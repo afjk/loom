@@ -436,7 +436,6 @@ Loom の核は、以下の仕組みです：
 ```
 
 このグラフの最終結果は、`engine.getValue("doubler.out")` で取得できます。
-```
 
 ## 7. 公開 API
 
