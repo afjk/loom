@@ -372,12 +372,12 @@ namespace Afjk.Loom
                 {
                     case "==": return Equals(left, right);
                     case "!=": return !Equals(left, right);
-                    case "<":  { var c = CompareValues(left, right); return (object)(c.HasValue && c.Value <  0); }
-                    case "<=": { var c = CompareValues(left, right); return (object)(c.HasValue && c.Value <= 0); }
-                    case ">":  { var c = CompareValues(left, right); return (object)(c.HasValue && c.Value >  0); }
-                    case ">=": { var c = CompareValues(left, right); return (object)(c.HasValue && c.Value >= 0); }
-                    case "&&": return (object)(IsTruthy(left) && IsTruthy(right));
-                    case "||": return (object)(IsTruthy(left) || IsTruthy(right));
+                    case "<":  { var c = CompareValues(left, right); return c.HasValue && c.Value <  0; }
+                    case "<=": { var c = CompareValues(left, right); return c.HasValue && c.Value <= 0; }
+                    case ">":  { var c = CompareValues(left, right); return c.HasValue && c.Value >  0; }
+                    case ">=": { var c = CompareValues(left, right); return c.HasValue && c.Value >= 0; }
+                    case "&&": return IsTruthy(left) && IsTruthy(right);
+                    case "||": return IsTruthy(left) || IsTruthy(right);
                     case "+":
                         if (left is double la && right is double ra) return la + ra;
                         return null;
