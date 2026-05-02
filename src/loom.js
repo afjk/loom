@@ -702,7 +702,7 @@ export class Loom {
   // 外部からノード型を追加するための静的メソッド（アダプタ層向け）
   static registerNodeType(name, definition) {
     if (NODE_TYPES[name]) {
-      throw new Error(`Node type already registered: ${name}`);
+      throw new LoomError('DUPLICATE_NODE_TYPE', `Node type already registered: ${name}`, { name });
     }
     NODE_TYPES[name] = definition;
   }

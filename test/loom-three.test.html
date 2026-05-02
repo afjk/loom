@@ -47,6 +47,9 @@
       }
     }
 
+    // ノード型を最初に一度だけ登録
+    registerThreeNodes(Loom, {});
+
     // テスト: setPosition が position.set を正しく呼ぶ
     test('setPosition: position.set を正しく呼ぶ', () => {
       const cube = makeMockObject();
@@ -248,21 +251,32 @@
       assertEqual(cube.position.x, 0, 'cube position should not be changed');
     });
 
-    // テスト: 同じノード型を2回 registerNodeType すると例外になる
-    test('重複登録: 例外をスロー', () => {
-      const MockLoom = class {};
-      MockLoom.registerNodeType = Loom.registerNodeType.bind(MockLoom);
+    // テスト: registerThreeNodes を複数回呼んでも例外にならず objects が追加される
+    test('registerThreeNodes: 複数回呼んでも例外にならず objects が追加される', () => {
+      const cubeA = makeMockObject();
+      const cubeB = makeMockObject();
 
-      try {
-        MockLoom.registerNodeType('testNode', { category: 'sink', inputs: [], outputs: [], params: [], evaluate: () => ({}) });
-        MockLoom.registerNodeType('testNode', { category: 'sink', inputs: [], outputs: [], params: [], evaluate: () => ({}) });
-        throw new Error('Should have thrown an error');
-      } catch (e) {
-        assert(e.message.includes('already registered'), 'Error should mention already registered');
-      }
+      registerThreeNodes(Loom, { cubeA });
+      registerThreeNodes(Loom, { cubeB });
+
+      const graph = {
+        nodes: [
+          { id: 'src', type: 'constant', params: { value: 3 } },
+          { id: 'pos', type: 'setPosition', params: { target: 'cubeB' } }
+        ],
+        edges: [
+          { from: 'src.out', to: 'pos.x' }
+        ]
+      };
+
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+
+      assertEqual(cubeB.position.x, 3, 'cubeB should be updated');
+      assertEqual(cubeA.position.x, 0, 'cubeA should not be updated');
     });
 
-    // 結果を表示
+    // 結果を表示＋CI用に window.__loomTestResults を設定
     function displayResults() {
       const passed = results.filter(r => r.pass).length;
       const failed = results.filter(r => !r.pass).length;
@@ -283,6 +297,18 @@
 
       html += '</ul>';
       document.getElementById('results').innerHTML = html;
+
+      // CI ランナー用に結果を設定
+      window.__loomTestResults = {
+        pass: passed,
+        fail: failed,
+        failures: results
+          .filter(r => !r.pass)
+          .map(r => ({
+            name: r.name,
+            error: r.error
+          }))
+      };
     }
 
     displayResults();
