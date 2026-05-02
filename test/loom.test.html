@@ -430,6 +430,7 @@
     // 実行とレポート
     const root = document.getElementById("results");
     let pass = 0, fail = 0;
+    const failures = [];
     for (const t of tests) {
       const div = document.createElement("div");
       div.className = "test-result";
@@ -442,6 +443,7 @@
         div.textContent = "❌ " + t.name + " — " + e.message;
         div.className += " test-fail";
         fail++;
+        failures.push({ name: t.name, message: e.message });
       }
       root.appendChild(div);
     }
@@ -456,6 +458,9 @@
       summary.textContent = `❌ ${pass} 成功, ${fail} 失敗`;
     }
     root.prepend(summary);
+
+    // Export results for CI automation
+    window.__loomTestResults = { pass, fail, failures };
   </script>
 </body>
 </html>

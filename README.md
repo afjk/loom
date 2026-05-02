@@ -1,5 +1,7 @@
 # Loom
 
+[![Tests](https://github.com/afjk/loom/actions/workflows/test.yml/badge.svg)](https://github.com/afjk/loom/actions/workflows/test.yml)
+
 A stateless dataflow engine for the browser. Build reactive visual, audio, and 3D content by composing pure functions.
 
 ---
@@ -8,9 +10,9 @@ A stateless dataflow engine for the browser. Build reactive visual, audio, and 3
 
 ## ステータス
 
-**第ゼロ段階：プロトタイプ実装完了**
+**第一段階：プロトタイプ実装完了、仕様確定**
 
-評価器コア（`src/loom.js`）と最小ノード5種（`clock`、`constant`、`sine`、`add`、`multiply`）の実装、テストスイート、デモが揃っています。GitHub Pages で動作確認できます。次は第一段階（イベント型と入力ノードの導入）を予定しています。
+第ゼロ段階および第一段階のプロトタイプ実装が完了。仕様書はバージョン 0.2.0 でクロスプラットフォーム評価セマンティクスを確定し、Phase 1.5（SceneSync アダプタ）および Phase 1.6（Unity 対応）の実装フェーズに進行可能となりました。
 
 ## 背景・モチベーション
 
@@ -107,6 +109,8 @@ GitHub Pages で公開されているデモを、ブラウザから直接確認�
 
 * 基本デモ：https://afjk.github.io/loom/examples/01-basic.html
 * 揺れる箱デモ：https://afjk.github.io/loom/examples/02-moving-box.html
+* ポインタ追従デモ：https://afjk.github.io/loom/examples/03-pointer.html
+* キー入力カウンタ：https://afjk.github.io/loom/examples/04-keydown.html
 * テスト結果：https://afjk.github.io/loom/test/loom.test.html
 
 ローカルで確認する場合は、ESM を使うため、ローカルファイル直接 (`file://`) ではなく HTTP サーバから配信する必要があります。
@@ -125,7 +129,15 @@ GitHub Pages で公開されているデモを、ブラウザから直接確認�
 
 * 揺れる箱デモ：`http://localhost:8000/examples/02-moving-box.html`
 
+* ポインタ追従デモ：`http://localhost:8000/examples/03-pointer.html`
+
+* キー入力カウンタ：`http://localhost:8000/examples/04-keydown.html`
+
 * テスト：`http://localhost:8000/test/loom.test.html`
+
+## CI と自動テスト
+
+GitHub Actions で自動テストを実行しています。ローカルで `npm test` を実行する場合は、`package.json` が必要ですが、これは CI 自動化専用です。`src/loom.js` は依存ライブラリゼロの単一ファイル配布であり、package.json は開発用ツール（Playwright、http-server）のみを含みます。
 
 ## ライセンス
 

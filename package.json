@@ -1,0 +1,12 @@
+{
+  "name": "loom",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "test": "node ci/run-tests.mjs"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1",
+    "playwright": "^1.40.0"
+  }
+}
