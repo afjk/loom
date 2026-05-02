@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Loom 揺れる箱デモ</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #333;
+    }
+    .description {
+      color: #666;
+      margin: 20px 0;
+    }
+    #stage {
+      position: relative;
+      width: 100%;
+      height: 200px;
+      border: 2px solid #ccc;
+      background: #fafafa;
+      margin: 30px 0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    #box {
+      position: absolute;
+      top: 75px;
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, #4a90e2, #2e5c8a);
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: none;
+    }
+    .info {
+      font-family: monospace;
+      color: #666;
+      font-size: 12px;
+      margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Loom 揺れる箱デモ</h1>
+  <p class="description">
+    正弦波で箱が左右に揺れます。グラフは以下の構成です：
+  </p>
+  <ul>
+    <li><code>clock</code> ノード：時刻を出力</li>
+    <li><code>sine</code> ノード：正弦波を計算（周波数 0.5 Hz、振幅 200）</li>
+    <li><code>constant</code> ノード：中心座標を出力（275）</li>
+    <li><code>add</code> ノード：波の値と中心を足して x 座標を計算</li>
+  </ul>
+
+  <div id="stage">
+    <div id="box"></div>
+  </div>
+
+  <div class="info">
+    グラフ: clock → sine → (add ← constant) → box.style.left
+  </div>
+
+  <script type="module">
+    import { Loom } from "../src/loom.js";
+
+    const graph = {
+      nodes: [
+        { id: "timer", type: "clock" },
+        { id: "wave", type: "sine", params: { freq: 0.5, amplitude: 200 } },
+        { id: "center", type: "constant", params: { value: 275 } },
+        { id: "x", type: "add" }
+      ],
+      edges: [
+        { from: "timer.t", to: "wave.t" },
+        { from: "wave.out", to: "x.a" },
+        { from: "center.out", to: "x.b" }
+      ]
+    };
+
+    const engine = new Loom(graph);
+    engine.evaluateAt(0);
+    engine.start();
+
+    const box = document.getElementById("box");
+
+    function tick() {
+      const x = engine.getValue("x.out");
+      box.style.left = x + "px";
+      requestAnimationFrame(tick);
+    }
+    tick();
+  </script>
+</body>
+</html>
