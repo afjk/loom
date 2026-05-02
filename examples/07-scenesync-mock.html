@@ -233,6 +233,12 @@
 
     // Timeline: 5s - object-specific graph
     setTimeout(() => {
+      addLog('Clearing scene-graph');
+      adapter.handleMessage({
+        type: 'scene-graph-clear',
+        scope: 'scene'
+      });
+
       addLog('Sending scene-graph-set for object scope (alternative motion)');
 
       const graph = {
