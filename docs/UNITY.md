@@ -267,7 +267,7 @@ Loom の sink ノード（`sceneSetPosition` / `sceneSetRotation` / `sceneSetSca
 - `LoomSceneSyncAdapterTests.cs` — SceneSync アダプタ・Unity ノード（テスト 19–28）
 - `LoomUnityTargetResolverTests.cs` — target resolver 登録・キャッシュ・非表示オブジェクト解決
 
-テスト 1–19、25–30 および `ExtraTest_*` は純 C# で Unity なしでも dotnet で検証済みです（36 テスト全て pass）。  
+テスト 1–19、25–30 および `ExtraTest_*` は純 C# で Unity なしでも dotnet で検証済みです（37 テスト全て pass）。  
 テスト 20–24（sceneSetPosition 等）と `LoomUnityTargetResolverTests` の Unity テストは Unity Test Runner が必要です。
 
 ## 未対応事項

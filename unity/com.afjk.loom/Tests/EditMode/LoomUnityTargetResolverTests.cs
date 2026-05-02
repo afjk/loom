@@ -108,9 +108,11 @@ namespace Afjk.Loom.Tests
 
                 resolver.UnregisterTarget("RegisteredThenRemoved");
 
-                // After unregister, inactive object must not be found (fallback skips inactive scene objects
-                // found via Resources only — but here the object is not in a scene if just created in test).
-                // The registered entry must be gone.
+                // After unregister, the object must not be found via the registered path.
+                // The object is inactive so the fallback Resources.FindObjectsOfTypeAll scan
+                // would normally include it — but in an EditMode test context the object may
+                // not be in a loaded scene, so the fallback will also return null.
+                // Either way, the registered entry must be gone.
                 var result = resolver.ResolveTarget("RegisteredThenRemoved");
                 Assert.IsNull(result, "After UnregisterTarget, explicitly registered target must no longer be returned");
             }
