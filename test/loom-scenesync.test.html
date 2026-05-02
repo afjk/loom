@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Loom SceneSync Adapter Tests</title>
+</head>
+<body>
+  <h1>Loom SceneSync Adapter Tests</h1>
+  <div id="results"></div>
+
+  <script type="module">
+    import { Loom } from '../src/loom.js';
+    import { LoomSceneSync } from '../src/loom-scenesync.js';
+
+    const results = [];
+
+    function test(name, fn) {
+      try {
+        fn();
+        results.push({ name, pass: true });
+        console.log(`✓ ${name}`);
+      } catch (e) {
+        results.push({ name, pass: false, error: e.message });
+        console.error(`✗ ${name}: ${e.message}`);
+      }
+    }
+
+    function assert(condition, message) {
+      if (!condition) throw new Error(message);
+    }
+
+    function assertEqual(actual, expected, message) {
+      if (actual !== expected) {
+        throw new Error(message || `Expected ${expected}, got ${actual}`);
+      }
+    }
+
+    // Mock Object3D
+    function createMockObject() {
+      return {
+        position: { x: 0, y: 0, z: 0, set(x, y, z) { this.x = x; this.y = y; this.z = z; } },
+        rotation: { x: 0, y: 0, z: 0, set(x, y, z) { this.x = x; this.y = y; this.z = z; } },
+        scale: { x: 1, y: 1, z: 1, set(x, y, z) { this.x = x; this.y = y; this.z = z; } },
+        material: { color: { r: 1, g: 1, b: 1, setRGB(r, g, b) { this.r = r; this.g = g; this.b = b; } } },
+        visible: true
+      };
+    }
+
+    // Test 1: scene-graph-set でシーングラフが差し替わる
+    test('scene-graph-set でシーングラフが差し替わる', () => {
+      let sendCalls = [];
+      const serverTime = { value: 0 };
+      const objects = { target1: createMockObject() };
+
+      const adapter = new LoomSceneSync({
+        LoomClass: Loom,
+        send: (msg) => sendCalls.push(msg),
+        getServerTime: () => serverTime.value,
+        resolveTarget: (id) => objects[id] ?? null
+      });
+
+      const graph = {
+        nodes: [
+          { id: 'clock', type: 'clock' },
+          { id: 'pos', type: 'sceneSetPosition', params: { target: 'target1' } }
+        ],
+        edges: [
+          { from: 'clock.t', to: 'pos.x' }
+        ]
+      };
+
+      adapter.handleMessage({ type: 'scene-graph-set', scope: 'scene', graph });
+      adapter.start();
+
+      serverTime.value = 0.5;
+      adapter._sceneGraph.evaluateAt(0.5);
+
+      assert(objects.target1.position.x !== 0, 'position should be updated');
+    });
+
+    // Test 2: scope { object } でオブジェクト単位グラフが独立に動く
+    test('scope { object } でオブジェクト単位グラフが独立に動く', () => {
+      let sendCalls = [];
+      const serverTime = { value: 0 };
+      const objects = { cube1: createMockObject(), cube2: createMockObject() };
+
+      const adapter = new LoomSceneSync({
+        LoomClass: Loom,
+        send: (msg) => sendCalls.push(msg),
+        getServerTime: () => serverTime.value,
+        resolveTarget: (id) => objects[id] ?? null
+      });
+
+      const graph1 = {
+        nodes: [
+          { id: 'const', type: 'constant', params: { value: 5 } },
+          { id: 'pos', type: 'sceneSetPosition', params: { target: 'cube1' } }
+        ],
+        edges: [
+          { from: 'const.out', to: 'pos.x' }
+        ]
+      };
+
+      const graph2 = {
+        nodes: [
+          { id: 'const', type: 'constant', params: { value: 10 } },
+          { id: 'pos', type: 'sceneSetPosition', params: { target: 'cube2' } }
+        ],
+        edges: [
+          { from: 'const.out', to: 'pos.x' }
+        ]
+      };
+
+      adapter.handleMessage({ type: 'scene-graph-set', scope: { object: 'cube1' }, graph: graph1 });
+      adapter.handleMessage({ type: 'scene-graph-set', scope: { object: 'cube2' }, graph: graph2 });
+
+      adapter._objectGraphs.get('cube1').evaluateAt(0);
+      adapter._objectGraphs.get('cube2').evaluateAt(0);
+
+      assertEqual(objects.cube1.position.x, 5, 'cube1 position should be 5');
+      assertEqual(objects.cube2.position.x, 10, 'cube2 position should be 10');
+    });
+
+    // Test 3: 同じ targetId に再度 scene-graph-set すると上書きされる
+    test('同じ targetId に再度 scene-graph-set すると上書きされる', () => {
+      const serverTime = { value: 0 };
+      const objects = { cube: createMockObject() };
+
+      const adapter = new LoomSceneSync({
+        LoomClass: Loom,
+        send: () => {},
+        getServerTime: () => serverTime.value,
+        resolveTarget: (id) => objects[id] ?? null
+      });
+
+      const graph1 = {
+        nodes: [{ id: 'const', type: 'constant', params: { value: 5 } }, { id: 'pos', type: 'sceneSetPosition', params: { target: 'cube' } }],
+        edges: [{ from: 'const.out', to: 'pos.x' }]
+      };
+
+      const graph2 = {
+        nodes: [{ id: 'const', type: 'constant', params: { value: 15 } }, { id: 'pos', type: 'sceneSetPosition', params: { target: 'cube' } }],
+        edges: [{ from: 'const.out', to: 'pos.x' }]
+      };
+
+      adapter.handleMessage({ type: 'scene-graph-set', scope: { object: 'cube' }, graph: graph1 });
+      adapter._objectGraphs.get('cube').evaluateAt(0);
+      assertEqual(objects.cube.position.x, 5, 'should be 5 initially');
+
+      adapter.handleMessage({ type: 'scene-graph-set', scope: { object: 'cube' }, graph: graph2 });
+      adapter._objectGraphs.get('cube').evaluateAt(0);
+      assertEqual(objects.cube.position.x, 15, 'should be updated to 15');
+    });
+
+    // Test 4: scene-graph-clear でシーングラフが空グラフに差し替わる
+    test('scene-graph-clear でシーングラフが空グラフに差し替わる', () => {
+      const serverTime = { value: 0 };
+      const objects = { target: createMockObject() };
+
+      const adapter = new LoomSceneSync({
+        LoomClass: Loom,
+        send: () => {},
+        getServerTime: () => serverTime.value,
+        resolveTarget: (id) => objects[id] ?? null
+      });
+
+      const graph = {
+        nodes: [{ id: 'const', type: 'constant', params: { value: 5 } }, { id: 'pos', type: 'sceneSetPosition', params: { target: 'target' } }],
+        edges: [{ from: 'const.out', to: 'pos.x' }]
+      };
+
+      adapter.handleMessage({ type: 'scene-graph-set', scope: 'scene', graph });
+      adapter._sceneGraph.evaluateAt(0);
+      assertEqual(objects.target.position.x, 5, 'should be 5');
+
+      adapter.handleMessage({ type: 'scene-graph-clear', scope: 'scene' });
+      objects.target.position.x = 0;
+      adapter._sceneGraph.evaluateAt(0);
+      assertEqual(objects.target.position.x, 0, 'should remain 0 after clear');
+    });
+
+    // Test 5: scene-graph-clear でオブジェクト単位グラフが削除される
+    test('scene-graph-clear でオブジェクト単位グラフが削除される', () => {
+      const serverTime = { value: 0 };
+      const objects = { cube: createMockObject() };
+
+      const adapter = new LoomSceneSync({
+        LoomClass: Loom,
+        send: () => {},
+        getServerTime: () => serverTime.value,
+        resolveTarget: (id) => objects[id] ?? null
+      });
+
+      const graph = {
+        nodes: [{ id: 'const', type: 'constant', params: { value: 5 } }, { id: 'pos', type: 'sceneSetPosition', params: { target: 'cube' } }],
+        edges: [{ from: 'const.out', to: 'pos.x' }]
+      };
+
+      adapter.handleMessage({ type: 'scene-graph-set', scope: { object: 'cube' }, graph });
+      assert(adapter._objectGraphs.has('cube'), 'graph should exist');
+
+      adapter.handleMessage({ type: 'scene-graph-clear', scope: { object: 'cube' } });
+      assert(!adapter._objectGraphs.has('cube'), 'graph should be deleted');
+    });
+
+    // Test 6: 存在しない object scope を clear してもエラーにならない
+    test('存在しない object scope を clear してもエラーにならない', () => {
+      const adapter = new LoomSceneSync({
+        LoomClass: Loom,
+        send: () => {},
+        getServerTime: () => 0,
+        resolveTarget: () => null
+      });
+
+      adapter.handleMessage({ type: 'scene-graph-clear', scope: { object: 'nonexistent' } });
+      assert(true, 'no error thrown');
+    });
+
+    // Test 7: resolveTarget が null を返しても sink がエラーを投げない
+    test('resolveTarget が null を返しても sink がエラーを投げない', () => {
+      const adapter = new LoomSceneSync({
+        LoomClass: Loom,
+        send: () => {},
+        getServerTime: () => 0,
+        resolveTarget: () => null
+      });
+
+      const graph = {
+        nodes: [
+          { id: 'const', type: 'constant', params: { value: 5 } },
+          { id: 'pos', type: 'sceneSetPosition', params: { target: 'nonexistent' } }
+        ],
+        edges: [{ from: 'const.out', to: 'pos.x' }]
+      };
+
+      adapter.handleMessage({ type: 'scene-graph-set', scope: 'scene', graph });
+      adapter._sceneGraph.evaluateAt(0);
+      assert(true, 'no error thrown');
+    });
+
+    // Test 8: serverClock.t が getServerTime() の戻り値と一致する
+    test('serverClock.t が getServerTime() の戻り値と一致する', () => {
+      const serverTime = { value: 42.5 };
+
+      const adapter = new LoomSceneSync({
+        LoomClass: Loom,
+        send: () => {},
+        getServerTime: () => serverTime.value,
+        resolveTarget: () => null
+      });
+
+      const graph = {
+        nodes: [
+          { id: 'clock', type: 'serverClock' }
+        ],
+        edges: []
+      };
+
+      adapter.handleMessage({ type: 'scene-graph-set', scope: 'scene', graph });
+      adapter._sceneGraph.evaluateAt(0);
+
+      const t = adapter._sceneGraph.getValue('clock.t');
+      assertEqual(t, 42.5, 'serverClock.t should match getServerTime()');
+    });
+
+    // Test 9: sceneSetPosition が position.set(x,y,z) を呼ぶ
+    test('sceneSetPosition が position.set(x,y,z) を呼ぶ', () => {
+      const obj = createMockObject();
+      const adapter = new LoomSceneSync({
+        LoomClass: Loom,
+        send: () => {},
+        getServerTime: () => 0,
+        resolveTarget: (id) => id === 'obj' ? obj : null
+      });
+
+      const graph = {
+        nodes: [
+          { id: 'x', type: 'constant', params: { value: 1 } },
+          { id: 'y', type: 'constant', params: { value: 2 } },
+          { id: 'z', type: 'constant', params: { value: 3 } },
+          { id: 'pos', type: 'sceneSetPosition', params: { target: 'obj' } }
+        ],
+        edges: [
+          { from: 'x.out', to: 'pos.x' },
+          { from: 'y.out', to: 'pos.y' },
+          { from: 'z.out', to: 'pos.z' }
+        ]
+      };
+
+      adapter.handleMessage({ type: 'scene-graph-set', scope: 'scene', graph });
+      adapter._sceneGraph.evaluateAt(0);
+
+      assertEqual(obj.position.x, 1);
+      assertEqual(obj.position.y, 2);
+      assertEqual(obj.position.z, 3);
+    });
+
+    // Test 10: sceneSetRotation が rotation.set(x,y,z) を呼ぶ
+    test('sceneSetRotation が rotation.set(x,y,z) を呼ぶ', () => {
+      const obj = createMockObject();
+      const adapter = new LoomSceneSync({
+        LoomClass: Loom,
+        send: () => {},
+        getServerTime: () => 0,
+        resolveTarget: (id) => id === 'obj' ? obj : null
+      });
+
+      const graph = {
+        nodes: [
+          { id: 'x', type: 'constant', params: { value: 0.5 } },
+          { id: 'y', type: 'constant', params: { value: 1.0 } },
+          { id: 'z', type: 'constant', params: { value: 1.5 } },
+          { id: 'rot', type: 'sceneSetRotation', params: { target: 'obj' } }
+        ],
+        edges: [
+          { from: 'x.out', to: 'rot.x' },
+          { from: 'y.out', to: 'rot.y' },
+          { from: 'z.out', to: 'rot.z' }
+        ]
+      };
+
+      adapter.handleMessage({ type: 'scene-graph-set', scope: 'scene', graph });
+      adapter._sceneGraph.evaluateAt(0);
+
+      assertEqual(obj.rotation.x, 0.5);
+      assertEqual(obj.rotation.y, 1.0);
+      assertEqual(obj.rotation.z, 1.5);
+    });
+
+    // Test 11: sceneSetScale が scale.set(x,y,z) を呼ぶ
+    test('sceneSetScale が scale.set(x,y,z) を呼ぶ', () => {
+      const obj = createMockObject();
+      const adapter = new LoomSceneSync({
+        LoomClass: Loom,
+        send: () => {},
+        getServerTime: () => 0,
+        resolveTarget: (id) => id === 'obj' ? obj : null
+      });
+
+      const graph = {
+        nodes: [
+          { id: 'x', type: 'constant', params: { value: 2 } },
+          { id: 'y', type: 'constant', params: { value: 3 } },
+          { id: 'z', type: 'constant', params: { value: 4 } },
+          { id: 'scale', type: 'sceneSetScale', params: { target: 'obj' } }
+        ],
+        edges: [
+          { from: 'x.out', to: 'scale.x' },
+          { from: 'y.out', to: 'scale.y' },
+          { from: 'z.out', to: 'scale.z' }
+        ]
+      };
+
+      adapter.handleMessage({ type: 'scene-graph-set', scope: 'scene', graph });
+      adapter._sceneGraph.evaluateAt(0);
+
+      assertEqual(obj.scale.x, 2);
+      assertEqual(obj.scale.y, 3);
+      assertEqual(obj.scale.z, 4);
+    });
+
+    // Test 12: sceneSetColor が material.color.setRGB(r,g,b) を呼ぶ
+    test('sceneSetColor が material.color.setRGB(r,g,b) を呼ぶ', () => {
+      const obj = createMockObject();
+      const adapter = new LoomSceneSync({
+        LoomClass: Loom,
+        send: () => {},
+        getServerTime: () => 0,
+        resolveTarget: (id) => id === 'obj' ? obj : null
+      });
+
+      const graph = {
+        nodes: [
+          { id: 'r', type: 'constant', params: { value: 0.5 } },
+          { id: 'g', type: 'constant', params: { value: 0.6 } },
+          { id: 'b', type: 'constant', params: { value: 0.7 } },
+          { id: 'color', type: 'sceneSetColor', params: { target: 'obj' } }
+        ],
+        edges: [
+          { from: 'r.out', to: 'color.r' },
+          { from: 'g.out', to: 'color.g' },
+          { from: 'b.out', to: 'color.b' }
+        ]
+      };
+
+      adapter.handleMessage({ type: 'scene-graph-set', scope: 'scene', graph });
+      adapter._sceneGraph.evaluateAt(0);
+
+      assertEqual(obj.material.color.r, 0.5);
+      assertEqual(obj.material.color.g, 0.6);
+      assertEqual(obj.material.color.b, 0.7);
+    });
+
+    // Test 13: sceneSetVisible が visible を更新する
+    test('sceneSetVisible が visible を更新する', () => {
+      const obj = createMockObject();
+      const adapter = new LoomSceneSync({
+        LoomClass: Loom,
+        send: () => {},
+        getServerTime: () => 0,
+        resolveTarget: (id) => id === 'obj' ? obj : null
+      });
+
+      const graph = {
+        nodes: [
+          { id: 'vis', type: 'constant', params: { value: 0 } },
+          { id: 'setVis', type: 'sceneSetVisible', params: { target: 'obj' } }
+        ],
+        edges: [
+          { from: 'vis.out', to: 'setVis.visible' }
+        ]
+      };
+
+      adapter.handleMessage({ type: 'scene-graph-set', scope: 'scene', graph });
+      adapter._sceneGraph.evaluateAt(0);
+
+      assert(obj.visible === false, 'visible should be false');
+    });
+
+    // Test 14: scene-graph-input 受信時は no-op
+    test('scene-graph-input 受信時は no-op', () => {
+      const adapter = new LoomSceneSync({
+        LoomClass: Loom,
+        send: () => {},
+        getServerTime: () => 0,
+        resolveTarget: () => null
+      });
+
+      adapter.handleMessage({ type: 'scene-graph-input', scope: 'scene', ref: 'click.event', payload: { x: 100 } });
+      assert(true, 'no error thrown');
+    });
+
+    // Test 15: scene-graph-patch は graph がある場合 scene-graph-set と等価に動く
+    test('scene-graph-patch は graph がある場合 scene-graph-set と等価に動く', () => {
+      const obj = createMockObject();
+      const adapter = new LoomSceneSync({
+        LoomClass: Loom,
+        send: () => {},
+        getServerTime: () => 0,
+        resolveTarget: (id) => id === 'obj' ? obj : null
+      });
+
+      const graph = {
+        nodes: [
+          { id: 'const', type: 'constant', params: { value: 5 } },
+          { id: 'pos', type: 'sceneSetPosition', params: { target: 'obj' } }
+        ],
+        edges: [{ from: 'const.out', to: 'pos.x' }]
+      };
+
+      adapter.handleMessage({ type: 'scene-graph-patch', scope: 'scene', graph });
+      adapter._sceneGraph.evaluateAt(0);
+
+      assertEqual(obj.position.x, 5, 'patch should work like set');
+    });
+
+    // Test 16: 不正な scope で INVALID_SCOPE
+    test('不正な scope で INVALID_SCOPE', () => {
+      const adapter = new LoomSceneSync({
+        LoomClass: Loom,
+        send: () => {},
+        getServerTime: () => 0,
+        resolveTarget: () => null
+      });
+
+      try {
+        adapter.handleMessage({ type: 'scene-graph-set', scope: { target: 'obj' }, graph: { nodes: [], edges: [] } });
+        throw new Error('Should have thrown');
+      } catch (e) {
+        assert(e.code === 'INVALID_SCOPE', 'should throw INVALID_SCOPE');
+      }
+    });
+
+    // Test 17: 不明な type で INVALID_MESSAGE
+    test('不明な type で INVALID_MESSAGE', () => {
+      const adapter = new LoomSceneSync({
+        LoomClass: Loom,
+        send: () => {},
+        getServerTime: () => 0,
+        resolveTarget: () => null
+      });
+
+      try {
+        adapter.handleMessage({ type: 'unknown-type' });
+        throw new Error('Should have thrown');
+      } catch (e) {
+        assert(e.code === 'INVALID_MESSAGE', 'should throw INVALID_MESSAGE');
+      }
+    });
+
+    // Test 18: scene-graph-patch に graph がない場合 INVALID_GRAPH
+    test('scene-graph-patch に graph がない場合 INVALID_GRAPH', () => {
+      const adapter = new LoomSceneSync({
+        LoomClass: Loom,
+        send: () => {},
+        getServerTime: () => 0,
+        resolveTarget: () => null
+      });
+
+      try {
+        adapter.handleMessage({ type: 'scene-graph-patch', scope: 'scene' });
+        throw new Error('Should have thrown');
+      } catch (e) {
+        assert(e.code === 'INVALID_GRAPH', 'should throw INVALID_GRAPH');
+      }
+    });
+
+    // Test 19: new LoomSceneSync(...) を複数回呼んでもノード重複登録エラーにならない
+    test('new LoomSceneSync(...) を複数回呼んでも重複登録エラーにならない', () => {
+      const adapter1 = new LoomSceneSync({
+        LoomClass: Loom,
+        send: () => {},
+        getServerTime: () => 0,
+        resolveTarget: () => null
+      });
+
+      const adapter2 = new LoomSceneSync({
+        LoomClass: Loom,
+        send: () => {},
+        getServerTime: () => 0,
+        resolveTarget: () => null
+      });
+
+      assert(true, 'no error thrown');
+    });
+
+    // Test 20: 複数 adapter がそれぞれ異なる getServerTime / resolveTarget を使える
+    test('複数 adapter が異なる getServerTime / resolveTarget を使える', () => {
+      const serverTime1 = { value: 1.0 };
+      const serverTime2 = { value: 2.0 };
+      const obj1 = createMockObject();
+      const obj2 = createMockObject();
+
+      const adapter1 = new LoomSceneSync({
+        LoomClass: Loom,
+        send: () => {},
+        getServerTime: () => serverTime1.value,
+        resolveTarget: (id) => id === 'obj1' ? obj1 : null
+      });
+
+      const adapter2 = new LoomSceneSync({
+        LoomClass: Loom,
+        send: () => {},
+        getServerTime: () => serverTime2.value,
+        resolveTarget: (id) => id === 'obj2' ? obj2 : null
+      });
+
+      const graph1 = { nodes: [{ id: 'clock', type: 'serverClock' }], edges: [] };
+      const graph2 = { nodes: [{ id: 'clock', type: 'serverClock' }], edges: [] };
+
+      adapter1.handleMessage({ type: 'scene-graph-set', scope: 'scene', graph: graph1 });
+      adapter2.handleMessage({ type: 'scene-graph-set', scope: 'scene', graph: graph2 });
+
+      adapter1._sceneGraph.evaluateAt(0);
+      adapter2._sceneGraph.evaluateAt(0);
+
+      const t1 = adapter1._sceneGraph.getValue('clock.t');
+      const t2 = adapter2._sceneGraph.getValue('clock.t');
+
+      assertEqual(t1, 1.0, 'adapter1 should use its own getServerTime');
+      assertEqual(t2, 2.0, 'adapter2 should use its own getServerTime');
+    });
+
+    // Display results + set window.__loomTestResults for CI
+    function displayResults() {
+      const passed = results.filter(r => r.pass).length;
+      const failed = results.filter(r => !r.pass).length;
+      const total = results.length;
+
+      let html = `<h2>Results: ${passed}/${total} passed</h2>`;
+      html += '<ul>';
+
+      for (const result of results) {
+        const status = result.pass ? '✓' : '✗';
+        const style = result.pass ? 'color: green' : 'color: red';
+        html += `<li style="${style}">${status} ${result.name}`;
+        if (!result.pass) {
+          html += `<br><small>${result.error}</small>`;
+        }
+        html += '</li>';
+      }
+
+      html += '</ul>';
+      document.getElementById('results').innerHTML = html;
+
+      window.__loomTestResults = {
+        pass: passed,
+        fail: failed,
+        failures: results
+          .filter(r => !r.pass)
+          .map(r => ({
+            name: r.name,
+            error: r.error
+          }))
+      };
+    }
+
+    displayResults();
+  </script>
+</body>
+</html>
