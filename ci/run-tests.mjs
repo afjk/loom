@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
 import { chromium } from 'playwright';
-import { globSync } from 'glob';
+import { readdirSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -27,7 +27,10 @@ async function runTests() {
     browser = await chromium.launch();
 
     // Find all test files
-    const testFiles = globSync('test/*.test.html', { cwd: projectRoot });
+    const testDir = path.join(projectRoot, 'test');
+    const testFiles = readdirSync(testDir)
+      .filter(file => file.endsWith('.test.html'))
+      .map(file => `test/${file}`);
     if (testFiles.length === 0) {
       console.error('No test files found');
       process.exit(1);
