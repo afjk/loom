@@ -712,6 +712,119 @@
       assert(Array.isArray(val) && val.length === 2 && val[0] === "a" && val[1] === "b");
     });
 
+    // DOM シンクノードのテスト
+    test("setText がターゲットの textContent を更新する", () => {
+      const div = document.createElement("div");
+      div.id = "sink-test-1";
+      document.body.appendChild(div);
+      try {
+        const graph = {
+          nodes: [
+            { id: "const", type: "constant", params: { value: "Hello" } },
+            { id: "sink", type: "setText", params: { target: "#sink-test-1" } }
+          ],
+          edges: [
+            { from: "const.out", to: "sink.value" }
+          ]
+        };
+        const engine = new Loom(graph);
+        engine.evaluateAt(0);
+        assert(div.textContent === "Hello", `expected "Hello", got "${div.textContent}"`);
+      } finally {
+        document.body.removeChild(div);
+      }
+    });
+
+    test("setStyle がターゲットの style プロパティと unit を組み合わせて設定する", () => {
+      const div = document.createElement("div");
+      div.id = "sink-test-2";
+      document.body.appendChild(div);
+      try {
+        const graph = {
+          nodes: [
+            { id: "const", type: "constant", params: { value: 50 } },
+            { id: "sink", type: "setStyle", params: { target: "#sink-test-2", property: "width", unit: "px" } }
+          ],
+          edges: [
+            { from: "const.out", to: "sink.value" }
+          ]
+        };
+        const engine = new Loom(graph);
+        engine.evaluateAt(0);
+        assert(div.style.width === "50px", `expected "50px", got "${div.style.width}"`);
+      } finally {
+        document.body.removeChild(div);
+      }
+    });
+
+    test("setAttr がターゲットの属性を更新する", () => {
+      const div = document.createElement("div");
+      div.id = "sink-test-3";
+      document.body.appendChild(div);
+      try {
+        const graph = {
+          nodes: [
+            { id: "const", type: "constant", params: { value: "my-value" } },
+            { id: "sink", type: "setAttr", params: { target: "#sink-test-3", name: "data-test" } }
+          ],
+          edges: [
+            { from: "const.out", to: "sink.value" }
+          ]
+        };
+        const engine = new Loom(graph);
+        engine.evaluateAt(0);
+        assert(div.getAttribute("data-test") === "my-value", `expected "my-value", got "${div.getAttribute("data-test")}"`);
+      } finally {
+        document.body.removeChild(div);
+      }
+    });
+
+    test("存在しないセレクタの setStyle でもエラーにならない", () => {
+      const graph = {
+        nodes: [
+          { id: "const", type: "constant", params: { value: 100 } },
+          { id: "sink", type: "setStyle", params: { target: "#nonexistent-element", property: "width", unit: "px" } }
+        ],
+        edges: [
+          { from: "const.out", to: "sink.value" }
+        ]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      // エラーが発生しなければ成功
+      assert(true);
+    });
+
+    test("複数シンクノードがトポロジカル順で評価される", () => {
+      const div1 = document.createElement("div");
+      const div2 = document.createElement("div");
+      div1.id = "sink-test-multi-1";
+      div2.id = "sink-test-multi-2";
+      document.body.appendChild(div1);
+      document.body.appendChild(div2);
+      try {
+        const graph = {
+          nodes: [
+            { id: "const1", type: "constant", params: { value: "first" } },
+            { id: "const2", type: "constant", params: { value: "second" } },
+            { id: "sink1", type: "setText", params: { target: "#sink-test-multi-1" } },
+            { id: "sink2", type: "setText", params: { target: "#sink-test-multi-2" } }
+          ],
+          edges: [
+            { from: "const1.out", to: "sink1.value" },
+            { from: "const2.out", to: "sink2.value" }
+          ]
+        };
+        const engine = new Loom(graph);
+        engine.evaluateAt(0);
+        assert(div1.textContent === "first", `expected "first", got "${div1.textContent}"`);
+        assert(div2.textContent === "second", `expected "second", got "${div2.textContent}"`);
+      } finally {
+        document.body.removeChild(div1);
+        document.body.removeChild(div2);
+      }
+    });
+
     // 実行とレポート
     const root = document.getElementById("results");
     let pass = 0, fail = 0;

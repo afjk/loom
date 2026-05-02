@@ -611,6 +611,76 @@ const NODE_TYPES = {
 
       return { event: merged };
     }
+  },
+
+  // DOM シンクノード
+  setText: {
+    category: 'sink',
+    inputs: [
+      { name: 'value', type: 'any', default: '', kind: 'behavior' }
+    ],
+    outputs: [],
+    params: [
+      { name: 'target', type: 'string', default: '' }
+    ],
+    evaluate: (inputs, params, ctx) => {
+      if (!params.target) return {};
+      const el = document.querySelector(params.target);
+      if (el) el.textContent = String(inputs.value);
+      return {};
+    }
+  },
+
+  setStyle: {
+    category: 'sink',
+    inputs: [
+      { name: 'value', type: 'any', default: '', kind: 'behavior' }
+    ],
+    outputs: [],
+    params: [
+      { name: 'target', type: 'string', default: '' },
+      { name: 'property', type: 'string', default: '' },
+      { name: 'unit', type: 'string', default: '' }
+    ],
+    evaluate: (inputs, params, ctx) => {
+      if (!params.target || !params.property) return {};
+      const el = document.querySelector(params.target);
+      if (el) el.style[params.property] = String(inputs.value) + params.unit;
+      return {};
+    }
+  },
+
+  setAttr: {
+    category: 'sink',
+    inputs: [
+      { name: 'value', type: 'any', default: '', kind: 'behavior' }
+    ],
+    outputs: [],
+    params: [
+      { name: 'target', type: 'string', default: '' },
+      { name: 'name', type: 'string', default: '' }
+    ],
+    evaluate: (inputs, params, ctx) => {
+      if (!params.target || !params.name) return {};
+      const el = document.querySelector(params.target);
+      if (el) el.setAttribute(params.name, String(inputs.value));
+      return {};
+    }
+  },
+
+  log: {
+    category: 'sink',
+    inputs: [
+      { name: 'value', type: 'any', default: undefined, kind: 'behavior' }
+    ],
+    outputs: [],
+    params: [
+      { name: 'label', type: 'string', default: '' }
+    ],
+    evaluate: (inputs, params, ctx) => {
+      console.log(params.label || 'log', inputs.value);
+      return {};
+    }
   }
 };
 
