@@ -1028,14 +1028,16 @@ Loom は単一の JSON グラフ表現を真の単一ソースとし、複数の
 
 ## 13. ロードマップ
 
-### 第一段階：イベント型と入力ノード（仕様策定中）
+### 第一段階：イベント型と入力ノード（実装完了・仕様 0.2.0 準拠化完了）
 
-- Event 型ポートと型ルールの設計
-- `engine.dispatchEvent(ref, payload)` API
-- 入力ノード4種：`pointerClick`、`pointerPosition`、`keyDown`、`keyUp`
-- イベント変換ノード3種：`filter`、`sample`、`merge`
-- 既存ノード5種は後方互換を維持
-- ノード数を計12種に拡張
+- ✅ Event 型ポートと型ルールの実装
+- ✅ `engine.dispatchEvent(ref, payload)` API の実装
+- ✅ 入力ノード4種の実装：`pointerClick`、`pointerPosition`、`keyDown`、`keyUp`
+- ✅ イベント変換ノード3種の実装：`filter`、`sample`、`merge`
+- ✅ 制限式 DSL インタプリタの実装（仕様 0.2.0 準拠）
+- ✅ Event ポート `getValue()` 戻り値の配列化
+- ✅ 既存ノード5種の後方互換性維持
+- ✅ ノード数を計12種に拡張
 
 ### 第二段階：状態部品と同期ポリシー
 

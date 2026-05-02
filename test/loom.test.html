@@ -508,9 +508,11 @@
       engine.evaluateAt(0);
       engine.dispatchEvent("kd.event", "a");
       engine.evaluateAt(0);
-      assert(engine.getValue("kd.event") !== undefined);
+      const v1 = engine.getValue("kd.event");
+      assert(Array.isArray(v1) && v1.length === 1 && v1[0] === "a");
       engine.evaluateAt(0);
-      assert(engine.getValue("kd.event") === undefined);
+      const v2 = engine.getValue("kd.event");
+      assert(Array.isArray(v2) && v2.length === 0);
     });
 
     test("dispatchEvent: 未知のノードで UNKNOWN_NODE エラー", () => {
@@ -573,7 +575,7 @@
       const graph = {
         nodes: [
           { id: "kd", type: "keyDown" },
-          { id: "f", type: "filter", params: { predicate: "key === 'Enter'" } }
+          { id: "f", type: "filter", params: { predicate: "key == 'Enter'" } }
         ],
         edges: [{ from: "kd.event", to: "f.event" }]
       };
@@ -624,7 +626,7 @@
       // dispatchEvent しない
       engine.evaluateAt(0);
       const val = engine.getValue("samp.event");
-      assert(val === undefined);
+      assert(Array.isArray(val) && val.length === 0);
     });
 
     // merge テスト
@@ -688,8 +690,8 @@
         nodes: [
           { id: "kd1", type: "keyDown" },
           { id: "kd2", type: "keyDown" },
-          { id: "f1", type: "filter", params: { predicate: "key === 'a'" } },
-          { id: "f2", type: "filter", params: { predicate: "key === 'b'" } },
+          { id: "f1", type: "filter", params: { predicate: "key == 'a'" } },
+          { id: "f2", type: "filter", params: { predicate: "key == 'b'" } },
           { id: "m", type: "merge" }
         ],
         edges: [
