@@ -8,9 +8,9 @@ A stateless dataflow engine for the browser. Build reactive visual, audio, and 3
 
 ## ステータス
 
-**第ゼロ段階：プロトタイプ実装完了**
+**第一段階：仕様策定中**
 
-評価器コア（`src/loom.js`）と最小ノード5種（`clock`、`constant`、`sine`、`add`、`multiply`）の実装、テストスイート、デモが揃っています。GitHub Pages で動作確認できます。次は第一段階（イベント型と入力ノードの導入）を予定しています。
+第ゼロ段階のプロトタイプは完了済み。第一段階ではイベント型と入力ノードを導入予定で、現在仕様策定フェーズです。
 
 ## 背景・モチベーション
 
