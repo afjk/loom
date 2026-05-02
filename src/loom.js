@@ -251,12 +251,6 @@ class RestrictedDSLEvaluator {
     if (tok.type === 'IDENT') {
       const ident = tok.value;
       this.consumeToken();
-      // フィールドアクセス（1段のみ）
-      if (ident === 'value' && this.currentToken() && this.currentToken().type === 'IDENT' &&
-          this.currentToken().value.startsWith('.')) {
-        // トークナイザ時点で .x, .y が分かれてしまうため、別対応
-        return { type: 'identifier', name: 'value' };
-      }
       if (ident.includes('.')) {
         const parts = ident.split('.');
         if (parts.length === 2 && parts[0] === 'value' && ['x', 'y'].includes(parts[1])) {
@@ -421,7 +415,8 @@ const NODE_TYPES = {
     outputs: [{ name: 'event', type: 'event<vec2>', kind: 'event' }],
     params: [{ name: 'target', type: 'string', default: 'window' }],
     evaluate: (inputs, params, ctx) => {
-      return { event: ctx.eventValues?.get('pointerClick.event') || [] };
+      // dispatchEvent 経由で this._values に設定済みのため、evaluate は呼ばれない
+      return { event: [] };
     },
     onStart: (node, engine) => {
       const targetSelector = node.params?.target || 'window';
@@ -487,7 +482,8 @@ const NODE_TYPES = {
     outputs: [{ name: 'event', type: 'event<string>', kind: 'event' }],
     params: [{ name: 'key', type: 'string', default: null }],
     evaluate: (inputs, params, ctx) => {
-      return { event: ctx.eventValues?.get('keyDown.event') || [] };
+      // dispatchEvent 経由で this._values に設定済みのため、evaluate は呼ばれない
+      return { event: [] };
     },
     onStart: (node, engine) => {
       const filterKey = node.params?.key || null;
@@ -513,7 +509,8 @@ const NODE_TYPES = {
     outputs: [{ name: 'event', type: 'event<string>', kind: 'event' }],
     params: [{ name: 'key', type: 'string', default: null }],
     evaluate: (inputs, params, ctx) => {
-      return { event: ctx.eventValues?.get('keyUp.event') || [] };
+      // dispatchEvent 経由で this._values に設定済みのため、evaluate は呼ばれない
+      return { event: [] };
     },
     onStart: (node, engine) => {
       const filterKey = node.params?.key || null;
@@ -662,26 +659,24 @@ export class Loom {
     const ctx = {
       time,
       engine: this,
-      eventValues: new Map(),
       nodePredicates: new Map()
     };
 
-    // Step 3: 全 Event ポートを [] にリセット
+    // Step 3: 全 Event ポートを [] にリセット（this._values に直接書く）
     for (const node of this._currentGraph.nodes) {
       const nodeType = NODE_TYPES[node.type];
       for (const output of nodeType.outputs) {
         if (output.kind === 'event') {
-          const ref = `${node.id}.${output.name}`;
-          ctx.eventValues.set(ref, []);
+          this._values.set(`${node.id}.${output.name}`, []);
         }
       }
     }
 
-    // Step 4: dispatchEvent で積まれたイベントを処理
+    // Step 4: dispatchEvent で積まれたイベントを this._values に反映してキューをクリア
     for (const { ref, payload } of this._eventQueue) {
-      const current = ctx.eventValues.get(ref) || [];
+      const current = this._values.get(ref) || [];
       current.push(payload);
-      ctx.eventValues.set(ref, current);
+      this._values.set(ref, current);
     }
     this._eventQueue = [];
 
@@ -690,13 +685,20 @@ export class Loom {
       const node = this._currentGraph.nodes.find(n => n.id === nodeId);
       const nodeType = NODE_TYPES[node.type];
 
+      // input カテゴリかつ全出力が Event のノード（pointerClick, keyDown, keyUp）は
+      // Step 4 で this._values に設定済みなのでスキップ
+      if (nodeType.category === 'input' &&
+          nodeType.outputs.length > 0 &&
+          nodeType.outputs.every(o => o.kind === 'event')) {
+        continue;
+      }
+
       // 入力値の解決
       const inputs = {};
       for (const inputDef of nodeType.inputs) {
         const portName = inputDef.name;
         const ref = `${nodeId}.${portName}`;
 
-        // エッジから入力値を取得
         const edge = this._currentGraph.edges.find(e => e.to === ref);
         if (edge) {
           if (inputDef.kind === 'event') {
@@ -705,7 +707,6 @@ export class Loom {
             inputs[portName] = this._values.get(edge.from);
           }
         } else {
-          // エッジがなければ params から取得
           const paramValue = node.params && node.params[portName];
           if (paramValue !== undefined) {
             inputs[portName] = paramValue;
@@ -735,10 +736,8 @@ export class Loom {
         const portName = outputDef.name;
         const ref = `${nodeId}.${portName}`;
         if (outputDef.kind === 'event') {
-          // Event ポートは配列として保存
           this._values.set(ref, outputs[portName] || []);
         } else {
-          // Behavior ポートは値として保存
           this._values.set(ref, outputs[portName]);
         }
       }
