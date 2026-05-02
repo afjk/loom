@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Loom テスト</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+    }
+    h2 {
+      color: #666;
+      margin-top: 30px;
+      font-size: 18px;
+    }
+    #results {
+      margin: 20px 0;
+    }
+    .test-result {
+      padding: 8px 12px;
+      margin: 4px 0;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .test-pass {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    .test-fail {
+      background: #ffebee;
+      color: #c62828;
+    }
+    .summary {
+      margin-top: 20px;
+      padding: 16px;
+      border-radius: 4px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .summary-pass {
+      background: #c8e6c9;
+      color: #1b5e20;
+    }
+    .summary-fail {
+      background: #ffcdd2;
+      color: #b71c1c;
+    }
+  </style>
+</head>
+<body>
+  <h1>Loom テスト</h1>
+  <div id="results"></div>
+  <script type="module">
+    import { Loom, LoomError } from "../src/loom.js";
+
+    const tests = [];
+    function test(name, fn) { tests.push({ name, fn }); }
+    function assert(cond, msg) { if (!cond) throw new Error(msg || "assertion failed"); }
+    function assertEqual(a, b, msg) {
+      if (Math.abs(a - b) > 1e-9 && a !== b) {
+        throw new Error(msg || `expected ${b}, got ${a}`);
+      }
+    }
+    function assertThrows(fn, code) {
+      try { fn(); }
+      catch (e) {
+        if (e.code === code) return;
+        throw new Error(`expected LoomError code ${code}, got ${e.code || e.message}`);
+      }
+      throw new Error(`expected throw with code ${code}, but no error thrown`);
+    }
+
+    // ノード単体の動作テスト
+    test("clock ノードが時刻を出力する", () => {
+      const graph = {
+        nodes: [{ id: "timer", type: "clock" }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(1.5);
+      assertEqual(engine.getValue("timer.t"), 1.5);
+    });
+
+    test("constant ノードが値を出力する", () => {
+      const graph = {
+        nodes: [{ id: "const", type: "constant", params: { value: 42 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("const.out"), 42);
+    });
+
+    test("sine ノードが t=0 で 0 を出力する", () => {
+      const graph = {
+        nodes: [
+          { id: "timer", type: "clock" },
+          { id: "wave", type: "sine" }
+        ],
+        edges: [{ from: "timer.t", to: "wave.t" }]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("wave.out"), 0, "sine(0) should be 0");
+    });
+
+    test("sine ノードが t=0.25, freq=1 で 1 を出力する", () => {
+      const graph = {
+        nodes: [
+          { id: "timer", type: "clock" },
+          { id: "wave", type: "sine" }
+        ],
+        edges: [{ from: "timer.t", to: "wave.t" }]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0.25);
+      assertEqual(engine.getValue("wave.out"), 1, "sine(0.25 * 2π) should be 1");
+    });
+
+    test("add ノードが加算を行う", () => {
+      const graph = {
+        nodes: [{ id: "adder", type: "add", params: { a: 3, b: 4 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("adder.out"), 7);
+    });
+
+    test("multiply ノードが乗算を行う", () => {
+      const graph = {
+        nodes: [{ id: "multiplier", type: "multiply", params: { a: 3, b: 4 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("multiplier.out"), 12);
+    });
+
+    // 入力解決ルールのテスト
+    test("エッジ接続がある場合、上流の値が使われる", () => {
+      const graph = {
+        nodes: [
+          { id: "a", type: "constant", params: { value: 10 } },
+          { id: "b", type: "add", params: { a: 100, b: 5 } }
+        ],
+        edges: [{ from: "a.out", to: "b.a" }]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("b.out"), 15, "edge value (10) should override params (100)");
+    });
+
+    test("エッジ接続がなく params がある場合、params の値が使われる", () => {
+      const graph = {
+        nodes: [{ id: "adder", type: "add", params: { a: 10, b: 20 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("adder.out"), 30);
+    });
+
+    test("どちらもない場合、ノード型のデフォルトが使われる", () => {
+      const graph = {
+        nodes: [{ id: "adder", type: "add" }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("adder.out"), 0, "add defaults are 0, 0");
+    });
+
+    test("add で a のみ接続、b は params の混在パターン", () => {
+      const graph = {
+        nodes: [
+          { id: "const5", type: "constant", params: { value: 5 } },
+          { id: "adder", type: "add", params: { b: 10 } }
+        ],
+        edges: [{ from: "const5.out", to: "adder.a" }]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("adder.out"), 15);
+    });
+
+    // グラフ評価のテスト
+    test("clock → sine グラフが正しく評価される", () => {
+      const graph = {
+        nodes: [
+          { id: "timer", type: "clock" },
+          { id: "wave", type: "sine", params: { freq: 1 } }
+        ],
+        edges: [{ from: "timer.t", to: "wave.t" }]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0.25);
+      const expected = Math.sin(0.25 * 2 * Math.PI);
+      assertEqual(engine.getValue("wave.out"), expected);
+    });
+
+    test("const10 + clock → multiply×2 グラフが評価される", () => {
+      const graph = {
+        nodes: [
+          { id: "const10", type: "constant", params: { value: 10 } },
+          { id: "timer", type: "clock" },
+          { id: "adder", type: "add" },
+          { id: "doubler", type: "multiply", params: { b: 2 } }
+        ],
+        edges: [
+          { from: "const10.out", to: "adder.a" },
+          { from: "timer.t", to: "adder.b" },
+          { from: "adder.out", to: "doubler.a" }
+        ]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(5);
+      // 10 + 5 = 15, 15 * 2 = 30
+      assertEqual(engine.getValue("doubler.out"), 30);
+    });
+
+    // エラー検出のテスト
+    test("DUPLICATE_NODE_ID エラー", () => {
+      const graph = {
+        nodes: [
+          { id: "node1", type: "constant" },
+          { id: "node1", type: "constant" }
+        ],
+        edges: []
+      };
+      assertThrows(() => new Loom(graph), 'DUPLICATE_NODE_ID');
+    });
+
+    test("UNKNOWN_NODE_TYPE エラー", () => {
+      const graph = {
+        nodes: [{ id: "node1", type: "unknown" }],
+        edges: []
+      };
+      assertThrows(() => new Loom(graph), 'UNKNOWN_NODE_TYPE');
+    });
+
+    test("UNKNOWN_NODE エラー", () => {
+      const graph = {
+        nodes: [{ id: "node1", type: "constant" }],
+        edges: [{ from: "node2.out", to: "node1.out" }]
+      };
+      assertThrows(() => new Loom(graph), 'UNKNOWN_NODE');
+    });
+
+    test("UNKNOWN_PORT (output) エラー", () => {
+      const graph = {
+        nodes: [
+          { id: "node1", type: "constant" },
+          { id: "node2", type: "add" }
+        ],
+        edges: [{ from: "node1.unknown", to: "node2.a" }]
+      };
+      assertThrows(() => new Loom(graph), 'UNKNOWN_PORT');
+    });
+
+    test("UNKNOWN_PORT (input) エラー", () => {
+      const graph = {
+        nodes: [
+          { id: "node1", type: "constant" },
+          { id: "node2", type: "add" }
+        ],
+        edges: [{ from: "node1.out", to: "node2.unknown" }]
+      };
+      assertThrows(() => new Loom(graph), 'UNKNOWN_PORT');
+    });
+
+    test("DUPLICATE_INPUT_EDGE エラー", () => {
+      const graph = {
+        nodes: [
+          { id: "const1", type: "constant" },
+          { id: "const2", type: "constant" },
+          { id: "adder", type: "add" }
+        ],
+        edges: [
+          { from: "const1.out", to: "adder.a" },
+          { from: "const2.out", to: "adder.a" }
+        ]
+      };
+      assertThrows(() => new Loom(graph), 'DUPLICATE_INPUT_EDGE');
+    });
+
+    test("CYCLE エラー", () => {
+      const graph = {
+        nodes: [
+          { id: "a", type: "add" },
+          { id: "b", type: "add" }
+        ],
+        edges: [
+          { from: "a.out", to: "b.a" },
+          { from: "b.out", to: "a.a" }
+        ]
+      };
+      assertThrows(() => new Loom(graph), 'CYCLE');
+    });
+
+    test("INVALID_GRAPH: nodes が配列でない", () => {
+      const graph = {
+        nodes: { id: "node1" },
+        edges: []
+      };
+      assertThrows(() => new Loom(graph), 'INVALID_GRAPH');
+    });
+
+    // load() の動作テスト
+    test("load() 直後 getValue は古いグラフの値を返す", () => {
+      const graph1 = {
+        nodes: [{ id: "const1", type: "constant", params: { value: 10 } }],
+        edges: []
+      };
+      const graph2 = {
+        nodes: [{ id: "const2", type: "constant", params: { value: 20 } }],
+        edges: []
+      };
+      const engine = new Loom(graph1);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("const1.out"), 10);
+
+      engine.load(graph2);
+      assertEqual(engine.getValue("const1.out"), 10, "should still be old graph value");
+    });
+
+    test("load() 後の evaluateAt で新しいグラフに切り替わる", () => {
+      const graph1 = {
+        nodes: [{ id: "const1", type: "constant", params: { value: 10 } }],
+        edges: []
+      };
+      const graph2 = {
+        nodes: [{ id: "const2", type: "constant", params: { value: 20 } }],
+        edges: []
+      };
+      const engine = new Loom(graph1);
+      engine.evaluateAt(0);
+      engine.load(graph2);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("const2.out"), 20);
+    });
+
+    test("不正なグラフを load() するとエラーがスローされる", () => {
+      const graph1 = {
+        nodes: [{ id: "const1", type: "constant", params: { value: 10 } }],
+        edges: []
+      };
+      const graph2 = {
+        nodes: [
+          { id: "a", type: "add" },
+          { id: "b", type: "add" }
+        ],
+        edges: [
+          { from: "a.out", to: "b.a" },
+          { from: "b.out", to: "a.a" }
+        ]
+      };
+      const engine = new Loom(graph1);
+      engine.evaluateAt(0);
+      assertThrows(() => engine.load(graph2), 'CYCLE');
+      // 保留中グラフが更新されていないことを確認
+      assertEqual(engine.getValue("const1.out"), 10);
+    });
+
+    // getValue の境界テスト
+    test("存在しないノード ID で undefined を返す", () => {
+      const graph = {
+        nodes: [{ id: "const1", type: "constant", params: { value: 10 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assert(engine.getValue("nonexistent.out") === undefined);
+    });
+
+    test("存在するノードの存在しないポート名で undefined を返す", () => {
+      const graph = {
+        nodes: [{ id: "const1", type: "constant", params: { value: 10 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assert(engine.getValue("const1.nonexistent") === undefined);
+    });
+
+    // sine の詳細テスト
+    test("sine: amplitude が機能する", () => {
+      const graph = {
+        nodes: [
+          { id: "timer", type: "clock" },
+          { id: "wave", type: "sine", params: { amplitude: 2 } }
+        ],
+        edges: [{ from: "timer.t", to: "wave.t" }]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0.25);
+      assertEqual(engine.getValue("wave.out"), 2);
+    });
+
+    test("sine: offset が機能する", () => {
+      const graph = {
+        nodes: [
+          { id: "timer", type: "clock" },
+          { id: "wave", type: "sine", params: { offset: 5 } }
+        ],
+        edges: [{ from: "timer.t", to: "wave.t" }]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("wave.out"), 5);
+    });
+
+    test("sine: phase が機能する", () => {
+      const graph = {
+        nodes: [
+          { id: "timer", type: "clock" },
+          { id: "wave", type: "sine", params: { phase: Math.PI / 2 } }
+        ],
+        edges: [{ from: "timer.t", to: "wave.t" }]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("wave.out"), 1, "sin(π/2) = 1");
+    });
+
+    // 実行とレポート
+    const root = document.getElementById("results");
+    let pass = 0, fail = 0;
+    for (const t of tests) {
+      const div = document.createElement("div");
+      div.className = "test-result";
+      try {
+        t.fn();
+        div.textContent = "✅ " + t.name;
+        div.className += " test-pass";
+        pass++;
+      } catch (e) {
+        div.textContent = "❌ " + t.name + " — " + e.message;
+        div.className += " test-fail";
+        fail++;
+      }
+      root.appendChild(div);
+    }
+
+    const summary = document.createElement("div");
+    summary.className = "summary";
+    if (fail === 0) {
+      summary.className += " summary-pass";
+      summary.textContent = `✅ ${pass} 成功, ${fail} 失敗`;
+    } else {
+      summary.className += " summary-fail";
+      summary.textContent = `❌ ${pass} 成功, ${fail} 失敗`;
+    }
+    root.prepend(summary);
+  </script>
+</body>
+</html>
