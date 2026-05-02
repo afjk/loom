@@ -75,9 +75,20 @@ Loom の設計は、以下の 4 つの原則に基づいています。
 - 評価モデル
 - ロードマップ
 
-## アダプタ
+## Unity 対応
 
-Loom は複数のライブラリ・プラットフォームとの連携用にアダプタ層を提供します。
+Unity 向け C# ランタイムを `unity/com.afjk.loom` に追加しています。
+
+Unity 版は JavaScript 版と同じ JSON グラフを評価します。  
+グラフ DSL は Unity 側では直接扱わず、DSL をパースした後の JSON グラフを入力とします。
+
+```text
+Graph DSL → JSON graph → Web Loom / Unity Loom で評価
+```
+
+詳細は [docs/UNITY.md](docs/UNITY.md) を参照してください。
+
+
 
 - **Three.js アダプタ** (`src/loom-three.js`): Three.js Object3D の制御
 - **SceneSync アダプタ** (`src/loom-scenesync.js`): SceneSync メッセージプロトコルでの複数グラフ管理
