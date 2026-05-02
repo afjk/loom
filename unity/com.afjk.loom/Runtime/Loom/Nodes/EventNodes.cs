@@ -17,6 +17,24 @@ namespace Afjk.Loom
             _registered = true;
 
             // ------------------------------------------------------------------
+            // pointerPosition: behavior<{x,y}> input node
+            // Updated by LoomEngine.SetPointerPosition(); starts at {x:0, y:0}.
+            // ------------------------------------------------------------------
+            registry["pointerPosition"] = new LoomNodeTypeDef
+            {
+                Category = "input",
+                Inputs = new List<LoomPortDef>(),
+                Outputs = new List<LoomPortDef>
+                {
+                    new LoomPortDef { Name = "pos", Type = "vec2", Kind = "behavior",
+                        Default = new Dictionary<string, object> { ["x"] = 0.0, ["y"] = 0.0 } }
+                },
+                Params = new List<LoomParamDef>(),
+                Evaluate = (inputs, @params, ctx) =>
+                    new Dictionary<string, object> { ["pos"] = ctx.Engine.GetPointerPosition() }
+            };
+
+            // ------------------------------------------------------------------
             // pointerClick: event<{x,y}> input node (populated via DispatchEvent)
             // ------------------------------------------------------------------
             registry["pointerClick"] = new LoomNodeTypeDef

@@ -341,5 +341,44 @@ namespace Afjk.Loom.Tests
             Assert.AreEqual("A", events[0]);
             Assert.AreEqual("B", events[1]);
         }
+
+        // -------------------------------------------------------------------------
+        // Test 29: pointerPosition returns initial {x:0, y:0}
+        // -------------------------------------------------------------------------
+        [Test]
+        public void Test29_PointerPosition_ReturnsInitialZero()
+        {
+            var graph = SimpleGraph(new[]
+            {
+                ("pos", "pointerPosition", (Dictionary<string, object>)null)
+            });
+            var engine = new LoomEngine(graph);
+            engine.EvaluateAt(0.0);
+
+            var pos = engine.GetValue("pos", "pos") as Dictionary<string, object>;
+            Assert.IsNotNull(pos, "pos output should be a Dictionary<string,object>");
+            Assert.AreEqual(0.0, pos["x"], "Initial x should be 0");
+            Assert.AreEqual(0.0, pos["y"], "Initial y should be 0");
+        }
+
+        // -------------------------------------------------------------------------
+        // Test 30: pointerPosition reflects SetPointerPosition()
+        // -------------------------------------------------------------------------
+        [Test]
+        public void Test30_PointerPosition_ReturnsUpdatedPosition()
+        {
+            var graph = SimpleGraph(new[]
+            {
+                ("pos", "pointerPosition", (Dictionary<string, object>)null)
+            });
+            var engine = new LoomEngine(graph);
+            engine.SetPointerPosition(10.0, 20.0);
+            engine.EvaluateAt(0.0);
+
+            var pos = engine.GetValue("pos", "pos") as Dictionary<string, object>;
+            Assert.IsNotNull(pos);
+            Assert.AreEqual(10.0, pos["x"], "x should be updated to 10");
+            Assert.AreEqual(20.0, pos["y"], "y should be updated to 20");
+        }
     }
 }

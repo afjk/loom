@@ -130,5 +130,23 @@ namespace Afjk.Loom.Tests
             Assert.IsTrue(EvalBool("value <= 5", (object)5.0));
             Assert.IsFalse(EvalBool("value < 5", (object)5.0));
         }
+
+        // -------------------------------------------------------------------------
+        // Test for incomparable types: string vs number should not produce false
+        // positives on >= or <= (previously returned true due to CompareValues → 0)
+        // -------------------------------------------------------------------------
+        [Test]
+        public void ExtraTest_IncomparableTypes_ReturnFalse()
+        {
+            // A string payload compared with a number must not be >= or <= anything
+            Assert.IsFalse(EvalBool("value >= 0", (object)"hello"),
+                ">= on incomparable types should be false, not true");
+            Assert.IsFalse(EvalBool("value <= 0", (object)"hello"),
+                "<= on incomparable types should be false, not true");
+            Assert.IsFalse(EvalBool("value > 0", (object)"hello"),
+                "> on incomparable types should be false");
+            Assert.IsFalse(EvalBool("value < 0", (object)"hello"),
+                "< on incomparable types should be false");
+        }
     }
 }

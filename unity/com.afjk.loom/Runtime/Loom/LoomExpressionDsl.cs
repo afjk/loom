@@ -372,10 +372,10 @@ namespace Afjk.Loom
                 {
                     case "==": return Equals(left, right);
                     case "!=": return !Equals(left, right);
-                    case "<":  return CompareValues(left, right) < 0;
-                    case "<=": return CompareValues(left, right) <= 0;
-                    case ">":  return CompareValues(left, right) > 0;
-                    case ">=": return CompareValues(left, right) >= 0;
+                    case "<":  { var c = CompareValues(left, right); return (object)(c.HasValue && c.Value <  0); }
+                    case "<=": { var c = CompareValues(left, right); return (object)(c.HasValue && c.Value <= 0); }
+                    case ">":  { var c = CompareValues(left, right); return (object)(c.HasValue && c.Value >  0); }
+                    case ">=": { var c = CompareValues(left, right); return (object)(c.HasValue && c.Value >= 0); }
                     case "&&": return (object)(IsTruthy(left) && IsTruthy(right));
                     case "||": return (object)(IsTruthy(left) || IsTruthy(right));
                     case "+":
@@ -405,13 +405,13 @@ namespace Afjk.Loom
             return true;
         }
 
-        private static int CompareValues(object left, object right)
+        private static int? CompareValues(object left, object right)
         {
             if (left is double ld && right is double rd)
                 return ld.CompareTo(rd);
             if (left is string ls && right is string rs)
                 return string.Compare(ls, rs, StringComparison.Ordinal);
-            return 0;
+            return null; // incomparable types → callers should treat as false
         }
 
         private static void ParseError(string message, string nodeId)

@@ -46,6 +46,10 @@ namespace Afjk.Loom
         private readonly List<(string reference, object payload)> _eventQueue =
             new List<(string, object)>();
 
+        // Pointer position state: updated via SetPointerPosition(), read by pointerPosition nodes.
+        private double _pointerX;
+        private double _pointerY;
+
         // -------------------------------------------------------------------------
         // Constructor
         // -------------------------------------------------------------------------
@@ -226,6 +230,20 @@ namespace Afjk.Loom
 
             return _values.TryGetValue($"{nodeId}.{portName}", out var val) ? val : null;
         }
+
+        /// <summary>
+        /// Update the pointer position that is exposed by <c>pointerPosition</c> nodes.
+        /// Call this from your input system whenever the pointer moves.
+        /// </summary>
+        public void SetPointerPosition(double x, double y)
+        {
+            _pointerX = x;
+            _pointerY = y;
+        }
+
+        /// <summary>Returns the current pointer position as a vec2 dictionary (for use by pointerPosition nodes).</summary>
+        internal Dictionary<string, object> GetPointerPosition() =>
+            new Dictionary<string, object> { ["x"] = _pointerX, ["y"] = _pointerY };
 
         /// <summary>
         /// Inject an event into an event-type output port. The event is queued and
