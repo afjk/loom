@@ -11,14 +11,16 @@ export class LoomError extends Error {
 
 // 制限式 DSL パーサ・インタプリタ
 class RestrictedDSLEvaluator {
-  constructor(dslString) {
+  constructor(dslString, nodeId) {
     this.input = dslString;
     this.pos = 0;
+    this.nodeId = nodeId;
   }
 
   error(msg) {
     throw new LoomError('INVALID_GRAPH', `DSL parse error: ${msg}`, {
       reason: 'filter.predicate',
+      nodeId: this.nodeId,
       error: msg
     });
   }
@@ -940,6 +942,15 @@ export class Loom {
     if (hasCycle) {
       const cycleNodeIds = this._findCycleNodeIds(graph);
       throw new LoomError('CYCLE', 'Graph contains a cycle', { nodeIds: cycleNodeIds });
+    }
+
+    // 9. filter ノードの predicate を load 時にパース検証
+    for (const node of graph.nodes) {
+      if (node.type === 'filter') {
+        const predicate = (node.params && node.params.predicate) ?? 'true';
+        const dslEval = new RestrictedDSLEvaluator(predicate, node.id);
+        dslEval.evaluate();
+      }
     }
   }
 
