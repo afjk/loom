@@ -6,7 +6,7 @@
 ._*
 
 # Custom folder icons
-Icon
+Icon
 
 # Volume root files
 .DocumentRevisions-V100
@@ -57,3 +57,11 @@ out/
 
 # Built Visual Studio Code Extensions
 *.vsix
+
+### Node.js / npm
+node_modules/
+package-lock.json
+
+### CI / Testing
+playwright-report/
+test-results/

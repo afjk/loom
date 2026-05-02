@@ -1,5 +1,7 @@
 # Loom
 
+[![Tests](https://github.com/afjk/loom/actions/workflows/test.yml/badge.svg)](https://github.com/afjk/loom/actions/workflows/test.yml)
+
 A stateless dataflow engine for the browser. Build reactive visual, audio, and 3D content by composing pure functions.
 
 ---
@@ -132,6 +134,10 @@ GitHub Pages で公開されているデモを、ブラウザから直接確認�
 * キー入力カウンタ：`http://localhost:8000/examples/04-keydown.html`
 
 * テスト：`http://localhost:8000/test/loom.test.html`
+
+## CI と自動テスト
+
+GitHub Actions で自動テストを実行しています。ローカルで `npm test` を実行する場合は、`package.json` が必要ですが、これは CI 自動化専用です。`src/loom.js` は依存ライブラリゼロの単一ファイル配布であり、package.json は開発用ツール（Playwright、http-server）のみを含みます。
 
 ## ライセンス
 
