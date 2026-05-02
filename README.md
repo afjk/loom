@@ -101,23 +101,31 @@ Loom の設計は、以下の 4 つの原則に基づいています。
 
 詳細な API・ノード仕様は [docs/SPEC.md](docs/SPEC.md) をご覧ください。
 
-## デモの起動方法
+## デモの確認方法
 
-ESM を使うため、ローカルファイル直接 (`file://`) ではなく HTTP サーバから配信する必要があります。
+GitHub Pages で公開されているデモを、ブラウザから直接確認できます。
 
-```bash
-# Python が入っていれば
-python3 -m http.server 8000
+* 基本デモ：https://afjk.github.io/loom/examples/01-basic.html
 
-# Node.js が入っていれば
-npx serve .
-```
+* 揺れる箱デモ：https://afjk.github.io/loom/examples/02-moving-box.html
+
+ローカルで確認する場合は、ESM を使うため、ローカルファイル直接 (`file://`) ではなく HTTP サーバから配信する必要があります。
+
+    # Python が入っていれば
+
+    python3 -m http.server 8000
+
+    # Node.js が入っていれば
+
+    npx serve .
 
 ブラウザで以下を開いてください。
 
-- 基本デモ：`http://localhost:8000/examples/01-basic.html`
-- 揺れる箱デモ：`http://localhost:8000/examples/02-moving-box.html`
-- テスト：`http://localhost:8000/test/loom.test.html`
+* 基本デモ：`http://localhost:8000/examples/01-basic.html`
+
+* 揺れる箱デモ：`http://localhost:8000/examples/02-moving-box.html`
+
+* テスト：`http://localhost:8000/test/loom.test.html`
 
 ## ライセンス
 
