@@ -946,6 +946,35 @@ engine.stop();
 engine.stop();
 ```
 
+#### `Loom.registerNodeType(name, definition)`（静的メソッド）
+
+```javascript
+Loom.registerNodeType('setPosition', {
+  category: 'sink',
+  inputs: [...],
+  outputs: [],
+  params: [...],
+  evaluate: (inputs, params, ctx) => ({})
+});
+```
+
+**引数：**
+- `name`（文字列）：登録するノード型の名前
+- `definition`（オブジェクト）：ノード型のメタデータ定義。「5. ノード仕様」で説明した構造と同じ
+
+**説明：**
+
+外部からノード型を追加する。アダプタライブラリ向けの拡張ポイント。既に登録済みの名前を指定した場合、エラーをスロー。
+
+**例：**
+```javascript
+import { Loom } from './src/loom.js';
+import { registerThreeNodes } from './src/loom-three.js';
+
+registerThreeNodes(Loom, objectsMap);  // 内部で Loom.registerNodeType を呼ぶ
+const engine = new Loom(graph);
+```
+
 ## 8. 評価モデル
 
 ### 初期化（グラフ読み込み時）
@@ -1022,6 +1051,14 @@ ES Module（ESM）形式の単一 JavaScript ファイルとして配布され�
 ゼロです。Three.js や d3.js などの外部ライブラリに依存しません。
 
 これにより、ファイルサイズが最小化され、読み込みが高速化されます。
+
+### アダプタ層
+
+コアエンジン（`src/loom.js`）は依存ゼロを保つが、特定ライブラリとの連携は別ファイルのアダプタとして提供する。
+
+- `src/loom-three.js`：Three.js Object3D 連携。`registerThreeNodes(Loom, objects)` で利用。
+
+アダプタは Loom コアに依存し、コアの `Loom.registerNodeType(name, definition)` 経由でノード型を登録する。
 
 ## 10. エラー仕様
 
@@ -1134,7 +1171,7 @@ Loom は単一の JSON グラフ表現を真の単一ソースとし、複数の
 
 - 複数クライアントでのグラフ・状態同期
 - イベント配信ノードによる broadcast
-- 3D エンジン連携アダプタ（Three.js など）
+- ✅（一部完了）3D エンジン連携アダプタ：Three.js Object3D 向けの `src/loom-three.js`（`setPosition`、`setRotation`、`setScale`、`setColor`、`setVisible` シンクノード）
 - AI 連携用のツール定義
 
 ### Phase 1.5：SceneSync アダプタ（Web）
