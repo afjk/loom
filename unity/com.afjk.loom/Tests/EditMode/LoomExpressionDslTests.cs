@@ -116,10 +116,11 @@ namespace Afjk.Loom.Tests
         }
 
         [Test]
-        public void ExtraTest_ValueFieldZ()
+        public void ExtraTest_ValueFieldZ_IsRejected()
         {
-            var payload = new Dictionary<string, object> { ["z"] = (object)5.0 };
-            Assert.IsTrue(EvalBool("value.z > 3", payload));
+            // value.z is not part of the JS Phase 1 expression DSL spec — it must be rejected.
+            var ex = Assert.Throws<LoomException>(() => LoomExpressionDsl.Compile("value.z > 3"));
+            Assert.AreEqual("EXPRESSION_PARSE_ERROR", ex.Code);
         }
 
         [Test]

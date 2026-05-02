@@ -293,7 +293,7 @@ namespace Afjk.Loom
                         var dotIdx = ident.IndexOf('.');
                         var obj = ident.Substring(0, dotIdx);
                         var field = ident.Substring(dotIdx + 1);
-                        if (obj == "value" && (field == "x" || field == "y" || field == "z"))
+                        if (obj == "value" && (field == "x" || field == "y"))
                             return new FieldAccessExpr { Object = "value", Field = field };
                         ParseError($"Invalid field access: '{ident}'", _nodeId);
                     }
