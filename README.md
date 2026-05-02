@@ -8,9 +8,9 @@ A stateless dataflow engine for the browser. Build reactive visual, audio, and 3
 
 ## ステータス
 
-**第一段階：プロトタイプ実装中**
+**第一段階：プロトタイプ実装完了、仕様確定**
 
-第ゼロ段階のプロトタイプは完了済み。第一段階ではイベント型と入力ノードを導入し、現在プロトタイプ実装フェーズです。イベント型ポート、入力ノード（pointerClick、pointerPosition、keyDown、keyUp）、イベント変換ノード（filter、sample、merge）の実装が進行中です。
+第ゼロ段階および第一段階のプロトタイプ実装が完了。仕様書はバージョン 0.2.0 でクロスプラットフォーム評価セマンティクスを確定し、Phase 1.5（SceneSync アダプタ）および Phase 1.6（Unity 対応）の実装フェーズに進行可能となりました。
 
 ## 背景・モチベーション
 
