@@ -8,9 +8,9 @@ A stateless dataflow engine for the browser. Build reactive visual, audio, and 3
 
 ## ステータス
 
-**第ゼロ段階：仕様策定中**
+**第ゼロ段階：プロトタイプ実装完了**
 
-このリポジトリは、Loom プロジェクトの仕様書策定フェーズにあります。本格的なコード実装は次段階で行われます。
+評価器コア（`src/loom.js`）と最小ノード5種（`clock`、`constant`、`sine`、`add`、`multiply`）の実装、テストスイート、デモが揃っています。GitHub Pages で動作確認できます。次は第一段階（イベント型と入力ノードの導入）を予定しています。
 
 ## 背景・モチベーション
 
@@ -106,8 +106,8 @@ Loom の設計は、以下の 4 つの原則に基づいています。
 GitHub Pages で公開されているデモを、ブラウザから直接確認できます。
 
 * 基本デモ：https://afjk.github.io/loom/examples/01-basic.html
-
 * 揺れる箱デモ：https://afjk.github.io/loom/examples/02-moving-box.html
+* テスト結果：https://afjk.github.io/loom/test/loom.test.html
 
 ローカルで確認する場合は、ESM を使うため、ローカルファイル直接 (`file://`) ではなく HTTP サーバから配信する必要があります。
 
