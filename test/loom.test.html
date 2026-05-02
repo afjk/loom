@@ -427,6 +427,289 @@
       assertEqual(engine.getValue("wave.out"), 1, "sin(π/2) = 1");
     });
 
+    // ========================================
+    // Phase 1 追加テスト
+    // ========================================
+
+    // 型検査テスト
+    test("TYPE_MISMATCH: Behavior → Event 接続で エラー", () => {
+      const graph = {
+        nodes: [
+          { id: "const1", type: "constant" },
+          { id: "filter1", type: "filter" }
+        ],
+        edges: [{ from: "const1.out", to: "filter1.event" }]
+      };
+      assertThrows(() => new Loom(graph), 'TYPE_MISMATCH');
+    });
+
+    test("TYPE_MISMATCH: Event → Behavior 接続でエラー", () => {
+      const graph = {
+        nodes: [
+          { id: "kd", type: "keyDown" },
+          { id: "add1", type: "add" }
+        ],
+        edges: [{ from: "kd.event", to: "add1.a" }]
+      };
+      assertThrows(() => new Loom(graph), 'TYPE_MISMATCH');
+    });
+
+    test("sample.value への Behavior 接続は許容される", () => {
+      const graph = {
+        nodes: [
+          { id: "const1", type: "constant", params: { value: 42 } },
+          { id: "kd", type: "keyDown" },
+          { id: "samp", type: "sample" }
+        ],
+        edges: [
+          { from: "const1.out", to: "samp.value" },
+          { from: "kd.event", to: "samp.trigger" }
+        ]
+      };
+      // エラーが投げられない（成功テスト）
+      const engine = new Loom(graph);
+      assert(engine !== null);
+    });
+
+    // dispatchEvent テスト
+    test("dispatchEvent: 単発のイベント dispatch が働く", () => {
+      const graph = {
+        nodes: [{ id: "kd", type: "keyDown" }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      engine.dispatchEvent("kd.event", "a");
+      engine.evaluateAt(0);
+      const val = engine.getValue("kd.event");
+      assert(Array.isArray(val) && val.length === 1 && val[0] === "a");
+    });
+
+    test("dispatchEvent: 同一 tick 内で複数 dispatch される", () => {
+      const graph = {
+        nodes: [{ id: "kd", type: "keyDown" }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      engine.dispatchEvent("kd.event", "a");
+      engine.dispatchEvent("kd.event", "b");
+      engine.evaluateAt(0);
+      const val = engine.getValue("kd.event");
+      assert(Array.isArray(val) && val.length === 2 && val[0] === "a" && val[1] === "b");
+    });
+
+    test("dispatchEvent: 次フレームではクリアされる", () => {
+      const graph = {
+        nodes: [{ id: "kd", type: "keyDown" }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      engine.dispatchEvent("kd.event", "a");
+      engine.evaluateAt(0);
+      assert(engine.getValue("kd.event") !== undefined);
+      engine.evaluateAt(0);
+      assert(engine.getValue("kd.event") === undefined);
+    });
+
+    test("dispatchEvent: 未知のノードで UNKNOWN_NODE エラー", () => {
+      const graph = {
+        nodes: [{ id: "kd", type: "keyDown" }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      assertThrows(() => engine.dispatchEvent("unknown.event", "x"), 'UNKNOWN_NODE');
+    });
+
+    test("dispatchEvent: 未知のポートで UNKNOWN_PORT エラー", () => {
+      const graph = {
+        nodes: [{ id: "kd", type: "keyDown" }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      assertThrows(() => engine.dispatchEvent("kd.unknown", "x"), 'UNKNOWN_PORT');
+    });
+
+    test("dispatchEvent: Behavior ポートに対してエラー", () => {
+      const graph = {
+        nodes: [{ id: "const1", type: "constant" }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      assertThrows(() => engine.dispatchEvent("const1.out", 42), 'TYPE_MISMATCH');
+    });
+
+    // filter テスト
+    test("filter: 正の値のみ通す predicate", () => {
+      const graph = {
+        nodes: [
+          { id: "kd", type: "keyDown" },
+          { id: "f", type: "filter", params: { predicate: "value > 0" } }
+        ],
+        edges: [{ from: "kd.event", to: "f.event" }]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      engine.dispatchEvent("kd.event", 5);
+      engine.dispatchEvent("kd.event", -3);
+      engine.evaluateAt(0);
+      const val = engine.getValue("f.event");
+      assert(Array.isArray(val) && val.length === 1 && val[0] === 5);
+    });
+
+    test("filter: predicate 構文エラーで INVALID_GRAPH", () => {
+      const graph = {
+        nodes: [
+          { id: "kd", type: "keyDown" },
+          { id: "f", type: "filter", params: { predicate: "value >>>" } }
+        ],
+        edges: [{ from: "kd.event", to: "f.event" }]
+      };
+      assertThrows(() => new Loom(graph), 'INVALID_GRAPH');
+    });
+
+    test("filter: key パラメータが渡される", () => {
+      const graph = {
+        nodes: [
+          { id: "kd", type: "keyDown" },
+          { id: "f", type: "filter", params: { predicate: "key === 'Enter'" } }
+        ],
+        edges: [{ from: "kd.event", to: "f.event" }]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      engine.dispatchEvent("kd.event", "Enter");
+      engine.dispatchEvent("kd.event", "a");
+      engine.evaluateAt(0);
+      const val = engine.getValue("f.event");
+      assert(Array.isArray(val) && val.length === 1 && val[0] === "Enter");
+    });
+
+    // sample テスト
+    test("sample: trigger が発火した時の value をキャプチャ", () => {
+      const graph = {
+        nodes: [
+          { id: "const1", type: "constant", params: { value: 42 } },
+          { id: "kd", type: "keyDown" },
+          { id: "samp", type: "sample" }
+        ],
+        edges: [
+          { from: "const1.out", to: "samp.value" },
+          { from: "kd.event", to: "samp.trigger" }
+        ]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      engine.dispatchEvent("kd.event", "Space");
+      engine.evaluateAt(0);
+      const val = engine.getValue("samp.event");
+      assert(Array.isArray(val) && val.length === 1 && val[0] === 42);
+    });
+
+    test("sample: trigger がない場合は何も出力しない", () => {
+      const graph = {
+        nodes: [
+          { id: "const1", type: "constant", params: { value: 42 } },
+          { id: "kd", type: "keyDown" },
+          { id: "samp", type: "sample" }
+        ],
+        edges: [
+          { from: "const1.out", to: "samp.value" },
+          { from: "kd.event", to: "samp.trigger" }
+        ]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      // dispatchEvent しない
+      engine.evaluateAt(0);
+      const val = engine.getValue("samp.event");
+      assert(val === undefined);
+    });
+
+    // merge テスト
+    test("merge: a と b が同時発火で a→b 順で出力", () => {
+      const graph = {
+        nodes: [
+          { id: "kd1", type: "keyDown" },
+          { id: "kd2", type: "keyDown" },
+          { id: "m", type: "merge" }
+        ],
+        edges: [
+          { from: "kd1.event", to: "m.a" },
+          { from: "kd2.event", to: "m.b" }
+        ]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      engine.dispatchEvent("kd1.event", "a");
+      engine.dispatchEvent("kd2.event", "b");
+      engine.evaluateAt(0);
+      const val = engine.getValue("m.event");
+      assert(Array.isArray(val) && val.length === 2 && val[0] === "a" && val[1] === "b");
+    });
+
+    // pointerPosition テスト
+    test("pointerPosition: 初期値は {x:0, y:0}", () => {
+      const graph = {
+        nodes: [{ id: "pp", type: "pointerPosition" }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      const pos = engine.getValue("pp.pos");
+      assert(pos && pos.x === 0 && pos.y === 0);
+    });
+
+    // グラフ切替テスト
+    test("load() で新グラフ切替後、イベントノードが正しく初期化される", () => {
+      const graph1 = {
+        nodes: [{ id: "const1", type: "constant", params: { value: 10 } }],
+        edges: []
+      };
+      const graph2 = {
+        nodes: [{ id: "kd", type: "keyDown" }],
+        edges: []
+      };
+      const engine = new Loom(graph1);
+      engine.evaluateAt(0);
+      engine.load(graph2);
+      engine.evaluateAt(0);
+      // graph2 に切り替わって dispatchEvent できることを確認
+      engine.dispatchEvent("kd.event", "x");
+      engine.evaluateAt(0);
+      const val = engine.getValue("kd.event");
+      assert(Array.isArray(val) && val[0] === "x");
+    });
+
+    // イベント型ノードの複合テスト
+    test("filter → merge チェーン", () => {
+      const graph = {
+        nodes: [
+          { id: "kd1", type: "keyDown" },
+          { id: "kd2", type: "keyDown" },
+          { id: "f1", type: "filter", params: { predicate: "key === 'a'" } },
+          { id: "f2", type: "filter", params: { predicate: "key === 'b'" } },
+          { id: "m", type: "merge" }
+        ],
+        edges: [
+          { from: "kd1.event", to: "f1.event" },
+          { from: "kd2.event", to: "f2.event" },
+          { from: "f1.event", to: "m.a" },
+          { from: "f2.event", to: "m.b" }
+        ]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      engine.dispatchEvent("kd1.event", "a");
+      engine.dispatchEvent("kd1.event", "x");
+      engine.dispatchEvent("kd2.event", "b");
+      engine.evaluateAt(0);
+      const val = engine.getValue("m.event");
+      // f1 が "a" のみ通し、f2 が "b" を通し、merge で "a", "b" 順
+      assert(Array.isArray(val) && val.length === 2 && val[0] === "a" && val[1] === "b");
+    });
+
     // 実行とレポート
     const root = document.getElementById("results");
     let pass = 0, fail = 0;
