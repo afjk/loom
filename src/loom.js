@@ -9,6 +9,342 @@ export class LoomError extends Error {
   }
 }
 
+// 制限式 DSL パーサ・インタプリタ
+class RestrictedDSLEvaluator {
+  constructor(dslString) {
+    this.input = dslString;
+    this.pos = 0;
+  }
+
+  error(msg) {
+    throw new LoomError('INVALID_GRAPH', `DSL parse error: ${msg}`, {
+      reason: 'filter.predicate',
+      error: msg
+    });
+  }
+
+  peek() {
+    return this.input[this.pos];
+  }
+
+  advance() {
+    this.pos++;
+  }
+
+  skipWhitespace() {
+    while (this.pos < this.input.length && /\s/.test(this.peek())) {
+      this.advance();
+    }
+  }
+
+  tokenize() {
+    const tokens = [];
+    while (this.pos < this.input.length) {
+      this.skipWhitespace();
+      if (this.pos >= this.input.length) break;
+
+      const ch = this.peek();
+
+      // 数値
+      if (/\d/.test(ch) || (ch === '-' && /\d/.test(this.input[this.pos + 1]))) {
+        let num = '';
+        if (ch === '-') {
+          num += '-';
+          this.advance();
+        }
+        while (this.pos < this.input.length && /[\d.]/.test(this.peek())) {
+          num += this.peek();
+          this.advance();
+        }
+        tokens.push({ type: 'NUMBER', value: parseFloat(num) });
+      }
+      // 文字列（シングルクォート）
+      else if (ch === "'") {
+        this.advance();
+        let str = '';
+        while (this.pos < this.input.length && this.peek() !== "'") {
+          str += this.peek();
+          this.advance();
+        }
+        if (this.peek() !== "'") this.error('Unterminated string');
+        this.advance();
+        tokens.push({ type: 'STRING', value: str });
+      }
+      // 識別子・キーワード
+      else if (/[a-zA-Z_]/.test(ch)) {
+        let ident = '';
+        while (this.pos < this.input.length && /[a-zA-Z0-9_.]/.test(this.peek())) {
+          ident += this.peek();
+          this.advance();
+        }
+        if (ident === 'true') tokens.push({ type: 'BOOL', value: true });
+        else if (ident === 'false') tokens.push({ type: 'BOOL', value: false });
+        else tokens.push({ type: 'IDENT', value: ident });
+      }
+      // 演算子・括弧
+      else if (ch === '(') {
+        tokens.push({ type: 'LPAREN' });
+        this.advance();
+      } else if (ch === ')') {
+        tokens.push({ type: 'RPAREN' });
+        this.advance();
+      } else if (ch === '!' && this.input[this.pos + 1] === '=') {
+        tokens.push({ type: 'NE' });
+        this.advance();
+        this.advance();
+      } else if (ch === '!') {
+        tokens.push({ type: 'NOT' });
+        this.advance();
+      } else if (ch === '=' && this.input[this.pos + 1] === '=') {
+        tokens.push({ type: 'EQ' });
+        this.advance();
+        this.advance();
+      } else if (ch === '<' && this.input[this.pos + 1] === '=') {
+        tokens.push({ type: 'LE' });
+        this.advance();
+        this.advance();
+      } else if (ch === '<') {
+        tokens.push({ type: 'LT' });
+        this.advance();
+      } else if (ch === '>' && this.input[this.pos + 1] === '=') {
+        tokens.push({ type: 'GE' });
+        this.advance();
+        this.advance();
+      } else if (ch === '>') {
+        tokens.push({ type: 'GT' });
+        this.advance();
+      } else if (ch === '&' && this.input[this.pos + 1] === '&') {
+        tokens.push({ type: 'AND' });
+        this.advance();
+        this.advance();
+      } else if (ch === '|' && this.input[this.pos + 1] === '|') {
+        tokens.push({ type: 'OR' });
+        this.advance();
+        this.advance();
+      } else if (ch === '+') {
+        tokens.push({ type: 'PLUS' });
+        this.advance();
+      } else if (ch === '-' && !/\d/.test(this.input[this.pos + 1])) {
+        tokens.push({ type: 'MINUS' });
+        this.advance();
+      } else if (ch === '*') {
+        tokens.push({ type: 'MUL' });
+        this.advance();
+      } else if (ch === '/') {
+        tokens.push({ type: 'DIV' });
+        this.advance();
+      } else {
+        this.error(`Unexpected character: ${ch}`);
+      }
+    }
+    return tokens;
+  }
+
+  parse() {
+    const tokens = this.tokenize();
+    this.tokens = tokens;
+    this.tokenPos = 0;
+    return this.parseExpression();
+  }
+
+  currentToken() {
+    return this.tokens[this.tokenPos];
+  }
+
+  consumeToken() {
+    this.tokenPos++;
+  }
+
+  expect(type) {
+    const tok = this.currentToken();
+    if (!tok || tok.type !== type) {
+      this.error(`Expected ${type}, got ${tok ? tok.type : 'EOF'}`);
+    }
+    this.consumeToken();
+  }
+
+  parseExpression() {
+    return this.parseOr();
+  }
+
+  parseOr() {
+    let left = this.parseAnd();
+    while (this.currentToken() && this.currentToken().type === 'OR') {
+      this.consumeToken();
+      const right = this.parseAnd();
+      left = { type: 'binary', op: '||', left, right };
+    }
+    return left;
+  }
+
+  parseAnd() {
+    let left = this.parseComparison();
+    while (this.currentToken() && this.currentToken().type === 'AND') {
+      this.consumeToken();
+      const right = this.parseComparison();
+      left = { type: 'binary', op: '&&', left, right };
+    }
+    return left;
+  }
+
+  parseComparison() {
+    let left = this.parseAdditive();
+    const tok = this.currentToken();
+    if (tok && ['EQ', 'NE', 'LT', 'LE', 'GT', 'GE'].includes(tok.type)) {
+      const opMap = { EQ: '==', NE: '!=', LT: '<', LE: '<=', GT: '>', GE: '>=' };
+      const op = opMap[tok.type];
+      this.consumeToken();
+      const right = this.parseAdditive();
+      return { type: 'binary', op, left, right };
+    }
+    return left;
+  }
+
+  parseAdditive() {
+    let left = this.parseMultiplicative();
+    while (this.currentToken() && ['PLUS', 'MINUS'].includes(this.currentToken().type)) {
+      const op = this.currentToken().type === 'PLUS' ? '+' : '-';
+      this.consumeToken();
+      const right = this.parseMultiplicative();
+      left = { type: 'binary', op, left, right };
+    }
+    return left;
+  }
+
+  parseMultiplicative() {
+    let left = this.parseUnary();
+    while (this.currentToken() && ['MUL', 'DIV'].includes(this.currentToken().type)) {
+      const op = this.currentToken().type === 'MUL' ? '*' : '/';
+      this.consumeToken();
+      const right = this.parseUnary();
+      left = { type: 'binary', op, left, right };
+    }
+    return left;
+  }
+
+  parseUnary() {
+    const tok = this.currentToken();
+    if (tok && tok.type === 'NOT') {
+      this.consumeToken();
+      const operand = this.parseUnary();
+      return { type: 'unary', op: '!', operand };
+    }
+    return this.parsePrimary();
+  }
+
+  parsePrimary() {
+    const tok = this.currentToken();
+    if (!tok) this.error('Unexpected end of input');
+
+    if (tok.type === 'NUMBER') {
+      this.consumeToken();
+      return { type: 'literal', value: tok.value };
+    }
+    if (tok.type === 'STRING') {
+      this.consumeToken();
+      return { type: 'literal', value: tok.value };
+    }
+    if (tok.type === 'BOOL') {
+      this.consumeToken();
+      return { type: 'literal', value: tok.value };
+    }
+    if (tok.type === 'IDENT') {
+      const ident = tok.value;
+      this.consumeToken();
+      // フィールドアクセス（1段のみ）
+      if (ident === 'value' && this.currentToken() && this.currentToken().type === 'IDENT' &&
+          this.currentToken().value.startsWith('.')) {
+        // トークナイザ時点で .x, .y が分かれてしまうため、別対応
+        return { type: 'identifier', name: 'value' };
+      }
+      if (ident.includes('.')) {
+        const parts = ident.split('.');
+        if (parts.length === 2 && parts[0] === 'value' && ['x', 'y'].includes(parts[1])) {
+          return { type: 'fieldAccess', object: 'value', field: parts[1] };
+        }
+        this.error(`Invalid field access: ${ident}`);
+      }
+      return { type: 'identifier', name: ident };
+    }
+    if (tok.type === 'LPAREN') {
+      this.consumeToken();
+      const expr = this.parseExpression();
+      this.expect('RPAREN');
+      return expr;
+    }
+    this.error(`Unexpected token: ${tok.type}`);
+  }
+
+  evaluate() {
+    const ast = this.parse();
+    return this.createEvaluator(ast);
+  }
+
+  createEvaluator(ast) {
+    return (payload) => {
+      return this.evalAst(ast, payload);
+    };
+  }
+
+  evalAst(ast, payload) {
+    if (ast.type === 'literal') {
+      return ast.value;
+    }
+    if (ast.type === 'identifier') {
+      if (ast.name === 'value') return payload;
+      if (ast.name === 'key') return typeof payload === 'string' ? payload : undefined;
+      return undefined;
+    }
+    if (ast.type === 'fieldAccess') {
+      const obj = this.evalAst({ type: 'identifier', name: ast.object }, payload);
+      if (obj != null && typeof obj === 'object') {
+        return obj[ast.field];
+      }
+      return undefined;
+    }
+    if (ast.type === 'binary') {
+      const left = this.evalAst(ast.left, payload);
+      const right = this.evalAst(ast.right, payload);
+
+      switch (ast.op) {
+        case '==': return left === right;
+        case '!=': return left !== right;
+        case '<': return left < right;
+        case '<=': return left <= right;
+        case '>': return left > right;
+        case '>=': return left >= right;
+        case '&&': return this.isTruthy(left) && this.isTruthy(right);
+        case '||': return this.isTruthy(left) || this.isTruthy(right);
+        case '+':
+          if (typeof left === 'number' && typeof right === 'number') return left + right;
+          return undefined;
+        case '-':
+          if (typeof left === 'number' && typeof right === 'number') return left - right;
+          return undefined;
+        case '*':
+          if (typeof left === 'number' && typeof right === 'number') return left * right;
+          return undefined;
+        case '/':
+          if (typeof left === 'number' && typeof right === 'number' && right !== 0) {
+            return left / right;
+          }
+          return undefined;
+        default: return undefined;
+      }
+    }
+    if (ast.type === 'unary') {
+      const operand = this.evalAst(ast.operand, payload);
+      if (ast.op === '!') return !this.isTruthy(operand);
+      return undefined;
+    }
+    return undefined;
+  }
+
+  isTruthy(value) {
+    return !(!value || value === 0 || value === '' || value === false || value === null || value === undefined);
+  }
+}
+
 // ノード型レジストリ
 const NODE_TYPES = {
   // Phase 0 ノード
@@ -85,8 +421,7 @@ const NODE_TYPES = {
     outputs: [{ name: 'event', type: 'event<vec2>', kind: 'event' }],
     params: [{ name: 'target', type: 'string', default: 'window' }],
     evaluate: (inputs, params, ctx) => {
-      // Event は evaluateAt 中に dispatchEvent で設定される
-      return { event: ctx.eventPayloads ? ctx.eventPayloads['pointerClick.event'] : undefined };
+      return { event: ctx.eventValues?.get('pointerClick.event') || [] };
     },
     onStart: (node, engine) => {
       const targetSelector = node.params?.target || 'window';
@@ -115,7 +450,6 @@ const NODE_TYPES = {
     outputs: [{ name: 'pos', type: 'vec2', kind: 'behavior' }],
     params: [{ name: 'target', type: 'string', default: 'window' }],
     evaluate: (inputs, params, ctx) => {
-      // pointerPosition は内部状態 _lastPos を保持する唯一の Behavior ノード
       if (!ctx.engine || !ctx.engine._inputStates) {
         ctx.engine._inputStates = {};
       }
@@ -153,7 +487,7 @@ const NODE_TYPES = {
     outputs: [{ name: 'event', type: 'event<string>', kind: 'event' }],
     params: [{ name: 'key', type: 'string', default: null }],
     evaluate: (inputs, params, ctx) => {
-      return { event: ctx.eventPayloads ? ctx.eventPayloads['keyDown.event'] : undefined };
+      return { event: ctx.eventValues?.get('keyDown.event') || [] };
     },
     onStart: (node, engine) => {
       const filterKey = node.params?.key || null;
@@ -179,7 +513,7 @@ const NODE_TYPES = {
     outputs: [{ name: 'event', type: 'event<string>', kind: 'event' }],
     params: [{ name: 'key', type: 'string', default: null }],
     evaluate: (inputs, params, ctx) => {
-      return { event: ctx.eventPayloads ? ctx.eventPayloads['keyUp.event'] : undefined };
+      return { event: ctx.eventValues?.get('keyUp.event') || [] };
     },
     onStart: (node, engine) => {
       const filterKey = node.params?.key || null;
@@ -206,34 +540,34 @@ const NODE_TYPES = {
     outputs: [{ name: 'event', type: 'event<any>', kind: 'event' }],
     params: [{ name: 'predicate', type: 'string', default: 'true' }],
     evaluate: (inputs, params, ctx) => {
-      // predicate を関数化（load 時にキャッシュ）
-      if (!ctx.predicateFunc) {
-        try {
-          ctx.predicateFunc = new Function('value', 'key', 'return (' + params.predicate + ');');
-        } catch (e) {
-          throw new LoomError('INVALID_GRAPH', 'filter.predicate compilation failed', {
-            reason: 'filter.predicate',
-            error: e.message
-          });
-        }
+      const eventPayloads = inputs.event || [];
+      if (!Array.isArray(eventPayloads)) {
+        return { event: [] };
       }
 
-      const eventPayloads = inputs.event;
-      if (!eventPayloads || !Array.isArray(eventPayloads)) {
-        return { event: undefined };
+      // predicate をパース・キャッシュ
+      if (!ctx.nodePredicates) ctx.nodePredicates = new Map();
+      const cacheKey = params.predicate;
+      let evaluator = ctx.nodePredicates.get(cacheKey);
+      if (!evaluator) {
+        try {
+          const dslEval = new RestrictedDSLEvaluator(params.predicate);
+          evaluator = dslEval.evaluate();
+          ctx.nodePredicates.set(cacheKey, evaluator);
+        } catch (e) {
+          throw e; // DSL パースエラーは LoomError で既にラップされている
+        }
       }
 
       const filtered = eventPayloads.filter(payload => {
         try {
-          const key = typeof payload === 'string' ? payload : undefined;
-          const value = payload;
-          return ctx.predicateFunc(value, key);
+          return evaluator(payload);
         } catch (e) {
           return false;
         }
       });
 
-      return { event: filtered.length > 0 ? filtered : undefined };
+      return { event: filtered };
     }
   },
 
@@ -246,16 +580,16 @@ const NODE_TYPES = {
     outputs: [{ name: 'event', type: 'event<number>', kind: 'event' }],
     params: [],
     evaluate: (inputs, params, ctx) => {
-      const triggers = inputs.trigger;
+      const triggers = inputs.trigger || [];
       const value = inputs.value;
 
-      if (!triggers || !Array.isArray(triggers)) {
-        return { event: undefined };
+      if (!Array.isArray(triggers)) {
+        return { event: [] };
       }
 
       // trigger が複数回発火した場合、その回数分 value をペイロードに積む
       const sampled = triggers.map(() => value);
-      return { event: sampled.length > 0 ? sampled : undefined };
+      return { event: sampled };
     }
   },
 
@@ -272,11 +606,11 @@ const NODE_TYPES = {
       const bPayloads = inputs.b || [];
 
       const merged = [
-        ...(Array.isArray(aPayloads) ? aPayloads : [aPayloads]),
-        ...(Array.isArray(bPayloads) ? bPayloads : [bPayloads])
+        ...(Array.isArray(aPayloads) ? aPayloads : []),
+        ...(Array.isArray(bPayloads) ? bPayloads : [])
       ];
 
-      return { event: merged.length > 0 ? merged : undefined };
+      return { event: merged };
     }
   }
 };
@@ -291,7 +625,6 @@ export class Loom {
     this._rafId = null;
     this._startTime = null;
     this._inputStates = {};
-    this._predicateFuncs = new Map();
 
     // グラフの検証とソートを実行
     this._loadGraphInternal(graph);
@@ -329,50 +662,35 @@ export class Loom {
     const ctx = {
       time,
       engine: this,
-      eventPayloads: {}
+      eventValues: new Map(),
+      nodePredicates: new Map()
     };
 
-    // Step 1: dispatchEvent キューを処理してイベントペイロードを準備
-    const eventMap = new Map(); // ref -> payload配列
-    for (const { ref, payload } of this._eventQueue) {
-      // ref が存在するかチェック
-      const [nodeId, portName] = ref.split('.');
-      const node = this._currentGraph.nodes.find(n => n.id === nodeId);
-      if (!node) {
-        throw new LoomError('UNKNOWN_NODE', `dispatchEvent references non-existent node: ${nodeId}`, { nodeId });
-      }
+    // Step 3: 全 Event ポートを [] にリセット
+    for (const node of this._currentGraph.nodes) {
       const nodeType = NODE_TYPES[node.type];
-      const outputPort = nodeType.outputs.find(o => o.name === portName);
-      if (!outputPort) {
-        throw new LoomError('UNKNOWN_PORT', `dispatchEvent references non-existent port: ${ref}`,
-          { nodeId, port: portName, side: 'output' });
+      for (const output of nodeType.outputs) {
+        if (output.kind === 'event') {
+          const ref = `${node.id}.${output.name}`;
+          ctx.eventValues.set(ref, []);
+        }
       }
-      if (outputPort.kind !== 'event') {
-        throw new LoomError('TYPE_MISMATCH', `dispatchEvent target must be Event port`,
-          { from: ref, to: ref, fromType: outputPort.kind, toType: 'event' });
-      }
+    }
 
-      if (!eventMap.has(ref)) {
-        eventMap.set(ref, []);
-      }
-      eventMap.get(ref).push(payload);
+    // Step 4: dispatchEvent で積まれたイベントを処理
+    for (const { ref, payload } of this._eventQueue) {
+      const current = ctx.eventValues.get(ref) || [];
+      current.push(payload);
+      ctx.eventValues.set(ref, current);
     }
     this._eventQueue = [];
 
-    // Step 2: トポロジカルソート順に各ノードを評価（Behavior ノード）
+    // Step 5: トポロジカルソート順に各ノードを評価
     for (const nodeId of this._sortedNodeIds) {
       const node = this._currentGraph.nodes.find(n => n.id === nodeId);
       const nodeType = NODE_TYPES[node.type];
 
-      // Event 型ノードの場合、イベントペイロードをコンテキストに反映
-      for (const outputDef of nodeType.outputs) {
-        if (outputDef.kind === 'event') {
-          const ref = `${nodeId}.${outputDef.name}`;
-          ctx.eventPayloads[ref] = eventMap.get(ref);
-        }
-      }
-
-      // 入力値の解決（エッジ → params → メタデータの default）
+      // 入力値の解決
       const inputs = {};
       for (const inputDef of nodeType.inputs) {
         const portName = inputDef.name;
@@ -381,14 +699,17 @@ export class Loom {
         // エッジから入力値を取得
         const edge = this._currentGraph.edges.find(e => e.to === ref);
         if (edge) {
-          inputs[portName] = this._values.get(edge.from);
+          if (inputDef.kind === 'event') {
+            inputs[portName] = this._values.get(edge.from) || [];
+          } else {
+            inputs[portName] = this._values.get(edge.from);
+          }
         } else {
           // エッジがなければ params から取得
           const paramValue = node.params && node.params[portName];
           if (paramValue !== undefined) {
             inputs[portName] = paramValue;
           } else {
-            // params もなければメタデータの default から取得
             inputs[portName] = inputDef.default;
           }
         }
@@ -406,19 +727,6 @@ export class Loom {
         }
       }
 
-      // filter ノード用に predicate 関数をキャッシュ
-      if (node.type === 'filter' && !ctx.predicateFunc) {
-        try {
-          ctx.predicateFunc = new Function('value', 'key', 'return (' + params.predicate + ');');
-        } catch (e) {
-          throw new LoomError('INVALID_GRAPH', 'filter.predicate compilation failed', {
-            reason: 'filter.predicate',
-            nodeId,
-            error: e.message
-          });
-        }
-      }
-
       // ノードを評価
       const outputs = nodeType.evaluate(inputs, params, ctx);
 
@@ -426,13 +734,14 @@ export class Loom {
       for (const outputDef of nodeType.outputs) {
         const portName = outputDef.name;
         const ref = `${nodeId}.${portName}`;
-        this._values.set(ref, outputs[portName]);
+        if (outputDef.kind === 'event') {
+          // Event ポートは配列として保存
+          this._values.set(ref, outputs[portName] || []);
+        } else {
+          // Behavior ポートは値として保存
+          this._values.set(ref, outputs[portName]);
+        }
       }
-    }
-
-    // Step 3: Event ペイロードをクリア（次フレームに持ち越さない）
-    for (const ref of eventMap.keys()) {
-      this._values.delete(ref);
     }
   }
 
