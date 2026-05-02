@@ -175,12 +175,12 @@ Loom の核は、以下の仕組みです：
 - ✅ `engine.dispatchEvent(ref, payload)` API
 - ✅ 入力ノード4種：`pointerClick`、`pointerPosition`、`keyDown`、`keyUp`
 - ✅ イベント変換ノード3種：`filter`、`sample`、`merge`
+- ✅ DOM シンクノード4種：`setText`、`setStyle`、`setAttr`、`log`
 - ✅ 既存ノードはそのまま動作（後方互換）
 
 ### 実装外（第二段階以降）
 
 - ❌ 状態を持つノード（`accum`、`smooth` など）
-- ❌ シンクノード
 - ❌ DSL とパーサ
 - ❌ ビジュアルエディタ
 - ❌ マルチクライアント同期
@@ -561,6 +561,73 @@ predicate は `load()` 時にパースして抽象構文木（AST）に変換し
 **説明：**
 
 複数の Event ストリームを1本にまとめる。同一フレームに両方発生した場合、出力配列は `a` の全ペイロード、その後に `b` の全ペイロード、という順序で連結される。下流ノードはこの順序を前提にしてよい。
+
+### 5.13 setText
+
+**カテゴリ：** シンク部品
+
+**入力：**
+- `value`（型：`any`、デフォルト：`""`）
+
+**出力：** なし
+
+**パラメータ：**
+- `target`（型：`string`、デフォルト：`""`）：CSS セレクタ
+
+**説明：**
+
+DOM 要素のテキスト内容を更新する。`document.querySelector(target)` で要素を取得し、その `textContent` に `value` を文字列化して設定します。要素が見つからない場合、何もしない（エラーにしない）。
+
+### 5.14 setStyle
+
+**カテゴリ：** シンク部品
+
+**入力：**
+- `value`（型：`any`、デフォルト：`""`）
+
+**出力：** なし
+
+**パラメータ：**
+- `target`（型：`string`、デフォルト：`""`）：CSS セレクタ
+- `property`（型：`string`、デフォルト：`""`）：スタイルプロパティ名
+- `unit`（型：`string`、デフォルト：`""`）：単位（例："px"、"em"、""）
+
+**説明：**
+
+DOM 要素の CSS スタイルを更新する。`el.style[property] = String(value) + unit` として設定されます。例えば `value=50`、`property="width"`、`unit="px"` なら、`el.style.width = "50px"` となります。要素が見つからない場合、何もしない（エラーにしない）。
+
+### 5.15 setAttr
+
+**カテゴリ：** シンク部品
+
+**入力：**
+- `value`（型：`any`、デフォルト：`""`）
+
+**出力：** なし
+
+**パラメータ：**
+- `target`（型：`string`、デフォルト：`""`）：CSS セレクタ
+- `name`（型：`string`、デフォルト：`""`）：属性名
+
+**説明：**
+
+DOM 要素の HTML 属性を更新する。`el.setAttribute(name, String(value))` として設定されます。例えば `name="data-count"` なら `data-count` 属性が更新されます。要素が見つからない場合、何もしない（エラーにしない）。
+
+### 5.16 log
+
+**カテゴリ：** シンク部品
+
+**入力：**
+- `value`（型：`any`、デフォルト：`undefined`）
+
+**出力：** なし
+
+**パラメータ：**
+- `label`（型：`string`、デフォルト：`""`）：ラベル
+
+**説明：**
+
+ブラウザコンソールにメッセージを出力する。`console.log(label || "log", value)` として実行されます。デバッグ用。
 
 ## 6. グラフ定義の JSON フォーマット
 
