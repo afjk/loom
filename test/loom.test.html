@@ -795,7 +795,7 @@
       assert(true);
     });
 
-    test("複数シンクノードがトポロジカル順で評価される", () => {
+    test("複数シンクノードがそれぞれ DOM を更新する", () => {
       const div1 = document.createElement("div");
       const div2 = document.createElement("div");
       div1.id = "sink-test-multi-1";
