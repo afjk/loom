@@ -65,6 +65,7 @@
     };
 
     const engine = new Loom(graph);
+    engine.evaluateAt(0);
     engine.start();
 
     const tEl = document.getElementById("t");
