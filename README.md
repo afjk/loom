@@ -112,6 +112,7 @@ GitHub Pages で公開されているデモを、ブラウザから直接確認�
 * ポインタ追従デモ：https://afjk.github.io/loom/examples/03-pointer.html
 * キー入力カウンタ：https://afjk.github.io/loom/examples/04-keydown.html
 * シンクノードデモ：https://afjk.github.io/loom/examples/05-sink-box.html
+* Three.js デモ：https://afjk.github.io/loom/examples/06-three-cube.html
 * テスト結果：https://afjk.github.io/loom/test/loom.test.html
 
 ローカルで確認する場合は、ESM を使うため、ローカルファイル直接 (`file://`) ではなく HTTP サーバから配信する必要があります。
@@ -135,6 +136,8 @@ GitHub Pages で公開されているデモを、ブラウザから直接確認�
 * キー入力カウンタ：`http://localhost:8000/examples/04-keydown.html`
 
 * シンクノードデモ：`http://localhost:8000/examples/05-sink-box.html`
+
+* Three.js デモ：`http://localhost:8000/examples/06-three-cube.html`
 
 * テスト：`http://localhost:8000/test/loom.test.html`
 

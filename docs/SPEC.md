@@ -629,6 +629,100 @@ DOM 要素の HTML 属性を更新する。`el.setAttribute(name, String(value))
 
 ブラウザコンソールにメッセージを出力する。`console.log(label || "log", value)` として実行されます。デバッグ用。
 
+## 5.17-5.21 Three.js アダプタノード
+
+**注：** 以下のノードは、`src/loom-three.js` のアダプタを通じて登録されます。コアには含まれず、`registerThreeNodes(Loom, objects)` 呼び出しで利用可能になります。
+
+### 5.17 setPosition
+
+**カテゴリ：** シンク部品
+
+**入力：**
+- `x`（型：`number`、デフォルト：`0`、kind: `behavior`）
+- `y`（型：`number`、デフォルト：`0`、kind: `behavior`）
+- `z`（型：`number`、デフォルト：`0`、kind: `behavior`）
+
+**出力：** なし
+
+**パラメータ：**
+- `target`（型：`string`、デフォルト：`""`）：操作対象の Three.js Object3D のキー
+
+**説明：**
+
+Three.js Object3D の位置を設定します。`registerThreeNodes(Loom, { objectKey: mesh })` で登録されたオブジェクトに対して、`target: "objectKey"` でアクセスできます。`position.set(x, y, z)` が呼ばれます。
+
+### 5.18 setRotation
+
+**カテゴリ：** シンク部品
+
+**入力：**
+- `x`（型：`number`、デフォルト：`0`、kind: `behavior`）：X軸周りの回転（ラジアン、オイラー角）
+- `y`（型：`number`、デフォルト：`0`、kind: `behavior`）：Y軸周りの回転（ラジアン、オイラー角）
+- `z`（型：`number`、デフォルト：`0`、kind: `behavior`）：Z軸周りの回転（ラジアン、オイラー角）
+
+**出力：** なし
+
+**パラメータ：**
+- `target`（型：`string`、デフォルト：`""`）：操作対象の Three.js Object3D のキー
+
+**説明：**
+
+Three.js Object3D の回転をオイラー角（ラジアン）で設定します。`rotation.set(x, y, z)` が呼ばれます。
+
+### 5.19 setScale
+
+**カテゴリ：** シンク部品
+
+**入力：**
+- `x`（型：`number`、デフォルト：`1`、kind: `behavior`）
+- `y`（型：`number`、デフォルト：`1`、kind: `behavior`）
+- `z`（型：`number`、デフォルト：`1`、kind: `behavior`）
+
+**出力：** なし
+
+**パラメータ：**
+- `target`（型：`string`、デフォルト：`""`）：操作対象の Three.js Object3D のキー
+
+**説明：**
+
+Three.js Object3D のスケールを設定します。`scale.set(x, y, z)` が呼ばれます。
+
+### 5.20 setColor
+
+**カテゴリ：** シンク部品
+
+**入力：**
+- `r`（型：`number`、デフォルト：`1`、kind: `behavior`）：赤成分（0..1）
+- `g`（型：`number`、デフォルト：`1`、kind: `behavior`）：緑成分（0..1）
+- `b`（型：`number`、デフォルト：`1`、kind: `behavior`）：青成分（0..1）
+
+**出力：** なし
+
+**パラメータ：**
+- `target`（型：`string`、デフォルト：`""`）：操作対象の Three.js Object3D のキー
+
+**説明：**
+
+Three.js Object3D のマテリアルの色を RGB（0..1 範囲）で設定します。`material.color.setRGB(r, g, b)` が呼ばれます。
+
+**マテリアル配列対応：** `material` が配列の場合、第一実装では **最初の要素のみ** を更新します。`material[0].color.setRGB(r, g, b)` が対象。
+
+### 5.21 setVisible
+
+**カテゴリ：** シンク部品
+
+**入力：**
+- `visible`（型：`any`、デフォルト：`true`、kind: `behavior`）：表示状態の真偽値
+
+**出力：** なし
+
+**パラメータ：**
+- `target`（型：`string`、デフォルト：`""`）：操作対象の Three.js Object3D のキー
+
+**説明：**
+
+Three.js Object3D の表示・非表示を切り替えます。`visible = !!inputs.visible` として設定されます。
+
 ## 6. グラフ定義の JSON フォーマット
 
 ### 基本構造
@@ -946,6 +1040,37 @@ engine.stop();
 engine.stop();
 ```
 
+#### `Loom.registerNodeType(name, definition)`（静的メソッド）
+
+```javascript
+Loom.registerNodeType('setPosition', {
+  category: 'sink',
+  inputs: [...],
+  outputs: [],
+  params: [...],
+  evaluate: (inputs, params, ctx) => ({})
+});
+```
+
+**引数：**
+- `name`（文字列）：登録するノード型の名前
+- `definition`（オブジェクト）：ノード型のメタデータ定義。「5. ノード仕様」で説明した構造と同じ
+
+**説明：**
+
+外部からノード型を追加する。アダプタライブラリ向けの拡張ポイント。
+
+同じ `name` で既に登録済みの場合、`LoomError` (`code: 'DUPLICATE_NODE_TYPE'`)をスロー。
+
+**例：**
+```javascript
+import { Loom } from './src/loom.js';
+import { registerThreeNodes } from './src/loom-three.js';
+
+registerThreeNodes(Loom, objectsMap);  // 内部で Loom.registerNodeType を呼ぶ
+const engine = new Loom(graph);
+```
+
 ## 8. 評価モデル
 
 ### 初期化（グラフ読み込み時）
@@ -1023,6 +1148,14 @@ ES Module（ESM）形式の単一 JavaScript ファイルとして配布され�
 
 これにより、ファイルサイズが最小化され、読み込みが高速化されます。
 
+### アダプタ層
+
+コアエンジン（`src/loom.js`）は依存ゼロを保つが、特定ライブラリとの連携は別ファイルのアダプタとして提供する。
+
+- `src/loom-three.js`：Three.js Object3D 連携。`registerThreeNodes(Loom, objects)` で利用。
+
+アダプタは Loom コアに依存し、コアの `Loom.registerNodeType(name, definition)` 経由でノード型を登録する。
+
 ## 10. エラー仕様
 
 Loom がスローするエラーは、以下の構造を持つ `Error` オブジェクトです。
@@ -1049,6 +1182,7 @@ Loom がスローするエラーは、以下の構造を持つ `Error` オブジ
 | `DUPLICATE_INPUT_EDGE` | コンストラクタ、`load()` | `{ nodeId, port }` | 同じ入力ポートに複数のエッジが接続されている |
 | `CYCLE` | コンストラクタ、`load()` | `{ nodeIds }` | グラフにサイクルが存在する。第ゼロ段階では一律エラー扱い |
 | `TYPE_MISMATCH` | コンストラクタ、`load()` | `{ from, to, fromType, toType }` | エッジが Behavior と Event を混ぜている、またはペイロード型が一致しない |
+| `DUPLICATE_NODE_TYPE` | `Loom.registerNodeType()` | `{ name }` | 同じ名前のノード型が既に登録されている |
 | `INVALID_GRAPH` | コンストラクタ、`load()` | `{ reason }` | 上記以外の構造的問題（`nodes` が配列でない等） |
 
 ### 10.2 エラーが投げられるタイミング
@@ -1134,7 +1268,7 @@ Loom は単一の JSON グラフ表現を真の単一ソースとし、複数の
 
 - 複数クライアントでのグラフ・状態同期
 - イベント配信ノードによる broadcast
-- 3D エンジン連携アダプタ（Three.js など）
+- ✅（一部完了）3D エンジン連携アダプタ：Three.js Object3D 向けの `src/loom-three.js`（`setPosition`、`setRotation`、`setScale`、`setColor`、`setVisible` シンクノード）
 - AI 連携用のツール定義
 
 ### Phase 1.5：SceneSync アダプタ（Web）
