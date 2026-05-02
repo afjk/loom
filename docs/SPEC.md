@@ -1406,3 +1406,40 @@ Loom は単一の JSON グラフ表現を真の単一ソースとし、複数の
 ---
 
 **仕様書のバージョン：** 0.2.0（クロスプラットフォーム仕様確定版）
+
+---
+
+## Unity C# ランタイム補足仕様（v0.1.0）
+
+### 概要
+
+JavaScript 版 Loom と同じ JSON グラフ形式を、Unity C# ランタイムでも評価できる。
+
+実装は `unity/com.afjk.loom/` に配置された Unity Package として提供される。
+
+### 評価モデル
+
+- Unity C# ランタイムは JSON グラフ評価のみを対象とする
+- グラフ DSL は将来の人間向け表現であり、Unity 側は JSON 中間表現を評価する
+- JavaScript 版の `evaluateAt(time)` に相当する `EvaluateAt(double time)` を毎フレーム呼び出す
+- `Load(graph)` は JS 版同様、次の `EvaluateAt()` まで切り替えを保留する
+
+### filter.predicate
+
+- `filter.predicate` の式 DSL は JS / C# 両方で評価される
+- C# 側では外部ライブラリ・Roslyn・DataTable.Compute を使わず、小さな tokenizer / parser / evaluator を実装する
+- 対応演算子: 比較（`==` `!=` `<` `<=` `>` `>=`）、論理（`&&` `||` `!`）、算術（`+` `-` `*` `/`）、括弧
+
+### sceneSetRotation の角度換算
+
+- `sceneSetRotation` はラジアン入力を受け付ける（JS 版と合わせるため）
+- Unity の `Transform.localEulerAngles` は度数法のため、内部で `radians * (180 / π)` 変換を行う
+
+### Unity 向け未対応事項
+
+以下は現バージョンでは Unity 側に実装しない：
+
+- グラフ DSL パーサ
+- ビジュアルエディタ
+- WebSocket 本体実装
+- Unity Package Manager 公開
