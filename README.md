@@ -134,6 +134,9 @@ GitHub Pages で公開されているデモを、ブラウザから直接確認�
 * シンクノードデモ：https://afjk.github.io/loom/examples/05-sink-box.html
 * Three.js デモ：https://afjk.github.io/loom/examples/06-three-cube.html
 * SceneSync モックデモ：https://afjk.github.io/loom/examples/07-scenesync-mock.html
+* Lissajous 曲線：https://afjk.github.io/loom/examples/08-lissajous.html
+* 位相ずらし波：https://afjk.github.io/loom/examples/10-multi-phase.html
+* 範囲リマップ：https://afjk.github.io/loom/examples/13-clamp-map.html
 * テスト結果：https://afjk.github.io/loom/test/loom.test.html
 
 ローカルで確認する場合は、ESM を使うため、ローカルファイル直接 (`file://`) ではなく HTTP サーバから配信する必要があります。
@@ -161,6 +164,12 @@ GitHub Pages で公開されているデモを、ブラウザから直接確認�
 * Three.js デモ：`http://localhost:8000/examples/06-three-cube.html`
 
 * SceneSync モックデモ：`http://localhost:8000/examples/07-scenesync-mock.html`
+
+* Lissajous 曲線：`http://localhost:8000/examples/08-lissajous.html`
+
+* 位相ずらし波：`http://localhost:8000/examples/10-multi-phase.html`
+
+* 範囲リマップ：`http://localhost:8000/examples/13-clamp-map.html`
 
 * テスト：`http://localhost:8000/test/loom.test.html`
 

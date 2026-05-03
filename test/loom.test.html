@@ -141,6 +141,168 @@
       assertEqual(engine.getValue("multiplier.out"), 12);
     });
 
+    // 第1陣: 基本演算系
+    test("subtract ノードが減算を行う", () => {
+      const graph = {
+        nodes: [{ id: "subtracter", type: "subtract", params: { a: 10, b: 3 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("subtracter.out"), 7);
+    });
+
+    test("divide ノードが除算を行う", () => {
+      const graph = {
+        nodes: [{ id: "divider", type: "divide", params: { a: 12, b: 3 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("divider.out"), 4);
+    });
+
+    test("divide ノードが b=0 の場合 0 を返す", () => {
+      const graph = {
+        nodes: [{ id: "divider", type: "divide", params: { a: 10, b: 0 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("divider.out"), 0);
+    });
+
+    test("mod ノードが剰余を返す", () => {
+      const graph = {
+        nodes: [{ id: "modder", type: "mod", params: { a: 7, b: 3 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("modder.out"), 1);
+    });
+
+    test("mod ノードが負の入力で正を返す", () => {
+      const graph = {
+        nodes: [{ id: "modder", type: "mod", params: { a: -1, b: 3 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("modder.out"), 2);
+    });
+
+    test("negate ノードが符号反転を行う", () => {
+      const graph = {
+        nodes: [{ id: "negater", type: "negate", params: { a: 5 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("negater.out"), -5);
+    });
+
+    test("abs ノードが絶対値を返す", () => {
+      const graph = {
+        nodes: [{ id: "abser", type: "abs", params: { a: -7 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("abser.out"), 7);
+    });
+
+    // 第2陣: 範囲操作系＋コサイン
+    test("clamp ノードが範囲内の値をクランプする", () => {
+      const graph = {
+        nodes: [{ id: "clamper", type: "clamp", params: { value: 0.5, min: 0, max: 1 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("clamper.out"), 0.5);
+    });
+
+    test("clamp ノードが最小値より小さい値をクランプする", () => {
+      const graph = {
+        nodes: [{ id: "clamper", type: "clamp", params: { value: -0.5, min: 0, max: 1 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("clamper.out"), 0);
+    });
+
+    test("clamp ノードが min > max の場合 min を返す", () => {
+      const graph = {
+        nodes: [{ id: "clamper", type: "clamp", params: { value: 0.5, min: 1, max: 0 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("clamper.out"), 1);
+    });
+
+    test("lerp ノードが線形補間を行う", () => {
+      const graph = {
+        nodes: [{ id: "lerper", type: "lerp", params: { a: 0, b: 10, t: 0.5 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("lerper.out"), 5);
+    });
+
+    test("smoothstep ノードが edge0 === edge1 の場合の境界判定を行う", () => {
+      const graph = {
+        nodes: [{ id: "smoother", type: "smoothstep", params: { x: 0.5, edge0: 1, edge1: 1 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("smoother.out"), 0);
+    });
+
+    test("map ノードが inMin === inMax の場合 outMin を返す", () => {
+      const graph = {
+        nodes: [{ id: "mapper", type: "map", params: { value: 5, inMin: 1, inMax: 1, outMin: 10, outMax: 20 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("mapper.out"), 10);
+    });
+
+    test("map ノードが clamp=false で外挿を行う", () => {
+      const graph = {
+        nodes: [{ id: "mapper", type: "map", params: { value: 2, inMin: 0, inMax: 1, outMin: 0, outMax: 10, clamp: false } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("mapper.out"), 20);
+    });
+
+    test("map ノードが clamp=true で外挿をクランプする", () => {
+      const graph = {
+        nodes: [{ id: "mapper", type: "map", params: { value: 2, inMin: 0, inMax: 1, outMin: 0, outMax: 10, clamp: true } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("mapper.out"), 10);
+    });
+
+    test("cosine ノードが t=0 で amplitude+offset を返す", () => {
+      const graph = {
+        nodes: [{ id: "cosiner", type: "cosine", params: { t: 0, freq: 1, amplitude: 1, phase: 0, offset: 0 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("cosiner.out"), 1);
+    });
+
     // 入力解決ルールのテスト
     test("エッジ接続がある場合、上流の値が使われる", () => {
       const graph = {
