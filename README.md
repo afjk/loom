@@ -217,6 +217,31 @@ GitHub Pages で公開されているデモを、ブラウザから直接確認�
 
 GitHub Actions で自動テストを実行しています。ローカルで `npm test` を実行する場合は、`package.json` が必要ですが、これは CI 自動化専用です。`src/loom.js` は依存ライブラリゼロの単一ファイル配布であり、package.json は開発用ツール（Playwright、http-server）のみを含みます。
 
+## パッケージとして利用
+
+upm.afjk.jp の Verdaccio から取得できます（匿名 read 可、publish は要認証）。
+
+```bash
+npm install --registry https://upm.afjk.jp @afjk/loom
+```
+
+または `.npmrc` に `@afjk:registry=https://upm.afjk.jp` を追記して：
+
+```bash
+npm install @afjk/loom
+```
+
+パッケージに含まれる構成：
+
+| パス | 内容 |
+|------|------|
+| `@afjk/loom/src/` | コアエンジン（loom.js, loom-dsl.js, loom-three.js 等） |
+| `@afjk/loom/editor/` | ライブエディタ（index.html） |
+| `@afjk/loom/editor-pro/dist/` | Pro エディタのビルド済みアセット |
+| `@afjk/loom/examples/` | サンプル HTML（13 本） |
+
+publish 手順や Verdaccio の設定については [docs/PUBLISH.md](docs/PUBLISH.md) を参照してください。
+
 ## ライセンス
 
 MIT License

@@ -1,10 +1,34 @@
 {
-  "name": "loom",
+  "name": "@afjk/loom",
   "version": "0.1.0",
-  "private": true,
+  "description": "Reactive dataflow graph engine for the web (DSL + JSON, with live editor)",
   "type": "module",
+  "main": "src/loom.js",
+  "exports": {
+    ".": "./src/loom.js",
+    "./dsl": "./src/loom-dsl.js",
+    "./three": "./src/loom-three.js"
+  },
+  "files": [
+    "src/",
+    "editor/",
+    "editor-pro/dist/",
+    "examples/",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/afjk/loom.git"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "registry": "https://upm.afjk.jp"
+  },
   "scripts": {
-    "test": "node ci/run-tests.mjs"
+    "test": "node ci/run-tests.mjs",
+    "build:editor-pro": "cd editor-pro && npm install && npm run build",
+    "prepublishOnly": "npm run build:editor-pro"
   },
   "devDependencies": {
     "http-server": "^14.1.1",

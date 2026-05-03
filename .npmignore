@@ -1,0 +1,12 @@
+test/
+.github/
+.claude/
+node_modules/
+editor-pro/node_modules/
+editor-pro/src/
+editor-pro/package.json
+editor-pro/package-lock.json
+editor-pro/vite.config.js
+editor-pro/index.html
+docs/
+*.test.html

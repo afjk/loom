@@ -1,0 +1,10 @@
+{
+  "name": "loom-editor-pro",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "mkdir -p dist && echo '/* loom-editor-pro placeholder – replace with vite build */' > dist/index.js",
+    "dev": "vite"
+  }
+}
