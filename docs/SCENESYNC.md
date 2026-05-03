@@ -33,6 +33,27 @@ socket.on("message", (data) => {
 adapter.start();
 ```
 
+### Outbound helper usage
+
+Loom から SceneSync 互換メッセージを組み立てる場合は、手書きの object literal ではなく adapter の helper を使う。
+
+```javascript
+const graphMsg = adapter.createGraphSetMessage(
+  { object: "cube1" },
+  {
+    nodes: [
+      { id: "clock", type: "serverClock" },
+      { id: "pos", type: "sceneSetPosition", params: { target: "cube1" } }
+    ],
+    edges: [{ from: "clock.t", to: "pos.x" }]
+  }
+);
+
+socket.send(JSON.stringify(graphMsg));
+
+adapter.sendInput("scene", "pointer.move", { x: 120, y: 80 });
+```
+
 ---
 
 ## 2. メッセージプロトコル
@@ -234,6 +255,26 @@ adapter.clearGraph("scene");
 adapter.clearGraph({ object: "cube1" });
 ```
 
+### `patchGraph(scope, graph)` / `sendInput(scope, ref, payload)` （オプション）
+
+送信用 helper。どちらも送信前に scope と payload 形状を検証する。
+
+```javascript
+adapter.patchGraph("scene", nextGraph);
+adapter.sendInput("scene", "pointer.down", { x: 200, y: 120, button: 0 });
+```
+
+### `createGraphSetMessage(...)` などの message builder
+
+以下の helper は、送信の前にメッセージを保存・署名・batch 化したい場合に使う。
+
+- `createGraphSetMessage(scope, graph)`
+- `createGraphPatchMessage(scope, graph)`
+- `createGraphClearMessage(scope)`
+- `createGraphInputMessage(scope, ref, payload)`
+
+いずれも入力を検証し、`graph` / `payload` は shallow clone された object を返す。
+
 ---
 
 ## 5. オブジェクト単位グラフの利用
@@ -277,6 +318,33 @@ adapter.handleMessage({
   }
 });
 ```
+
+---
+
+## 6. 統合責務と source of truth
+
+Loom SceneSync 統合では、同じ target を「Loom が毎 frame 書く状態」と「remote sync が直接書く状態」に同時にしない方が安全。
+
+- **Loom authoritative**: `sceneSetPosition` / `sceneSetRotation` などを含む graph を SceneSync 経由で配布し、各 client が同じ graph を評価する。アニメーションや procedural motion 向き。
+- **SceneSync authoritative**: 他 peer や server から届いた transform/state をそのまま反映する。共同編集や drag 操作の確定値向き。
+
+推奨ルール:
+
+- 同一 target / 同一 property は一度に一つの系だけが ownership を持つ。
+- remote drag 中は Loom graph を clear または patch して sink を外し、drag 完了後に必要なら graph を戻す。
+- `scene-graph-input` は「状態そのもの」ではなく、「graph evaluation に必要な event」を配るために使う。
+- graph を受けて local 適用した結果を、そのまま再度 outbound 送信しない。feedback loop の原因になる。
+
+### 例: remote override 中だけ Loom movement を止める
+
+```javascript
+adapter.clearGraph({ object: "cube1" });
+applyRemoteTransform("cube1", incomingTransform);
+
+adapter.sendGraph({ object: "cube1" }, authoredMotionGraph);
+```
+
+この切り替え責務は transport 層または SceneSync セッション管理側が持ち、`LoomSceneSync` 自体は protocol 変換と graph 実行に専念させるのが最小で安全。
 
 各オブジェクトグラフは独立して評価される。
 

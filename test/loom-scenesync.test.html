@@ -561,6 +561,83 @@
       assertEqual(t2, 2.0, 'adapter2 should use its own getServerTime');
     });
 
+    // Test 21: createGraphSetMessage は scope/graph を検証し複製を返す
+    test('createGraphSetMessage は scope/graph を検証し複製を返す', () => {
+      const adapter = new LoomSceneSync({
+        LoomClass: Loom,
+        send: () => {},
+        getServerTime: () => 0,
+        resolveTarget: () => null
+      });
+
+      const graph = {
+        nodes: [{ id: 'const', type: 'constant', params: { value: 5 } }],
+        edges: []
+      };
+
+      const msg = adapter.createGraphSetMessage('scene', graph);
+      graph.nodes[0].params.value = 9;
+
+      assertEqual(msg.type, 'scene-graph-set');
+      assertEqual(msg.scope, 'scene');
+      assertEqual(msg.graph.nodes[0].params.value, 5, 'message graph should be cloned');
+    });
+
+    // Test 22: sendGraph / patchGraph / clearGraph / sendInput は SceneSync 互換メッセージを送る
+    test('sendGraph / patchGraph / clearGraph / sendInput は SceneSync 互換メッセージを送る', () => {
+      const sent = [];
+      const adapter = new LoomSceneSync({
+        LoomClass: Loom,
+        send: (msg) => sent.push(msg),
+        getServerTime: () => 0,
+        resolveTarget: () => null
+      });
+
+      const graph = {
+        nodes: [{ id: 'const', type: 'constant', params: { value: 5 } }],
+        edges: []
+      };
+
+      adapter.sendGraph({ object: 'cube1' }, graph);
+      adapter.patchGraph('scene', graph);
+      adapter.clearGraph({ object: 'cube1' });
+      adapter.sendInput('scene', 'pointer.move', { x: 10, y: 20 });
+
+      assertEqual(sent.length, 4, 'should emit 4 messages');
+      assertEqual(sent[0].type, 'scene-graph-set');
+      assertEqual(sent[0].scope.object, 'cube1');
+      assertEqual(sent[1].type, 'scene-graph-patch');
+      assertEqual(sent[2].type, 'scene-graph-clear');
+      assertEqual(sent[3].type, 'scene-graph-input');
+      assertEqual(sent[3].ref, 'pointer.move');
+      assertEqual(sent[3].payload.x, 10);
+      assertEqual(sent[3].payload.y, 20);
+    });
+
+    // Test 23: createGraphInputMessage は ref/payload を検証する
+    test('createGraphInputMessage は ref/payload を検証する', () => {
+      const adapter = new LoomSceneSync({
+        LoomClass: Loom,
+        send: () => {},
+        getServerTime: () => 0,
+        resolveTarget: () => null
+      });
+
+      try {
+        adapter.createGraphInputMessage('scene', '', {});
+        throw new Error('Should have thrown');
+      } catch (e) {
+        assert(e.code === 'INVALID_MESSAGE', 'empty ref should throw INVALID_MESSAGE');
+      }
+
+      try {
+        adapter.createGraphInputMessage('scene', 'pointer.move', null);
+        throw new Error('Should have thrown');
+      } catch (e) {
+        assert(e.code === 'INVALID_MESSAGE', 'null payload should throw INVALID_MESSAGE');
+      }
+    });
+
     // Display results + set window.__loomTestResults for CI
     function displayResults() {
       const passed = results.filter(r => r.pass).length;

@@ -197,13 +197,15 @@
     const adapter = new LoomSceneSync({
       LoomClass: Loom,
       send: (msg) => {
-        addLog(`SEND: ${msg.type} scope=${JSON.stringify(msg.scope)}`);
+        const body = msg.payload ?? msg.graph ?? {};
+        addLog(`SEND: ${msg.type} scope=${JSON.stringify(msg.scope)} body=${JSON.stringify(body)}`);
       },
       getServerTime,
       resolveTarget: (id) => objects[id] ?? null
     });
 
     addLog('Adapter initialized');
+    addLog('Ownership rule: avoid driving the same transform from both Loom sinks and remote sync at the same time');
 
     // Timeline: 1s - start scene graph
     setTimeout(() => {
@@ -226,6 +228,7 @@
         scope: 'scene',
         graph
       });
+      adapter.send(adapter.createGraphSetMessage('scene', graph));
 
       adapter.start();
       addLog('Adapter started - scene graph active');
@@ -266,6 +269,8 @@
         scope: { object: 'cube1' },
         graph
       });
+      adapter.send(adapter.createGraphSetMessage({ object: 'cube1' }, graph));
+      adapter.sendInput('scene', 'pointer.move', { x: 240, y: 160, source: 'mock-demo' });
 
       addLog('Object-specific graph activated');
     }, 5000);

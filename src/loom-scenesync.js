@@ -209,9 +209,7 @@ export class LoomSceneSync {
   }
 
   _injectAdapterId(graph) {
-    if (!graph || typeof graph !== "object" || !Array.isArray(graph.nodes) || !Array.isArray(graph.edges)) {
-      throw new LoomError("INVALID_GRAPH", "graph must have nodes and edges arrays", { reason: "invalid graph" });
-    }
+    this._validateGraph(graph);
 
     // グラフをコピー（元を破壊しない）
     const nodes = graph.nodes.map(node => {
@@ -227,6 +225,23 @@ export class LoomSceneSync {
     });
 
     return { nodes, edges: graph.edges };
+  }
+
+  _validateGraph(graph) {
+    if (!graph || typeof graph !== "object" || !Array.isArray(graph.nodes) || !Array.isArray(graph.edges)) {
+      throw new LoomError("INVALID_GRAPH", "graph must have nodes and edges arrays", { reason: "invalid graph" });
+    }
+  }
+
+  _cloneGraph(graph) {
+    this._validateGraph(graph);
+    return {
+      nodes: graph.nodes.map(node => ({
+        ...node,
+        params: node.params ? { ...node.params } : node.params
+      })),
+      edges: graph.edges.map(edge => ({ ...edge }))
+    };
   }
 
   _handleGraphSet(msg) {
@@ -312,18 +327,62 @@ export class LoomSceneSync {
     }
   }
 
-  sendGraph(scope, graph) {
-    this.send({
+  createGraphSetMessage(scope, graph) {
+    this._validateScope(scope);
+    return {
       type: "scene-graph-set",
       scope,
-      graph
-    });
+      graph: this._cloneGraph(graph)
+    };
+  }
+
+  createGraphPatchMessage(scope, graph) {
+    this._validateScope(scope);
+    return {
+      type: "scene-graph-patch",
+      scope,
+      graph: this._cloneGraph(graph)
+    };
+  }
+
+  createGraphClearMessage(scope) {
+    this._validateScope(scope);
+    return {
+      type: "scene-graph-clear",
+      scope
+    };
+  }
+
+  createGraphInputMessage(scope, ref, payload = {}) {
+    this._validateScope(scope);
+    if (typeof ref !== "string" || ref.length === 0) {
+      throw new LoomError("INVALID_MESSAGE", "ref must be a non-empty string", { ref });
+    }
+    if (payload === null || typeof payload !== "object" || Array.isArray(payload)) {
+      throw new LoomError("INVALID_MESSAGE", "payload must be an object", { payload });
+    }
+
+    return {
+      type: "scene-graph-input",
+      scope,
+      ref,
+      payload: { ...payload }
+    };
+  }
+
+  sendGraph(scope, graph) {
+    this.send(this.createGraphSetMessage(scope, graph));
+  }
+
+  patchGraph(scope, graph) {
+    this.send(this.createGraphPatchMessage(scope, graph));
   }
 
   clearGraph(scope) {
-    this.send({
-      type: "scene-graph-clear",
-      scope
-    });
+    this.send(this.createGraphClearMessage(scope));
+  }
+
+  sendInput(scope, ref, payload = {}) {
+    this.send(this.createGraphInputMessage(scope, ref, payload));
   }
 }
