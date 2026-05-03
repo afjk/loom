@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Easing pointer follow - イージングでマウス追従</title>
+  <title>Pointer trail - マウス軌跡の可視化</title>
   <style>
     body {
       font-family: sans-serif;
@@ -36,15 +36,15 @@
   </style>
 </head>
 <body>
-  <h1>Easing pointer follow - イージングでマウス追従</h1>
+  <h1>Pointer trail - マウス軌跡の可視化</h1>
   <p class="description">
-    マウスポインタに滑らかに追従する点。<code>pointerPosition</code> でマウス位置を連続取得し、<code>clock</code> + <code>mod</code> で 0→1 のランプを生成、<code>lerp</code> で補間します。
+    <code>pointerPosition</code> でマウス位置を連続取得し、Canvas 座標へ変換して描画します。残像効果で軌跡が見えます。Loom はステートレスなため、前フレームの状態に依存するイージング追従はステート機構が入る将来のフェーズで扱います。
   </p>
 
   <canvas id="canvas" width="800" height="500"></canvas>
 
   <div class="info">
-    グラフ: (clock, pointerPosition) → mod → (lerp x, lerp y) → canvas
+    グラフ: pointerPosition → canvas
   </div>
 
   <script type="module">
@@ -52,21 +52,12 @@
 
     const graph = {
       nodes: [
-        { id: "timer", type: "clock" },
-        { id: "pointerPos", type: "pointerPosition", params: { target: "#canvas" } },
-        { id: "ramp", type: "mod", params: { b: 1.0 } },
-        { id: "lerpX", type: "lerp" },
-        { id: "lerpY", type: "lerp" }
+        { id: "pointerPos", type: "pointerPosition", params: { target: "#canvas" } }
       ],
-      edges: [
-        { from: "timer.t", to: "ramp.a" },
-        { from: "ramp.out", to: "lerpX.t" },
-        { from: "ramp.out", to: "lerpY.t" }
-      ]
+      edges: []
     };
 
     const engine = new Loom(graph);
-    engine.evaluateAt(0);
     engine.start();
 
     const canvas = document.getElementById("canvas");
@@ -74,18 +65,20 @@
 
     function tick() {
       // 背景を半透明黒で塗る（残像効果）
-      ctx.fillStyle = "rgba(0, 0, 0, 0.08)";
+      ctx.fillStyle = "rgba(0, 0, 0, 0.1)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // ポインタ位置とランプ係数を取得
-      const pos = engine.getValue("pointerPos.pos") || { x: 400, y: 250 };
-      const t = engine.getValue("ramp.out");
+      // Canvas のバウンディングボックスとスケール補正を取得
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
 
-      // lerp 計算（中心 → ポインタ位置へイージング）
-      const centerX = 400;
-      const centerY = 250;
-      const x = centerX + (pos.x - centerX) * t;
-      const y = centerY + (pos.y - centerY) * t;
+      // ポインタ位置を取得（デフォルト値は Canvas 中央）
+      const pos = engine.getValue("pointerPos.pos") || { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+
+      // clientX/Y を Canvas ローカル座標に変換
+      const x = (pos.x - rect.left) * scaleX;
+      const y = (pos.y - rect.top) * scaleY;
 
       // 現在の点を描く
       ctx.fillStyle = "#00ff00";
