@@ -378,11 +378,20 @@
     }
 
     function resolveValue(ref) {
+      // If already a number, return it directly
+      if (typeof ref === "number") {
+        return ref;
+      }
+
+      if (ref === null || ref === undefined) {
+        return null;
+      }
+
       if (!engine) return null;
 
-      // Check if it's a numeric literal
+      // Check if it's a numeric literal string
       const numVal = parseFloat(ref);
-      if (!isNaN(numVal) && ref.trim() === String(numVal)) {
+      if (!isNaN(numVal) && String(ref).trim() === String(numVal)) {
         return numVal;
       }
 
@@ -422,9 +431,9 @@
             const width = resolveValue(currentRender.width);
             const color = currentRender.color || "#00ccff";
             const height = currentRender.height !== undefined ? currentRender.height : 40;
-            const y = currentRender.y !== undefined ? currentRender.y : (canvas.height - height) / 2;
+            const y = currentRender.y !== undefined ? resolveValue(currentRender.y) : (canvas.height - height) / 2;
 
-            if (width !== null && typeof width === "number") {
+            if (width !== null && typeof width === "number" && y !== null && typeof y === "number") {
               ctx.fillStyle = color;
               ctx.fillRect(0, y, width, height);
             }
