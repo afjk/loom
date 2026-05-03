@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Loom Pro Editor</title>
+  <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+  <canvas id="preview"></canvas>
+  <div id="editor-overlay">
+    <div id="editor-titlebar">
+      <div class="tabs">
+        <button class="tab active" data-mode="dsl">DSL</button>
+        <button class="tab" data-mode="json">JSON</button>
+      </div>
+      <select id="presetSelect"></select>
+      <span id="status" class="running">running</span>
+      <button id="closeBtn">×</button>
+    </div>
+    <div id="editor-host"></div>
+    <div id="values-pane">
+      <div id="values-toggle">▼ Current Values</div>
+      <div id="values-content"></div>
+    </div>
+  </div>
+  <button id="reopenBtn" style="display: none;">✎</button>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
