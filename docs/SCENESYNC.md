@@ -275,6 +275,14 @@ adapter.sendInput("scene", "pointer.down", { x: 200, y: 120, button: 0 });
 
 いずれも入力を検証し、`graph` / `payload` は shallow clone された object を返す。
 
+### `getScopeKey(scope)` / `isSceneScope(scope)`
+
+ownership や controller lock の registry キーを作るための軽量 helper。
+
+- `getScopeKey("scene")` は `"scene"` を返す
+- `getScopeKey({ object: "cube1" })` は `"cube1"` を返す
+- `isSceneScope(scope)` は `scope === "scene"` のとき `true`
+
 ---
 
 ## 5. オブジェクト単位グラフの利用
@@ -323,28 +331,37 @@ adapter.handleMessage({
 
 ## 6. 統合責務と source of truth
 
-Loom SceneSync 統合では、同じ target を「Loom が毎 frame 書く状態」と「remote sync が直接書く状態」に同時にしない方が安全。
+Loom SceneSync 統合では、同じ target / 同じ property を「Loom が毎 frame 書く状態」と「remote sync が直接書く状態」に同時にしない方が安全。
+Loom のグラフは評価結果の source of truth であり、SceneSync はその source of truth を配布・切り替え・一時停止するための transport と考える。
 
 - **Loom authoritative**: `sceneSetPosition` / `sceneSetRotation` などを含む graph を SceneSync 経由で配布し、各 client が同じ graph を評価する。アニメーションや procedural motion 向き。
 - **SceneSync authoritative**: 他 peer や server から届いた transform/state をそのまま反映する。共同編集や drag 操作の確定値向き。
+- **Controller / lock authoritative**: 1 つの actor が一時的に ownership を持ち、他の更新は読み取り専用または queued にする。将来の collaborative editing の土台になる。
 
 推奨ルール:
 
-- 同一 target / 同一 property は一度に一つの系だけが ownership を持つ。
-- remote drag 中は Loom graph を clear または patch して sink を外し、drag 完了後に必要なら graph を戻す。
+- first-writer が scope の ownership を取る。以後はその writer が release するまで、他系は上書きしない。
+- 永続アニメーションは Loom が source of truth を持つ。手動ドラッグや server-side override はその間だけ controller か lock を持つ。
+- remote drag 中は Loom graph を `clear` するか、`patch` で sink を外して一時停止する。drag 完了後に必要なら graph を戻す。
 - `scene-graph-input` は「状態そのもの」ではなく、「graph evaluation に必要な event」を配るために使う。
 - graph を受けて local 適用した結果を、そのまま再度 outbound 送信しない。feedback loop の原因になる。
+- ownership のキーは `scope: "scene"` または `scope: { object: "targetId" }` ごとに分ける。`LoomSceneSync#getScopeKey(scope)` を session 側の lock/registry キーに使える。
 
 ### 例: remote override 中だけ Loom movement を止める
 
 ```javascript
+const scopeKey = adapter.getScopeKey({ object: "cube1" });
+ownership.set(scopeKey, "remote-drag");
+
 adapter.clearGraph({ object: "cube1" });
 applyRemoteTransform("cube1", incomingTransform);
 
 adapter.sendGraph({ object: "cube1" }, authoredMotionGraph);
+ownership.delete(scopeKey);
 ```
 
 この切り替え責務は transport 層または SceneSync セッション管理側が持ち、`LoomSceneSync` 自体は protocol 変換と graph 実行に専念させるのが最小で安全。
+将来の collaborative editing では、ここに per-scope lock、lease、revision、conflict resolution を追加するのが自然だが、現段階では first-writer/controller モデルを前提にするのが無難。
 
 各オブジェクトグラフは独立して評価される。
 

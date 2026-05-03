@@ -638,6 +638,28 @@
       }
     });
 
+    // Test 24: scope helper は ownership キーとして使える
+    test('scope helper は ownership キーとして使える', () => {
+      const adapter = new LoomSceneSync({
+        LoomClass: Loom,
+        send: () => {},
+        getServerTime: () => 0,
+        resolveTarget: () => null
+      });
+
+      assert(adapter.isSceneScope('scene'), 'scene scope should be recognized');
+      assert(!adapter.isSceneScope({ object: 'cube1' }), 'object scope should not be scene scope');
+      assertEqual(adapter.getScopeKey('scene'), 'scene', 'scene key should be scene');
+      assertEqual(adapter.getScopeKey({ object: 'cube1' }), 'cube1', 'object key should be target id');
+
+      try {
+        adapter.getScopeKey({ target: 'cube1' });
+        throw new Error('Should have thrown');
+      } catch (e) {
+        assert(e.code === 'INVALID_SCOPE', 'invalid scope should throw INVALID_SCOPE');
+      }
+    });
+
     // Display results + set window.__loomTestResults for CI
     function displayResults() {
       const passed = results.filter(r => r.pass).length;

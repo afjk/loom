@@ -193,6 +193,7 @@
     // Create adapter and objects
     const cube = createDomObject3D(document.getElementById('cube1'));
     const objects = { cube1: cube };
+    const ownership = new Map();
 
     const adapter = new LoomSceneSync({
       LoomClass: Loom,
@@ -205,11 +206,14 @@
     });
 
     addLog('Adapter initialized');
-    addLog('Ownership rule: avoid driving the same transform from both Loom sinks and remote sync at the same time');
+    addLog('Ownership rule: one scope has one writer at a time; use first-writer/controller/lock, not dual writes');
 
     // Timeline: 1s - start scene graph
     setTimeout(() => {
       addLog('Sending scene-graph-set (serverClock → sine → sceneSetPosition)');
+      const scopeKey = adapter.getScopeKey('scene');
+      ownership.set(scopeKey, 'loom-authoritative');
+      addLog(`Scope ${scopeKey} owned by Loom graph`);
 
       const graph = {
         nodes: [
@@ -237,12 +241,16 @@
     // Timeline: 5s - object-specific graph
     setTimeout(() => {
       addLog('Clearing scene-graph');
+      ownership.delete(adapter.getScopeKey('scene'));
       adapter.handleMessage({
         type: 'scene-graph-clear',
         scope: 'scene'
       });
 
       addLog('Sending scene-graph-set for object scope (alternative motion)');
+      const scopeKey = adapter.getScopeKey({ object: 'cube1' });
+      ownership.set(scopeKey, 'loom-authoritative');
+      addLog(`Scope ${scopeKey} owned by Loom graph`);
 
       const graph = {
         nodes: [
@@ -272,12 +280,15 @@
       adapter.send(adapter.createGraphSetMessage({ object: 'cube1' }, graph));
       adapter.sendInput('scene', 'pointer.move', { x: 240, y: 160, source: 'mock-demo' });
 
+      addLog('If a remote drag starts here, release the scope lock before writing transforms');
       addLog('Object-specific graph activated');
     }, 5000);
 
     // Timeline: 10s - clear and stop
     setTimeout(() => {
       addLog('Clearing scene-graph');
+      ownership.delete(adapter.getScopeKey('scene'));
+      ownership.delete(adapter.getScopeKey({ object: 'cube1' }));
       adapter.handleMessage({
         type: 'scene-graph-clear',
         scope: 'scene'
