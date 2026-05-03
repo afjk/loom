@@ -72,10 +72,9 @@
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
 
-    // 半透明の黒で背景を描く（残像効果）
-    ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
-
     function tick() {
+      // 背景を半透明黒で塗る（残像効果）
+      ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       const x = engine.getValue("mapX.out");
