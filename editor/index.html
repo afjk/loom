@@ -99,6 +99,33 @@
       text-transform: uppercase;
       letter-spacing: 0.5px;
       flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+
+    .mode-tab {
+      padding: 4px 12px;
+      background: transparent;
+      color: #666;
+      border: none;
+      border-radius: 4px 4px 0 0;
+      font-size: 12px;
+      font-family: inherit;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .mode-tab:hover {
+      color: #aaa;
+      background: #1a1a1a;
+    }
+
+    .mode-tab.active {
+      color: #fff;
+      background: #1a1a1a;
     }
 
     #editorPane {
@@ -106,7 +133,7 @@
       overflow: hidden;
     }
 
-    #editor {
+    .editor-textarea {
       width: 100%;
       height: 100%;
       padding: 12px;
@@ -118,6 +145,11 @@
       line-height: 1.5;
       resize: none;
       outline: none;
+      display: none;
+    }
+
+    .editor-textarea.active {
+      display: block;
     }
 
     #rightPane {
@@ -176,23 +208,23 @@
     }
 
     /* Scrollbar styling */
-    #editor::-webkit-scrollbar,
+    .editor-textarea::-webkit-scrollbar,
     #values::-webkit-scrollbar {
       width: 8px;
     }
 
-    #editor::-webkit-scrollbar-track,
+    .editor-textarea::-webkit-scrollbar-track,
     #values::-webkit-scrollbar-track {
       background: #2a2a2a;
     }
 
-    #editor::-webkit-scrollbar-thumb,
+    .editor-textarea::-webkit-scrollbar-thumb,
     #values::-webkit-scrollbar-thumb {
       background: #444;
       border-radius: 4px;
     }
 
-    #editor::-webkit-scrollbar-thumb:hover,
+    .editor-textarea::-webkit-scrollbar-thumb:hover,
     #values::-webkit-scrollbar-thumb:hover {
       background: #555;
     }
@@ -232,8 +264,12 @@
 
   <div id="container">
     <div class="pane" id="editorPane">
-      <div class="pane-label">JSON Graph</div>
-      <textarea id="editor" spellcheck="false"></textarea>
+      <div class="pane-label">
+        <button class="mode-tab active" data-mode="json">JSON</button>
+        <button class="mode-tab" data-mode="dsl">DSL</button>
+      </div>
+      <textarea id="editorJson" class="editor-textarea active" spellcheck="false"></textarea>
+      <textarea id="editorDsl"  class="editor-textarea"        spellcheck="false"></textarea>
     </div>
 
     <div class="pane" id="rightPane">
@@ -252,6 +288,7 @@
 
   <script type="module">
     import { Loom } from "../src/loom.js";
+    import { parseDSL } from "../src/loom-dsl.js";
     import { presets } from "./presets.js";
 
     // State
@@ -259,19 +296,49 @@
     let currentRender = null;
     let debounceTimer = null;
     const DEBOUNCE_MS = 250;
-    const STORAGE_KEY = "loom-editor-text";
+    const STORAGE_KEY_JSON = "loom-editor-text-json";
+    const STORAGE_KEY_DSL  = "loom-editor-text-dsl";
+    const STORAGE_KEY_MODE = "loom-editor-mode";
+
+    let currentMode = localStorage.getItem(STORAGE_KEY_MODE) || "json";
 
     // UI Elements
-    const editor = document.getElementById("editor");
+    const editorJson  = document.getElementById("editorJson");
+    const editorDsl   = document.getElementById("editorDsl");
     const presetSelect = document.getElementById("presetSelect");
-    const statusEl = document.getElementById("status");
-    const canvas = document.getElementById("preview");
-    const ctx = canvas.getContext("2d");
-    const valuesEl = document.getElementById("values");
+    const statusEl    = document.getElementById("status");
+    const canvas      = document.getElementById("preview");
+    const ctx         = canvas.getContext("2d");
+    const valuesEl    = document.getElementById("values");
+    const modeTabs    = document.querySelectorAll(".mode-tab");
+
+    function activeEditor() {
+      return currentMode === "json" ? editorJson : editorDsl;
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      localStorage.setItem(STORAGE_KEY_MODE, mode);
+      modeTabs.forEach(tab => {
+        tab.classList.toggle("active", tab.dataset.mode === mode);
+      });
+      editorJson.classList.toggle("active", mode === "json");
+      editorDsl.classList.toggle("active",  mode === "dsl");
+      debouncedLoad();
+    }
+
+    modeTabs.forEach(tab => {
+      tab.addEventListener("click", () => setMode(tab.dataset.mode));
+    });
 
     // Initialize preset dropdown
     function initPresets() {
       presetSelect.innerHTML = "";
+      const blank = document.createElement("option");
+      blank.value = "";
+      blank.textContent = "— preset —";
+      presetSelect.appendChild(blank);
+
       Object.entries(presets).forEach(([key, preset]) => {
         const option = document.createElement("option");
         option.value = key;
@@ -280,53 +347,69 @@
       });
     }
 
-    // Handle preset selection
     presetSelect.addEventListener("change", (e) => {
       const key = e.target.value;
+      if (!key) return;
       const preset = presets[key];
-      if (preset) {
-        editor.value = JSON.stringify(preset.graph, null, 2);
-        localStorage.setItem(STORAGE_KEY, editor.value);
-        debouncedLoad();
+      if (!preset) return;
+
+      if (currentMode === "json") {
+        const text = JSON.stringify(preset.graph, null, 2);
+        editorJson.value = text;
+        localStorage.setItem(STORAGE_KEY_JSON, text);
+      } else {
+        const text = preset.dsl || "";
+        editorDsl.value = text;
+        localStorage.setItem(STORAGE_KEY_DSL, text);
       }
+      debouncedLoad();
     });
 
-    // Handle Tab key in textarea
-    editor.addEventListener("keydown", (e) => {
+    function handleKeydown(e) {
       if (e.key === "Tab") {
         e.preventDefault();
-        const start = editor.selectionStart;
-        const end = editor.selectionEnd;
-        const value = editor.value;
-        editor.value = value.substring(0, start) + "  " + value.substring(end);
-        editor.selectionStart = editor.selectionEnd = start + 2;
+        const ta = e.target;
+        const start = ta.selectionStart;
+        const end   = ta.selectionEnd;
+        ta.value = ta.value.substring(0, start) + "  " + ta.value.substring(end);
+        ta.selectionStart = ta.selectionEnd = start + 2;
       }
+    }
+
+    editorJson.addEventListener("keydown", handleKeydown);
+    editorDsl.addEventListener("keydown", handleKeydown);
+
+    editorJson.addEventListener("input", () => {
+      localStorage.setItem(STORAGE_KEY_JSON, editorJson.value);
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(debouncedLoad, DEBOUNCE_MS);
     });
 
-    // Handle editor changes with debounce
-    editor.addEventListener("input", () => {
+    editorDsl.addEventListener("input", () => {
+      localStorage.setItem(STORAGE_KEY_DSL, editorDsl.value);
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(debouncedLoad, DEBOUNCE_MS);
     });
 
     function debouncedLoad() {
       try {
-        const graphText = editor.value.trim();
-        if (!graphText) {
-          setStatus("error", "JSON: Empty graph");
-          return;
+        let graphForLoom, renderConfig;
+
+        if (currentMode === "json") {
+          const text = editorJson.value.trim();
+          if (!text) { setStatus("error", "JSON: Empty graph"); return; }
+          const parsed = JSON.parse(text);
+          renderConfig = parsed.render;
+          graphForLoom = { ...parsed };
+          delete graphForLoom.render;
+        } else {
+          const text = editorDsl.value.trim();
+          if (!text) { setStatus("error", "DSL: Empty"); return; }
+          const parsed = parseDSL(text);
+          renderConfig = parsed.render;
+          graphForLoom = { nodes: parsed.nodes, edges: parsed.edges };
         }
 
-        const parsed = JSON.parse(graphText);
-
-        // Extract render config if present
-        const renderConfig = parsed.render;
-
-        // Create a copy without render field for Loom
-        const graphForLoom = { ...parsed };
-        delete graphForLoom.render;
-
-        // Load the graph
         if (!engine) {
           engine = new Loom(graphForLoom);
           engine.start();
@@ -334,14 +417,12 @@
           engine.load(graphForLoom);
         }
 
-        // Update render config
         currentRender = renderConfig || null;
-
-        // Save to localStorage
-        localStorage.setItem(STORAGE_KEY, editor.value);
         setStatus("running", "running");
       } catch (e) {
-        if (e.name === "SyntaxError") {
+        if (e.name === "LoomDSLError") {
+          setStatus("error", `DSL [${e.line}:${e.column}] ${e.message}`);
+        } else if (e.name === "SyntaxError") {
           setStatus("error", `JSON: ${e.message}`);
         } else if (e.code) {
           setStatus("error", `${e.code}: ${e.message}`);
@@ -357,12 +438,8 @@
     }
 
     function formatValue(val) {
-      if (val === null || val === undefined) {
-        return "null";
-      }
-      if (typeof val === "number") {
-        return val.toFixed(3);
-      }
+      if (val === null || val === undefined) return "null";
+      if (typeof val === "number") return val.toFixed(3);
       if (typeof val === "object") {
         if (Array.isArray(val)) {
           return "[" + val.map(v => typeof v === "number" ? v.toFixed(3) : v).join(", ") + "]";
@@ -378,87 +455,57 @@
     }
 
     function resolveValue(ref) {
-      // If already a number, return it directly
-      if (typeof ref === "number") {
-        return ref;
-      }
-
-      if (ref === null || ref === undefined) {
-        return null;
-      }
-
+      if (typeof ref === "number") return ref;
+      if (ref === null || ref === undefined) return null;
       if (!engine) return null;
-
-      // Check if it's a numeric literal string
       const numVal = parseFloat(ref);
-      if (!isNaN(numVal) && String(ref).trim() === String(numVal)) {
-        return numVal;
-      }
-
+      if (!isNaN(numVal) && String(ref).trim() === String(numVal)) return numVal;
       return engine.getValue(ref);
     }
 
     function tick() {
-      // Update canvas
       if (engine && canvas && ctx) {
         if (currentRender) {
-          // Apply trail effect if specified
           const trail = currentRender.trail !== undefined ? currentRender.trail : 0.1;
           if (trail > 0) {
             ctx.fillStyle = `rgba(0, 0, 0, ${trail})`;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
           }
 
-          // Draw based on render type
           if (currentRender.type === "point") {
             const x = resolveValue(currentRender.x);
             const y = resolveValue(currentRender.y);
             const color = currentRender.color || "#00ff00";
-
             if (x !== null && y !== null && typeof x === "number" && typeof y === "number") {
               ctx.fillStyle = color;
               ctx.beginPath();
               ctx.arc(x, y, 4, 0, Math.PI * 2);
               ctx.fill();
             } else {
-              // Fallback to center
               ctx.fillStyle = color;
               ctx.beginPath();
               ctx.arc(canvas.width / 2, canvas.height / 2, 4, 0, Math.PI * 2);
               ctx.fill();
             }
           } else if (currentRender.type === "bar") {
-            const width = resolveValue(currentRender.width);
-            const color = currentRender.color || "#00ccff";
+            const width  = resolveValue(currentRender.width);
+            const color  = currentRender.color || "#00ccff";
             const height = currentRender.height !== undefined ? currentRender.height : 40;
-            const y = currentRender.y !== undefined ? resolveValue(currentRender.y) : (canvas.height - height) / 2;
-
+            const y      = currentRender.y !== undefined ? resolveValue(currentRender.y) : (canvas.height - height) / 2;
             if (width !== null && typeof width === "number" && y !== null && typeof y === "number") {
               ctx.fillStyle = color;
               ctx.fillRect(0, y, width, height);
             }
           }
         } else {
-          // Clear canvas with semi-transparent black
           ctx.fillStyle = "rgba(0, 0, 0, 0.1)";
           ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
       }
 
-      // Update values table
       if (engine && engine._currentGraph) {
         const lines = [];
         for (const node of engine._currentGraph.nodes) {
-          const nodeType = engine._currentGraph.nodes.find(n => n.id === node.id);
-          if (!nodeType) continue;
-
-          // Get node type to get output ports
-          const graph = engine._currentGraph;
-          const nodeTypeDef = graph.nodes.find(n => n.id === node.id);
-          if (!nodeTypeDef) continue;
-
-          // We need access to NODE_TYPES but it's internal to loom.js
-          // Instead, iterate through what values exist
           const keys = Array.from(engine._values.keys());
           for (const key of keys) {
             if (key.startsWith(node.id + ".")) {
@@ -468,45 +515,36 @@
             }
           }
         }
-
         valuesEl.innerHTML = lines.join("");
       }
 
       requestAnimationFrame(tick);
     }
 
-    // Initialize
     function init() {
       initPresets();
 
-      // Load from localStorage or use default preset
-      let savedText = localStorage.getItem(STORAGE_KEY);
-      if (!savedText) {
-        // Use first preset as default
-        const firstKey = Object.keys(presets)[0];
-        savedText = JSON.stringify(presets[firstKey].graph, null, 2);
-        presetSelect.value = firstKey;
+      // Restore saved content for both editors
+      const savedJson = localStorage.getItem(STORAGE_KEY_JSON);
+      const savedDsl  = localStorage.getItem(STORAGE_KEY_DSL);
+
+      if (savedJson) {
+        editorJson.value = savedJson;
       } else {
-        // Try to detect which preset is loaded
-        try {
-          const parsed = JSON.parse(savedText);
-          for (const [key, preset] of Object.entries(presets)) {
-            if (JSON.stringify(parsed) === JSON.stringify(preset.graph)) {
-              presetSelect.value = key;
-              break;
-            }
-          }
-        } catch (e) {
-          // Ignore
-        }
+        const firstKey = Object.keys(presets)[0];
+        editorJson.value = JSON.stringify(presets[firstKey].graph, null, 2);
       }
 
-      editor.value = savedText;
+      if (savedDsl) {
+        editorDsl.value = savedDsl;
+      } else {
+        const firstKey = Object.keys(presets)[0];
+        editorDsl.value = presets[firstKey].dsl || "";
+      }
 
-      // Initial load
-      debouncedLoad();
+      // Apply saved mode
+      setMode(currentMode);
 
-      // Start animation loop
       tick();
     }
 

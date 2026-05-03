@@ -123,6 +123,32 @@ Graph DSL → JSON graph → Web Loom / Unity Loom で評価
 
 詳細な API・ノード仕様は [docs/SPEC.md](docs/SPEC.md) をご覧ください。
 
+## ライブエディタと DSL
+
+ライブエディタ（`editor/index.html`）では **JSON** モードと **DSL** モードを切り替えてグラフを編集できます。
+
+DSL（Domain Specific Language）は JSON より簡潔にグラフを記述するためのテキスト形式です。各代入文がノードに、識別子参照がエッジに自動変換されます。
+
+```
+# リサジュー曲線の DSL 例
+timer = clock()
+sineX = sine(timer, freq: 0.3)
+cosineY = cosine(timer, freq: 0.5)
+mapX = map(sineX, inMin: -1, inMax: 1, outMin: 100, outMax: 700)
+mapY = map(cosineY, inMin: -1, inMax: 1, outMin: 50, outMax: 450)
+
+render point(x: mapX, y: mapY, color: "#00ff00", trail: 0.05)
+```
+
+パイプ演算子 `|>` を使えば処理の流れをより直線的に書けます：
+
+```
+timer = clock()
+x = timer |> sine(freq: 0.3) |> map(inMin: -1, inMax: 1, outMin: 100, outMax: 700)
+```
+
+詳細な仕様は **[docs/DSL.md](docs/DSL.md)** をご覧ください。
+
 ## デモの確認方法
 
 GitHub Pages で公開されているデモを、ブラウザから直接確認できます。

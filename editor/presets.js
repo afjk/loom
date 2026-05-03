@@ -22,7 +22,15 @@ export const presets = {
         color: "#00ff00",
         trail: 0.05
       }
-    }
+    },
+    dsl: `timer = clock()
+sineX = sine(timer, freq: 0.3)
+cosineY = cosine(timer, freq: 0.5)
+mapX = map(sineX, inMin: -1, inMax: 1, outMin: 100, outMax: 700)
+mapY = map(cosineY, inMin: -1, inMax: 1, outMin: 50, outMax: 450)
+
+render point(x: mapX, y: mapY, color: "#00ff00", trail: 0.05)
+`
   },
 
   circular: {
@@ -48,7 +56,15 @@ export const presets = {
         color: "#ff00ff",
         trail: 0.05
       }
-    }
+    },
+    dsl: `timer = clock()
+sineX = sine(timer, freq: 0.5)
+cosineY = cosine(timer, freq: 0.5)
+mapX = map(sineX, inMin: -1, inMax: 1, outMin: 100, outMax: 700)
+mapY = map(cosineY, inMin: -1, inMax: 1, outMin: 50, outMax: 450)
+
+render point(x: mapX, y: mapY, color: "#ff00ff", trail: 0.05)
+`
   },
 
   "clamp-map": {
@@ -72,7 +88,14 @@ export const presets = {
         color: "#00ccff",
         height: 40
       }
-    }
+    },
+    dsl: `timer = clock()
+freqMap = map(timer, inMin: 0, inMax: 30, outMin: 0.1, outMax: 5, clamp: true)
+wave = sine(timer, freq: freqMap)
+widthMap = map(wave, inMin: -1, inMax: 1, outMin: 50, outMax: 750)
+
+render bar(width: widthMap, color: "#00ccff", height: 40)
+`
   },
 
   "smoothstep-fade": {
@@ -95,7 +118,14 @@ export const presets = {
         color: "#ffaa00",
         height: 60
       }
-    }
+    },
+    dsl: `timer = clock()
+mod = mod(timer, b: 4)
+smooth = smoothstep(mod, edge0: 1, edge1: 3)
+widthMap = map(smooth, inMin: 0, inMax: 1, outMin: 50, outMax: 600)
+
+render bar(width: widthMap, color: "#ffaa00", height: 60)
+`
   },
 
   "lerp-ping-pong": {
@@ -117,6 +147,12 @@ export const presets = {
         color: "#ff6688",
         trail: 0.1
       }
-    }
+    },
+    dsl: `timer = clock()
+sine = sine(timer, freq: 0.3, amplitude: 0.5, offset: 0.5)
+lerp = lerp(a: 100, b: 700, t: sine)
+
+render point(x: lerp, y: 250, color: "#ff6688", trail: 0.1)
+`
   }
 };
