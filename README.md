@@ -140,6 +140,7 @@ GitHub Pages で公開されているデモを、ブラウザから直接確認�
 * 色相循環 (Three.js)：https://afjk.github.io/loom/examples/11-color-cycle.html
 * 円運動：https://afjk.github.io/loom/examples/12-circular-motion.html
 * 範囲リマップ：https://afjk.github.io/loom/examples/13-clamp-map.html
+* **ライブエディタ**：https://afjk.github.io/loom/editor/
 * テスト結果：https://afjk.github.io/loom/test/loom.test.html
 
 ローカルで確認する場合は、ESM を使うため、ローカルファイル直接 (`file://`) ではなく HTTP サーバから配信する必要があります。
@@ -179,6 +180,8 @@ GitHub Pages で公開されているデモを、ブラウザから直接確認�
 * 円運動：`http://localhost:8000/examples/12-circular-motion.html`
 
 * 範囲リマップ：`http://localhost:8000/examples/13-clamp-map.html`
+
+* **ライブエディタ**：`http://localhost:8000/editor/`
 
 * テスト：`http://localhost:8000/test/loom.test.html`
 
