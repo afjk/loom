@@ -208,6 +208,15 @@ export class LoomSceneSync {
     throw new LoomError("INVALID_SCOPE", "scope must be 'scene' or { object: targetId }", { scope });
   }
 
+  isSceneScope(scope) {
+    return scope === "scene";
+  }
+
+  getScopeKey(scope) {
+    this._validateScope(scope);
+    return this.isSceneScope(scope) ? "scene" : scope.object;
+  }
+
   _injectAdapterId(graph) {
     this._validateGraph(graph);
 
@@ -253,7 +262,7 @@ export class LoomSceneSync {
 
     const injectedGraph = this._injectAdapterId(msg.graph);
 
-    if (typeof msg.scope === "string" && msg.scope === "scene") {
+    if (this.isSceneScope(msg.scope)) {
       // シーングラフの置き換え
       this._sceneGraph.stop();
       this._sceneGraph = new this.LoomClass(injectedGraph);
@@ -262,7 +271,7 @@ export class LoomSceneSync {
       }
     } else {
       // オブジェクト単位グラフ
-      const targetId = msg.scope.object;
+      const targetId = this.getScopeKey(msg.scope);
       if (this._objectGraphs.has(targetId)) {
         this._objectGraphs.get(targetId).stop();
       }
@@ -277,13 +286,13 @@ export class LoomSceneSync {
   _handleGraphClear(msg) {
     this._validateScope(msg.scope);
 
-    if (typeof msg.scope === "string" && msg.scope === "scene") {
+    if (this.isSceneScope(msg.scope)) {
       // シーングラフをクリア
       this._sceneGraph.stop();
       this._sceneGraph = new this.LoomClass({ nodes: [], edges: [] });
     } else {
       // オブジェクト単位グラフをクリア
-      const targetId = msg.scope.object;
+      const targetId = this.getScopeKey(msg.scope);
       if (this._objectGraphs.has(targetId)) {
         this._objectGraphs.get(targetId).stop();
         this._objectGraphs.delete(targetId);
