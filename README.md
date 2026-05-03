@@ -125,6 +125,22 @@ Graph DSL → JSON graph → Web Loom / Unity Loom で評価
 
 ## ライブエディタと DSL
 
+### エディタ一覧
+
+| エディタ | URL | 特徴 |
+|---|---|---|
+| シンプル版 (`editor/`) | [editor/](https://afjk.github.io/loom/editor/) | 依存ゼロ・軽量・textarea ベース |
+| **Pro 版** (`editor-pro/`) | [editor-pro/dist/](https://afjk.github.io/loom/editor-pro/dist/) | **補完・構文ハイライト・lint 付き、オーバーレイ UI** |
+
+**シンプル版** はライブラリ依存ゼロで手軽に使えるテキストエリアベースのエディタです。
+
+**Pro 版** は CodeMirror 6 ベースの高機能エディタで、以下の機能を備えています:
+- 構文ハイライト（コメント・文字列・数値・キーワード・ノード名・識別子）
+- 文脈依存の補完（ノード型、パラメータ名、定義済み識別子）
+- パースエラー時の赤い波線 lint 表示
+- デモを全画面背景に表示した半透明オーバーレイ UI
+- ドラッグ・リサイズ対応、デスクトップ・タブレット・スマホで動作
+
 ライブエディタ（`editor/index.html`）では **JSON** モードと **DSL** モードを切り替えてグラフを編集できます。
 
 DSL（Domain Specific Language）は JSON より簡潔にグラフを記述するためのテキスト形式です。各代入文がノードに、識別子参照がエッジに自動変換されます。
@@ -166,7 +182,8 @@ GitHub Pages で公開されているデモを、ブラウザから直接確認�
 * 色相循環 (Three.js)：https://afjk.github.io/loom/examples/11-color-cycle.html
 * 円運動：https://afjk.github.io/loom/examples/12-circular-motion.html
 * 範囲リマップ：https://afjk.github.io/loom/examples/13-clamp-map.html
-* **ライブエディタ**：https://afjk.github.io/loom/editor/
+* **ライブエディタ（シンプル版）**：https://afjk.github.io/loom/editor/
+* **ライブエディタ（Pro 版）**：https://afjk.github.io/loom/editor-pro/dist/
 * テスト結果：https://afjk.github.io/loom/test/loom.test.html
 
 ローカルで確認する場合は、ESM を使うため、ローカルファイル直接 (`file://`) ではなく HTTP サーバから配信する必要があります。
@@ -207,7 +224,8 @@ GitHub Pages で公開されているデモを、ブラウザから直接確認�
 
 * 範囲リマップ：`http://localhost:8000/examples/13-clamp-map.html`
 
-* **ライブエディタ**：`http://localhost:8000/editor/`
+* **ライブエディタ（シンプル版）**：`http://localhost:8000/editor/`
+* **ライブエディタ（Pro 版）**：`http://localhost:8000/editor-pro/dist/`
 
 * テスト：`http://localhost:8000/test/loom.test.html`
 
