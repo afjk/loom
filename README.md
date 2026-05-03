@@ -135,7 +135,10 @@ GitHub Pages で公開されているデモを、ブラウザから直接確認�
 * Three.js デモ：https://afjk.github.io/loom/examples/06-three-cube.html
 * SceneSync モックデモ：https://afjk.github.io/loom/examples/07-scenesync-mock.html
 * Lissajous 曲線：https://afjk.github.io/loom/examples/08-lissajous.html
+* イージングポインタ追従：https://afjk.github.io/loom/examples/09-lerp-tween.html
 * 位相ずらし波：https://afjk.github.io/loom/examples/10-multi-phase.html
+* 色相循環 (Three.js)：https://afjk.github.io/loom/examples/11-color-cycle.html
+* 円運動：https://afjk.github.io/loom/examples/12-circular-motion.html
 * 範囲リマップ：https://afjk.github.io/loom/examples/13-clamp-map.html
 * テスト結果：https://afjk.github.io/loom/test/loom.test.html
 
@@ -167,7 +170,13 @@ GitHub Pages で公開されているデモを、ブラウザから直接確認�
 
 * Lissajous 曲線：`http://localhost:8000/examples/08-lissajous.html`
 
+* イージングポインタ追従：`http://localhost:8000/examples/09-lerp-tween.html`
+
 * 位相ずらし波：`http://localhost:8000/examples/10-multi-phase.html`
+
+* 色相循環 (Three.js)：`http://localhost:8000/examples/11-color-cycle.html`
+
+* 円運動：`http://localhost:8000/examples/12-circular-motion.html`
 
 * 範囲リマップ：`http://localhost:8000/examples/13-clamp-map.html`
 
