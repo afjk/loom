@@ -342,7 +342,7 @@ class RestrictedDSLEvaluator {
 }
 
 // ノード型レジストリ
-const NODE_TYPES = {
+export const NODE_TYPES = {
   // Phase 0 ノード
   clock: {
     category: 'source',
@@ -385,6 +385,7 @@ const NODE_TYPES = {
   },
   add: {
     category: 'transform',
+    commutative: true,
     inputs: [
       { name: 'a', type: 'number', default: 0, kind: 'behavior' },
       { name: 'b', type: 'number', default: 0, kind: 'behavior' }
@@ -398,6 +399,7 @@ const NODE_TYPES = {
   },
   multiply: {
     category: 'transform',
+    commutative: true,
     inputs: [
       { name: 'a', type: 'number', default: 1, kind: 'behavior' },
       { name: 'b', type: 'number', default: 1, kind: 'behavior' }
