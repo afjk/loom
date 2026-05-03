@@ -410,6 +410,181 @@ const NODE_TYPES = {
     evaluate: (inputs, params, ctx) => ({ out: inputs.a * inputs.b })
   },
 
+  // 第1陣: 基本演算系
+  subtract: {
+    category: 'transform',
+    inputs: [
+      { name: 'a', type: 'number', default: 0, kind: 'behavior' },
+      { name: 'b', type: 'number', default: 0, kind: 'behavior' }
+    ],
+    outputs: [{ name: 'out', type: 'number', kind: 'behavior' }],
+    params: [
+      { name: 'a', type: 'number', default: 0 },
+      { name: 'b', type: 'number', default: 0 }
+    ],
+    evaluate: (inputs, params, ctx) => ({ out: inputs.a - inputs.b })
+  },
+  divide: {
+    category: 'transform',
+    inputs: [
+      { name: 'a', type: 'number', default: 0, kind: 'behavior' },
+      { name: 'b', type: 'number', default: 1, kind: 'behavior' }
+    ],
+    outputs: [{ name: 'out', type: 'number', kind: 'behavior' }],
+    params: [
+      { name: 'a', type: 'number', default: 0 },
+      { name: 'b', type: 'number', default: 1 }
+    ],
+    evaluate: (inputs, params, ctx) => ({ out: inputs.b === 0 ? 0 : inputs.a / inputs.b })
+  },
+  mod: {
+    category: 'transform',
+    inputs: [
+      { name: 'a', type: 'number', default: 0, kind: 'behavior' },
+      { name: 'b', type: 'number', default: 1, kind: 'behavior' }
+    ],
+    outputs: [{ name: 'out', type: 'number', kind: 'behavior' }],
+    params: [
+      { name: 'a', type: 'number', default: 0 },
+      { name: 'b', type: 'number', default: 1 }
+    ],
+    evaluate: (inputs, params, ctx) => ({ out: inputs.b === 0 ? 0 : ((inputs.a % inputs.b) + inputs.b) % inputs.b })
+  },
+  negate: {
+    category: 'transform',
+    inputs: [
+      { name: 'a', type: 'number', default: 0, kind: 'behavior' }
+    ],
+    outputs: [{ name: 'out', type: 'number', kind: 'behavior' }],
+    params: [
+      { name: 'a', type: 'number', default: 0 }
+    ],
+    evaluate: (inputs, params, ctx) => ({ out: -inputs.a })
+  },
+  abs: {
+    category: 'transform',
+    inputs: [
+      { name: 'a', type: 'number', default: 0, kind: 'behavior' }
+    ],
+    outputs: [{ name: 'out', type: 'number', kind: 'behavior' }],
+    params: [
+      { name: 'a', type: 'number', default: 0 }
+    ],
+    evaluate: (inputs, params, ctx) => ({ out: Math.abs(inputs.a) })
+  },
+
+  // 第2陣: 範囲操作系＋コサイン
+  clamp: {
+    category: 'transform',
+    inputs: [
+      { name: 'value', type: 'number', default: 0, kind: 'behavior' },
+      { name: 'min', type: 'number', default: 0, kind: 'behavior' },
+      { name: 'max', type: 'number', default: 1, kind: 'behavior' }
+    ],
+    outputs: [{ name: 'out', type: 'number', kind: 'behavior' }],
+    params: [
+      { name: 'value', type: 'number', default: 0 },
+      { name: 'min', type: 'number', default: 0 },
+      { name: 'max', type: 'number', default: 1 }
+    ],
+    evaluate: (inputs, params, ctx) => ({
+      out: inputs.min > inputs.max ? inputs.min : Math.max(inputs.min, Math.min(inputs.max, inputs.value))
+    })
+  },
+  lerp: {
+    category: 'transform',
+    inputs: [
+      { name: 'a', type: 'number', default: 0, kind: 'behavior' },
+      { name: 'b', type: 'number', default: 1, kind: 'behavior' },
+      { name: 't', type: 'number', default: 0, kind: 'behavior' }
+    ],
+    outputs: [{ name: 'out', type: 'number', kind: 'behavior' }],
+    params: [
+      { name: 'a', type: 'number', default: 0 },
+      { name: 'b', type: 'number', default: 1 },
+      { name: 't', type: 'number', default: 0 }
+    ],
+    evaluate: (inputs, params, ctx) => ({ out: inputs.a + (inputs.b - inputs.a) * inputs.t })
+  },
+  smoothstep: {
+    category: 'transform',
+    inputs: [
+      { name: 'x', type: 'number', default: 0, kind: 'behavior' },
+      { name: 'edge0', type: 'number', default: 0, kind: 'behavior' },
+      { name: 'edge1', type: 'number', default: 1, kind: 'behavior' }
+    ],
+    outputs: [{ name: 'out', type: 'number', kind: 'behavior' }],
+    params: [
+      { name: 'x', type: 'number', default: 0 },
+      { name: 'edge0', type: 'number', default: 0 },
+      { name: 'edge1', type: 'number', default: 1 }
+    ],
+    evaluate: (inputs, params, ctx) => {
+      const { x, edge0, edge1 } = inputs;
+      if (edge0 === edge1) {
+        return { out: x < edge0 ? 0 : 1 };
+      }
+      let t = (x - edge0) / (edge1 - edge0);
+      t = Math.max(0, Math.min(1, t));
+      return { out: t * t * (3 - 2 * t) };
+    }
+  },
+  map: {
+    category: 'transform',
+    inputs: [
+      { name: 'value', type: 'number', default: 0, kind: 'behavior' },
+      { name: 'inMin', type: 'number', default: 0, kind: 'behavior' },
+      { name: 'inMax', type: 'number', default: 1, kind: 'behavior' },
+      { name: 'outMin', type: 'number', default: 0, kind: 'behavior' },
+      { name: 'outMax', type: 'number', default: 1, kind: 'behavior' }
+    ],
+    outputs: [{ name: 'out', type: 'number', kind: 'behavior' }],
+    params: [
+      { name: 'value', type: 'number', default: 0 },
+      { name: 'inMin', type: 'number', default: 0 },
+      { name: 'inMax', type: 'number', default: 1 },
+      { name: 'outMin', type: 'number', default: 0 },
+      { name: 'outMax', type: 'number', default: 1 },
+      { name: 'clamp', type: 'boolean', default: false }
+    ],
+    evaluate: (inputs, params, ctx) => {
+      const { value, inMin, inMax, outMin, outMax } = inputs;
+      if (inMax === inMin) {
+        return { out: outMin };
+      }
+      let t = (value - inMin) / (inMax - inMin);
+      if (params.clamp === true) {
+        t = Math.max(0, Math.min(1, t));
+      }
+      return { out: outMin + (outMax - outMin) * t };
+    }
+  },
+  cosine: {
+    category: 'transform',
+    inputs: [
+      { name: 't', type: 'number', default: 0, kind: 'behavior' },
+      { name: 'freq', type: 'number', default: 1, kind: 'behavior' },
+      { name: 'amplitude', type: 'number', default: 1, kind: 'behavior' },
+      { name: 'phase', type: 'number', default: 0, kind: 'behavior' },
+      { name: 'offset', type: 'number', default: 0, kind: 'behavior' }
+    ],
+    outputs: [{ name: 'out', type: 'number', kind: 'behavior' }],
+    params: [
+      { name: 'freq', type: 'number', default: 1 },
+      { name: 'amplitude', type: 'number', default: 1 },
+      { name: 'phase', type: 'number', default: 0 },
+      { name: 'offset', type: 'number', default: 0 }
+    ],
+    evaluate: (inputs, params, ctx) => {
+      const t = inputs.t;
+      const freq = inputs.freq;
+      const amplitude = inputs.amplitude;
+      const phase = inputs.phase;
+      const offset = inputs.offset;
+      return { out: Math.cos(t * freq * 2 * Math.PI + phase) * amplitude + offset };
+    }
+  },
+
   // Phase 1 入力ノード
   pointerClick: {
     category: 'input',
