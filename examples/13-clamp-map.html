@@ -97,9 +97,9 @@
     const freqDisplay = document.getElementById("freqDisplay");
 
     function tick() {
+      const time = engine.getValue("timer.t");
       const freq = engine.getValue("freqMap.out");
       const width = engine.getValue("widthMap.out");
-      const time = engine.time;
 
       bar.style.width = width + "px";
       timeDisplay.textContent = `時刻: ${time.toFixed(1)}s`;
