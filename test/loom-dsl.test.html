@@ -231,6 +231,7 @@ wave = sine(t, freq: 0.3, amplitude: 2)`;
     // ── Run tests ─────────────────────────────────────────────────────────────
     const el = document.getElementById("results");
     let pass = 0, fail = 0;
+    const failures = [];
 
     for (const { name, fn } of results) {
       const div = document.createElement("div");
@@ -244,6 +245,7 @@ wave = sine(t, freq: 0.3, amplitude: 2)`;
         div.classList.add("test-fail");
         div.textContent = `❌ ${name}: ${e.message}`;
         fail++;
+        failures.push({ name, message: e.message });
       }
       el.appendChild(div);
     }
@@ -253,7 +255,7 @@ wave = sine(t, freq: 0.3, amplitude: 2)`;
     summary.textContent = `${pass} passed, ${fail} failed`;
     el.appendChild(summary);
 
-    window.__loomDSLTestResults = { pass, fail };
+    window.__loomTestResults = { pass, fail, failures };
   </script>
 </body>
 </html>
