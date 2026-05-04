@@ -275,3 +275,78 @@ body {
     display: none;
   }
 }
+
+#dom-preview-layer {
+  position: absolute;
+  inset: 0;
+  display: none;
+  place-items: center;
+  gap: 20px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+#dom-preview-layer.active {
+  display: grid;
+}
+
+#demo-card {
+  --glow: 0.35;
+  --hue: 210;
+  width: 280px;
+  padding: 20px;
+  border-radius: 16px;
+  background: hsl(var(--hue), 80%, 55%);
+  box-shadow: 0 12px 42px hsla(var(--hue), 90%, 60%, var(--glow));
+  transform-origin: center;
+  text-align: center;
+  color: #0a1022;
+  font-weight: 700;
+  display: none;
+}
+
+#demo-readout {
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+#demo-meter {
+  width: 320px;
+  display: none;
+}
+
+#demo-meter.active {
+  display: block;
+}
+
+.demo-track {
+  height: 18px;
+  border-radius: 999px;
+  background: #1f2937;
+  overflow: hidden;
+  border: 1px solid #2b3442;
+}
+
+#demo-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #36cfc9, #5b8cff);
+}
+
+#demo-lamp {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #1c2534;
+  border: 1px solid #334155;
+  transition: 150ms;
+}
+
+#demo-lamp.is-hot {
+  background: #4d1f1f;
+  border-color: #f97316;
+  box-shadow: 0 0 24px rgba(249, 115, 22, 0.6);
+  color: #ffd5bd;
+}
