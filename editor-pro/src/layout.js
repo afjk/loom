@@ -1,4 +1,9 @@
 export function initLayout(overlay, titlebar, closeBtn, reopenBtn) {
+
+function isInteractiveElement(target) {
+  return target.closest('button, select, input, textarea, [contenteditable="true"]');
+}
+
   let isDragging = false;
   let isResizing = false;
   let dragStartX = 0;
@@ -32,6 +37,7 @@ export function initLayout(overlay, titlebar, closeBtn, reopenBtn) {
   titlebar.addEventListener('mousedown', e => {
     if (!isDesktopOrTablet()) return;
     if (e.target === closeBtn) return;
+    if (isInteractiveElement(e.target)) return;
     isDragging = true;
 
     const rect = overlay.getBoundingClientRect();
@@ -99,6 +105,7 @@ export function initLayout(overlay, titlebar, closeBtn, reopenBtn) {
 
   titlebar.addEventListener('touchstart', e => {
     if (isMobile()) return;
+    if (isInteractiveElement(e.target)) return;
     const touch = e.touches[0];
     const rect = overlay.getBoundingClientRect();
     touchStartX = touch.clientX - rect.left;
