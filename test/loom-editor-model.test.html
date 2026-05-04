@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Loom Editor Model テスト</title>
+</head>
+<body>
+  <h1>Loom Editor Model テスト</h1>
+  <div id="results"></div>
+  <script type="module">
+    import { graphToEditorModel, editorModelToGraph, applyEditorOperation, layoutFallback } from "../src/loom-editor-model.js";
+
+    const results = [];
+    function test(name, fn) { results.push({ name, fn }); }
+    function assert(cond, msg) { if (!cond) throw new Error(msg || 'assertion failed'); }
+    function assertEqual(a, b, msg) {
+      const av = JSON.stringify(a);
+      const bv = JSON.stringify(b);
+      if (av !== bv) throw new Error(msg || `expected ${bv}, got ${av}`);
+    }
+    function assertThrows(fn) {
+      let threw = false;
+      try { fn(); } catch (_) { threw = true; }
+      if (!threw) throw new Error('expected throw');
+    }
+
+    function sampleGraph() {
+      return {
+        nodes: [
+          { id: 't', type: 'clock' },
+          { id: 'wave', type: 'sine', params: { freq: 0.3 } },
+          { id: 'out', type: 'setVar', params: { key: 'v' } }
+        ],
+        edges: [
+          { from: 't.t', to: 'wave.t' },
+          { from: 'wave.out', to: 'out.value' }
+        ],
+        render: { type: 'point', x: 'wave.out', y: 'wave.out' }
+      };
+    }
+
+    test('1. roundtrip nodes/edges 等価', () => {
+      const g = sampleGraph();
+      const em = graphToEditorModel(g);
+      const out = editorModelToGraph(em, g);
+      assertEqual(out.nodes.map(n => n.id), g.nodes.map(n => n.id));
+      assertEqual(out.nodes.map(n => n.type), g.nodes.map(n => n.type));
+      assertEqual(out.edges, g.edges);
+    });
+
+    test('2. position 無しに layoutFallback', () => {
+      const em = graphToEditorModel(sampleGraph());
+      assertEqual(em.nodesById.t.position, { x: 0, y: 0 });
+      assertEqual(em.nodesById.wave.position, { x: 300, y: 0 });
+    });
+
+    test('3. meta.position が保持される', () => {
+      const g = sampleGraph();
+      g.nodes[1].meta = { position: { x: 11, y: 22 } };
+      const em = graphToEditorModel(g);
+      assertEqual(em.nodesById.wave.position, { x: 11, y: 22 });
+    });
+
+    test('4. edge id format deterministic', () => {
+      const em = graphToEditorModel(sampleGraph());
+      assert(em.edgesById['t.t->wave.t']);
+      assert(em.edgesById['wave.out->out.value']);
+    });
+
+    test('5. editorModelToGraph は order を反映', () => {
+      const em = graphToEditorModel(sampleGraph());
+      em.order = ['out', 'wave', 't'];
+      const g = editorModelToGraph(em);
+      assertEqual(g.nodes.map(n => n.id), ['out', 'wave', 't']);
+    });
+
+    test('6. editorModelToGraph は render 継承', () => {
+      const g = sampleGraph();
+      const em = graphToEditorModel(g);
+      const out = editorModelToGraph(em, g);
+      assertEqual(out.render, g.render);
+    });
+
+    test('7. addNode は order 末尾に追加', () => {
+      const em = graphToEditorModel(sampleGraph());
+      const next = applyEditorOperation(em, { type: 'addNode', node: { id: 'n1', type: 'add', category: 'transform', params: {}, position: { x: 1, y: 2 } } });
+      assert(next.nodesById.n1);
+      assertEqual(next.order[next.order.length - 1], 'n1');
+    });
+
+    test('8. removeNode で関連 edge も削除', () => {
+      const em = graphToEditorModel(sampleGraph());
+      const next = applyEditorOperation(em, { type: 'removeNode', id: 'wave' });
+      assert(!next.nodesById.wave);
+      assertEqual(Object.keys(next.edgesById).length, 0);
+    });
+
+    test('9. updateParam は対象のみ更新', () => {
+      const em = graphToEditorModel(sampleGraph());
+      const next = applyEditorOperation(em, { type: 'updateParam', id: 'wave', key: 'freq', value: 0.9 });
+      assertEqual(next.nodesById.wave.params.freq, 0.9);
+      assertEqual(next.nodesById.out.params.key, 'v');
+    });
+
+    test('10. moveNode は position のみ更新', () => {
+      const em = graphToEditorModel(sampleGraph());
+      const next = applyEditorOperation(em, { type: 'moveNode', id: 'wave', position: { x: 99, y: 88 } });
+      assertEqual(next.nodesById.wave.position, { x: 99, y: 88 });
+      assertEqual(next.nodesById.wave.params, em.nodesById.wave.params);
+    });
+
+    test('11. addEdge/removeEdge と冪等', () => {
+      let em = graphToEditorModel(sampleGraph());
+      em = applyEditorOperation(em, { type: 'addNode', node: { id: 'b', type: 'add', category: 'transform', params: {}, position: { x: 5, y: 5 } } });
+      const edge = { id: 't.t->b.a', fromNodeId: 't', fromPort: 't', toNodeId: 'b', toPort: 'a' };
+      let next = applyEditorOperation(em, { type: 'addEdge', edge });
+      assert(next.edgesById[edge.id]);
+      next = applyEditorOperation(next, { type: 'removeEdge', edgeId: edge.id });
+      assert(!next.edgesById[edge.id]);
+      const idempotent = applyEditorOperation(next, { type: 'removeEdge', edgeId: edge.id });
+      assertEqual(idempotent, next);
+    });
+
+    test('12. 不正 id は throw', () => {
+      const em = graphToEditorModel(sampleGraph());
+      assertThrows(() => applyEditorOperation(em, { type: 'updateParam', id: 'none', key: 'a', value: 1 }));
+      assertThrows(() => applyEditorOperation(em, { type: 'moveNode', id: 'none', position: { x: 0, y: 0 } }));
+      assertThrows(() => applyEditorOperation(em, { type: 'addEdge', edge: { id: 'a.out->none.in', fromNodeId: 'a', fromPort: 'out', toNodeId: 'none', toPort: 'in' } }));
+    });
+
+    test('13. layoutFallback column + deterministic', () => {
+      const nodes = [
+        { id: 'a', category: 'input', position: null },
+        { id: 'b', category: 'input', position: null },
+        { id: 'c', category: 'state', position: null },
+        { id: 'd', category: 'other', position: null }
+      ];
+      const one = layoutFallback(nodes);
+      const two = layoutFallback(nodes);
+      assertEqual(one, two);
+      assertEqual(one[0].position, { x: 0, y: 0 });
+      assertEqual(one[1].position, { x: 0, y: 120 });
+      assertEqual(one[2].position, { x: 600, y: 0 });
+      assertEqual(one[3].position, { x: 1200, y: 0 });
+    });
+
+    test('14. applyEditorOperation immutable', () => {
+      const em = graphToEditorModel(sampleGraph());
+      const before = JSON.stringify(em);
+      const next = applyEditorOperation(em, { type: 'moveNode', id: 'wave', position: { x: 1, y: 1 } });
+      assert(JSON.stringify(em) === before, 'input unchanged');
+      assert(next !== em, 'new object');
+    });
+
+    async function run() {
+      let pass = 0; let fail = 0; const failures = [];
+      for (const t of results) {
+        try { await t.fn(); pass++; }
+        catch (e) { fail++; failures.push({ name: t.name, error: e.message }); }
+      }
+      window.__loomTestResults = { pass, fail, failures };
+      document.getElementById('results').textContent = `${pass} passed, ${fail} failed`;
+    }
+    run();
+  </script>
+</body>
+</html>

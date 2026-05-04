@@ -2014,3 +2014,43 @@ interface Span { start: { line: number; column: number; offset: number }; end: {
 - editor-pro の lint / autocomplete を Source AST ベースに移行
 - DSL シンタックス拡張時の Source AST 拡張(InlineEdgeDecl, PipelineDecl 等)
 - 書式ヒントフィールドの追加(`CallExpression.multiline`, `Statement.blankLinesBefore`, `PipeExpression.lineBreakBefore`)
+
+
+## Editor Model
+
+Loom は次の 3 つの truth を分離して扱う。
+
+- **Source AST** は DSL の表層構文(配列ベース、順序・コメント保持)。
+- **GraphJSON** は Loom 実行用の正規形。
+- **Editor Model** はノードエディタ用の視覚モデル(id をキーとする Map 構造、CRDT 互換)。
+
+これらを橋渡しする関数として `parseDSLToAST` / `compileToGraph` / `graphToEditorModel` / `editorModelToGraph` / `applyEditorOperation` を提供する。Source AST と Editor Model は構造が異なる(配列ベース vs Map ベース)ため、相互変換は GraphJSON を中継して行うのが基本。
+
+### 型
+
+- `EditorNode`: `{ id, type, category, params, position }`
+- `EditorEdge`: `{ id, fromNodeId, fromPort, toNodeId, toPort }`
+- `EditorModel`: `{ nodesById, edgesById, order }`
+- `EditorOperation`: `addNode` / `removeNode` / `updateParam` / `moveNode` / `addEdge` / `removeEdge`
+
+### API
+
+- `graphToEditorModel(graph)`: GraphJSON を `nodesById` / `edgesById` / `order` に変換。`meta.position` がないノードには `layoutFallback` を適用する。
+- `editorModelToGraph(em, originalGraph = null)`: `order` で node 配列を再構築し、position を `meta.position` に保存。edge は edge id 昇順で決定論的に出力し、`originalGraph.render` を継承できる。
+- `applyEditorOperation(em, op)`: EditorModel をイミュータブル更新する。`removeNode` は関連 edge も削除し、`removeNode` / `removeEdge` は存在しない id で no-op。
+- `layoutFallback(nodes)`: category 別の決定論的グリッド配置を行う。
+
+### `layoutFallback` 仕様
+
+- `input`: x=0
+- `transform`: x=300
+- `state`: x=600
+- `sink`: x=900
+- その他: x=1200
+- 同カテゴリ内は入力順に y=0,120,240... を割り当てる。
+- 既存 `position` を持つノードは再配置しない。
+
+### v1 制約
+
+- v1 では DSL への書き戻し(EditorModel → Source AST → DSL)はサポートしない。
+- 将来の Yjs 統合では `nodesById` / `edgesById` を CRDT マップとしてそのまま扱う方針。
