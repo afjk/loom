@@ -14,6 +14,14 @@ Loom は原則としてステートレスなデータフローを基本とし、
 
 加えて、Source AST API（`parseDSLToAST` / `compileToGraph` / `formatDSL`）を公開しており、AI 補助編集・DSL formatter・ビジュアルエディタの基盤として利用できます。詳細は [SPEC.md の AST 章](docs/SPEC.md#astabstract-syntax-tree) を参照してください。
 
+加えて、Editor Model API（`graphToEditorModel` / `editorModelToGraph` / `applyEditorOperation`）を公開し、Source AST と GraphJSON の上にノードエディタ向けの正規化層を追加しました。三層分離の詳細は [SPEC.md の Editor Model 章](docs/SPEC.md#editor-model) を参照してください。
+
+```text
+DSL → Source AST → GraphJSON → EditorModel → (将来) Rete 描画
+                              ↑
+      (将来) Rete 操作 → EditorModel → GraphJSON → Preview 実行
+```
+
 ## Node categories
 
 | Category | 説明 | 例 |
