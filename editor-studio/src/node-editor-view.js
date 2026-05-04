@@ -221,7 +221,7 @@ export class NodeEditorView {
         }
 
         portY = 45;
-        for (const outputName of ['output'] || []) {
+        for (const outputName of (nodeType.outputs || []).map(o => o.name || o)) {
           const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
           circle.setAttribute('cx', node.position.x + nodeWidth);
           circle.setAttribute('cy', node.position.y + portY);
@@ -246,7 +246,7 @@ export class NodeEditorView {
                   edge: {
                     id: '',
                     fromNodeId: nodeId,
-                    fromPort: 'output',
+                    fromPort: outputName,
                     toNodeId: this.connectFromNodeId,
                     toPort: this.connectFromPort
                   }
@@ -257,7 +257,7 @@ export class NodeEditorView {
             } else {
               this.isConnecting = true;
               this.connectFromNodeId = nodeId;
-              this.connectFromPort = 'output';
+              this.connectFromPort = outputName;
               const tempLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
               tempLine.setAttribute('x1', node.position.x + nodeWidth);
               tempLine.setAttribute('y1', node.position.y + portY);

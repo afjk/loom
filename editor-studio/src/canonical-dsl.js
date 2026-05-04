@@ -17,36 +17,27 @@ export function graphToCanonicalDSL(graph) {
     }
 
     const params = { ...node.params };
-    const args = [];
     const inputNames = (nodeType.inputs || []).map(inp => inp.name || inp);
+    const paramNames = (nodeType.params || []).map(p => p.name || p);
 
+    // All args are emitted as named to avoid positional-arg restrictions in the compiler
+    // (non-commutative nodes allow at most 1 positional; commutative disallows mixing).
+    const allNamedArgs = [];
     for (const inputName of inputNames) {
       if (inputEdges[inputName]) {
-        args.push(inputEdges[inputName]);
+        allNamedArgs.push(formatParam(inputName, inputEdges[inputName]));
       } else if (params[inputName] !== undefined) {
-        args.push(params[inputName]);
+        allNamedArgs.push(formatParam(inputName, params[inputName]));
         delete params[inputName];
       }
     }
-
-    const namedArgs = [];
-    const paramNames = (nodeType.params || []).map(p => p.name || p);
     for (const paramName of Object.keys(params)) {
       if (paramNames.includes(paramName)) {
-        const value = params[paramName];
-        namedArgs.push(formatParam(paramName, value));
+        allNamedArgs.push(formatParam(paramName, params[paramName]));
       }
     }
 
-    let callStr = `${node.type}(`;
-    const allArgs = [];
-    for (const arg of args) {
-      allArgs.push(formatValue(arg));
-    }
-    for (const namedArg of namedArgs) {
-      allArgs.push(namedArg);
-    }
-    callStr += allArgs.join(', ') + ')';
+    const callStr = `${node.type}(${allNamedArgs.join(', ')})`;
 
     lines.push(`${node.id} = ${callStr}`);
   }
@@ -56,19 +47,19 @@ export function graphToCanonicalDSL(graph) {
     const renderArgs = [];
 
     if (graph.render.width !== undefined) {
-      renderArgs.push(formatParam('width', graph.render.width));
+      renderArgs.push(formatRenderParam('width', graph.render.width));
     }
     if (graph.render.height !== undefined) {
-      renderArgs.push(formatParam('height', graph.render.height));
+      renderArgs.push(formatRenderParam('height', graph.render.height));
     }
     if (graph.render.color !== undefined) {
-      renderArgs.push(formatParam('color', graph.render.color));
+      renderArgs.push(formatRenderParam('color', graph.render.color));
     }
     if (graph.render.x !== undefined) {
-      renderArgs.push(formatParam('x', graph.render.x));
+      renderArgs.push(formatRenderParam('x', graph.render.x));
     }
     if (graph.render.y !== undefined) {
-      renderArgs.push(formatParam('y', graph.render.y));
+      renderArgs.push(formatRenderParam('y', graph.render.y));
     }
 
     lines.push('');
@@ -96,4 +87,12 @@ function formatValue(val) {
 
 function formatParam(name, value) {
   return `${name}: ${formatValue(value)}`;
+}
+
+// For render params: nodeId.portName references become bare identifiers (e.g. "width.out" → width)
+function formatRenderParam(name, value) {
+  if (typeof value === 'string' && /^[a-zA-Z_][a-zA-Z0-9_]*\.[a-zA-Z_][a-zA-Z0-9_]*$/.test(value)) {
+    return `${name}: ${value.split('.')[0]}`;
+  }
+  return formatParam(name, value);
 }

@@ -8,7 +8,7 @@ import { parseDSLToAST, compileToGraph } from '../../src/loom-dsl.js';
 import { graphToEditorModel, editorModelToGraph, applyEditorOperation } from '../../src/loom-editor-model.js';
 import { graphToCanonicalDSL } from './canonical-dsl.js';
 import { createStore } from './studio-store.js';
-import { NodeEditorView } from './rete-view.js';
+import { NodeEditorView } from './node-editor-view.js';
 
 const SAMPLE_DSL = `t = clock()
 wave = sine(t, freq: 0.35)
@@ -138,6 +138,11 @@ function renderErrors() {
 }
 
 function runPreview(graph) {
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  }
+
   const state = store.getState();
   if (!graph) graph = state.graph;
   if (!graph) return;
