@@ -17,36 +17,27 @@ export function graphToCanonicalDSL(graph) {
     }
 
     const params = { ...node.params };
-    const args = [];
     const inputNames = (nodeType.inputs || []).map(inp => inp.name || inp);
+    const paramNames = (nodeType.params || []).map(p => p.name || p);
 
+    // All args are emitted as named to avoid positional-arg restrictions in the compiler
+    // (non-commutative nodes allow at most 1 positional; commutative disallows mixing).
+    const allNamedArgs = [];
     for (const inputName of inputNames) {
       if (inputEdges[inputName]) {
-        args.push(inputEdges[inputName]);
+        allNamedArgs.push(formatParam(inputName, inputEdges[inputName]));
       } else if (params[inputName] !== undefined) {
-        args.push(params[inputName]);
+        allNamedArgs.push(formatParam(inputName, params[inputName]));
         delete params[inputName];
       }
     }
-
-    const namedArgs = [];
-    const paramNames = (nodeType.params || []).map(p => p.name || p);
     for (const paramName of Object.keys(params)) {
       if (paramNames.includes(paramName)) {
-        const value = params[paramName];
-        namedArgs.push(formatParam(paramName, value));
+        allNamedArgs.push(formatParam(paramName, params[paramName]));
       }
     }
 
-    let callStr = `${node.type}(`;
-    const allArgs = [];
-    for (const arg of args) {
-      allArgs.push(formatValue(arg));
-    }
-    for (const namedArg of namedArgs) {
-      allArgs.push(namedArg);
-    }
-    callStr += allArgs.join(', ') + ')';
+    const callStr = `${node.type}(${allNamedArgs.join(', ')})`;
 
     lines.push(`${node.id} = ${callStr}`);
   }
