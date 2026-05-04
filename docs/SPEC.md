@@ -1940,3 +1940,77 @@ Loom の標準的な同期モデルは「全クライアントが同じ graph JS
 | `lowpass` | ノイズ除去・平滑化 | `tau` (sec), `initial` | `out = prevOut + (value - prevOut) * (dt / (tau + dt))` |
 | `delay1` | 1 フレーム前の入力を出力 | `initial` | `out = prevOut`、内部状態として現在の入力を次フレームへ |
 | `integrate` | 入力の時間積分 | `min`, `max`, `initial` | `out = clamp(prevOut + value * dt, min, max)` |
+
+
+## AST(Abstract Syntax Tree)
+
+### 動機
+
+DSL を「書ける言語」から「編集・生成・変換できる言語」へ拡張するため、Loom は Source AST を中間表現として公開する。
+
+- AI 補助編集: LLM に DSL の構造的な部分編集を依頼できる。
+- DSL formatter: 保存時の自動整形が可能。
+- ビジュアルエディタ基盤: DSL ⇄ graph JSON の中間として AST を介し、書式情報を保ったまま編集できる。
+- 将来の文法拡張: pipeline / inline expression / マクロ等を入れる際、AST 拡張だけで API 互換を保てる。
+
+### 二層構造
+
+- **Source AST**: ユーザーが書いた DSL の表層を忠実に表現。AssignmentStatement / RenderStatement / CallExpression / PipeExpression / Identifier / Literal / Comment などで構成。識別子参照・パイプ式・デフォルトポートは脱糖しない。
+- **Canonical AST / Graph**: 実行用に正規化された形(NodeDecl + EdgeDecl)。graph JSON はこの層の serialization。
+
+### 公開 API
+
+| 関数 | 役割 |
+|---|---|
+| `parseDSLToAST(source)` | DSL を Source AST に変換。throw せず errors を返す。 |
+| `compileToGraph(ast)` | Source AST を graph JSON に lower する。throw せず errors を返す。 |
+| `formatDSL(ast, options?)` | Source AST を整形済み DSL に変換。決定的。 |
+
+### Source AST スキーマ(抜粋)
+
+```ts
+type SourceAST = Program;
+interface Program { type: "Program"; body: Statement[]; span: Span; }
+type Statement = AssignmentStatement | RenderStatement | CommentStatement;
+interface AssignmentStatement { type: "AssignmentStatement"; target: Identifier; value: Expression; span: Span; leadingComments?: Comment[]; trailingComment?: Comment; }
+interface RenderStatement { type: "RenderStatement"; call: CallExpression; span: Span; leadingComments?: Comment[]; trailingComment?: Comment; }
+interface CommentStatement { type: "CommentStatement"; comment: Comment; span: Span; }
+type Expression = CallExpression | PipeExpression | Identifier | NumberLiteral | StringLiteral | BooleanLiteral | NullLiteral | ArrayLiteral | ObjectLiteral;
+interface CallExpression { type: "CallExpression"; callee: Identifier; args: Argument[]; span: Span; }
+interface PipeExpression { type: "PipeExpression"; left: Expression; right: CallExpression; span: Span; }
+type Argument = PositionalArg | NamedArg;
+interface PositionalArg { type: "PositionalArg"; value: Expression; span: Span; }
+interface NamedArg { type: "NamedArg"; name: Identifier; value: Expression; span: Span; }
+interface Identifier { type: "Identifier"; name: string; span: Span; }
+interface NumberLiteral { type: "NumberLiteral"; value: number; raw: string; span: Span; }
+interface StringLiteral { type: "StringLiteral"; value: string; raw: string; span: Span; }
+interface BooleanLiteral { type: "BooleanLiteral"; value: boolean; span: Span; }
+interface NullLiteral { type: "NullLiteral"; span: Span; }
+interface ArrayLiteral { type: "ArrayLiteral"; elements: Expression[]; span: Span; }
+interface ObjectLiteral { type: "ObjectLiteral"; entries: ObjectEntry[]; span: Span; }
+interface ObjectEntry { type: "ObjectEntry"; key: Identifier | StringLiteral; value: Expression; span: Span; }
+interface Comment { type: "Comment"; text: string; variant: "line"; span: Span; }
+interface Span { start: { line: number; column: number; offset: number }; end: { line: number; column: number; offset: number }; }
+```
+
+### round-trip 契約
+
+`parseDSLToAST → formatDSL → parseDSLToAST` で得られる AST は、初回 AST と span を除いて等価。コメント・引数順・キー順・リテラル raw 表現・パイプ式の構造が保持される。
+
+### 安定性
+
+本章で定義した Source AST 型は後方互換を意識したバージョニングの対象。`_internal` プレフィックスの type は予告なく変更され得る(本バージョンでは未使用)。
+
+### エラーハンドリング(現状)
+
+現在の parser 実装は最初の 1 件の ParseError を errors 配列で返す。将来、error recovery 実装により複数件収集を予定。
+
+### Future work
+
+- `graphToAST(graph): CanonicalAST`
+- `patchDSL(originalSource, newGraph): string`
+- Canonical AST(NodeDecl / EdgeDecl)の独立公開
+- AST バージョニング機構(`astVersion`)
+- editor-pro の lint / autocomplete を Source AST ベースに移行
+- DSL シンタックス拡張時の Source AST 拡張(InlineEdgeDecl, PipelineDecl 等)
+- 書式ヒントフィールドの追加(`CallExpression.multiline`, `Statement.blankLinesBefore`, `PipeExpression.lineBreakBefore`)

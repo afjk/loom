@@ -353,3 +353,29 @@ const graph = {
 ```
 
 ※ `delay1` は `out = prevOut` を返し、現在の入力を次フレームに渡す state ノードです。
+
+## Programmatic API
+
+Loom は DSL を Source AST 経由で扱う関数を公開している。AI 補助編集・DSL formatter・ビジュアルエディタの基盤として使う。
+
+### 例: DSL を解析して整形する
+
+```js
+import { parseDSLToAST, formatDSL } from "loom";
+
+const source = `t = clock()\nwave = sine(t, freq: 0.3)`;
+
+const { ast, errors } = parseDSLToAST(source);
+if (errors.length) console.error(errors);
+
+const formatted = formatDSL(ast);
+```
+
+### 例: DSL を graph JSON に変換する(2 段階)
+
+```js
+import { parseDSLToAST, compileToGraph } from "loom";
+
+const { ast } = parseDSLToAST(source);
+const { graph, errors } = compileToGraph(ast);
+```

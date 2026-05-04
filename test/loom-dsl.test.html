@@ -24,7 +24,7 @@
   <h1>Loom DSL テスト</h1>
   <div id="results"></div>
   <script type="module">
-    import { parseDSL, LoomDSLError } from "../src/loom-dsl.js";
+    import { parseDSL, parseDSLToAST, compileToGraph, formatDSL, LoomDSLError } from "../src/loom-dsl.js";
     import { presets } from "../editor/presets.js";
 
     const results = [];
@@ -229,6 +229,83 @@ wave = sine(t, freq: 0.3, amplitude: 2)`;
     });
 
     // ── Run tests ─────────────────────────────────────────────────────────────
+    test("16. parseDSLToAST: assignment/call schema", () => {
+      const { ast, errors } = parseDSLToAST("t = clock()");
+      assertEqual(errors.length, 0);
+      const s = ast.body[0];
+      assertEqual(s.type, "AssignmentStatement");
+      assertEqual(s.target.type, "Identifier");
+      assertEqual(s.value.type, "CallExpression");
+    });
+
+    test("17. parseDSLToAST: pipe expression and comments", () => {
+      const src = `# lead\na = clock() # tail\n# lone\nb = a |> sine(freq: 0.3)`;
+      const { ast } = parseDSLToAST(src);
+      const b = ast.body.find(x => x.type === "AssignmentStatement" && x.target.name === "b");
+      assert(b.leadingComments && b.leadingComments.length === 1, "adjacent comment becomes leading");
+      assertEqual(b.value.type, "PipeExpression");
+      assertEqual(b.value.right.type, "CallExpression");
+    });
+    test("17b. parseDSLToAST: leading/trailing/standalone comment split", () => {
+      const src = `# lead\na = clock() # trail\n\n# standalone`;
+      const { ast } = parseDSLToAST(src);
+      const stmt = ast.body.find(x => x.type === "AssignmentStatement");
+      assert(stmt.leadingComments && stmt.leadingComments.length === 1, "leading comment attached");
+      assert(stmt.trailingComment, "trailing comment attached");
+      const standalone = ast.body.filter(x => x.type === "CommentStatement");
+      assertEqual(standalone.length, 1, "only free comment becomes CommentStatement");
+    });
+
+    test("18. compileToGraph is non-throwing", () => {
+      const { ast } = parseDSLToAST("a = unknownNode()");
+      const { errors } = compileToGraph(ast);
+      assert(errors.length > 0, "compile error returned");
+    });
+    test("18b. compileToGraph supports null/array/object literal params", () => {
+      const src = `c = constant(value: null)\na = constant(value: [1, 2, 3])\no = constant(value: {x: 1, y: true})`;
+      const { ast } = parseDSLToAST(src);
+      const out = compileToGraph(ast);
+      assertEqual(out.errors.length, 0);
+      assertEqual(out.graph.nodes.find(n => n.id === "c").params.value, null);
+      assertEqual(out.graph.nodes.find(n => n.id === "a").params.value[2], 3);
+      assertEqual(out.graph.nodes.find(n => n.id === "o").params.value.x, 1);
+    });
+    test("18c. compileToGraph nested expression in object returns CompileError with span", () => {
+      const src = `t = clock()\na = constant(value: {x: t})`;
+      const { ast } = parseDSLToAST(src);
+      const out = compileToGraph(ast);
+      assert(out.errors.length > 0, "compile error exists");
+      assert(out.errors[0].span && out.errors[0].span.start.line > 0, "span exists");
+    });
+
+    test("19. parseDSLToAST parse error is non-throwing", () => {
+      const out = parseDSLToAST("a = ");
+      assert(out.errors.length > 0, "parse errors returned");
+    });
+    test("19b. Source AST v1 has no EdgeStatement nodes", () => {
+      const { ast } = parseDSLToAST("t = clock()");
+      assert(!ast.body.some(s => s.type === "EdgeStatement"), "no EdgeStatement in v1 AST body");
+    });
+
+    test("20. formatDSL roundtrip keeps pipe/raw", () => {
+      const src = `t = clock()\nwave = t |> sine(freq: 4.5e-2)\nrender point(x: wave, color: '#00ff00')`;
+      const a1 = parseDSLToAST(src).ast;
+      const formatted = formatDSL(a1);
+      const a2 = parseDSLToAST(formatted).ast;
+      assert(formatted.includes("|>"), "pipe kept");
+      assert(formatted.includes("4.5e-2"), "raw number kept");
+      assertEqual(JSON.stringify(a1, (k,v)=>k==="span"?undefined:v), JSON.stringify(a2, (k,v)=>k==="span"?undefined:v));
+    });
+
+    test("21. formatDSL call multiline + deterministic", () => {
+      const src = `result = map(t, inMin: 0, inMax: 10, outMin: 100, outMax: 700)`;
+      const ast = parseDSLToAST(src).ast;
+      const out1 = formatDSL(ast, { maxInlineParams: 2 });
+      const out2 = formatDSL(ast, { maxInlineParams: 2 });
+      assert(out1.includes("map(\n"), "multiline call");
+      assertEqual(out1, out2, "deterministic");
+    });
+
     const el = document.getElementById("results");
     let pass = 0, fail = 0;
     const failures = [];
