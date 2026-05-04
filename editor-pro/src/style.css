@@ -26,7 +26,6 @@ body {
   height: 100dvh;
   display: flex;
   flex-direction: column;
-  backdrop-filter: blur(8px);
   background: rgba(40, 44, 52, 0.85);
   border-left: 1px solid rgba(255, 255, 255, 0.1);
   z-index: 10;
@@ -211,7 +210,6 @@ body {
   border-radius: 50%;
   font-size: 20px;
   cursor: pointer;
-  backdrop-filter: blur(8px);
   z-index: 20;
   display: flex;
   align-items: center;
@@ -265,7 +263,6 @@ body {
   #editor-overlay {
     width: 100%;
     background: rgba(40, 44, 52, 0.75);
-    backdrop-filter: blur(6px);
     left: 0;
     border-left: none;
   }
