@@ -128,6 +128,25 @@
       assertThrows(() => applyEditorOperation(em, { type: 'addEdge', edge: { id: 'a.out->none.in', fromNodeId: 'a', fromPort: 'out', toNodeId: 'none', toPort: 'in' } }));
     });
 
+
+    test('12b. addEdge は不正 id を normalized id で保存', () => {
+      const em = graphToEditorModel(sampleGraph());
+      const edge = { id: 'wrong', fromNodeId: 't', fromPort: 't', toNodeId: 'wave', toPort: 't' };
+      const next = applyEditorOperation(em, { type: 'addEdge', edge });
+      assert(next.edgesById['t.t->wave.t']);
+      assert(!next.edgesById.wrong);
+    });
+
+    test('12c. editorModelToGraph は normalized edge から from/to を生成', () => {
+      const em = graphToEditorModel({ nodes: [{ id: 't', type: 'clock' }, { id: 'wave', type: 'sine' }], edges: [] });
+      const next = applyEditorOperation(em, {
+        type: 'addEdge',
+        edge: { id: 'wrong', fromNodeId: 't', fromPort: 't', toNodeId: 'wave', toPort: 't' }
+      });
+      const g = editorModelToGraph(next);
+      assertEqual(g.edges, [{ from: 't.t', to: 'wave.t' }]);
+    });
+
     test('13. layoutFallback column + deterministic', () => {
       const nodes = [
         { id: 'a', category: 'input', position: null },

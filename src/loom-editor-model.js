@@ -188,11 +188,13 @@ export function applyEditorOperation(em, op) {
 
   if (op.type === 'addEdge') {
     const edge = op.edge;
-    if (next.edgesById[edge.id]) throw new Error(`Edge '${edge.id}' already exists`);
+    const normalizedId = edgeId(edge.fromNodeId, edge.fromPort, edge.toNodeId, edge.toPort);
+    const normalizedEdge = { ...edge, id: normalizedId };
+    if (next.edgesById[normalizedId]) throw new Error(`Edge '${normalizedId}' already exists`);
     if (!next.nodesById[edge.fromNodeId] || !next.nodesById[edge.toNodeId]) {
       throw new Error('Edge endpoint does not exist');
     }
-    next.edgesById[edge.id] = { ...edge };
+    next.edgesById[normalizedId] = normalizedEdge;
     return next;
   }
 
