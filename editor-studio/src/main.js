@@ -1,5 +1,5 @@
 import { EditorState } from '@codemirror/state';
-import { EditorView, keymap } from '@codemirror/view';
+import { EditorView, keymap, lineNumbers } from '@codemirror/view';
 import { defaultKeymap } from '@codemirror/commands';
 import { json } from '@codemirror/lang-json';
 
@@ -43,7 +43,7 @@ function initDslEditor() {
     doc: SAMPLE_DSL,
     extensions: [
       keymap.of(defaultKeymap),
-      EditorView.lineNumbers(),
+      lineNumbers(),
       EditorView.theme({
         '&': { height: '100%' },
         '.cm-scroller': { overflow: 'auto' }
