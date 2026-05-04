@@ -26,11 +26,11 @@ export function translateToMoveNodeOp(data) {
 }
 
 export function controlValueToUpdateParamOp(nodeId, key, rawValue, controlType) {
-  const parsed = controlType === 'number' ? parseFloat(rawValue) : rawValue;
+  const parsed = controlType === 'number' ? Number(rawValue) : rawValue;
   return {
     type: 'updateParam',
     id: nodeId,
     key,
-    value: Number.isNaN(parsed) ? rawValue : parsed
+    value: controlType === 'number' && Number.isFinite(parsed) ? parsed : rawValue
   };
 }
