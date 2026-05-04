@@ -246,16 +246,45 @@ wave = sine(t, freq: 0.3, amplitude: 2)`;
       assertEqual(b.value.type, "PipeExpression");
       assertEqual(b.value.right.type, "CallExpression");
     });
+    test("17b. parseDSLToAST: leading/trailing/standalone comment split", () => {
+      const src = `# lead\na = clock() # trail\n\n# standalone`;
+      const { ast } = parseDSLToAST(src);
+      const stmt = ast.body.find(x => x.type === "AssignmentStatement");
+      assert(stmt.leadingComments && stmt.leadingComments.length === 1, "leading comment attached");
+      assert(stmt.trailingComment, "trailing comment attached");
+      const standalone = ast.body.filter(x => x.type === "CommentStatement");
+      assertEqual(standalone.length, 1, "only free comment becomes CommentStatement");
+    });
 
     test("18. compileToGraph is non-throwing", () => {
       const { ast } = parseDSLToAST("a = unknownNode()");
       const { errors } = compileToGraph(ast);
       assert(errors.length > 0, "compile error returned");
     });
+    test("18b. compileToGraph supports null/array/object literal params", () => {
+      const src = `c = constant(value: null)\na = constant(value: [1, 2, 3])\no = constant(value: {x: 1, y: true})`;
+      const { ast } = parseDSLToAST(src);
+      const out = compileToGraph(ast);
+      assertEqual(out.errors.length, 0);
+      assertEqual(out.graph.nodes.find(n => n.id === "c").params.value, null);
+      assertEqual(out.graph.nodes.find(n => n.id === "a").params.value[2], 3);
+      assertEqual(out.graph.nodes.find(n => n.id === "o").params.value.x, 1);
+    });
+    test("18c. compileToGraph nested expression in object returns CompileError with span", () => {
+      const src = `t = clock()\na = constant(value: {x: t})`;
+      const { ast } = parseDSLToAST(src);
+      const out = compileToGraph(ast);
+      assert(out.errors.length > 0, "compile error exists");
+      assert(out.errors[0].span && out.errors[0].span.start.line > 0, "span exists");
+    });
 
     test("19. parseDSLToAST parse error is non-throwing", () => {
       const out = parseDSLToAST("a = ");
       assert(out.errors.length > 0, "parse errors returned");
+    });
+    test("19b. Source AST v1 has no EdgeStatement nodes", () => {
+      const { ast } = parseDSLToAST("t = clock()");
+      assert(!ast.body.some(s => s.type === "EdgeStatement"), "no EdgeStatement in v1 AST body");
     });
 
     test("20. formatDSL roundtrip keeps pipe/raw", () => {

@@ -1971,11 +1971,10 @@ DSL を「書ける言語」から「編集・生成・変換できる言語」�
 ```ts
 type SourceAST = Program;
 interface Program { type: "Program"; body: Statement[]; span: Span; }
-type Statement = AssignmentStatement | RenderStatement | EdgeStatement | CommentStatement;
+type Statement = AssignmentStatement | RenderStatement | CommentStatement;
 interface AssignmentStatement { type: "AssignmentStatement"; target: Identifier; value: Expression; span: Span; leadingComments?: Comment[]; trailingComment?: Comment; }
 interface RenderStatement { type: "RenderStatement"; call: CallExpression; span: Span; leadingComments?: Comment[]; trailingComment?: Comment; }
 interface CommentStatement { type: "CommentStatement"; comment: Comment; span: Span; }
-interface EdgeStatement { type: "EdgeStatement"; from: PortRef; to: PortRef; span: Span; }
 type Expression = CallExpression | PipeExpression | Identifier | NumberLiteral | StringLiteral | BooleanLiteral | NullLiteral | ArrayLiteral | ObjectLiteral;
 interface CallExpression { type: "CallExpression"; callee: Identifier; args: Argument[]; span: Span; }
 interface PipeExpression { type: "PipeExpression"; left: Expression; right: CallExpression; span: Span; }

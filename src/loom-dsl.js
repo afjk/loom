@@ -110,14 +110,17 @@ export function parseDSLToAST(source) {
     function parseCall() { const nt = expect(TT.IDENT); const callee = mkIdent(nt); expect(TT.LPAREN); skipNL(); const args = []; while (peek().type !== TT.RPAREN && peek().type !== TT.EOF) { skipNL(); const at = peek(); if (at.type === TT.IDENT && peek(1).type === TT.COLON) { const n = mkIdent(take()); take(); skipNL(); const v = parseExpr(); args.push({ type: 'NamedArg', name: n, value: v, span: spanFrom(n.span.start, v.span.end) }); } else { const v = parseExpr(); args.push({ type: 'PositionalArg', value: v, span: v.span }); } skipNL(); if (peek().type === TT.COMMA) take(); skipNL(); }
       const end = expect(TT.RPAREN); return { type: 'CallExpression', callee, args, span: spanFrom(nt.span.start, end.span.end) }; }
 
+    let blankLines = 0;
     while (peek().type !== TT.EOF) {
-      if (peek().type === TT.NEWLINE) { take(); continue; }
+      if (peek().type === TT.NEWLINE) { take(); blankLines++; if (blankLines > 1) pendingComments = []; continue; }
       if (peek().type === TT.COMMENT) {
         const ct = take(); const c = { type: 'Comment', text: ct.value, variant: 'line', span: ct.span };
-        if (peek().type === TT.NEWLINE || peek().type === TT.EOF) body.push({ type: 'CommentStatement', comment: c, span: ct.span }); else pendingComments.push(c);
+        pendingComments.push(c);
         if (peek().type === TT.NEWLINE) take();
+        blankLines = 0;
         continue;
       }
+      blankLines = 0;
       const stTok = peek();
       let stmt;
       if (stTok.type === TT.IDENT && stTok.value === 'render') { take(); const call = parseCall(); stmt = { type: 'RenderStatement', call, span: spanFrom(stTok.span.start, call.span.end) }; }
@@ -128,6 +131,7 @@ export function parseDSLToAST(source) {
       if (peek().type === TT.NEWLINE) take();
       body.push(stmt);
     }
+    for (const c of pendingComments) body.push({ type: 'CommentStatement', comment: c, span: c.span });
     const end = tokens[tokens.length - 1].span.end;
     return { ast: { type: 'Program', body, span: spanFrom(posFrom(1, 1, 0), end) }, errors };
   } catch (e) {
@@ -153,7 +157,10 @@ export function compileToGraph(ast) { /* bridge via existing shape */
     const graph = buildGraph(textAst);
     return { graph, errors };
   } catch (e) {
-    errors.push({ type: 'CompileError', message: e.message, code: e.code || 'UNKNOWN_NODE_TYPE', span: null });
+    const span = (typeof e.line === 'number' && typeof e.column === 'number')
+      ? { start: { line: e.line, column: e.column, offset: 0 }, end: { line: e.line, column: e.column, offset: 0 } }
+      : null;
+    errors.push({ type: 'CompileError', message: e.message, code: e.code || 'UNKNOWN_NODE_TYPE', span });
     return { graph: { nodes: [], edges: [] }, errors };
   }
 }
@@ -166,7 +173,27 @@ function astToLegacy(program) {
     if (e.type === 'NumberLiteral') return { type: 'number', value: e.value, line: e.span.start.line, col: e.span.start.column };
     if (e.type === 'StringLiteral') return { type: 'string', value: e.value, line: e.span.start.line, col: e.span.start.column };
     if (e.type === 'BooleanLiteral') return { type: 'bool', value: e.value, line: e.span.start.line, col: e.span.start.column };
+    if (e.type === 'NullLiteral') return { type: 'null', value: null, line: e.span.start.line, col: e.span.start.column };
+    if (e.type === 'ArrayLiteral') return { type: 'array', value: convJsonLiteral(e, e.span.start.line, e.span.start.column), line: e.span.start.line, col: e.span.start.column };
+    if (e.type === 'ObjectLiteral') return { type: 'object', value: convJsonLiteral(e, e.span.start.line, e.span.start.column), line: e.span.start.line, col: e.span.start.column };
     throw new LoomDSLError('Unsupported expression in compileToGraph', e.span.start.line, e.span.start.column, 'UNEXPECTED_TOKEN');
+  }
+  function convJsonLiteral(node, line, col) {
+    if (node.type === 'NumberLiteral' || node.type === 'StringLiteral' || node.type === 'BooleanLiteral') return node.value;
+    if (node.type === 'NullLiteral') return null;
+    if (node.type === 'ArrayLiteral') return node.elements.map((e) => {
+      if (['Identifier', 'CallExpression', 'PipeExpression'].includes(e.type)) throw new LoomDSLError('Nested non-literal in array is not supported', e.span.start.line, e.span.start.column, 'UNEXPECTED_TOKEN');
+      return convJsonLiteral(e, line, col);
+    });
+    if (node.type === 'ObjectLiteral') {
+      const out = {};
+      for (const en of node.entries) {
+        if (['Identifier', 'CallExpression', 'PipeExpression'].includes(en.value.type)) throw new LoomDSLError('Nested non-literal in object is not supported', en.value.span.start.line, en.value.span.start.column, 'UNEXPECTED_TOKEN');
+        out[en.key.type === 'Identifier' ? en.key.name : en.key.value] = convJsonLiteral(en.value, line, col);
+      }
+      return out;
+    }
+    throw new LoomDSLError('Unsupported JSON literal', line, col, 'UNEXPECTED_TOKEN');
   }
   return program.body.filter(s => s.type !== 'CommentStatement').map(s => s.type === 'RenderStatement' ? { type: 'render', call: convExpr(s.call) } : { type: 'assign', name: s.target.name, expr: convExpr(s.value) });
 }
@@ -253,6 +280,6 @@ export function parseDSL(text) {
   const { ast, errors: p } = parseDSLToAST(text);
   if (p.length) throw new LoomDSLError(p[0].message, p[0].span.start.line, p[0].span.start.column, p[0].code);
   const { graph, errors: c } = compileToGraph(ast);
-  if (c.length) throw new LoomDSLError(c[0].message, 0, 0, c[0].code);
+  if (c.length) throw new LoomDSLError(c[0].message, c[0].span?.start?.line || 1, c[0].span?.start?.column || 1, c[0].code);
   return graph;
 }
