@@ -107,7 +107,7 @@ export function parseDSLToAST(source) {
     }
     function parseArray() { const st = expect(TT.LBRACKET); const elements = []; while (peek().type !== TT.RBRACKET && peek().type !== TT.EOF) { elements.push(parseExpr()); if (peek().type === TT.COMMA) take(); else break; } const ed = expect(TT.RBRACKET); return { type: 'ArrayLiteral', elements, span: spanFrom(st.span.start, ed.span.end) }; }
     function parseObject() { const st = expect(TT.LBRACE); const entries = []; while (peek().type !== TT.RBRACE && peek().type !== TT.EOF) { const kt = peek(); let key; if (kt.type === TT.IDENT) { take(); key = mkIdent(kt); } else if (kt.type === TT.STRING) { take(); key = { type: 'StringLiteral', value: kt.value.value, raw: kt.value.raw, span: kt.span }; } else throw new LoomDSLError('Expected object key', kt.span.start.line, kt.span.start.column, 'UNEXPECTED_TOKEN'); expect(TT.COLON); const value = parseExpr(); entries.push({ type: 'ObjectEntry', key, value, span: spanFrom(key.span.start, value.span.end) }); if (peek().type === TT.COMMA) take(); else break; } const ed = expect(TT.RBRACE); return { type: 'ObjectLiteral', entries, span: spanFrom(st.span.start, ed.span.end) }; }
-    function parseCall() { const nt = expect(TT.IDENT); const callee = mkIdent(nt); expect(TT.LPAREN); const args = []; while (peek().type !== TT.RPAREN && peek().type !== TT.EOF) { const at = peek(); if (at.type === TT.IDENT && peek(1).type === TT.COLON) { const n = mkIdent(take()); take(); const v = parseExpr(); args.push({ type: 'NamedArg', name: n, value: v, span: spanFrom(n.span.start, v.span.end) }); } else { const v = parseExpr(); args.push({ type: 'PositionalArg', value: v, span: v.span }); } if (peek().type === TT.COMMA) take(); }
+    function parseCall() { const nt = expect(TT.IDENT); const callee = mkIdent(nt); expect(TT.LPAREN); skipNL(); const args = []; while (peek().type !== TT.RPAREN && peek().type !== TT.EOF) { skipNL(); const at = peek(); if (at.type === TT.IDENT && peek(1).type === TT.COLON) { const n = mkIdent(take()); take(); skipNL(); const v = parseExpr(); args.push({ type: 'NamedArg', name: n, value: v, span: spanFrom(n.span.start, v.span.end) }); } else { const v = parseExpr(); args.push({ type: 'PositionalArg', value: v, span: v.span }); } skipNL(); if (peek().type === TT.COMMA) take(); skipNL(); }
       const end = expect(TT.RPAREN); return { type: 'CallExpression', callee, args, span: spanFrom(nt.span.start, end.span.end) }; }
 
     while (peek().type !== TT.EOF) {
@@ -131,6 +131,7 @@ export function parseDSLToAST(source) {
     const end = tokens[tokens.length - 1].span.end;
     return { ast: { type: 'Program', body, span: spanFrom(posFrom(1, 1, 0), end) }, errors };
   } catch (e) {
+    // TODO: support error recovery to collect multiple errors
     errors.push({ type: 'ParseError', message: e.message, code: e.code || 'UNEXPECTED_TOKEN', span: { start: { line: e.line || 1, column: e.column || 1, offset: 0 }, end: { line: e.line || 1, column: e.column || 1, offset: 0 } } });
     return { ast: null, errors };
   }
@@ -187,10 +188,28 @@ function buildGraph(stmts) { /* mostly original */
 }
 
 export function formatDSL(ast, options = {}) {
-  const indent = ' '.repeat(options.indent ?? 2);
-  const fmtExpr = (e) => {
-    if (e.type === 'PipeExpression') return `${fmtExpr(e.left)} |> ${fmtExpr(e.right)}`;
-    if (e.type === 'CallExpression') return `${e.callee.name}(${e.args.map(a => a.type === 'NamedArg' ? `${a.name.name}: ${fmtExpr(a.value)}` : fmtExpr(a.value)).join(', ')})`;
+  const indentSize = options.indent ?? 2;
+  const indent = (n) => ' '.repeat(n * indentSize);
+  const maxInlineParams = options.maxInlineParams ?? 2;
+  const maxWidth = options.maxLineWidth ?? 80;
+
+  function fmtExpr(e, level = 0) {
+    if (e.type === 'PipeExpression') {
+      const chain = [];
+      let cur = e;
+      while (cur && cur.type === 'PipeExpression') {
+        chain.push(cur.right);
+        cur = cur.left;
+      }
+      chain.reverse();
+      const head = fmtExpr(cur, level);
+      const multiline = chain.length >= 2 || chain.some((c) => shouldMultilineCall(c, level));
+      if (!multiline) return `${head} |> ${chain.map((c) => fmtExpr(c, level)).join(' |> ')}`;
+      const lines = [head];
+      for (const c of chain) lines.push(`${indent(level + 1)}|> ${fmtExpr(c, level + 1)}`);
+      return lines.join('\n');
+    }
+    if (e.type === 'CallExpression') return fmtCall(e, level);
     if (e.type === 'Identifier') return e.name;
     if (e.type === 'NumberLiteral' || e.type === 'StringLiteral') return e.raw;
     if (e.type === 'BooleanLiteral') return e.value ? 'true' : 'false';
@@ -198,14 +217,34 @@ export function formatDSL(ast, options = {}) {
     if (e.type === 'ArrayLiteral') return `[${e.elements.map(fmtExpr).join(', ')}]`;
     if (e.type === 'ObjectLiteral') return `{ ${e.entries.map(en => `${en.key.type === 'Identifier' ? en.key.name : en.key.raw}: ${fmtExpr(en.value)}`).join(', ')} }`;
     return '';
-  };
+  }
+
+  function shouldMultilineCall(call, level) {
+    if (call.args.length > maxInlineParams) return true;
+    const inline = fmtCallInline(call, level);
+    return inline.length > Math.max(20, maxWidth - indent(level).length);
+  }
+
+  function fmtCallInline(call, level) {
+    const args = call.args.map((a) => a.type === 'NamedArg' ? `${a.name.name}: ${fmtExpr(a.value, level)}` : fmtExpr(a.value, level));
+    return `${call.callee.name}(${args.join(', ')})`;
+  }
+
+  function fmtCall(call, level) {
+    if (!shouldMultilineCall(call, level)) return fmtCallInline(call, level);
+    const args = call.args.map((a) => a.type === 'NamedArg' ? `${a.name.name}: ${fmtExpr(a.value, level + 1)}` : fmtExpr(a.value, level + 1));
+    const body = args.map((a) => `${indent(level + 1)}${a}`).join(',\n');
+    return `${call.callee.name}(\n${body}\n${indent(level)})`;
+  }
+
   const lines = [];
   for (const s of ast.body) {
     if (s.type === 'CommentStatement') { lines.push(`#${s.comment.text}`); continue; }
     if (s.leadingComments) for (const c of s.leadingComments) lines.push(`#${c.text}`);
-    let line = s.type === 'AssignmentStatement' ? `${s.target.name} = ${fmtExpr(s.value)}` : `render ${fmtExpr(s.call)}`;
+    const expr = s.type === 'AssignmentStatement' ? `${s.target.name} = ${fmtExpr(s.value, 0)}` : `render ${fmtExpr(s.call, 0)}`;
+    let line = expr;
     if (s.trailingComment) line += `  #${s.trailingComment.text}`;
-    lines.push(line.replaceAll('\n', `\n${indent}`));
+    lines.push(line);
   }
   return `${lines.join('\n')}\n`;
 }

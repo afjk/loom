@@ -12,6 +12,8 @@ A browser dataflow engine with stateless transforms and explicit time-based stat
 
 Loom は原則としてステートレスなデータフローを基本とし、時間的な追従・遅延・累積が必要な場合のみ、明示的な state ノード(explicit temporal state)に状態を隔離します。これにより graph JSON は宣言的・再現可能なまま保たれ、状態を持つ挙動も graph の中で可視化されます。
 
+加えて、Source AST API（`parseDSLToAST` / `compileToGraph` / `formatDSL`）を公開しており、AI 補助編集・DSL formatter・ビジュアルエディタの基盤として利用できます。詳細は [SPEC.md の AST 章](docs/SPEC.md#astabstract-syntax-tree) を参照してください。
+
 ## Node categories
 
 | Category | 説明 | 例 |
@@ -270,5 +272,3 @@ GitHub Actions で自動テストを実行しています。ローカルで `npm
 ## ライセンス
 
 MIT License
-
-- Source AST API (`parseDSLToAST`, `compileToGraph`, `formatDSL`) を公開し、DSL の構造編集と round-trip をサポート。
