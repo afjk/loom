@@ -1940,3 +1940,16 @@ Loom の標準的な同期モデルは「全クライアントが同じ graph JS
 | `lowpass` | ノイズ除去・平滑化 | `tau` (sec), `initial` | `out = prevOut + (value - prevOut) * (dt / (tau + dt))` |
 | `delay1` | 1 フレーム前の入力を出力 | `initial` | `out = prevOut`、内部状態として現在の入力を次フレームへ |
 | `integrate` | 入力の時間積分 | `min`, `max`, `initial` | `out = clamp(prevOut + value * dt, min, max)` |
+
+## AST(Abstract Syntax Tree)
+
+### 二層構造
+
+- **Source AST**: ユーザーが書いた DSL の表層を忠実に表現。AssignmentStatement / RenderStatement / CallExpression / PipeExpression / Identifier / Literal / Comment などで構成。識別子参照・パイプ式・デフォルトポートは脱糖しない。
+- **Canonical AST / Graph**: 実行用に正規化された形(NodeDecl + EdgeDecl)。graph JSON はこの層の serialization。
+
+### 公開 API
+
+- `parseDSLToAST(source)`
+- `compileToGraph(ast)`
+- `formatDSL(ast, options?)`

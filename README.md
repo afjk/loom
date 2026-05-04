@@ -270,3 +270,5 @@ GitHub Actions で自動テストを実行しています。ローカルで `npm
 ## ライセンス
 
 MIT License
+
+- Source AST API (`parseDSLToAST`, `compileToGraph`, `formatDSL`) を公開し、DSL の構造編集と round-trip をサポート。
