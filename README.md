@@ -220,9 +220,10 @@ npm run dev
   - ドラッグで移動
   - エッジの接続・削除
   - params の表示・編集
-- Canvas preview：`render bar` / `render point` に対応
+- Canvas preview：`render bar` / `render point` に対応（全画面表示）
 - GraphJSON 表示 pane
 - Errors pane
+- Editor panels can be shown or hidden with the `Show/Hide Editors` button
 
 **設計方針：**
 - 手動同期: DSL ↔ Node は明示ボタン式（リアルタイム自動同期ではない）
