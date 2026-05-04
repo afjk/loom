@@ -956,6 +956,149 @@
       // エラーが発生しなければ成功
       assert(true);
     });
+    test("setClass が class を付与/削除し、存在しない selector でも throw しない", () => {
+      const div = document.createElement("div");
+      div.id = "sink-test-class";
+      document.body.appendChild(div);
+      try {
+        const graph = {
+          nodes: [
+            { id: "flag", type: "constant", params: { value: true } },
+            { id: "sink", type: "setClass", params: { target: "#sink-test-class", className: "is-hot" } }
+          ],
+          edges: [{ from: "flag.out", to: "sink.enabled" }]
+        };
+        const engine = new Loom(graph);
+        engine.evaluateAt(0);
+        assert(div.classList.contains("is-hot"), "class should be added");
+
+        engine.load({
+          nodes: [
+            { id: "flag", type: "constant", params: { value: false } },
+            { id: "sink", type: "setClass", params: { target: "#sink-test-class", className: "is-hot" } }
+          ],
+          edges: [{ from: "flag.out", to: "sink.enabled" }]
+        });
+        engine.evaluateAt(0);
+        assert(!div.classList.contains("is-hot"), "class should be removed");
+
+        const engine2 = new Loom({
+          nodes: [
+            { id: "flag", type: "constant", params: { value: true } },
+            { id: "sink", type: "setClass", params: { target: "#no-such-target", className: "is-hot" } }
+          ],
+          edges: [{ from: "flag.out", to: "sink.enabled" }]
+        });
+        engine2.evaluateAt(0);
+        assert(true);
+      } finally {
+        document.body.removeChild(div);
+      }
+    });
+    test("setCssVar が CSS 変数を設定し、name の -- 補完と非存在 selector を扱う", () => {
+      const div = document.createElement("div");
+      div.id = "sink-test-cssvar";
+      document.body.appendChild(div);
+      try {
+        const engine = new Loom({
+          nodes: [
+            { id: "v", type: "constant", params: { value: 10 } },
+            { id: "sink", type: "setCssVar", params: { target: "#sink-test-cssvar", name: "--x", unit: "px" } }
+          ],
+          edges: [{ from: "v.out", to: "sink.value" }]
+        });
+        engine.evaluateAt(0);
+        assertEqual(div.style.getPropertyValue("--x"), "10px");
+
+        const engine2 = new Loom({
+          nodes: [
+            { id: "v", type: "constant", params: { value: 20 } },
+            { id: "sink", type: "setCssVar", params: { target: "#sink-test-cssvar", name: "x", unit: "px" } }
+          ],
+          edges: [{ from: "v.out", to: "sink.value" }]
+        });
+        engine2.evaluateAt(0);
+        assertEqual(div.style.getPropertyValue("--x"), "20px");
+
+        const engine3 = new Loom({
+          nodes: [
+            { id: "v", type: "constant", params: { value: 1 } },
+            { id: "sink", type: "setCssVar", params: { target: "#no-such-target", name: "x", unit: "px" } }
+          ],
+          edges: [{ from: "v.out", to: "sink.value" }]
+        });
+        engine3.evaluateAt(0);
+        assert(true);
+      } finally {
+        document.body.removeChild(div);
+      }
+    });
+    test("setTransform2D が transform を設定し、未接続入力で default を使う", () => {
+      const div = document.createElement("div");
+      div.id = "sink-test-transform";
+      document.body.appendChild(div);
+      try {
+        const engine = new Loom({
+          nodes: [
+            { id: "x", type: "constant", params: { value: 10 } },
+            { id: "y", type: "constant", params: { value: 20 } },
+            { id: "s", type: "constant", params: { value: 1.5 } },
+            { id: "r", type: "constant", params: { value: 45 } },
+            { id: "sink", type: "setTransform2D", params: { target: "#sink-test-transform" } }
+          ],
+          edges: [
+            { from: "x.out", to: "sink.x" },
+            { from: "y.out", to: "sink.y" },
+            { from: "s.out", to: "sink.scale" },
+            { from: "r.out", to: "sink.rotate" }
+          ]
+        });
+        engine.evaluateAt(0);
+        assertEqual(div.style.transform, "translate(10px, 20px) scale(1.5) rotate(45deg)");
+
+        const engine2 = new Loom({
+          nodes: [
+            { id: "x", type: "constant", params: { value: 8 } },
+            { id: "sink", type: "setTransform2D", params: { target: "#sink-test-transform" } }
+          ],
+          edges: [{ from: "x.out", to: "sink.x" }]
+        });
+        engine2.evaluateAt(0);
+        assertEqual(div.style.transform, "translate(8px, 0px) scale(1) rotate(0deg)");
+
+        const engine3 = new Loom({
+          nodes: [{ id: "sink", type: "setTransform2D", params: { target: "#no-such-target" } }],
+          edges: []
+        });
+        engine3.evaluateAt(0);
+        assert(true);
+      } finally {
+        document.body.removeChild(div);
+      }
+    });
+    test("greaterThan / lessThan が期待通りで、edge 接続値を使う", () => {
+      const engine = new Loom({
+        nodes: [
+          { id: "gt1", type: "greaterThan", params: { value: 2, threshold: 1 } },
+          { id: "gt2", type: "greaterThan", params: { value: 1, threshold: 2 } },
+          { id: "lt1", type: "lessThan", params: { value: 1, threshold: 2 } },
+          { id: "lt2", type: "lessThan", params: { value: 2, threshold: 1 } },
+          { id: "v", type: "constant", params: { value: 5 } },
+          { id: "th", type: "constant", params: { value: 3 } },
+          { id: "gtEdge", type: "greaterThan" }
+        ],
+        edges: [
+          { from: "v.out", to: "gtEdge.value" },
+          { from: "th.out", to: "gtEdge.threshold" }
+        ]
+      });
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("gt1.out"), true);
+      assertEqual(engine.getValue("gt2.out"), false);
+      assertEqual(engine.getValue("lt1.out"), true);
+      assertEqual(engine.getValue("lt2.out"), false);
+      assertEqual(engine.getValue("gtEdge.out"), true);
+    });
 
     test("複数シンクノードがそれぞれ DOM を更新する", () => {
       const div1 = document.createElement("div");
