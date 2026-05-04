@@ -10,7 +10,12 @@
   <script type="module">
     import { graphToCanonicalDSL } from "../editor-studio/src/canonical-dsl.js";
     import { parseDSLToAST, compileToGraph } from "../src/loom-dsl.js";
-    import { graphToEditorModel, editorModelToGraph } from "../src/loom-editor-model.js";
+    import { graphToEditorModel, editorModelToGraph, applyEditorOperation } from "../src/loom-editor-model.js";
+    import {
+      connectionToAddEdgeOp,
+      translateToMoveNodeOp,
+      controlValueToUpdateParamOp
+    } from "../editor-studio/src/rete-operation-helpers.js";
 
     const results = [];
     function test(name, fn) { results.push({ name, fn }); }
@@ -108,6 +113,79 @@
         const found = newGraph.edges.some(e => e.to === origEdge.to);
         assert(found, `edge to ${origEdge.to} should be preserved after round-trip`);
       }
+    });
+
+    // --- rete-operation-helpers pure function tests ---
+
+    test('9. connectionToAddEdgeOp returns correct addEdge operation shape', () => {
+      const reteConnection = {
+        id: 'rete-conn-1',
+        source: 'nodeA',
+        sourceOutput: 'out',
+        target: 'nodeB',
+        targetInput: 'value'
+      };
+      const op = connectionToAddEdgeOp(reteConnection);
+      assertEqual(op.type, 'addEdge', 'type should be addEdge');
+      assertEqual(op.edge.fromNodeId, 'nodeA', 'fromNodeId');
+      assertEqual(op.edge.fromPort, 'out', 'fromPort');
+      assertEqual(op.edge.toNodeId, 'nodeB', 'toNodeId');
+      assertEqual(op.edge.toPort, 'value', 'toPort');
+      assertEqual(op.edge.id, '', 'id should be empty string');
+    });
+
+    test('10. translateToMoveNodeOp returns correct moveNode operation shape', () => {
+      const reteData = {
+        id: 'nodeA',
+        position: { x: 120, y: 80 },
+        previous: { x: 100, y: 60 }
+      };
+      const op = translateToMoveNodeOp(reteData);
+      assertEqual(op.type, 'moveNode', 'type should be moveNode');
+      assertEqual(op.id, 'nodeA', 'id');
+      assertEqual(op.position.x, 120, 'x');
+      assertEqual(op.position.y, 80, 'y');
+    });
+
+    test('11. controlValueToUpdateParamOp returns correct updateParam shape (number)', () => {
+      const op = controlValueToUpdateParamOp('nodeA', 'freq', '0.5', 'number');
+      assertEqual(op.type, 'updateParam', 'type should be updateParam');
+      assertEqual(op.id, 'nodeA', 'id');
+      assertEqual(op.key, 'freq', 'key');
+      assertEqual(op.value, 0.5, 'value should be parsed as number');
+    });
+
+    test('12. controlValueToUpdateParamOp returns correct updateParam shape (text)', () => {
+      const op = controlValueToUpdateParamOp('nodeA', 'target', '#el', 'text');
+      assertEqual(op.type, 'updateParam', 'type should be updateParam');
+      assertEqual(op.id, 'nodeA', 'id');
+      assertEqual(op.key, 'target', 'key');
+      assertEqual(op.value, '#el', 'value should remain string');
+    });
+
+    test('13. controlValueToUpdateParamOp: NaN input kept as raw string', () => {
+      const op = controlValueToUpdateParamOp('nodeA', 'freq', 'abc', 'number');
+      assertEqual(op.value, 'abc', 'NaN parse should fall back to raw string');
+    });
+
+    test('14. connectionToAddEdgeOp result is accepted by applyEditorOperation addEdge', () => {
+      // Build a model with two unconnected nodes
+      const { ast } = parseDSLToAST('clk = clock()\nw = sine()');
+      const { graph } = compileToGraph(ast);
+      const em = graphToEditorModel(graph);
+
+      // Simulate a Rete connectioncreated payload
+      const reteConnection = {
+        id: 'rete-conn-x',
+        source: 'clk',
+        sourceOutput: 't',
+        target: 'w',
+        targetInput: 't'
+      };
+      const op = connectionToAddEdgeOp(reteConnection);
+      const newModel = applyEditorOperation(em, op);
+      const edgeId = 'clk.t->w.t';
+      assert(newModel.edgesById[edgeId], 'edge should exist in model after applyEditorOperation');
     });
 
     test('8. graphToCanonicalDSL → compileToGraph preserves render.width reference', () => {
