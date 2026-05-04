@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Threshold Class Sink Demo</title>
+  <style>
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0d1117; color: #c9d1d9; font-family: sans-serif; }
+    #meter { width: 320px; }
+    .track { height: 18px; border-radius: 999px; background: #1f2937; overflow: hidden; border: 1px solid #2b3442; }
+    #fill { height: 100%; width: 0%; background: linear-gradient(90deg, #36cfc9, #5b8cff); }
+    #lamp { margin-top: 16px; padding: 12px 14px; border-radius: 10px; background: #1c2534; border: 1px solid #334155; transition: 150ms; }
+    #lamp.is-hot { background: #4d1f1f; border-color: #f97316; box-shadow: 0 0 24px rgba(249, 115, 22, 0.6); color: #ffd5bd; }
+  </style>
+</head>
+<body>
+  <div id="meter">
+    <div class="track"><div id="fill"></div></div>
+    <div id="lamp">normal</div>
+  </div>
+
+  <script type="module">
+    import { Loom } from "../src/loom.js";
+
+    const graph = {
+      nodes: [
+        { id: "t", type: "clock" },
+        { id: "wave", type: "sine", params: { freq: 0.35, amplitude: 1 } },
+        { id: "norm", type: "map", params: { inMin: -1, inMax: 1, outMin: 0, outMax: 1, clamp: true } },
+        { id: "percent", type: "map", params: { inMin: 0, inMax: 1, outMin: 0, outMax: 100, clamp: true } },
+        { id: "isHot", type: "greaterThan", params: { threshold: 0.7 } },
+        { id: "fillWidth", type: "setStyle", params: { target: "#fill", property: "width", unit: "%" } },
+        { id: "hotClass", type: "setClass", params: { target: "#lamp", className: "is-hot" } },
+        { id: "label", type: "setText", params: { target: "#lamp" } }
+      ],
+      edges: [
+        { from: "t.t", to: "wave.t" },
+        { from: "wave.out", to: "norm.value" },
+        { from: "norm.out", to: "percent.value" },
+        { from: "percent.out", to: "fillWidth.value" },
+        { from: "norm.out", to: "isHot.value" },
+        { from: "isHot.out", to: "hotClass.enabled" },
+        { from: "percent.out", to: "label.value" }
+      ]
+    };
+
+    new Loom(graph).start();
+  </script>
+</body>
+</html>

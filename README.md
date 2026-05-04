@@ -182,6 +182,8 @@ GitHub Pages で公開されているデモを、ブラウザから直接確認�
 * 色相循環 (Three.js)：https://afjk.github.io/loom/examples/11-color-cycle.html
 * 円運動：https://afjk.github.io/loom/examples/12-circular-motion.html
 * 範囲リマップ：https://afjk.github.io/loom/examples/13-clamp-map.html
+* DOM Transform Sink デモ：https://afjk.github.io/loom/examples/14-dom-transform-sink.html
+* Threshold Class Sink デモ：https://afjk.github.io/loom/examples/15-threshold-class-sink.html
 * **ライブエディタ（シンプル版）**：https://afjk.github.io/loom/editor/
 * **ライブエディタ（Pro 版）**：https://afjk.github.io/loom/editor-pro/dist/
 * テスト結果：https://afjk.github.io/loom/test/loom.test.html
@@ -223,6 +225,8 @@ GitHub Pages で公開されているデモを、ブラウザから直接確認�
 * 円運動：`http://localhost:8000/examples/12-circular-motion.html`
 
 * 範囲リマップ：`http://localhost:8000/examples/13-clamp-map.html`
+* DOM Transform Sink デモ：`http://localhost:8000/examples/14-dom-transform-sink.html`
+* Threshold Class Sink デモ：`http://localhost:8000/examples/15-threshold-class-sink.html`
 
 * **ライブエディタ（シンプル版）**：`http://localhost:8000/editor/`
 * **ライブエディタ（Pro 版）**：`http://localhost:8000/editor-pro/dist/`

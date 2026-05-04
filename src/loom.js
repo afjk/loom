@@ -586,6 +586,32 @@ export const NODE_TYPES = {
       return { out: Math.cos(t * freq * 2 * Math.PI + phase) * amplitude + offset };
     }
   },
+  greaterThan: {
+    category: 'transform',
+    inputs: [
+      { name: 'value', type: 'number', default: 0, kind: 'behavior' },
+      { name: 'threshold', type: 'number', default: 0, kind: 'behavior' }
+    ],
+    outputs: [{ name: 'out', type: 'boolean', kind: 'behavior' }],
+    params: [
+      { name: 'value', type: 'number', default: 0 },
+      { name: 'threshold', type: 'number', default: 0 }
+    ],
+    evaluate: (inputs, params, ctx) => ({ out: inputs.value > inputs.threshold })
+  },
+  lessThan: {
+    category: 'transform',
+    inputs: [
+      { name: 'value', type: 'number', default: 0, kind: 'behavior' },
+      { name: 'threshold', type: 'number', default: 0, kind: 'behavior' }
+    ],
+    outputs: [{ name: 'out', type: 'boolean', kind: 'behavior' }],
+    params: [
+      { name: 'value', type: 'number', default: 0 },
+      { name: 'threshold', type: 'number', default: 0 }
+    ],
+    evaluate: (inputs, params, ctx) => ({ out: inputs.value < inputs.threshold })
+  },
 
   // Phase 1 入力ノード
   pointerClick: {
@@ -823,6 +849,67 @@ export const NODE_TYPES = {
       if (!params.target || !params.property) return {};
       const el = document.querySelector(params.target);
       if (el) el.style[params.property] = String(inputs.value) + params.unit;
+      return {};
+    }
+  },
+  setClass: {
+    category: 'sink',
+    inputs: [
+      { name: 'enabled', type: 'boolean', default: true, kind: 'behavior' }
+    ],
+    outputs: [],
+    params: [
+      { name: 'target', type: 'string', default: '' },
+      { name: 'className', type: 'string', default: '' }
+    ],
+    evaluate: (inputs, params, ctx) => {
+      if (!params.target || !params.className) return {};
+      const el = document.querySelector(params.target);
+      if (!el) return {};
+      el.classList.toggle(params.className, Boolean(inputs.enabled));
+      return {};
+    }
+  },
+  setCssVar: {
+    category: 'sink',
+    inputs: [
+      { name: 'value', type: 'any', default: 0, kind: 'behavior' }
+    ],
+    outputs: [],
+    params: [
+      { name: 'target', type: 'string', default: '' },
+      { name: 'name', type: 'string', default: '' },
+      { name: 'unit', type: 'string', default: '' }
+    ],
+    evaluate: (inputs, params, ctx) => {
+      if (!params.target || !params.name) return {};
+      if (inputs.value === null || inputs.value === undefined) return {};
+      const el = document.querySelector(params.target);
+      if (!el) return {};
+      const cssVarName = params.name.startsWith('--') ? params.name : `--${params.name}`;
+      el.style.setProperty(cssVarName, String(inputs.value) + params.unit);
+      return {};
+    }
+  },
+  setTransform2D: {
+    category: 'sink',
+    inputs: [
+      { name: 'x', type: 'number', default: 0, kind: 'behavior' },
+      { name: 'y', type: 'number', default: 0, kind: 'behavior' },
+      { name: 'scale', type: 'number', default: 1, kind: 'behavior' },
+      { name: 'rotate', type: 'number', default: 0, kind: 'behavior' }
+    ],
+    outputs: [],
+    params: [
+      { name: 'target', type: 'string', default: '' },
+      { name: 'unit', type: 'string', default: 'px' },
+      { name: 'rotateUnit', type: 'string', default: 'deg' }
+    ],
+    evaluate: (inputs, params, ctx) => {
+      if (!params.target) return {};
+      const el = document.querySelector(params.target);
+      if (!el) return {};
+      el.style.transform = `translate(${inputs.x}${params.unit}, ${inputs.y}${params.unit}) scale(${inputs.scale}) rotate(${inputs.rotate}${params.rotateUnit})`;
       return {};
     }
   },

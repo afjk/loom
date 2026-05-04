@@ -175,7 +175,7 @@ Loom の核は、以下の仕組みです：
 - ✅ `engine.dispatchEvent(ref, payload)` API
 - ✅ 入力ノード4種：`pointerClick`、`pointerPosition`、`keyDown`、`keyUp`
 - ✅ イベント変換ノード3種：`filter`、`sample`、`merge`
-- ✅ DOM シンクノード4種：`setText`、`setStyle`、`setAttr`、`log`
+- ✅ DOM シンクノード7種：`setText`、`setStyle`、`setAttr`、`setClass`、`setCssVar`、`setTransform2D`、`log`
 - ✅ 既存ノードはそのまま動作（後方互換）
 
 ### 実装外（第二段階以降）
@@ -811,6 +811,44 @@ predicate は `load()` 時にパースして抽象構文木（AST）に変換し
 
 複数の Event ストリームを1本にまとめる。同一フレームに両方発生した場合、出力配列は `a` の全ペイロード、その後に `b` の全ペイロード、という順序で連結される。下流ノードはこの順序を前提にしてよい。
 
+### 5.12.1 greaterThan
+
+**カテゴリ：** 変換部品
+
+**入力：**
+- `value`（型：`number`、デフォルト：`0`）
+- `threshold`（型：`number`、デフォルト：`0`）
+
+**出力：**
+- `out`（型：`boolean`）
+
+**パラメータ：**
+- `value`（型：`number`、デフォルト：`0`）
+- `threshold`（型：`number`、デフォルト：`0`）
+
+**説明：**
+
+`value > threshold` を評価し、真偽値を返す。しきい値判定をシンプルに記述するためのノード。
+
+### 5.12.2 lessThan
+
+**カテゴリ：** 変換部品
+
+**入力：**
+- `value`（型：`number`、デフォルト：`0`）
+- `threshold`（型：`number`、デフォルト：`0`）
+
+**出力：**
+- `out`（型：`boolean`）
+
+**パラメータ：**
+- `value`（型：`number`、デフォルト：`0`）
+- `threshold`（型：`number`、デフォルト：`0`）
+
+**説明：**
+
+`value < threshold` を評価し、真偽値を返す。`greaterThan` と対で使える比較ノード。
+
 ### 5.13 setText
 
 **カテゴリ：** シンク部品
@@ -844,6 +882,62 @@ DOM 要素のテキスト内容を更新する。`document.querySelector(target)
 **説明：**
 
 DOM 要素の CSS スタイルを更新する。`el.style[property] = String(value) + unit` として設定されます。例えば `value=50`、`property="width"`、`unit="px"` なら、`el.style.width = "50px"` となります。要素が見つからない場合、何もしない（エラーにしない）。
+
+### 5.14.1 setClass
+
+**カテゴリ：** シンク部品
+
+**入力：**
+- `enabled`（型：`boolean`、デフォルト：`true`）
+
+**出力：** なし（シンクノードは副作用専用のため出力を持たない）
+
+**パラメータ：**
+- `target`（型：`string`、デフォルト：`""`）：CSS セレクタ
+- `className`（型：`string`、デフォルト：`""`）：付け外しするクラス名
+
+**説明：**
+
+`element.classList.toggle(className, Boolean(enabled))` を実行してクラスを付与/削除する。対象要素がない場合、`className` が空の場合は何もしない。
+
+### 5.14.2 setCssVar
+
+**カテゴリ：** シンク部品
+
+**入力：**
+- `value`（型：`any`、デフォルト：`0`）
+
+**出力：** なし（シンクノードは副作用専用のため出力を持たない）
+
+**パラメータ：**
+- `target`（型：`string`、デフォルト：`""`）：CSS セレクタ
+- `name`（型：`string`、デフォルト：`""`）：CSS カスタムプロパティ名
+- `unit`（型：`string`、デフォルト：`""`）：単位文字列
+
+**説明：**
+
+CSS custom property を更新する。`name` が `--` で始まらない場合は自動で `--` を補う。`value` が `null` / `undefined` の場合や対象要素がない場合は何もしない。
+
+### 5.14.3 setTransform2D
+
+**カテゴリ：** シンク部品
+
+**入力：**
+- `x`（型：`number`、デフォルト：`0`）
+- `y`（型：`number`、デフォルト：`0`）
+- `scale`（型：`number`、デフォルト：`1`）
+- `rotate`（型：`number`、デフォルト：`0`）
+
+**出力：** なし（シンクノードは副作用専用のため出力を持たない）
+
+**パラメータ：**
+- `target`（型：`string`、デフォルト：`""`）：CSS セレクタ
+- `unit`（型：`string`、デフォルト：`"px"`）：translate の単位
+- `rotateUnit`（型：`string`、デフォルト：`"deg"`）：rotate の単位
+
+**説明：**
+
+`style.transform` を `translate(...) scale(...) rotate(...)` 形式でまとめて設定する。`setStyle` でも transform は設定できるが、`setTransform2D` は 2D 変形を分かりやすく扱うための専用シンク。対象要素がない場合は何もしない。
 
 ### 5.15 setAttr
 
