@@ -43,6 +43,11 @@ const titlebar = document.getElementById('editor-titlebar');
 const closeBtn = document.getElementById('closeBtn');
 const reopenBtn = document.getElementById('reopenBtn');
 const tabs = document.querySelectorAll('.tab');
+const domPreviewLayer = document.getElementById('dom-preview-layer');
+const demoCard = document.getElementById('demo-card');
+const demoMeter = document.getElementById('demo-meter');
+const demoLamp = document.getElementById('demo-lamp');
+const demoFill = document.getElementById('demo-fill');
 
 // ─── Canvas sizing ───────────────────────────────────────────────────────────
 
@@ -161,6 +166,8 @@ presetSelect.addEventListener('change', e => {
   const preset = presets[key];
   if (!preset) return;
 
+  setPreviewMode(preset.previewMode || 'canvas');
+
   if (currentMode === 'dsl') {
     const text = preset.dsl || '';
     localStorage.setItem(STORAGE_KEY_DSL, text);
@@ -171,8 +178,50 @@ presetSelect.addEventListener('change', e => {
     setEditorContent(text);
   }
 
-  setTimeout(() => { presetSelect.value = ''; }, 500);
 });
+
+
+function resetDomPreview() {
+  if (demoCard) {
+    demoCard.style.transform = '';
+    demoCard.style.removeProperty('--glow');
+    demoCard.style.removeProperty('--hue');
+    demoCard.style.display = 'none';
+  }
+
+  const demoReadout = document.getElementById('demo-readout');
+  if (demoReadout) {
+    demoReadout.textContent = 'starting...';
+  }
+
+  if (demoMeter) {
+    demoMeter.classList.remove('active');
+  }
+
+  if (demoLamp) {
+    demoLamp.classList.remove('is-hot');
+    demoLamp.textContent = 'normal';
+  }
+
+  if (demoFill) {
+    demoFill.style.width = '0%';
+  }
+}
+
+function setPreviewMode(mode = 'canvas') {
+  resetDomPreview();
+
+  const isDomPreview = mode !== 'canvas';
+  domPreviewLayer?.classList.toggle('active', isDomPreview);
+
+  if (mode === 'dom-card' && demoCard) {
+    demoCard.style.display = 'block';
+  }
+
+  if (mode === 'dom-meter' && demoMeter) {
+    demoMeter.classList.add('active');
+  }
+}
 
 // ─── Loom loading ─────────────────────────────────────────────────────────────
 
@@ -345,6 +394,7 @@ function defaultJson() {
 function init() {
   initPresets();
   initLayout(overlay, titlebar, closeBtn, reopenBtn);
+  setPreviewMode('canvas');
 
   // Restore or use default
   const savedDsl = localStorage.getItem(STORAGE_KEY_DSL) || defaultDsl();
