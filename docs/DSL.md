@@ -300,3 +300,56 @@ lerp = lerp(a: 100, b: 700, t: sine)
 
 render point(x: lerp, y: 250, color: "#ff6688", trail: 0.1)
 ```
+
+## State nodes (explicit temporal state)
+
+### smoothLerp — 目標値への滑らかな追従
+
+state ノード。graph JSON には現れない runtime state(prevOut)を持ち、`engine.load()` で同じ id ならその state を引き継ぐ。
+
+```js
+const graph = {
+  nodes: [
+    { id: "target", type: "constant", params: { value: 100 } },
+    { id: "follow", type: "smoothLerp", params: { rate: 5, initial: 0 } }
+  ],
+  edges: [
+    { from: "target.out", to: "follow.value" }
+  ]
+};
+```
+
+### lowpass — 時定数 tau による平滑化
+
+state ノード。graph JSON には現れない runtime state(prevOut)を持ち、ノイズの多い入力(マウス座標など)を滑らかにする用途。
+
+```js
+const graph = {
+  nodes: [
+    { id: "raw", type: "pointerPosition", params: { axis: "x" } },
+    { id: "smooth", type: "lowpass", params: { tau: 0.1, initial: 0 } }
+  ],
+  edges: [
+    { from: "raw.out", to: "smooth.value" }
+  ]
+};
+```
+
+### integrate — 時間積分(チャージゲージ等)
+
+state ノード。graph JSON には現れない runtime state(prevOut)を持ち、`min` / `max` でクランプ可能。
+
+```js
+const graph = {
+  nodes: [
+    { id: "key", type: "keyDown", params: { key: " " } },
+    { id: "rate", type: "constant", params: { value: 1 } },
+    { id: "charge", type: "integrate", params: { min: 0, max: 1, initial: 0 } }
+  ],
+  edges: [
+    { from: "rate.out", to: "charge.value" }
+  ]
+};
+```
+
+※ `delay1` は `out = prevOut` を返し、現在の入力を次フレームに渡す state ノードです。

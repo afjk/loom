@@ -1888,3 +1888,55 @@ JavaScript 版 Loom と同じ JSON グラフ形式を、Unity C# ランタイム
 - ビジュアルエディタ
 - WebSocket 本体実装
 - Unity Package Manager 公開
+
+## State nodes (explicit temporal state)
+
+### 動機
+
+Loom の通常ノードはステートレスな純粋関数であり、`evaluate(inputs, params)` の結果は入力のみで決まる。これは graph を「時刻 t の関数 f(t)」として扱える純度の高い性質を生むが、一方で smoothing / delay / integrate / easing follow のような「前フレーム値を必要とする挙動」は表現できない。
+
+これらを graph 外の JS に逃がすと、Loom グラフから挙動が見えなくなり、Loom の「graph に挙動を閉じ込める」という思想からむしろ外れてしまう。そこで Loom は state を禁止するのでも無制限に許すのでもなく、明示的に隔離されたカテゴリとして導入する。
+
+### 設計原則
+
+1. 通常ノードは純粋関数である。
+2. 状態を持てるのは `category: "state"` のノードだけである。
+3. state は node id に紐づく。
+4. state は graph JSON には保存されない runtime state である。
+5. `engine.load()` 時、同じ id の state ノードは state を引き継ぐ。
+6. id が変わった state ノードは `params.initial` から始まる。
+7. state ノードは同期・再現性に影響するため、必要最小限に使う。
+8. AI が graph を生成する場合、state ノードの使用は時間的挙動(smooth / delay / integrate / easing follow)が必要な場合に限定する。
+
+### 用語
+
+- カテゴリ識別子(機械可読)は `state` を使う。
+- ドキュメント・説明文では "explicit temporal state" と呼び、「時間方向のふるまいを扱うノード」であることを強調する。
+- 「任意のメモリ」「変数」「保存領域」としての拡大解釈は意図的に避ける。
+
+### エンジン契約
+
+- `dt` は秒単位で、フレーム間のタイムスタンプ差から算出される。
+- `dt` の上限は 0.1 秒にクランプされる(タブ非アクティブ時の暴走を防ぐため)。
+- state ノードの evaluate は `evaluate(inputs, params, { prevOut, dt })` の形で呼ばれる。
+- 評価後の出力は engine 側で id ごとに保持され、次フレームの `prevOut` として渡される。
+- `engine.load(newGraph)` では、同じ id の state ノードは prevOut を保持し、異なる id は `params.initial` から開始する。
+- NaN / Infinity が出た場合は `prevOut` を更新せず、必要に応じて `initial` にリセットする。
+
+### 同期(SceneSync 等)に関する注意
+
+Loom の標準的な同期モデルは「全クライアントが同じ graph JSON を受け取り、それぞれ独自に評価する」というものである。state ノードはこのモデル上、各クライアントで独立に進行する。
+
+- 同じ `params.initial` と同じ入力履歴(クロック、pointerClick イベントなど)が両端で揃っていれば、state ノードの値は収束する。
+- ジョイン時のキャッチアップ(途中参加クライアントが過去の入力を再生する仕組み)は保証されない。
+- したがって SceneSync 越しで state ノードを使う場合は、「収束しても OK な性質(easing follow、低域通過など)」に限定するのが安全である。
+- 累積誤差が問題になる挙動(`integrate` で大きなカウントを保持し続ける等)は、必要なら別途 broadcast 機構で値を共有する設計を将来検討する。
+
+### 標準 state ノード
+
+| Node | 用途 | 主なパラメータ | 式 |
+|---|---|---|---|
+| `smoothLerp` | 目標値への指数的収束(easing follow) | `rate` (1/sec), `initial` | `out = prevOut + (value - prevOut) * (1 - exp(-rate * dt))` |
+| `lowpass` | ノイズ除去・平滑化 | `tau` (sec), `initial` | `out = prevOut + (value - prevOut) * (dt / (tau + dt))` |
+| `delay1` | 1 フレーム前の入力を出力 | `initial` | `out = prevOut`、内部状態として現在の入力を次フレームへ |
+| `integrate` | 入力の時間積分 | `min`, `max`, `initial` | `out = clamp(prevOut + value * dt, min, max)` |
