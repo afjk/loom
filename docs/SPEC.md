@@ -1,3 +1,335 @@
+# Loom の設計思想
+
+Loom は、結果ではなく関係を記述する。
+
+Loom graph は、環境から出力を導くためのシリアライズ可能な定義である。  
+graph 自体は、決定論的な関係として扱う。つまり、同じ環境と同じ評価規則が与えられれば、同じ出力を生成するべきである。
+
+言い換えると、次の原則が成り立つ。
+
+同じ graph + 同じ environment + 同じ評価規則 = 同じ出力
+
+この原則が Loom の設計判断の土台である。
+
+ただし、Loom はすべての host behavior を完全に決定論的にすることを目的としない。  
+物理、デバイス入力、描画、AI サービス、乱数、外部 API など、host 固有または非決定的な処理は、environment input または同期済み result として扱う。
+
+Loom の役割は、同期済み environment から、決定論的に記述できる振る舞いを各 runtime が再現できるようにすることである。
+
+## 3 層モデル
+
+Loom は振る舞いを次の 3 つの層に分離する。
+
+1. Graph
+2. Environment
+3. Runtime
+
+### Graph
+
+Graph は、値、イベント、状態、出力の関係を記述する。
+
+Graph はホスト言語のコードではなく、データである。  
+Graph が JSON として表現されることで、シリアライズ、送信、ランタイム編集、AI 生成、ノードとしての可視化、そして Web、Unity、Godot など複数のホスト環境での実行が可能になる。
+
+Graph は、可能な限り決定論的で、副作用を持たない状態に保つべきである。
+
+### Environment
+
+Environment は、graph を評価するために外部から与えられる入力を含む。
+
+Environment には次のものが含まれる。
+
+- 共有 clock によって同期された時刻
+- 入力値
+- 入力イベント
+
+例として、スライダー値、ボタン押下、乗り物の発車イベント、プレイヤー操作、ページ送り、その他 graph に注入される外部シグナルがある。
+
+Environment は graph から分離される。
+
+この分離が重要である。Loom は、計算済みのすべての結果を同期する必要はない。  
+代わりに、Loom は environment を同期する。すべてのクライアントが同じ graph を同じ environment で評価すれば、各クライアントは同じ結果を独立に計算できる。
+
+### Runtime
+
+Runtime は、graph を environment に対して評価し、その結果として得られた出力をホストシステムに適用する。
+
+Runtime は次の責務を持つ。
+
+- ノードを評価する
+- 決定論的な評価規則を維持する
+- 明示的な state ノードを管理する
+- 出力を host scene や application に適用する
+- graph の出力を DOM、Unity Transform、Godot Node など、host 固有の API に対応づける
+
+Web、Unity、Godot など複数の runtime が存在し得るが、それらは同じ評価規則に従うべきである。
+
+## Scene-level graph と Object-level graph
+
+Loom graph は、scene 全体に対して持つことも、個別の scene object に attach することもできる。
+
+### Scene-level graph
+
+Scene-level graph は、scene 全体の状態や object 間の関係を記述する。
+
+例:
+
+- game state
+- scene phase
+- score
+- page index
+- button と door の関係
+- ride start event と乗り物 object の関係
+- 全体イベントの routing
+
+Scene-level graph は、object 間の橋渡しを担当する。
+
+たとえば、button object が押されたとき、door object を開くという関係は、button object や door object の内部に直接埋め込むのではなく、scene-level graph に記述できる。
+
+### Object-level graph
+
+Object-level graph は、個別 object の振る舞いを記述する。
+
+例:
+
+- self の position / rotation / scale の制御
+- open / close animation
+- idle animation
+- patrol movement
+- projectile motion
+- local reaction
+
+Object-level graph は、基本的に自分自身の振る舞いを記述する。  
+他 object を直接変更するのではなく、environment event、scene-level graph、または output command を通じて関係を扱う。
+
+同じ graph は、異なる object context と environment で評価することで、多数の object に再利用できる。
+
+たとえば、100 個の bullet object が存在する場合でも、それぞれに同じ bullet motion graph を attach し、spawnTime、initialPosition、direction、speed などの environment だけを変えて評価できる。
+
+このモデルにより、Loom core が動的に N 個の object を graph 内で直接管理する必要を減らせる。  
+Object の生成、削除、識別子、graph attachment は SceneSync または host 側が管理する。
+
+## 同期モデル
+
+Loom は、連続的な結果ではなく原因を同期する。
+
+オブジェクトの位置、回転、アニメーション値、その他の計算済み出力を毎フレーム broadcast する代わりに、Loom は environment を同期することを優先する。
+
+- 入力イベントは、発生したときに environment event として同期する
+- 入力値は、変化したときに environment value として同期する
+- 時刻は、同期された clock に基づく
+
+連続的な振る舞いは、各クライアントがローカルで計算する。
+
+例:
+
+- ページ送りイベントを同期し、スライドアニメーションはローカルで計算する
+- 発射イベントを同期し、弾の軌道はローカルで計算する
+- 乗り物の発車イベントを同期し、乗り物の移動はローカルで計算する
+- ボタン押下を同期し、その結果としての振る舞いはローカルで計算する
+
+これにより、通信量を減らし、振る舞いの再生、デバッグ、再現を容易にする。
+
+## Local input と Committed environment event
+
+Loom が読むべき入力は、生の local input ではなく、同期対象として確定した environment event である。
+
+たとえば、マルチプレイで一人のプレイヤーがボタンを押した場合、local device はまず local input を検出する。  
+しかし、door を開く、ride を開始する、score を加算するなど、scene の共有状態に影響する処理は、同期済み environment event に基づいて行うべきである。
+
+推奨される流れは次の通りである。
+
+1. プレイヤーの端末が local input を検出する
+2. SceneSync または host authority に event request を送る
+3. SceneSync または host authority が committed environment event として確定する
+4. 確定済み event を全クライアントの environment に配信する
+5. Scene-level graph が object 間の関係を評価する
+6. 各 object-level graph が自分の振る舞いを計算する
+
+Environment event には、少なくとも次の情報を含めるべきである。
+
+- event id
+- channel
+- timestamp
+- source player id
+- target object id
+- payload
+
+同期において重要なのは、全クライアントが同じ event set、同じ event order、同じ timestamp、同じ payload を観測できることである。
+
+ただし、local feedback は committed event を待たずに表示してもよい。  
+たとえば、ボタンが押された瞬間の軽いアニメーション、音、ハイライト、触覚 feedback などは local input に基づいて即時に出せる。
+
+共有状態に影響する committed behavior と、操作感のための local feedback は分けて扱う。
+
+## 評価モデル
+
+Loom runtime は、object-level graph 間で評価順に依存する振る舞いを避けるべきである。
+
+各 evaluation tick において、runtime は次の順序で処理する。
+
+1. environment snapshot を取得する
+2. すべての対象 Loom graph を、その snapshot に対して評価する
+3. host scene を即座に変更せず、output command を収集する
+4. 決定論的なルールで output の競合を解決する
+5. 収集した output を host scene に適用する
+
+Object-level graph は、同じ tick 内で他の object-level graph が生成した output を観測しないべきである。  
+観測できるのは、前回 commit 済みの environment / scene state、または現在 tick の同期済み environment snapshot である。
+
+この方式を次のように表せる。
+
+snapshot → evaluate → collect outputs → resolve conflicts → apply
+
+この評価モデルにより、object の評価順が結果に影響することを避ける。
+
+## Output の競合
+
+同じ property に対して複数の graph が同時に output を生成すると、結果が曖昧になる。
+
+例:
+
+- graph A が cube.position を書く
+- graph B も cube.position を書く
+
+このような競合は避けるべきである。
+
+基本方針として、Loom runtime は single writer rule を採用することが望ましい。
+
+つまり、1 つの property に対して書き込める graph は原則として 1 つにする。
+
+他 object に影響を与えたい場合は、その object の Transform を直接書き換えるのではなく、environment event、command、または scene-level graph を通じて依頼する。
+
+例:
+
+- door.position を外部 graph が直接書くのではなく、door.open event を送る
+- bullet が enemy を直接 destroy するのではなく、hit event を発生させる
+- button が door を直接操作するのではなく、scene-level graph が button.pressed から door.open を導く
+
+## Spawn / Delete
+
+Object の生成や削除は、graph 評価中に即座に反映しない方がよい。
+
+推奨される扱いは次の通りである。
+
+1. graph は spawn / delete command を生成する
+2. runtime は command を収集する
+3. tick の commit 段階で object を生成または削除する
+4. 新しく生成された object の graph は、次の tick から評価する
+
+これにより、同じ tick 内で生成順や評価順に依存する挙動を避けられる。
+
+Projectile など、生成された瞬間から進行しているように見せたい object では、spawnTime を environment に含める。  
+Object-level graph は serverTime - spawnTime を使って現在位置を計算できる。
+
+## Loom tick と host frame
+
+Loom runtime は、host frame ごとに 1 回だけ graph を評価する必要はない。
+
+Host の frame loop と Loom の evaluation tick は、異なる周期で動作してよい。  
+決定論的な振る舞いのために、Loom は同期された時刻に基づく固定 timestep で評価されるべきである。
+
+Runtime は、現在の同期時刻に追いつくために、1 つの host frame 内で Loom を複数回評価してよい。
+
+Unity の場合、Unity Update と Loom tick は次のように分離できる。
+
+- Unity Update は、入力収集、output 適用、描画反映を担当する
+- Loom tick は、決定論的な graph 評価を担当する
+
+推奨される評価モデルは次の通りである。
+
+1. 入力値と入力イベントを timestamp 付きで収集する
+2. 固定 timestep で Loom を進める
+3. immutable な environment snapshot に対して graph を評価する
+4. output command を収集する
+5. host main thread 上で、最新または補間された output を host scene に適用する
+
+Loom の graph 評価中に host object を直接変更してはならない。  
+Host の変更は、収集された output command を適用する段階でのみ行うべきである。
+
+Unity の Transform、GameObject、Renderer などの Unity API は、原則として Unity main thread 上で扱う。  
+Loom の評価を worker thread 化する場合でも、worker thread は純粋な graph 評価と output command 生成に限定し、Unity API への反映は main thread で行う。
+
+## 決定論の要件
+
+Environment 同期モデルが成立するためには、Loom の評価が決定論的である必要がある。
+
+そのため、Loom は次のルールに従うべきである。
+
+- 純粋な計算ノードは、隠れた副作用を持たない
+- state を持つ振る舞いは、明示的な state ノードとして表現する
+- state ノードは安定した識別子を持つ
+- 時刻に依存する振る舞いは、ローカルの wall-clock time ではなく、同期された時刻を使用する
+- 入力イベントは timestamp を持つ
+- 評価順序は明確に定義する
+- graph 評価中に host object を直接変更しない
+- host 固有の振る舞いは runtime 境界に隔離する
+- 非決定的な処理や外部副作用を、通常の graph ノードの中に隠さない
+
+この中心原則をより厳密に書くと、次のようになる。
+
+同じ graph + 同じ environment + 同じ評価規則 = 同じ出力
+
+## State と副作用
+
+Loom の多くのノードは、純粋な関係ノードであるべきである。
+
+state を持つ振る舞いは許可するが、それらは明示的でなければならない。  
+例として、delay、previous-value、accumulator、low-pass filter、state-machine ノードなどがある。
+
+副作用は output 境界に隔離するべきである。
+
+つまり Loom は、次のものを区別するべきである。
+
+- 値を計算すること
+- output command を生成すること
+- その command を host scene に適用すること
+
+Graph は、何が起きるべきかを記述する。  
+Runtime は、それを host 環境にどう適用するかを決定する。
+
+## 結果同期を fallback として扱う
+
+すべてを Loom の決定論的モデルに押し込むべきではない。
+
+一部の振る舞いは、host 固有のシステム、物理エンジン、外部サービス、AI 生成、乱数、デバイス固有データ、その他の非決定的な処理に依存する場合がある。
+
+そのような場合、SceneSync または別の host 同期レイヤーが、結果を直接同期してよい。
+
+実用上、Loom と SceneSync は次の 2 種類の同期戦略を併用できる。
+
+1. 決定論的な Loom の振る舞いには environment 同期を使う
+2. host 固有または非決定的な振る舞いには result 同期を使う
+
+Loom は、決定論的な関係として記述できる振る舞いに使う。  
+SceneSync は、外部結果として同期する必要がある振る舞いを扱う。
+
+例:
+
+- Unity physics の衝突判定結果
+- host authority によって確定された hit event
+- AI サービスによって生成された結果
+- 外部 API の応答
+- device 固有の入力や tracking 結果
+- 完全な決定論を保証できない random source
+
+これらは Loom graph 内に隠すのではなく、environment input または同期済み result として扱う。
+
+## まとめ
+
+Loom は、Arrowized FRP に着想を得た、シリアライズ可能な振る舞い graph システムである。
+
+Loom は関係を JSON として記述し、environment を分離し、その environment をクライアント間で同期し、各 runtime が結果を独立に計算する。
+
+Scene-level graph は object 間の関係を記述する。  
+Object-level graph は個別 object の振る舞いを記述する。  
+Runtime は immutable な environment snapshot に対して graph を評価し、output command を収集し、host scene に適用する。
+
+Loom の役割は、同期可能な振る舞いを記述することである。  
+SceneSync の役割は、environment を同期し、object の生成・削除・識別子・graph attachment を管理し、必要に応じて外部結果を同期することである。
+
+Arrowized FRP や Yampa などの背景概念については、Appendix: Influences を参照する。
+
 # Loom 仕様書
 
 ## 1. 概要
