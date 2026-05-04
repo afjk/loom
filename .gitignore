@@ -61,6 +61,7 @@ out/
 ### Node.js / npm
 node_modules/
 package-lock.json
+*/dist/
 
 ### CI / Testing
 playwright-report/

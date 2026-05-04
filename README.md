@@ -163,6 +163,7 @@ Graph DSL → JSON graph → Web Loom / Unity Loom で評価
 |---|---|---|
 | シンプル版 (`editor/`) | [editor/](https://afjk.github.io/loom/editor/) | 依存ゼロ・軽量・textarea ベース |
 | **Pro 版** (`editor-pro/`) | [editor-pro/dist/](https://afjk.github.io/loom/editor-pro/dist/) | **補完・構文ハイライト・lint 付き、オーバーレイ UI** |
+| **Studio MVP** (`editor-studio/`) | Local dev: `npm run dev` | **DSL + ノードエディタ並行編集 MVP** |
 
 **シンプル版** はライブラリ依存ゼロで手軽に使えるテキストエリアベースのエディタです。
 
@@ -197,6 +198,34 @@ x = timer |> sine(freq: 0.3) |> map(inMin: -1, inMax: 1, outMin: 100, outMax: 70
 
 詳細な仕様は **[docs/DSL.md](docs/DSL.md)** をご覧ください。
 
+### Editor Studio MVP
+
+`editor-studio` は、DSL とノードエディタを左右に並べた協調編集スタジオの MVP です。
+
+```bash
+cd editor-studio
+npm install
+npm run dev
+```
+
+**機能：**
+- DSL エディタ（CodeMirror）とノードエディタを左右2ペインで表示
+- `Apply DSL → Node`: DSL をパースしてノードエディタに反映
+- `Generate DSL ← Node`: ノードエディタから正規形 DSL を生成
+- ノード操作：
+  - ドラッグで移動
+  - エッジの接続・削除
+- Canvas preview：`render bar` / `render point` に対応
+- GraphJSON 表示 pane
+- Errors pane
+
+**設計方針：**
+- 手動同期: DSL ↔ Node は明示ボタン式（リアルタイム自動同期ではない）
+- Node → DSL は正規形（元のコメント・書式は保持しない）
+- EditorModel が single source of truth、カスタム SVG ノードエディタは view として扱う
+
+詳細は `editor-studio/src/` の実装と `test/loom-editor-studio.test.html` のテストを参照してください。
+
 ## デモの確認方法
 
 GitHub Pages で公開されているデモを、ブラウザから直接確認できます。
@@ -221,6 +250,7 @@ GitHub Pages で公開されているデモを、ブラウザから直接確認�
 * integrate チャージゲージ：https://afjk.github.io/loom/examples/18-charge-gauge.html
 * **ライブエディタ（シンプル版）**：https://afjk.github.io/loom/editor/
 * **ライブエディタ（Pro 版）**：https://afjk.github.io/loom/editor-pro/dist/
+* **Studio MVP**：ローカルでのみ利用可能（`cd editor-studio && npm install && npm run dev`）
 * テスト結果：https://afjk.github.io/loom/test/loom.test.html
 
 ローカルで確認する場合は、ESM を使うため、ローカルファイル直接 (`file://`) ではなく HTTP サーバから配信する必要があります。

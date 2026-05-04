@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Loom Editor Studio テスト</title>
+</head>
+<body>
+  <h1>Loom Editor Studio テスト</h1>
+  <div id="results"></div>
+  <script type="module">
+    import { graphToCanonicalDSL } from "../editor-studio/src/canonical-dsl.js";
+    import { parseDSLToAST, compileToGraph } from "../src/loom-dsl.js";
+    import { graphToEditorModel, editorModelToGraph } from "../src/loom-editor-model.js";
+
+    const results = [];
+    function test(name, fn) { results.push({ name, fn }); }
+    function assert(cond, msg) { if (!cond) throw new Error(msg || 'assertion failed'); }
+    function assertEqual(a, b, msg) {
+      const av = JSON.stringify(a);
+      const bv = JSON.stringify(b);
+      if (av !== bv) throw new Error(msg || `expected ${bv}, got ${av}`);
+    }
+
+    function sampleGraph() {
+      return {
+        nodes: [
+          { id: 't', type: 'clock' },
+          { id: 'wave', type: 'sine', params: { freq: 0.35 } },
+          { id: 'smooth', type: 'smoothLerp', params: { rate: 5, initial: 0 } },
+          { id: 'width', type: 'map', params: { inMin: -1, inMax: 1, outMin: 80, outMax: 680, clamp: true } }
+        ],
+        edges: [
+          { from: 't.t', to: 'wave.t' },
+          { from: 'wave.out', to: 'smooth.value' },
+          { from: 'smooth.out', to: 'width.value' }
+        ],
+        render: { type: 'bar', width: 'width.out', color: '#80ed99', height: 48 }
+      };
+    }
+
+    test('1. graphToCanonicalDSL produces valid DSL', () => {
+      const graph = sampleGraph();
+      const dsl = graphToCanonicalDSL(graph);
+      assert(dsl.includes('t = clock()'), 'should include clock');
+      assert(dsl.includes('wave = sine('), 'should include sine');
+      assert(dsl.includes('smooth = smoothLerp('), 'should include smoothLerp');
+      assert(dsl.includes('width = map('), 'should include map');
+      assert(dsl.includes('render bar('), 'should include render bar');
+      assert(dsl.endsWith('\n'), 'should end with newline');
+    });
+
+    test('2. graphToCanonicalDSL round-trip parses correctly', () => {
+      const graph = sampleGraph();
+      const dsl = graphToCanonicalDSL(graph);
+      const { ast, errors } = parseDSLToAST(dsl);
+      assert(errors.length === 0, `should have no parse errors: ${errors.map(e => e.message).join(', ')}`);
+      assert(ast, 'should produce valid AST');
+    });
+
+    test('3. graphToCanonicalDSL → DSL → Graph preserves node count', () => {
+      const graph = sampleGraph();
+      const dsl = graphToCanonicalDSL(graph);
+      const { ast } = parseDSLToAST(dsl);
+      const { graph: newGraph } = compileToGraph(ast);
+      assertEqual(newGraph.nodes.length, graph.nodes.length, 'should preserve node count');
+    });
+
+    test('4. graphToCanonicalDSL respects render config', () => {
+      const graph = sampleGraph();
+      const dsl = graphToCanonicalDSL(graph);
+      assert(dsl.includes('width:'), 'should include width param');
+      assert(dsl.includes('color:'), 'should include color param');
+      assert(dsl.includes('height:'), 'should include height param');
+    });
+
+    test('5. graphToCanonicalDSL handles basic graph without render', () => {
+      const graph = {
+        nodes: [
+          { id: 't', type: 'clock' },
+          { id: 'wave', type: 'sine', params: { freq: 0.3 } }
+        ],
+        edges: [
+          { from: 't.t', to: 'wave.t' }
+        ]
+      };
+      const dsl = graphToCanonicalDSL(graph);
+      assert(dsl.includes('t = clock()'), 'should include clock');
+      assert(dsl.includes('wave = sine('), 'should include sine');
+      assert(!dsl.includes('render'), 'should not include render when absent');
+    });
+
+    test('6. render width reference is not string-literal (node reference as identifier)', () => {
+      const graph = sampleGraph();
+      const dsl = graphToCanonicalDSL(graph);
+      // 'width.out' must become the identifier `width`, not the string "width.out"
+      assert(!dsl.includes('"width'), 'render width ref must not be a quoted string');
+      assert(dsl.includes('width: width'), 'render width should reference node id as bare identifier');
+    });
+
+    test('7. graphToCanonicalDSL → parseDSLToAST → compileToGraph preserves edges', () => {
+      const graph = sampleGraph();
+      const dsl = graphToCanonicalDSL(graph);
+      const { ast } = parseDSLToAST(dsl);
+      const { graph: newGraph } = compileToGraph(ast);
+      assertEqual(newGraph.edges.length, graph.edges.length, 'should preserve edge count');
+      // Each original destination port must be reachable in the round-tripped graph
+      for (const origEdge of graph.edges) {
+        const found = newGraph.edges.some(e => e.to === origEdge.to);
+        assert(found, `edge to ${origEdge.to} should be preserved after round-trip`);
+      }
+    });
+
+    test('8. graphToCanonicalDSL → compileToGraph preserves render.width reference', () => {
+      const graph = sampleGraph();
+      const dsl = graphToCanonicalDSL(graph);
+      const { ast } = parseDSLToAST(dsl);
+      const { graph: newGraph } = compileToGraph(ast);
+      assert(newGraph.render, 'round-tripped graph should have render');
+      assertEqual(newGraph.render.type, graph.render.type, 'render type should be preserved');
+      // compileToGraph resolves identifiers to nodeId.portName references
+      assertEqual(newGraph.render.width, graph.render.width, 'render width ref should round-trip to width.out');
+    });
+
+    // Run tests
+    let passed = 0;
+    let failed = 0;
+    const resultsList = [];
+    const failedItems = [];
+
+    for (const { name, fn } of results) {
+      try {
+        fn();
+        passed++;
+        resultsList.push(`<li style="color: green;">✓ ${name}</li>`);
+      } catch (err) {
+        failed++;
+        resultsList.push(`<li style="color: red;">✗ ${name}: ${err.message}</li>`);
+        failedItems.push({ name, message: err.message });
+      }
+    }
+
+    const html = `
+      <h2>${passed} passed, ${failed} failed</h2>
+      <ul>${resultsList.join('')}</ul>
+    `;
+    document.getElementById('results').innerHTML = html;
+
+    window.__loomTestResults = {
+      pass: passed,
+      fail: failed,
+      failures: failedItems
+    };
+  </script>
+</body>
+</html>
