@@ -8,6 +8,14 @@ A browser dataflow engine with stateless transforms and explicit time-based stat
 
 ブラウザで動くデータフロー実行エンジン。純粋関数ノードを基本にしつつ、必要な箇所だけを `state` ノードとして明示し、リアクティブな視覚・音響・3D コンテンツを構築します。
 
+## Design Philosophy
+
+Loom describes relationships, not results.
+
+A Loom graph is a serializable definition of how outputs are derived from an environment. The same graph evaluated with the same environment and the same evaluation semantics produces the same outputs, on any runtime.
+
+For the full design philosophy, see [docs/SPEC.md Chapter 1](docs/SPEC.md#chapter-1-design-philosophy).
+
 ## 設計思想
 
 Loom は原則としてステートレスなデータフローを基本とし、時間的な追従・遅延・累積が必要な場合のみ、明示的な state ノード(explicit temporal state)に状態を隔離します。これにより graph JSON は宣言的・再現可能なまま保たれ、状態を持つ挙動も graph の中で可視化されます。
