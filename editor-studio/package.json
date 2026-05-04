@@ -1,0 +1,25 @@
+{
+  "name": "editor-studio",
+  "version": "0.1.0",
+  "description": "Loom DSL + Node Editor Studio",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "@codemirror/commands": "^6.2.5",
+    "@codemirror/lang-javascript": "^6.2.2",
+    "@codemirror/lang-json": "^6.0.1",
+    "@codemirror/language": "^6.9.1",
+    "@codemirror/search": "^6.5.4",
+    "@codemirror/state": "^6.2.1",
+    "@codemirror/view": "^6.17.0",
+    "@codemirror/autocomplete": "^6.10.0",
+    "@codemirror/lint": "^6.4.1",
+    "@codemirror/theme-one-dark": "^6.1.2",
+    "vite": "^5.0.0"
+  },
+  "devDependencies": {}
+}
