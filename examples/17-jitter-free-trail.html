@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Jitter free trail - lowpass でポインタを平滑化</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+      color: #f8f9fa;
+      background:
+        radial-gradient(circle at top, rgba(20, 33, 61, 0.9), rgba(8, 10, 15, 1) 60%);
+    }
+    h1 {
+      color: #ffd166;
+    }
+    .description {
+      color: #d9e2ec;
+      line-height: 1.7;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      max-width: 800px;
+      margin: 24px auto;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 209, 102, 0.25);
+      background: rgba(8, 12, 20, 0.96);
+      cursor: crosshair;
+    }
+    .legend {
+      display: flex;
+      gap: 16px;
+      font-size: 13px;
+      color: #d9e2ec;
+      font-family: monospace;
+    }
+    .swatch {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      margin-right: 6px;
+      border-radius: 50%;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+  <h1>Jitter free trail</h1>
+  <p class="description">
+    <code>lowpass(tau=0.1)</code> でマウス座標を平滑化します。赤が生の座標、緑が平滑化後の座標です。素早く動かすと、細かいジッタやカクつきが吸収される様子が見えます。
+  </p>
+
+  <canvas id="canvas" width="800" height="500"></canvas>
+
+  <div class="legend">
+    <span><span class="swatch" style="background:#ff595e"></span>raw</span>
+    <span><span class="swatch" style="background:#80ed99"></span>lowpass</span>
+  </div>
+
+  <script type="module">
+    import { Loom } from "../src/loom.js";
+
+    const graph = {
+      nodes: [
+        { id: "rawX", type: "constant", params: { value: 400 } },
+        { id: "rawY", type: "constant", params: { value: 250 } },
+        { id: "lowpassX", type: "lowpass", params: { tau: 0.1, initial: 400 } },
+        { id: "lowpassY", type: "lowpass", params: { tau: 0.1, initial: 250 } }
+      ],
+      edges: [
+        { from: "rawX.out", to: "lowpassX.value" },
+        { from: "rawY.out", to: "lowpassY.value" }
+      ]
+    };
+
+    const engine = new Loom(graph);
+    engine.start();
+
+    const rawXNode = graph.nodes.find(node => node.id === "rawX");
+    const rawYNode = graph.nodes.find(node => node.id === "rawY");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const rawTrail = [];
+    const smoothTrail = [];
+
+    canvas.addEventListener("pointermove", (event) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      rawXNode.params.value = (event.clientX - rect.left) * scaleX;
+      rawYNode.params.value = (event.clientY - rect.top) * scaleY;
+    });
+
+    function pushTrail(list, point) {
+      list.push(point);
+      if (list.length > 120) list.shift();
+    }
+
+    function drawTrail(points, strokeStyle) {
+      if (points.length < 2) return;
+      ctx.strokeStyle = strokeStyle;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+      }
+      ctx.stroke();
+    }
+
+    function draw() {
+      ctx.fillStyle = "rgba(8, 12, 20, 0.14)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const raw = { x: rawXNode.params.value, y: rawYNode.params.value };
+      const smooth = {
+        x: engine.getValue("lowpassX.out") ?? 400,
+        y: engine.getValue("lowpassY.out") ?? 250
+      };
+
+      pushTrail(rawTrail, raw);
+      pushTrail(smoothTrail, smooth);
+
+      drawTrail(rawTrail, "rgba(255, 89, 94, 0.55)");
+      drawTrail(smoothTrail, "rgba(128, 237, 153, 0.95)");
+
+      requestAnimationFrame(draw);
+    }
+
+    draw();
+  </script>
+</body>
+</html>

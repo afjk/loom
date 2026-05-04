@@ -341,6 +341,23 @@ class RestrictedDSLEvaluator {
   }
 }
 
+function isFiniteNumber(value) {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function coerceFiniteNumber(value, fallback = 0) {
+  return isFiniteNumber(value) ? value : fallback;
+}
+
+function resolveStateInputValue(value, fallback) {
+  if (value === null || value === undefined) return fallback;
+  return coerceFiniteNumber(value, 0);
+}
+
+function sanitizeStateValue(value, initial) {
+  return isFiniteNumber(value) ? value : initial;
+}
+
 // ノード型レジストリ
 export const NODE_TYPES = {
   // Phase 0 ノード
@@ -611,6 +628,83 @@ export const NODE_TYPES = {
       { name: 'threshold', type: 'number', default: 0 }
     ],
     evaluate: (inputs, params, ctx) => ({ out: inputs.value < inputs.threshold })
+  },
+  smoothLerp: {
+    category: 'state',
+    inputs: [
+      { name: 'value', type: 'number', default: 0, kind: 'behavior' }
+    ],
+    outputs: [{ name: 'out', type: 'number', kind: 'behavior' }],
+    params: [
+      { name: 'value', type: 'number', default: 0 },
+      { name: 'rate', type: 'number', default: 5 },
+      { name: 'initial', type: 'number', default: 0 }
+    ],
+    evaluate: (inputs, params, ctx) => {
+      const prevOut = sanitizeStateValue(ctx.prevOut, params.initial);
+      const value = resolveStateInputValue(inputs.value, params.initial);
+      const rate = coerceFiniteNumber(params.rate, 5);
+      const factor = 1 - Math.exp(-rate * ctx.dt);
+      return { out: prevOut + (value - prevOut) * factor };
+    }
+  },
+  lowpass: {
+    category: 'state',
+    inputs: [
+      { name: 'value', type: 'number', default: 0, kind: 'behavior' }
+    ],
+    outputs: [{ name: 'out', type: 'number', kind: 'behavior' }],
+    params: [
+      { name: 'value', type: 'number', default: 0 },
+      { name: 'tau', type: 'number', default: 0.2 },
+      { name: 'initial', type: 'number', default: 0 }
+    ],
+    evaluate: (inputs, params, ctx) => {
+      const prevOut = sanitizeStateValue(ctx.prevOut, params.initial);
+      const value = resolveStateInputValue(inputs.value, params.initial);
+      const tau = coerceFiniteNumber(params.tau, 0.2);
+      const factor = tau <= 0 ? 1 : ctx.dt / (tau + ctx.dt);
+      return { out: prevOut + (value - prevOut) * factor };
+    }
+  },
+  delay1: {
+    category: 'state',
+    inputs: [
+      { name: 'value', type: 'number', default: 0, kind: 'behavior' }
+    ],
+    outputs: [{ name: 'out', type: 'number', kind: 'behavior' }],
+    params: [
+      { name: 'value', type: 'number', default: 0 },
+      { name: 'initial', type: 'number', default: 0 }
+    ],
+    evaluate: (inputs, params, ctx) => {
+      const prevOut = sanitizeStateValue(ctx.prevOut, params.initial);
+      const value = resolveStateInputValue(inputs.value, params.initial);
+      return { out: prevOut, _newState: value };
+    }
+  },
+  integrate: {
+    category: 'state',
+    inputs: [
+      { name: 'value', type: 'number', default: 0, kind: 'behavior' }
+    ],
+    outputs: [{ name: 'out', type: 'number', kind: 'behavior' }],
+    params: [
+      { name: 'value', type: 'number', default: 0 },
+      { name: 'initial', type: 'number', default: 0 },
+      { name: 'min', type: 'number|null', default: null },
+      { name: 'max', type: 'number|null', default: null }
+    ],
+    evaluate: (inputs, params, ctx) => {
+      const prevOut = sanitizeStateValue(ctx.prevOut, params.initial);
+      const value = resolveStateInputValue(inputs.value, 0);
+      const min = params.min === null ? null : coerceFiniteNumber(params.min, null);
+      const max = params.max === null ? null : coerceFiniteNumber(params.max, null);
+      let out = prevOut + value * ctx.dt;
+      if (min !== null && out < min) out = min;
+      if (max !== null && out > max) out = max;
+      return { out };
+    }
   },
 
   // Phase 1 入力ノード
@@ -954,9 +1048,11 @@ export class Loom {
     this._pendingGraph = null;
     this._sortedNodeIds = [];
     this._values = new Map();
+    this._prevOuts = new Map();
     this._eventQueue = [];
     this._rafId = null;
     this._startTime = null;
+    this._lastTimestamp = null;
     this._inputStates = {};
 
     // グラフの検証とソートを実行
@@ -971,7 +1067,7 @@ export class Loom {
     NODE_TYPES[name] = definition;
   }
 
-  evaluateAt(time) {
+  evaluateAt(time, frameTimestamp = time * 1000) {
     // 保留中グラフがあれば切り替え
     if (this._pendingGraph !== null) {
       // 旧グラフのノードの onStop を呼ぶ
@@ -984,6 +1080,7 @@ export class Loom {
         }
       }
 
+      this._reconcileStateForGraph(this._pendingGraph);
       this._currentGraph = this._pendingGraph;
       this._sortedNodeIds = this._pendingNodeIds;
       this._pendingGraph = null;
@@ -1000,8 +1097,11 @@ export class Loom {
     // グラフが設定されていなければ何もしない
     if (!this._currentGraph) return;
 
+    const dt = this._computeDeltaTime(frameTimestamp);
+
     const ctx = {
       time,
+      dt,
       engine: this,
       nodePredicates: new Map()
     };
@@ -1073,7 +1173,29 @@ export class Loom {
       }
 
       // ノードを評価
-      const outputs = nodeType.evaluate(inputs, params, ctx);
+      let outputs;
+      if (nodeType.category === 'state') {
+        const initial = coerceFiniteNumber(params.initial, 0);
+        const prevOut = this._prevOuts.has(nodeId)
+          ? this._prevOuts.get(nodeId)
+          : initial;
+        const stateCtx = { ...ctx, prevOut: sanitizeStateValue(prevOut, initial) };
+
+        try {
+          outputs = nodeType.evaluate(inputs, params, stateCtx);
+          const rawOut = outputs?.out;
+          const rawNewState = outputs?._newState !== undefined ? outputs._newState : rawOut;
+          const safeOut = sanitizeStateValue(rawOut, initial);
+          const safeNewState = sanitizeStateValue(rawNewState, initial);
+          outputs = { ...outputs, out: safeOut };
+          this._prevOuts.set(nodeId, safeNewState);
+        } catch (error) {
+          console.error(`State node evaluation failed: ${nodeId}`, error);
+          outputs = { out: stateCtx.prevOut };
+        }
+      } else {
+        outputs = nodeType.evaluate(inputs, params, ctx);
+      }
 
       // 出力値を保存
       for (const outputDef of nodeType.outputs) {
@@ -1150,10 +1272,11 @@ export class Loom {
       }
     }
 
+    this._lastTimestamp = null;
     this._startTime = performance.now() / 1000;
-    const tick = () => {
-      const elapsed = (performance.now() / 1000) - this._startTime;
-      this.evaluateAt(elapsed);
+    const tick = (timestamp) => {
+      const elapsed = (timestamp / 1000) - this._startTime;
+      this.evaluateAt(elapsed, timestamp);
       this._rafId = requestAnimationFrame(tick);
     };
     this._rafId = requestAnimationFrame(tick);
@@ -1176,6 +1299,31 @@ export class Loom {
     }
   }
 
+  _computeDeltaTime(frameTimestamp) {
+    if (this._lastTimestamp === null) {
+      this._lastTimestamp = frameTimestamp;
+      return 0;
+    }
+
+    const dt = Math.max(0, (frameTimestamp - this._lastTimestamp) / 1000);
+    this._lastTimestamp = frameTimestamp;
+    return Math.min(dt, 0.1);
+  }
+
+  _reconcileStateForGraph(graph) {
+    const nextStateIds = new Set(
+      graph.nodes
+        .filter(node => NODE_TYPES[node.type]?.category === 'state')
+        .map(node => node.id)
+    );
+
+    for (const nodeId of Array.from(this._prevOuts.keys())) {
+      if (!nextStateIds.has(nodeId)) {
+        this._prevOuts.delete(nodeId);
+      }
+    }
+  }
+
   // 内部メソッド：グラフの検証とソート
   _loadGraphInternal(graph) {
     // グラフを検証
@@ -1188,6 +1336,7 @@ export class Loom {
     this._currentGraph = graph;
     this._sortedNodeIds = sortedNodeIds;
     this._pendingGraph = null;
+    this._reconcileStateForGraph(graph);
   }
 
   // グラフの検証
