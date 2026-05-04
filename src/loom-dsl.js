@@ -111,8 +111,18 @@ export function parseDSLToAST(source) {
       const end = expect(TT.RPAREN); return { type: 'CallExpression', callee, args, span: spanFrom(nt.span.start, end.span.end) }; }
 
     let blankLines = 0;
+    function flushPendingAsStandalone() {
+      if (!pendingComments.length) return;
+      for (const c of pendingComments) body.push({ type: 'CommentStatement', comment: c, span: c.span });
+      pendingComments = [];
+    }
     while (peek().type !== TT.EOF) {
-      if (peek().type === TT.NEWLINE) { take(); blankLines++; if (blankLines > 1) pendingComments = []; continue; }
+      if (peek().type === TT.NEWLINE) {
+        take();
+        blankLines++;
+        if (blankLines > 1) flushPendingAsStandalone();
+        continue;
+      }
       if (peek().type === TT.COMMENT) {
         const ct = take(); const c = { type: 'Comment', text: ct.value, variant: 'line', span: ct.span };
         pendingComments.push(c);
@@ -131,7 +141,7 @@ export function parseDSLToAST(source) {
       if (peek().type === TT.NEWLINE) take();
       body.push(stmt);
     }
-    for (const c of pendingComments) body.push({ type: 'CommentStatement', comment: c, span: c.span });
+    flushPendingAsStandalone();
     const end = tokens[tokens.length - 1].span.end;
     return { ast: { type: 'Program', body, span: spanFrom(posFrom(1, 1, 0), end) }, errors };
   } catch (e) {
