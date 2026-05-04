@@ -23,6 +23,7 @@ let dslEditor = null;
 let nodeEditor = null;
 let engine = null;
 let animationFrameId = null;
+let panelsVisible = true;
 
 const elements = {
   dslEditorHost: document.getElementById('dsl-editor-host'),
@@ -34,9 +35,30 @@ const elements = {
   generateDslBtn: document.getElementById('generateDslBtn'),
   runPreviewBtn: document.getElementById('runPreviewBtn'),
   resetSampleBtn: document.getElementById('resetSampleBtn'),
+  togglePanelsBtn: document.getElementById('toggle-panels'),
   tabBtns: document.querySelectorAll('.tab-btn'),
   tabPanes: document.querySelectorAll('.tab-pane')
 };
+
+function setPanelsVisible(visible) {
+  panelsVisible = visible;
+  document.body.classList.toggle('panels-hidden', !visible);
+
+  const button = elements.togglePanelsBtn;
+  if (button) {
+    button.textContent = visible ? 'Hide Editors' : 'Show Editors';
+  }
+}
+
+function resizePreviewCanvas() {
+  const canvas = elements.previewCanvas;
+  if (!canvas) return;
+
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  canvas.style.width = `${window.innerWidth}px`;
+  canvas.style.height = `${window.innerHeight}px`;
+}
 
 function initDslEditor() {
   const initialState = EditorState.create({
@@ -147,6 +169,8 @@ function runPreview(graph) {
     engine.stop();
   }
 
+  resizePreviewCanvas();
+
   const state = store.getState();
   if (!graph) graph = state.graph;
   if (!graph) return;
@@ -155,8 +179,6 @@ function runPreview(graph) {
     const canvas = elements.previewCanvas;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     const graphForLoom = {
       nodes: graph.nodes || [],
@@ -186,6 +208,8 @@ function tick(engine, graph) {
     if (trail > 0) {
       ctx.fillStyle = `rgba(0, 0, 0, ${trail})`;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+    } else {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 
     if (currentRender?.type === 'point') {
@@ -209,9 +233,6 @@ function tick(engine, graph) {
         ctx.fillStyle = color;
         ctx.fillRect(0, y, width, height);
       }
-    } else {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
   }
 
@@ -240,6 +261,9 @@ function setupEventListeners() {
     runPreview(state.graph);
   });
   elements.resetSampleBtn.addEventListener('click', resetSample);
+  elements.togglePanelsBtn.addEventListener('click', () => {
+    setPanelsVisible(!panelsVisible);
+  });
 
   elements.tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -250,6 +274,8 @@ function setupEventListeners() {
       document.getElementById(`${tabName}-tab`)?.classList.add('active');
     });
   });
+
+  window.addEventListener('resize', resizePreviewCanvas);
 }
 
 async function handleOperation(operation) {
@@ -281,6 +307,9 @@ async function handleOperation(operation) {
 }
 
 function init() {
+  resizePreviewCanvas();
+  setPanelsVisible(true);
+
   initDslEditor();
   nodeEditor = new NodeEditorView(elements.nodeEditorHost, {
     onOperation: handleOperation,

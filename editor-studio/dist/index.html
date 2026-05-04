@@ -4,55 +4,51 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Loom Editor Studio MVP</title>
-  <script type="module" crossorigin src="./assets/index-D-9u5R9F.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-7BWMxJm4.css">
+  <script type="module" crossorigin src="./assets/index-DT2bsyyN.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-Bp0aN222.css">
 </head>
 <body>
-  <div id="app">
-    <div class="studio-container">
+  <canvas id="preview-canvas" class="preview-canvas"></canvas>
+
+  <div class="studio-overlay">
+    <div class="studio-toolbar">
+      <button id="toggle-panels">Hide Editors</button>
+      <button id="runPreviewBtn" class="btn btn-success">Run Preview</button>
+      <button id="resetSampleBtn" class="btn">Reset Sample</button>
+      <button id="applyDslBtn" class="btn btn-primary">Apply DSL → Node</button>
+      <button id="generateDslBtn" class="btn btn-primary">Generate DSL ← Node</button>
+    </div>
+
+    <div id="editor-panels" class="editor-panels">
       <!-- Left pane: DSL Editor -->
-      <div class="pane dsl-pane">
+      <div class="panel dsl-pane">
         <div class="pane-header">
           <h2>DSL Editor</h2>
-          <button id="applyDslBtn" class="btn btn-primary">Apply DSL → Node</button>
         </div>
         <div id="dsl-editor-host" class="dsl-editor-host"></div>
       </div>
 
       <!-- Right pane: Node Editor -->
-      <div class="pane node-pane">
+      <div class="panel node-pane">
         <div class="pane-header">
           <h2>Node Editor</h2>
-          <button id="generateDslBtn" class="btn btn-primary">Generate DSL ← Node</button>
         </div>
         <div id="node-editor" class="node-editor-canvas"></div>
       </div>
-    </div>
 
-    <!-- Bottom pane: Preview, GraphJSON, Errors -->
-    <div class="bottom-pane">
-      <div class="tabs">
-        <button class="tab-btn active" data-tab="preview">Preview</button>
-        <button class="tab-btn" data-tab="graph">GraphJSON</button>
-        <button class="tab-btn" data-tab="errors">Errors</button>
-      </div>
-
-      <div class="tab-content">
-        <div id="preview-tab" class="tab-pane active">
-          <div class="controls">
-            <button id="runPreviewBtn" class="btn btn-success">Run Preview</button>
-            <button id="resetSampleBtn" class="btn">Reset Sample</button>
+      <!-- Bottom area: GraphJSON and Errors -->
+      <div class="panel graph-errors-panel">
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="graph">GraphJSON</button>
+          <button class="tab-btn" data-tab="errors">Errors</button>
+        </div>
+        <div class="tab-content">
+          <div id="graph-tab" class="tab-pane active">
+            <pre id="graph-json" class="graph-json"></pre>
           </div>
-          <canvas id="preview-canvas" width="800" height="300"></canvas>
-        </div>
-
-        <div id="graph-tab" class="tab-pane">
-          <pre id="graph-json" class="graph-json">
-          </pre>
-        </div>
-
-        <div id="errors-tab" class="tab-pane">
-          <div id="errors-list" class="errors-list"></div>
+          <div id="errors-tab" class="tab-pane">
+            <div id="errors-list" class="errors-list"></div>
+          </div>
         </div>
       </div>
     </div>
