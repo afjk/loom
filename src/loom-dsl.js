@@ -295,6 +295,7 @@ function buildGraph(stmts) {
     nodes.push(nodeObj);
 
     const inputNames = typeDef.inputs.map(i => i.name);
+    const paramNames = typeDef.params ? typeDef.params.map(p => p.name) : [];
     const isComm = typeDef.commutative === true;
 
     const positional = call.args.filter(a => !a.named);
@@ -354,7 +355,27 @@ function buildGraph(stmts) {
 
     // named explicit args
     for (const arg of named) {
-      wire(arg.value, arg.name);
+      if (inputNames.includes(arg.name)) {
+        wire(arg.value, arg.name);
+      } else if (paramNames.includes(arg.name)) {
+        if (!nodeObj.params) nodeObj.params = {};
+        if (arg.value.type === 'ident' || arg.value.type === 'call') {
+          throw new LoomDSLError(
+            `Parameter '${arg.name}' for '${fnName}' must be a literal`,
+            arg.value.line || call.line,
+            arg.value.col || call.col,
+            'UNEXPECTED_TOKEN'
+          );
+        }
+        nodeObj.params[arg.name] = arg.value.value;
+      } else {
+        throw new LoomDSLError(
+          `Unknown argument '${arg.name}' for '${fnName}'`,
+          call.line,
+          call.col,
+          'UNKNOWN_ARGUMENT'
+        );
+      }
     }
 
     return id;

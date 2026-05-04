@@ -56,6 +56,7 @@
   <div id="results"></div>
   <script type="module">
     import { Loom, LoomError } from "../src/loom.js";
+    import { parseDSL, LoomDSLError } from "../src/loom-dsl.js";
 
     const tests = [];
     function test(name, fn) { tests.push({ name, fn }); }
@@ -1127,6 +1128,44 @@
       } finally {
         document.body.removeChild(div1);
         document.body.removeChild(div2);
+      }
+    });
+
+
+    test("DSL: setCssVar の named argument を input/params に正しく分類する", () => {
+      const parsed = parseDSL(`
+mapGlow = constant(value: 0.42)
+glow = setCssVar(mapGlow, target: "#demo-card", name: "glow")
+`);
+      const glowNode = parsed.nodes.find(n => n.id === "glow");
+      assert(glowNode, "glow node not found");
+      assertEqual(glowNode.params.target, "#demo-card");
+      assertEqual(glowNode.params.name, "glow");
+      assert(parsed.edges.some(e => e.from === "mapGlow.out" && e.to === "glow.value"), "expected edge mapGlow.out -> glow.value");
+    });
+
+    test("DSL: setClass の enabled は input、target/className は params になる", () => {
+      const parsed = parseDSL(`
+isHot = constant(value: true)
+hotClass = setClass(enabled: isHot, target: "#demo-lamp", className: "is-hot")
+`);
+      const hotClassNode = parsed.nodes.find(n => n.id === "hotClass");
+      assert(hotClassNode, "hotClass node not found");
+      assertEqual(hotClassNode.params.target, "#demo-lamp");
+      assertEqual(hotClassNode.params.className, "is-hot");
+      assert(parsed.edges.some(e => e.from === "isHot.out" && e.to === "hotClass.enabled"), "expected edge isHot.out -> hotClass.enabled");
+    });
+
+    test("DSL: unknown named argument は UNKNOWN_ARGUMENT エラーになる", () => {
+      try {
+        parseDSL(`
+v = constant(value: 1)
+sink = setCssVar(v, target: "#demo-card", nope: "x")
+`);
+        throw new Error("expected LoomDSLError");
+      } catch (e) {
+        assert(e instanceof LoomDSLError, `expected LoomDSLError, got ${e?.name || e}`);
+        assertEqual(e.code, "UNKNOWN_ARGUMENT");
       }
     });
 

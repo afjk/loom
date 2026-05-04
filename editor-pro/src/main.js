@@ -178,7 +178,6 @@ presetSelect.addEventListener('change', e => {
     setEditorContent(text);
   }
 
-  setTimeout(() => { presetSelect.value = ''; }, 500);
 });
 
 
