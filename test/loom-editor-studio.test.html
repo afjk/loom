@@ -89,10 +89,43 @@
       assert(!dsl.includes('render'), 'should not include render when absent');
     });
 
+    test('6. render width reference is not string-literal (node reference as identifier)', () => {
+      const graph = sampleGraph();
+      const dsl = graphToCanonicalDSL(graph);
+      // 'width.out' must become the identifier `width`, not the string "width.out"
+      assert(!dsl.includes('"width'), 'render width ref must not be a quoted string');
+      assert(dsl.includes('width: width'), 'render width should reference node id as bare identifier');
+    });
+
+    test('7. graphToCanonicalDSL → parseDSLToAST → compileToGraph preserves edges', () => {
+      const graph = sampleGraph();
+      const dsl = graphToCanonicalDSL(graph);
+      const { ast } = parseDSLToAST(dsl);
+      const { graph: newGraph } = compileToGraph(ast);
+      assertEqual(newGraph.edges.length, graph.edges.length, 'should preserve edge count');
+      // Each original destination port must be reachable in the round-tripped graph
+      for (const origEdge of graph.edges) {
+        const found = newGraph.edges.some(e => e.to === origEdge.to);
+        assert(found, `edge to ${origEdge.to} should be preserved after round-trip`);
+      }
+    });
+
+    test('8. graphToCanonicalDSL → compileToGraph preserves render.width reference', () => {
+      const graph = sampleGraph();
+      const dsl = graphToCanonicalDSL(graph);
+      const { ast } = parseDSLToAST(dsl);
+      const { graph: newGraph } = compileToGraph(ast);
+      assert(newGraph.render, 'round-tripped graph should have render');
+      assertEqual(newGraph.render.type, graph.render.type, 'render type should be preserved');
+      // compileToGraph resolves identifiers to nodeId.portName references
+      assertEqual(newGraph.render.width, graph.render.width, 'render width ref should round-trip to width.out');
+    });
+
     // Run tests
     let passed = 0;
     let failed = 0;
     const resultsList = [];
+    const failedItems = [];
 
     for (const { name, fn } of results) {
       try {
@@ -102,6 +135,7 @@
       } catch (err) {
         failed++;
         resultsList.push(`<li style="color: red;">✗ ${name}: ${err.message}</li>`);
+        failedItems.push({ name, message: err.message });
       }
     }
 
@@ -110,6 +144,12 @@
       <ul>${resultsList.join('')}</ul>
     `;
     document.getElementById('results').innerHTML = html;
+
+    window.__loomTestResults = {
+      pass: passed,
+      fail: failed,
+      failures: failedItems
+    };
   </script>
 </body>
 </html>
