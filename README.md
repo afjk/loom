@@ -198,9 +198,9 @@ x = timer |> sine(freq: 0.3) |> map(inMin: -1, inMax: 1, outMin: 100, outMax: 70
 
 詳細な仕様は **[docs/DSL.md](docs/DSL.md)** をご覧ください。
 
-### Editor Studio MVP
+### Editor Studio
 
-`editor-studio` は、DSL とノードエディタを左右に並べた協調編集スタジオの MVP です。
+`editor-studio` は DSL と Rete.js v2 ノードエディタを左右に並べた協調編集スタジオです。
 
 ```bash
 cd editor-studio
@@ -209,12 +209,13 @@ npm run dev
 ```
 
 **機能：**
-- DSL エディタ（CodeMirror）とノードエディタを左右2ペインで表示
+- DSL エディタ（CodeMirror）と **Rete.js v2 ノードエディタ** を左右2ペインで表示
 - `Apply DSL → Node`: DSL をパースしてノードエディタに反映
 - `Generate DSL ← Node`: ノードエディタから正規形 DSL を生成
 - ノード操作：
   - ドラッグで移動
   - エッジの接続・削除
+  - params の表示・編集
 - Canvas preview：`render bar` / `render point` に対応
 - GraphJSON 表示 pane
 - Errors pane
@@ -222,7 +223,8 @@ npm run dev
 **設計方針：**
 - 手動同期: DSL ↔ Node は明示ボタン式（リアルタイム自動同期ではない）
 - Node → DSL は正規形（元のコメント・書式は保持しない）
-- EditorModel が single source of truth、カスタム SVG ノードエディタは view として扱う
+- EditorModel が single source of truth、Rete.js ノードエディタは view として扱う
+- The node editor uses **Rete.js v2** as the visual editing layer
 
 詳細は `editor-studio/src/` の実装と `test/loom-editor-studio.test.html` のテストを参照してください。
 

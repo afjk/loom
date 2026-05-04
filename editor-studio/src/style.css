@@ -74,6 +74,47 @@ html, body {
   background: var(--bg-lighter);
   border: 1px solid var(--border-color);
   overflow: hidden;
+  position: relative;
+}
+
+/* Rete.js v2 dark theme overrides */
+.node-editor-canvas .rete-area {
+  width: 100%;
+  height: 100%;
+}
+
+/* Node title bar */
+.node-editor-canvas .title {
+  background: #2a2a2a !important;
+  color: var(--text-color) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+}
+
+/* Node body */
+.node-editor-canvas .node {
+  background: #222 !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-color) !important;
+}
+
+.node-editor-canvas .node.selected-node {
+  border-color: var(--primary-color) !important;
+}
+
+/* Port sockets */
+.node-editor-canvas .socket {
+  background: var(--primary-color) !important;
+  border-color: #1a5cb0 !important;
+}
+
+/* Input controls */
+.node-editor-canvas input[type="number"],
+.node-editor-canvas input[type="text"] {
+  background: #111 !important;
+  color: var(--text-color) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 3px !important;
+  padding: 2px 4px !important;
 }
 
 .bottom-pane {

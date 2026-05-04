@@ -1,7 +1,7 @@
 {
   "name": "editor-studio",
   "version": "0.1.0",
-  "description": "Loom DSL + Node Editor Studio",
+  "description": "Loom DSL + Rete.js node editor studio",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
@@ -19,6 +19,14 @@
     "@codemirror/autocomplete": "^6.10.0",
     "@codemirror/lint": "^6.4.1",
     "@codemirror/theme-one-dark": "^6.1.2",
+    "rete": "latest",
+    "rete-area-plugin": "latest",
+    "rete-connection-plugin": "latest",
+    "rete-react-plugin": "latest",
+    "rete-render-utils": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "styled-components": "latest",
     "vite": "^5.0.0"
   },
   "devDependencies": {}

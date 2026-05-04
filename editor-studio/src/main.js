@@ -70,7 +70,7 @@ function setDslText(text) {
   }
 }
 
-function applyDsl() {
+async function applyDsl() {
   const sourceText = getDslText();
   const { ast, errors: parseErrors } = parseDSLToAST(sourceText);
 
@@ -97,7 +97,7 @@ function applyDsl() {
     errors: []
   });
 
-  nodeEditor?.render(editorModel);
+  await nodeEditor?.renderModel(editorModel);
   renderGraphJSON(graph);
   renderErrors();
   runPreview(graph);
@@ -235,20 +235,42 @@ function setupEventListeners() {
   });
 }
 
-function init() {
-  initDslEditor();
-  nodeEditor = new NodeEditorView(elements.nodeEditorHost, (operation) => {
-    const state = store.getState();
-    if (!state.editorModel) return;
+async function handleOperation(operation) {
+  const state = store.getState();
+  if (!state.editorModel) return;
 
+  try {
     const newModel = applyEditorOperation(state.editorModel, operation);
     store.setState({ editorModel: newModel });
-    nodeEditor?.render(newModel);
+
+    // moveNode: Rete already reflects the position visually; skip full re-render
+    if (operation.type !== 'moveNode') {
+      await nodeEditor?.renderModel(newModel);
+    }
 
     const graph = editorModelToGraph(newModel, state.graph);
     store.setState({ graph });
     renderGraphJSON(graph);
     runPreview(graph);
+  } catch (e) {
+    // Revert Rete state to current model if operation fails
+    const currentModel = store.getState().editorModel;
+    if (currentModel && operation.type !== 'moveNode') {
+      await nodeEditor?.renderModel(currentModel);
+    }
+    store.setState({ errors: [{ message: `Operation error: ${e.message}`, code: 'EDITOR_ERROR' }] });
+    renderErrors();
+  }
+}
+
+function init() {
+  initDslEditor();
+  nodeEditor = new NodeEditorView(elements.nodeEditorHost, {
+    onOperation: handleOperation,
+    onError: (error) => {
+      store.setState({ errors: [{ message: `Editor error: ${error.message}`, code: 'EDITOR_ERROR' }] });
+      renderErrors();
+    }
   });
 
   setupEventListeners();
