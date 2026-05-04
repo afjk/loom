@@ -55,7 +55,7 @@
   <h1>Loom テスト</h1>
   <div id="results"></div>
   <script type="module">
-    import { Loom, LoomError } from "../src/loom.js";
+    import { Loom, LoomError, NODE_TYPES } from "../src/loom.js";
     import { parseDSL, LoomDSLError } from "../src/loom-dsl.js";
 
     const tests = [];
@@ -73,6 +73,16 @@
         throw new Error(`expected LoomError code ${code}, got ${e.code || e.message}`);
       }
       throw new Error(`expected throw with code ${code}, but no error thrown`);
+    }
+    function assertApprox(a, b, epsilon = 1e-6, msg) {
+      if (Math.abs(a - b) > epsilon) {
+        throw new Error(msg || `expected ${b} ± ${epsilon}, got ${a}`);
+      }
+    }
+    function runTimes(engine, times) {
+      for (const time of times) {
+        engine.evaluateAt(time);
+      }
     }
 
     // ノード単体の動作テスト
@@ -527,6 +537,174 @@
       assertThrows(() => engine.load(graph2), 'CYCLE');
       // 保留中グラフが更新されていないことを確認
       assertEqual(engine.getValue("const1.out"), 10);
+    });
+
+    // state ノード
+    test("smoothLerp: dt=1 で指数収束する", () => {
+      const result = NODE_TYPES.smoothLerp.evaluate(
+        { value: 10 },
+        { rate: 5, initial: 0 },
+        { prevOut: 0, dt: 1 }
+      );
+      assertApprox(result.out, 10 * (1 - Math.exp(-5)), 1e-6);
+    });
+
+    test("smoothLerp: 繰り返し評価で単調増加し 100 に近づく", () => {
+      let prevOut = 0;
+      let last = prevOut;
+      for (let i = 0; i < 10; i++) {
+        const result = NODE_TYPES.smoothLerp.evaluate(
+          { value: 100 },
+          { rate: 10, initial: 0 },
+          { prevOut, dt: 0.1 }
+        );
+        assert(result.out >= last, `expected monotonic increase, got ${result.out} after ${last}`);
+        last = result.out;
+        prevOut = result.out;
+      }
+      assert(last > 90, `expected final value > 90, got ${last}`);
+    });
+
+    test("lowpass: tau=0.2, dt=0.2 で 5.0 になる", () => {
+      const result = NODE_TYPES.lowpass.evaluate(
+        { value: 10 },
+        { tau: 0.2, initial: 0 },
+        { prevOut: 0, dt: 0.2 }
+      );
+      assertApprox(result.out, 5.0, 1e-9);
+    });
+
+    test("lowpass: tau=0 で即時追従する", () => {
+      const result = NODE_TYPES.lowpass.evaluate(
+        { value: 10 },
+        { tau: 0, initial: 0 },
+        { prevOut: 3, dt: 0.016 }
+      );
+      assertEqual(result.out, 10);
+    });
+
+    test("delay1: 1フレーム前の入力を返す", () => {
+      let state = 0;
+
+      let result = NODE_TYPES.delay1.evaluate(
+        { value: 5 },
+        { initial: 0 },
+        { prevOut: state, dt: 0.1 }
+      );
+      assertEqual(result.out, 0);
+      state = result._newState;
+
+      result = NODE_TYPES.delay1.evaluate(
+        { value: 7 },
+        { initial: 0 },
+        { prevOut: state, dt: 0.1 }
+      );
+      assertEqual(result.out, 5);
+      state = result._newState;
+
+      result = NODE_TYPES.delay1.evaluate(
+        { value: 9 },
+        { initial: 0 },
+        { prevOut: state, dt: 0.1 }
+      );
+      assertEqual(result.out, 7);
+    });
+
+    test("integrate: max クランプが効く", () => {
+      let prevOut = 0;
+      let result = NODE_TYPES.integrate.evaluate(
+        { value: 2 },
+        { initial: 0, min: 0, max: 1 },
+        { prevOut, dt: 0.3 }
+      );
+      assertApprox(result.out, 0.6, 1e-9);
+      prevOut = result.out;
+
+      result = NODE_TYPES.integrate.evaluate(
+        { value: 2 },
+        { initial: 0, min: 0, max: 1 },
+        { prevOut, dt: 0.3 }
+      );
+      assertApprox(result.out, 1.0, 1e-9);
+    });
+
+    test("integrate: min クランプが効く", () => {
+      const result = NODE_TYPES.integrate.evaluate(
+        { value: -3 },
+        { initial: 0.2, min: 0, max: 1 },
+        { prevOut: 0.2, dt: 0.2 }
+      );
+      assertApprox(result.out, 0, 1e-9);
+    });
+
+    test("state: 同じ id で load() すると prevOut を維持する", () => {
+      const engine = new Loom({
+        nodes: [{ id: "acc", type: "integrate", params: { value: 1, initial: 0 } }],
+        edges: []
+      });
+
+      runTimes(engine, [0, 0.05, 0.1]);
+      assertApprox(engine.getValue("acc.out"), 0.1, 1e-9);
+
+      engine.load({
+        nodes: [{ id: "acc", type: "integrate", params: { value: 1, initial: 999 } }],
+        edges: []
+      });
+      engine.evaluateAt(0.15);
+
+      assertApprox(engine.getValue("acc.out"), 0.15, 1e-9);
+    });
+
+    test("state: 新しい id で load() すると initial から始まる", () => {
+      const engine = new Loom({
+        nodes: [{ id: "acc", type: "integrate", params: { value: 1, initial: 0 } }],
+        edges: []
+      });
+
+      runTimes(engine, [0, 0.05, 0.1]);
+      engine.load({
+        nodes: [{ id: "fresh", type: "integrate", params: { value: 1, initial: 5 } }],
+        edges: []
+      });
+      engine.evaluateAt(0.15);
+
+      assertApprox(engine.getValue("fresh.out"), 5.05, 1e-9);
+      assert(engine._prevOuts.has("fresh"), "fresh state should be tracked");
+      assert(!engine._prevOuts.has("acc"), "removed node state should be dropped");
+    });
+
+    test("state: 巨大な dt は 0.1 秒にクランプされる", () => {
+      const engine = new Loom({
+        nodes: [{ id: "acc", type: "integrate", params: { value: 1, initial: 0 } }],
+        edges: []
+      });
+
+      engine.evaluateAt(0);
+      engine.evaluateAt(1);
+      assertApprox(engine.getValue("acc.out"), 0.1, 1e-9);
+    });
+
+    test("state: smoothLerp は 60fps と 30fps でほぼ同じ最終値になる", () => {
+      const graph = {
+        nodes: [{ id: "smooth", type: "smoothLerp", params: { value: 100, rate: 5, initial: 0 } }],
+        edges: []
+      };
+      const engine60 = new Loom(graph);
+      const engine30 = new Loom(graph);
+
+      engine60.evaluateAt(0);
+      for (let i = 1; i <= 60; i++) {
+        engine60.evaluateAt(i / 60);
+      }
+
+      engine30.evaluateAt(0);
+      for (let i = 1; i <= 30; i++) {
+        engine30.evaluateAt(i / 30);
+      }
+
+      const v60 = engine60.getValue("smooth.out");
+      const v30 = engine30.getValue("smooth.out");
+      assertApprox(v60, v30, 1.0, `expected 60fps and 30fps to be within 1, got ${v60} vs ${v30}`);
     });
 
     // getValue の境界テスト

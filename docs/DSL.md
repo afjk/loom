@@ -189,7 +189,7 @@ x |> add(y)                 # OK（add は可換、x と y は両方位置引数
 |----------|---------------------|
 | `clock` | `t` |
 | `pointerPosition` | `pos` |
-| その他 | `out` |
+| その他（変換 / 状態 / シンク系を含む） | `out` |
 
 例：
 
@@ -198,6 +198,14 @@ t = clock()
 wave = sine(t, freq: 0.3)
 # t は clock の出力 → t.t として解決
 # wave は sine の出力 → wave.out として解決
+```
+
+state ノードも同じルールで扱えます。
+
+```
+t = clock()
+wave = sine(t, freq: 0.3)
+smooth = smoothLerp(wave, rate: 5, initial: 0)
 ```
 
 ---
@@ -259,6 +267,17 @@ wave = sine(timer, freq: freqMap)
 widthMap = map(wave, inMin: -1, inMax: 1, outMin: 50, outMax: 750)
 
 render bar(width: widthMap, color: "#00ccff", height: 40)
+```
+
+### 時間ベースの平滑化
+
+```
+t = clock()
+wave = sine(t, freq: 0.3)
+smooth = smoothLerp(wave, rate: 5, initial: 0)
+widthMap = map(smooth, inMin: -1, inMax: 1, outMin: 50, outMax: 600)
+
+render bar(width: widthMap, color: "#80ed99", height: 48)
 ```
 
 ### smoothstep フェード

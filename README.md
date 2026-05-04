@@ -2,26 +2,27 @@
 
 [![Tests](https://github.com/afjk/loom/actions/workflows/test.yml/badge.svg)](https://github.com/afjk/loom/actions/workflows/test.yml)
 
-A stateless dataflow engine for the browser. Build reactive visual, audio, and 3D content by composing pure functions.
+A browser dataflow engine with stateless transforms and explicit time-based state nodes. Build reactive visual, audio, and 3D content by composing small graph parts.
 
 ---
 
-ブラウザで動くステートレスなデータフロー実行エンジン。純粋な関数の合成により、リアクティブな視覚・音響・3D コンテンツを構築します。
+ブラウザで動くデータフロー実行エンジン。純粋関数ノードを基本にしつつ、必要な箇所だけを `state` ノードとして明示し、リアクティブな視覚・音響・3D コンテンツを構築します。
 
 ## ステータス
 
 **第一段階：プロトタイプ実装完了、仕様確定**
 
-第ゼロ段階および第一段階のプロトタイプ実装が完了。仕様書はバージョン 0.2.0 でクロスプラットフォーム評価セマンティクスを確定し、Phase 1.5（SceneSync アダプタ）および Phase 1.6（Unity 対応）の実装フェーズに進行可能となりました。
+第ゼロ段階と第一段階に加え、時間ベース state ノード（`smoothLerp`, `lowpass`, `delay1`, `integrate`）を実装済みです。仕様書はクロスプラットフォーム評価セマンティクスを維持したまま、明示的な状態管理層を持つ形に拡張されています。
 
 ## 背景・モチベーション
 
 アート、インタラクティブ作品、ゲームなどのリアルタイムなコンテンツでは、視覚・音響・3D 空間の変化を時々刻々と計算する必要があります。こうしたシステムは状態管理が複雑になりがちで、デバッグや再現が難しいという課題があります。
 
-Loom は、データフロー思想に基づき、現在時刻と入力値だけから出力が決まる「ステートレス」な設計を基本とします。これにより：
+Loom は、データフロー思想に基づき、現在時刻と入力値だけから出力が決まる設計を基本とします。状態が必要な処理は state ノードに限定して局所化します。これにより：
 
 - 任意のタイミングで同じ計算を再実行しても、同じ結果が得られる
 - 動作が予測可能で、デバッグが容易
+- ステートフルな追従や累積も、グラフ上で明示的に扱える
 - クリエイティブコーダーと AI が共有できるテキスト表現を持つ
 
 ことが実現されます。
@@ -69,11 +70,18 @@ Loom の設計は、以下の 4 つの原則に基づいています。
 仕様の詳細は **[docs/SPEC.md](docs/SPEC.md)** をご覧ください。以下が含まれます：
 
 - データフローモデル（連続値とイベント）
-- ノード 5 種類の詳細仕様
+- ノード仕様（transform / input / state / sink）
 - グラフ定義の JSON フォーマット
 - 公開 API（Loom エンジンの使用方法）
 - 評価モデル
 - ロードマップ
+
+state ノードとして、以下を同梱しています。
+
+- `smoothLerp`: 目標値への時間ベース追従
+- `lowpass`: 時定数ベースの平滑化
+- `delay1`: 1 フレーム遅延
+- `integrate`: 時間積分と min/max クランプ
 
 ## Unity 対応
 
@@ -184,6 +192,9 @@ GitHub Pages で公開されているデモを、ブラウザから直接確認�
 * 範囲リマップ：https://afjk.github.io/loom/examples/13-clamp-map.html
 * DOM Transform Sink デモ：https://afjk.github.io/loom/examples/14-dom-transform-sink.html
 * Threshold Class Sink デモ：https://afjk.github.io/loom/examples/15-threshold-class-sink.html
+* smoothLerp 追従デモ：https://afjk.github.io/loom/examples/16-smooth-pointer.html
+* lowpass 平滑化デモ：https://afjk.github.io/loom/examples/17-jitter-free-trail.html
+* integrate チャージゲージ：https://afjk.github.io/loom/examples/18-charge-gauge.html
 * **ライブエディタ（シンプル版）**：https://afjk.github.io/loom/editor/
 * **ライブエディタ（Pro 版）**：https://afjk.github.io/loom/editor-pro/dist/
 * テスト結果：https://afjk.github.io/loom/test/loom.test.html
@@ -227,6 +238,9 @@ GitHub Pages で公開されているデモを、ブラウザから直接確認�
 * 範囲リマップ：`http://localhost:8000/examples/13-clamp-map.html`
 * DOM Transform Sink デモ：`http://localhost:8000/examples/14-dom-transform-sink.html`
 * Threshold Class Sink デモ：`http://localhost:8000/examples/15-threshold-class-sink.html`
+* smoothLerp 追従デモ：`http://localhost:8000/examples/16-smooth-pointer.html`
+* lowpass 平滑化デモ：`http://localhost:8000/examples/17-jitter-free-trail.html`
+* integrate チャージゲージ：`http://localhost:8000/examples/18-charge-gauge.html`
 
 * **ライブエディタ（シンプル版）**：`http://localhost:8000/editor/`
 * **ライブエディタ（Pro 版）**：`http://localhost:8000/editor-pro/dist/`

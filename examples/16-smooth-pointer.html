@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Smooth pointer - smoothLerp でクリック位置へ追従</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      max-width: 860px;
+      margin: 0 auto;
+      color: #d8f3dc;
+      background: #08110c;
+    }
+    h1 {
+      color: #95d5b2;
+    }
+    .description {
+      color: #b7e4c7;
+      line-height: 1.7;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      max-width: 800px;
+      margin: 24px auto;
+      border: 1px solid rgba(149, 213, 178, 0.35);
+      border-radius: 14px;
+      background: #020604;
+      cursor: crosshair;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+    }
+    .info {
+      color: #95d5b2;
+      font-family: monospace;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Smooth pointer</h1>
+  <p class="description">
+    クリックした位置に <code>smoothLerp(rate=5)</code> で約 1 秒かけて滑らかに追従します。<code>dt</code> は秒ベースで扱われるため、フレームレートが変わっても見た目が揃います。
+  </p>
+
+  <canvas id="canvas" width="800" height="500"></canvas>
+
+  <div class="info">グラフ: targetX / targetY → smoothLerp → canvas draw</div>
+
+  <script type="module">
+    import { Loom } from "../src/loom.js";
+
+    const graph = {
+      nodes: [
+        { id: "targetX", type: "constant", params: { value: 400 } },
+        { id: "targetY", type: "constant", params: { value: 250 } },
+        { id: "smoothX", type: "smoothLerp", params: { rate: 5, initial: 400 } },
+        { id: "smoothY", type: "smoothLerp", params: { rate: 5, initial: 250 } }
+      ],
+      edges: [
+        { from: "targetX.out", to: "smoothX.value" },
+        { from: "targetY.out", to: "smoothY.value" }
+      ]
+    };
+
+    const engine = new Loom(graph);
+    engine.start();
+
+    const targetXNode = graph.nodes.find(node => node.id === "targetX");
+    const targetYNode = graph.nodes.find(node => node.id === "targetY");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    canvas.addEventListener("pointerdown", (event) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      targetXNode.params.value = (event.clientX - rect.left) * scaleX;
+      targetYNode.params.value = (event.clientY - rect.top) * scaleY;
+    });
+
+    function draw() {
+      ctx.fillStyle = "rgba(2, 6, 4, 0.12)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const targetX = targetXNode.params.value;
+      const targetY = targetYNode.params.value;
+      const x = engine.getValue("smoothX.out") ?? 400;
+      const y = engine.getValue("smoothY.out") ?? 250;
+
+      ctx.strokeStyle = "rgba(149, 213, 178, 0.25)";
+      ctx.beginPath();
+      ctx.moveTo(targetX - 10, targetY);
+      ctx.lineTo(targetX + 10, targetY);
+      ctx.moveTo(targetX, targetY - 10);
+      ctx.lineTo(targetX, targetY + 10);
+      ctx.stroke();
+
+      ctx.fillStyle = "#00ff88";
+      ctx.beginPath();
+      ctx.arc(x, y, 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      requestAnimationFrame(draw);
+    }
+
+    draw();
+  </script>
+</body>
+</html>

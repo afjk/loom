@@ -128,6 +128,36 @@ render bar(width: widthMap, color: "#ffaa00", height: 60)
 `
   },
 
+  "state-smooth-bar": {
+    label: "State Smooth Bar",
+    graph: {
+      nodes: [
+        { id: "timer", type: "clock" },
+        { id: "target", type: "sine", params: { freq: 0.35, amplitude: 1 } },
+        { id: "smooth", type: "smoothLerp", params: { rate: 5, initial: 0 } },
+        { id: "widthMap", type: "map", params: { inMin: -1, inMax: 1, outMin: 50, outMax: 700, clamp: true } }
+      ],
+      edges: [
+        { from: "timer.t", to: "target.t" },
+        { from: "target.out", to: "smooth.value" },
+        { from: "smooth.out", to: "widthMap.value" }
+      ],
+      render: {
+        type: "bar",
+        width: "widthMap.out",
+        color: "#80ed99",
+        height: 48
+      }
+    },
+    dsl: `timer = clock()
+target = sine(timer, freq: 0.35)
+smooth = smoothLerp(target, rate: 5, initial: 0)
+widthMap = map(smooth, inMin: -1, inMax: 1, outMin: 50, outMax: 700, clamp: true)
+
+render bar(width: widthMap, color: "#80ed99", height: 48)
+`
+  },
+
   "lerp-ping-pong": {
     label: "lerp 行き来",
     graph: {
