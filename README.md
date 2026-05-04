@@ -8,6 +8,20 @@ A browser dataflow engine with stateless transforms and explicit time-based stat
 
 ブラウザで動くデータフロー実行エンジン。純粋関数ノードを基本にしつつ、必要な箇所だけを `state` ノードとして明示し、リアクティブな視覚・音響・3D コンテンツを構築します。
 
+## 設計思想
+
+Loom は原則としてステートレスなデータフローを基本とし、時間的な追従・遅延・累積が必要な場合のみ、明示的な state ノード(explicit temporal state)に状態を隔離します。これにより graph JSON は宣言的・再現可能なまま保たれ、状態を持つ挙動も graph の中で可視化されます。
+
+## Node categories
+
+| Category | 説明 | 例 |
+|---|---|---|
+| `source` | 入力なしで値を生成するカテゴリ | `clock`, `constant` |
+| `input` | 外界から値やイベントを受け取るカテゴリ | `pointerPosition`, `pointerClick`, `keyDown` |
+| `transform` | ステートレスな純粋変換を行うカテゴリ | `sine`, `add`, `map`, `clamp` |
+| `state` | 前フレーム値と `dt` を保持する特例カテゴリ。明示的な temporal state。詳細は SPEC.md の「State nodes」章参照 | `smoothLerp`, `lowpass`, `delay1`, `integrate` |
+| `sink` | 副作用を外部に反映するカテゴリ | `setStyle`, `setText`, `log` |
+
 ## ステータス
 
 **第一段階：プロトタイプ実装完了、仕様確定**
