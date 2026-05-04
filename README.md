@@ -163,7 +163,7 @@ Graph DSL → JSON graph → Web Loom / Unity Loom で評価
 |---|---|---|
 | シンプル版 (`editor/`) | [editor/](https://afjk.github.io/loom/editor/) | 依存ゼロ・軽量・textarea ベース |
 | **Pro 版** (`editor-pro/`) | [editor-pro/dist/](https://afjk.github.io/loom/editor-pro/dist/) | **補完・構文ハイライト・lint 付き、オーバーレイ UI** |
-| **Studio MVP** (`editor-studio/`) | Local dev: `npm run dev` | **DSL + ノードエディタ並行編集 MVP** |
+| **Studio MVP** (`editor-studio/`) | [editor-studio/dist/](https://afjk.github.io/loom/editor-studio/dist/) | **DSL + ノードエディタ並行編集 MVP** |
 
 **シンプル版** はライブラリ依存ゼロで手軽に使えるテキストエリアベースのエディタです。
 
@@ -201,6 +201,10 @@ x = timer |> sine(freq: 0.3) |> map(inMin: -1, inMax: 1, outMin: 100, outMax: 70
 ### Editor Studio
 
 `editor-studio` は DSL と Rete.js v2 ノードエディタを左右に並べた協調編集スタジオです。
+
+- GitHub Pages: https://afjk.github.io/loom/editor-studio/dist/
+
+ローカル開発:
 
 ```bash
 cd editor-studio
@@ -252,7 +256,7 @@ GitHub Pages で公開されているデモを、ブラウザから直接確認�
 * integrate チャージゲージ：https://afjk.github.io/loom/examples/18-charge-gauge.html
 * **ライブエディタ（シンプル版）**：https://afjk.github.io/loom/editor/
 * **ライブエディタ（Pro 版）**：https://afjk.github.io/loom/editor-pro/dist/
-* **Studio MVP**：ローカルでのみ利用可能（`cd editor-studio && npm install && npm run dev`）
+* **Studio MVP**：https://afjk.github.io/loom/editor-studio/dist/
 * テスト結果：https://afjk.github.io/loom/test/loom.test.html
 
 ローカルで確認する場合は、ESM を使うため、ローカルファイル直接 (`file://`) ではなく HTTP サーバから配信する必要があります。
