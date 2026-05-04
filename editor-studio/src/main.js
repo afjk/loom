@@ -143,12 +143,29 @@ function runPreview(graph) {
     animationFrameId = null;
   }
 
+  if (engine && typeof engine.stop === 'function') {
+    engine.stop();
+  }
+
   const state = store.getState();
   if (!graph) graph = state.graph;
   if (!graph) return;
 
   try {
-    engine = new Loom(graph);
+    const canvas = elements.previewCanvas;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const graphForLoom = {
+      nodes: graph.nodes || [],
+      edges: graph.edges || []
+    };
+
+    engine = new Loom(graphForLoom);
+    engine.start();
+
     animationFrameId = requestAnimationFrame(() => {
       tick(engine, graph);
     });
@@ -177,7 +194,7 @@ function tick(engine, graph) {
       const color = currentRender.color || '#00ff00';
       ctx.fillStyle = color;
       ctx.beginPath();
-      if (x !== null && y !== null) {
+      if (x !== null && y !== null && typeof x === 'number' && typeof y === 'number') {
         ctx.arc(x, y, 4, 0, Math.PI * 2);
       } else {
         ctx.arc(canvas.width / 2, canvas.height / 2, 4, 0, Math.PI * 2);
@@ -188,7 +205,7 @@ function tick(engine, graph) {
       const color = currentRender.color || '#00ccff';
       const height = currentRender.height !== undefined ? currentRender.height : 40;
       const y = currentRender.y !== undefined ? resolveValue(engine, currentRender.y) : (canvas.height - height) / 2;
-      if (width !== null && y !== null) {
+      if (width !== null && typeof width === 'number' && y !== null && typeof y === 'number') {
         ctx.fillStyle = color;
         ctx.fillRect(0, y, width, height);
       }
