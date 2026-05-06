@@ -9,10 +9,10 @@
 
 ## Phase 2: Import syntax
 
-- minimal `import math` / `import fs` / `import scene`
+✓ import math / import fs / import scene (Phase 2 complete)
 - runtime target validation
 - import math
-- import scene
+- import scene (with scene.setPosition, scene.setRotation, scene.setScale)
 - import fs
 - target compatibility validation
 

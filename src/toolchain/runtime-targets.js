@@ -42,7 +42,7 @@ export const LIBRARY_COMPATIBILITY = {
     description: 'Canvas preview renderer'
   },
   scene: {
-    targets: ['scenesync', 'unity', 'web'],
+    targets: ['cli', 'scenesync', 'unity', 'web'],
     kind: 'effect',
     description: 'Scene object control through a host adapter'
   },
