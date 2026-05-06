@@ -907,8 +907,8 @@ export const LIBRARY_METADATA = {
   },
   fs: {
     name: 'fs',
-    description: LIBRARY_COMPATIBILITY.fs.description,
-    status: 'planned',
+    description: 'CLI-only file system access',
+    status: 'implemented',
     targets: LIBRARY_COMPATIBILITY.fs.targets,
     functions: {}
   },
@@ -952,3 +952,117 @@ export const LIBRARY_METADATA = {
 export function getAllLibraries() {
   return Object.keys(LIBRARY_METADATA).sort();
 }
+
+function makeFunctionMetadata(libraryName, functionName, signature, description, returns = 'any', status = 'implemented') {
+  return {
+    name: functionName,
+    signature,
+    description,
+    args: [],
+    returns,
+    status,
+    targets: LIBRARY_COMPATIBILITY[libraryName].targets,
+    examples: [`${libraryName}.${functionName}()`]
+  };
+}
+
+Object.assign(LIBRARY_METADATA.text.functions, {
+  concat: makeFunctionMetadata('text', 'concat', 'text.concat(...values)', 'Converts values to strings and concatenates them.', 'string'),
+  split: makeFunctionMetadata('text', 'split', 'text.split(value, separator: ",")', 'Splits text into a list.', 'array'),
+  join: makeFunctionMetadata('text', 'join', 'text.join(list, separator: ",")', 'Joins a list into text.', 'string'),
+  includes: makeFunctionMetadata('text', 'includes', 'text.includes(value, search: "...")', 'Returns true when text contains the search text.', 'boolean'),
+  startsWith: makeFunctionMetadata('text', 'startsWith', 'text.startsWith(value, search: "...")', 'Returns true when text starts with the search text.', 'boolean'),
+  endsWith: makeFunctionMetadata('text', 'endsWith', 'text.endsWith(value, search: "...")', 'Returns true when text ends with the search text.', 'boolean'),
+  length: makeFunctionMetadata('text', 'length', 'text.length(value)', 'Returns string length after user-facing conversion.', 'number'),
+  isEmpty: makeFunctionMetadata('text', 'isEmpty', 'text.isEmpty(value)', 'Returns true when converted text has zero length.', 'boolean'),
+  stringify: makeFunctionMetadata('text', 'stringify', 'text.stringify(value)', 'Converts values to readable text; null and undefined become empty text.', 'string')
+});
+
+Object.assign(LIBRARY_METADATA.console.functions, {
+  table: makeFunctionMetadata('console', 'table', 'console.table(value)', 'Outputs a table-shaped value to the host console when available.', 'void')
+});
+
+Object.assign(LIBRARY_METADATA.math.functions, {
+  floor: makeFunctionMetadata('math', 'floor', 'math.floor(value)', 'Rounds down using Math.floor.', 'number'),
+  ceil: makeFunctionMetadata('math', 'ceil', 'math.ceil(value)', 'Rounds up using Math.ceil.', 'number'),
+  round: makeFunctionMetadata('math', 'round', 'math.round(value)', 'Rounds to nearest integer using Math.round.', 'number'),
+  min: makeFunctionMetadata('math', 'min', 'math.min(a, b)', 'Returns the smaller of two numbers.', 'number'),
+  max: makeFunctionMetadata('math', 'max', 'math.max(a, b)', 'Returns the larger of two numbers.', 'number'),
+  tan: makeFunctionMetadata('math', 'tan', 'math.tan(value)', 'Returns tangent using Math.tan.', 'number'),
+  sqrt: makeFunctionMetadata('math', 'sqrt', 'math.sqrt(value)', 'Returns square root using Math.sqrt.', 'number'),
+  pow: makeFunctionMetadata('math', 'pow', 'math.pow(value, exponent: 2)', 'Raises value to exponent using Math.pow.', 'number')
+});
+
+LIBRARY_METADATA.logic = {
+  name: 'logic',
+  description: LIBRARY_COMPATIBILITY.logic.description,
+  targets: LIBRARY_COMPATIBILITY.logic.targets,
+  functions: Object.fromEntries([
+    ['not', ['logic.not(value)', 'Boolean negation using JavaScript-style truthiness.', 'boolean']],
+    ['and', ['logic.and(a, b)', 'Boolean AND using JavaScript-style truthiness, returned as a boolean.', 'boolean']],
+    ['or', ['logic.or(a, b)', 'Boolean OR using JavaScript-style truthiness, returned as a boolean.', 'boolean']],
+    ['equals', ['logic.equals(value, other: value)', 'Strict equality using Object.is.', 'boolean']],
+    ['notEquals', ['logic.notEquals(value, other: value)', 'Inverse of logic.equals.', 'boolean']],
+    ['greaterThan', ['logic.greaterThan(value, other: 0)', 'Numeric greater-than comparison.', 'boolean']],
+    ['lessThan', ['logic.lessThan(value, other: 0)', 'Numeric less-than comparison.', 'boolean']],
+    ['greaterOrEqual', ['logic.greaterOrEqual(value, other: 0)', 'Numeric greater-or-equal comparison.', 'boolean']],
+    ['lessOrEqual', ['logic.lessOrEqual(value, other: 0)', 'Numeric less-or-equal comparison.', 'boolean']],
+    ['select', ['logic.select(condition, whenTrue: value, whenFalse: value)', 'Returns whenTrue when condition is truthy using JavaScript-style truthiness, otherwise whenFalse.', 'any']],
+    ['when', ['logic.when(condition, value: value)', 'Returns value when condition is truthy using JavaScript-style truthiness, otherwise null.', 'any']]
+  ].map(([name, [signature, description, returns]]) => [name, makeFunctionMetadata('logic', name, signature, description, returns)]))
+};
+
+LIBRARY_METADATA.list = {
+  name: 'list',
+  description: LIBRARY_COMPATIBILITY.list.description,
+  targets: LIBRARY_COMPATIBILITY.list.targets,
+  functions: Object.fromEntries([
+    ['of', ['list.of(...values)', 'Builds a list from up to eight positional values.', 'array', 'implemented']],
+    ['range', ['list.range(start, end: 5)', 'Builds an inclusive ascending or descending numeric range.', 'array', 'implemented']],
+    ['length', ['list.length(list)', 'Returns list length.', 'number', 'implemented']],
+    ['at', ['list.at(list, index: 0)', 'Returns an item by index; negative indexes count from the end.', 'any', 'implemented']],
+    ['first', ['list.first(list)', 'Returns first item or null.', 'any', 'implemented']],
+    ['last', ['list.last(list)', 'Returns last item or null.', 'any', 'implemented']],
+    ['map', ['list.map(list, fn: value)', 'Planned until function values are implemented; throws UNSUPPORTED_FUNCTION_VALUE at runtime.', 'array', 'planned']],
+    ['filter', ['list.filter(list, fn: value)', 'Planned until function values are implemented; throws UNSUPPORTED_FUNCTION_VALUE at runtime.', 'array', 'planned']],
+    ['reduce', ['list.reduce(list, fn: value, initial: value)', 'Planned until function values are implemented; throws UNSUPPORTED_FUNCTION_VALUE at runtime.', 'any', 'planned']],
+    ['join', ['list.join(list, separator: ",")', 'Joins list values into text.', 'string', 'implemented']],
+    ['reverse', ['list.reverse(list)', 'Returns a new reversed list.', 'array', 'implemented']],
+    ['sort', ['list.sort(list)', 'Returns a new sorted list; numbers sort numerically, otherwise by string.', 'array', 'implemented']],
+    ['take', ['list.take(list, count: 2)', 'Returns the first count items.', 'array', 'implemented']],
+    ['drop', ['list.drop(list, count: 2)', 'Drops the first count items.', 'array', 'implemented']],
+    ['concat', ['list.concat(...lists)', 'Concatenates up to four lists.', 'array', 'implemented']]
+  ].map(([name, [signature, description, returns, status]]) => [name, makeFunctionMetadata('list', name, signature, description, returns, status)]))
+};
+
+LIBRARY_METADATA.random = {
+  name: 'random',
+  description: LIBRARY_COMPATIBILITY.random.description,
+  targets: LIBRARY_COMPATIBILITY.random.targets,
+  functions: Object.fromEntries([
+    ['value', ['random.value()', 'Returns Math.random() in [0, 1).', 'number', 'implemented']],
+    ['range', ['random.range(min: 0, max: 1)', 'Returns a random float in [min, max).', 'number', 'implemented']],
+    ['int', ['random.int(min: 1, max: 6)', 'Returns a random integer in inclusive [min, max].', 'number', 'implemented']],
+    ['choice', ['random.choice(list)', 'Returns a random item or null for an empty list.', 'any', 'implemented']],
+    ['seeded', ['random.seeded(seed: 1)', 'Planned seeded random generator.', 'any', 'planned']],
+    ['noise', ['random.noise(...)', 'Planned noise generator.', 'number', 'planned']]
+  ].map(([name, [signature, description, returns, status]]) => [name, makeFunctionMetadata('random', name, signature, description, returns, status)]))
+};
+
+LIBRARY_METADATA.debug = {
+  name: 'debug',
+  description: LIBRARY_COMPATIBILITY.debug.description,
+  targets: LIBRARY_COMPATIBILITY.debug.targets,
+  functions: Object.fromEntries([
+    ['inspect', ['debug.inspect(value)', 'Returns a readable string representation.', 'string']],
+    ['trace', ['debug.trace(value, label: "trace")', 'Records a trace effect and returns the original value.', 'any']],
+    ['assert', ['debug.assert(condition, message: "Assertion failed")', 'Throws ASSERTION_FAILED when condition is false.', 'boolean']]
+  ].map(([name, [signature, description, returns]]) => [name, makeFunctionMetadata('debug', name, signature, description, returns)]))
+};
+
+LIBRARY_METADATA.fs.functions = Object.fromEntries([
+  ['readText', ['fs.readText(path: "file.txt")', 'CLI-only: reads UTF-8 text from the local filesystem.', 'string']],
+  ['writeText', ['fs.writeText(path: "file.txt", value: "text")', 'CLI-only: writes UTF-8 text to the local filesystem.', 'void']],
+  ['exists', ['fs.exists(path: "file.txt")', 'CLI-only: returns whether a local path exists.', 'boolean']],
+  ['list', ['fs.list(path: ".")', 'CLI-only: returns filenames in a local directory.', 'array']]
+].map(([name, [signature, description, returns]]) => [name, makeFunctionMetadata('fs', name, signature, description, returns)]));

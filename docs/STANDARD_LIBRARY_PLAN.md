@@ -24,42 +24,49 @@ Targets: cli, scenesync, unity, web
 ## logic
 Purpose: boolean algebra and branching.
 Current:
-- none (no `logic` library today)
+- `logic.not`, `logic.and`, `logic.or`, `logic.equals`, `logic.notEquals`
+- `logic.greaterThan`, `logic.lessThan`, `logic.greaterOrEqual`, `logic.lessOrEqual`
+- `logic.select`, `logic.when`
 Used by tour samples:
 - `logic.equals`, `logic.select`, `logic.and`, `logic.greaterThan`, `logic.lessOrEqual`, `logic.lessThan`, `logic.greaterOrEqual`
 Recommended baseline:
 - `logic.not`, `logic.and`, `logic.or`, `logic.equals`, `logic.notEquals`, `logic.greaterThan`, `logic.lessThan`, `logic.greaterOrEqual`, `logic.lessOrEqual`, `logic.select`, `logic.when`
-Status summary: Implemented: none / Missing: baseline set / Planned: full baseline / Uncertain: event-gated forms
+Status summary: Implemented: baseline set / Missing: event-gated forms / Planned: portability polish / Uncertain: event-gated forms
 Targets: cli, scenesync, unity, web
 
 ## math
 Purpose: numeric transforms.
 Current:
 - `abs`, `add`, `clamp`, `cosine`, `divide`, `greaterThan`, `lerp`, `lessThan`, `map`, `mod`, `multiply`, `negate`, `math.sine`, `smoothstep`, `subtract`
+- `math.add`, `math.subtract`, `math.multiply`, `math.divide`, `math.mod`, `math.abs`
+- `math.floor`, `math.ceil`, `math.round`, `math.min`, `math.max`, `math.tan`, `math.sqrt`, `math.pow`
 Used by tour samples:
 - `add`, `multiply`, `map`, `clamp`, `math.sine`, `mod`
 Recommended baseline:
 - add missing candidates: `floor`, `ceil`, `round`, `min`, `max`, `tan`, `sqrt`, `pow`
-Status summary: Implemented: current set above / Missing: baseline expansion / Planned: portability review / Uncertain: naming unification (`sine` vs `math.sine`)
+Status summary: Implemented: current set above plus baseline expansion and namespace aliases / Missing: none for pure baseline / Planned: portability review / Uncertain: legacy unqualified aliases
 Targets: cli, scenesync, unity, web
 
 ## text
 Purpose: string processing.
 Current:
 - `text.upper`, `text.lower`, `text.trim`, `text.replace`
+- `text.concat`, `text.split`, `text.join`, `text.includes`, `text.startsWith`, `text.endsWith`, `text.length`, `text.isEmpty`, `text.stringify`
 Used by tour samples:
 - `text.upper`, `text.trim`, `text.replace`, `text.stringify` (draft)
 Recommended baseline:
 - `text.concat`, `text.split`, `text.join`, `text.includes`, `text.startsWith`, `text.endsWith`, `text.length`, `text.isEmpty`, `text.stringify`
-Status summary: Implemented: 4 core ops / Missing: stringify and composition helpers / Planned: baseline completion / Uncertain: locale-specific transforms
+Status summary: Implemented: core ops plus baseline additions / Missing: locale-specific transforms / Planned: portability polish / Uncertain: locale-specific transforms
 Targets: cli, scenesync, unity, web
 
 ## list
 Purpose: ordered collection processing.
-Current: none
+Current:
+- `list.of`, `list.range`, `list.length`, `list.at`, `list.first`, `list.last`, `list.join`, `list.reverse`, `list.sort`, `list.take`, `list.drop`, `list.concat`
+- `list.map`, `list.filter`, `list.reduce` are metadata/runtime placeholders that throw `UNSUPPORTED_FUNCTION_VALUE` until function values exist
 Used by tour samples: `list.of`, `list.range`, `list.map`, `list.filter`, `list.reduce`, `list.first`, `list.drop`, `list.concat`, `list.length`, `list.of`
 Recommended baseline: `list.of`, `list.range`, `list.length`, `list.at`, `list.first`, `list.last`, `list.map`, `list.filter`, `list.reduce`, `list.join`, `list.reverse`, `list.sort`, `list.take`, `list.drop`, `list.concat`
-Status summary: Implemented none / Missing foundational set / Planned high priority
+Status summary: Implemented foundational pure list set / Missing function-value execution for map/filter/reduce / Planned high priority
 Targets: cli, scenesync, unity, web
 
 ## object
@@ -117,18 +124,19 @@ Targets: cli, scenesync, unity, web
 ## console
 Purpose: host logging and diagnostics sink.
 Current:
-- `console.log`, `console.warn`, `console.error`
+- `console.log`, `console.warn`, `console.error`, `console.table`
 Used by tour samples: `console.log`
 Recommended baseline: `console.table`
-Status summary: mostly implemented
+Status summary: baseline implemented
 Targets: cli, scenesync, unity, web
 
 ## fs
 Purpose: file IO.
-Current: none (`fs` library is planned)
+Current:
+- CLI-only `fs.readText`, `fs.writeText`, `fs.exists`, `fs.list`
 Used by tour samples: none
 Recommended baseline: `fs.readText`, `fs.writeText`, `fs.exists`, `fs.list`
-Status summary: missing/planned
+Status summary: minimal CLI-only baseline implemented; no browser/web/scenesync/unity support and no sandboxing yet
 Targets: cli
 
 ## scene
@@ -168,16 +176,19 @@ Targets: cli, scenesync, unity, web
 
 ## random
 Purpose: controlled randomness.
-Current: none
+Current:
+- `random.value`, `random.range`, `random.int`, `random.choice`
+- `random.seeded`, `random.noise` are planned metadata only
 Used by tour samples: none
 Recommended baseline: `random.value`, `random.range`, `random.int`, `random.choice`, `random.seeded`, `random.noise`
-Status summary: planned
-Targets: cli, scenesync, unity, web
+Status summary: unseeded baseline implemented; seeded/noise planned
+Targets: cli, web
 
 ## debug
 Purpose: graph-level diagnostics.
-Current: none
+Current:
+- `debug.inspect`, `debug.trace`, `debug.assert`
 Used by tour samples: none
 Recommended baseline: `debug.inspect`, `debug.trace`, `debug.assert`
-Status summary: planned
-Targets: cli, scenesync, unity, web
+Status summary: baseline implemented
+Targets: cli, unity, web
