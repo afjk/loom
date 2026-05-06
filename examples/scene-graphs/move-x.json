@@ -1,0 +1,26 @@
+{
+  "nodes": [
+    { "id": "clock", "type": "serverClock" },
+    {
+      "id": "sine",
+      "type": "sine",
+      "params": {
+        "freq": 0.2,
+        "amplitude": 2,
+        "offset": 0
+      }
+    },
+    {
+      "id": "pos",
+      "type": "sceneSetPosition",
+      "params": {
+        "y": 0.5,
+        "z": 0
+      }
+    }
+  ],
+  "edges": [
+    { "from": "clock.t", "to": "sine.t" },
+    { "from": "sine.out", "to": "pos.x" }
+  ]
+}
