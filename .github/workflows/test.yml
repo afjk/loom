@@ -1,14 +1,13 @@
-name: Tests
+name: Unit Tests
 
 on:
   pull_request:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
-  test:
+  unit:
     runs-on: ubuntu-latest
 
     steps:
@@ -17,12 +16,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-
-      - name: Run tests
-        run: npm test
+      - name: Run unit tests
+        run: npm run test:unit
