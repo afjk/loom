@@ -222,8 +222,9 @@ loom> console.log(message)
 [log] HELLO LOOM
 loom> :source
 import text
-message = text.upper("hello loom")
 import console
+
+message = text.upper("hello loom")
 console.log(message)
 loom> :quit
 ```
