@@ -1,9 +1,19 @@
 {
-  "name": "loom",
+  "name": "@afjk/loomlet",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "type": "module",
+  "description": "A small dataflow language for weaving values, signals, and scene behavior.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/afjk/loomlet.git"
+  },
+  "bugs": {
+    "url": "https://github.com/afjk/loomlet/issues"
+  },
+  "homepage": "https://github.com/afjk/loomlet#readme",
   "bin": {
+    "loomlet": "./bin/loomlet.mjs",
     "loom": "./bin/loom.mjs"
   },
   "scripts": {
