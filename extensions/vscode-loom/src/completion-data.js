@@ -46,11 +46,20 @@ const libraryMembers = {
     {
       label: 'setPosition(...)',
       insertText: 'setPosition("${1:sample-cube}", x: ${2:0}, y: ${3:0.5}, z: ${4:0})',
-      alternateInsertText: 'setPosition(objectId: "${1:sample-cube}", x: ${2:0}, y: ${3:0.5}, z: ${4:0})',
       topLevelInsertText: 'scene.setPosition("${1:sample-cube}", x: ${2:0}, y: ${3:0.5}, z: ${4:0})',
       detail: 'scene.setPosition("objectId", x:, y:, z:)',
       documentation: 'Set a Scene Sync object position.',
       namedArgs: ['x', 'y', 'z']
+    }
+  ],
+  console: [
+    {
+      label: 'log(...)',
+      insertText: 'log(${1:value})',
+      topLevelInsertText: 'console.log(${1:value})',
+      detail: 'console.log(value)',
+      documentation: 'Log a value to the host console.',
+      namedArgs: []
     }
   ]
 };

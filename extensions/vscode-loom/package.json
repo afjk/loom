@@ -1,7 +1,7 @@
 {
-  "name": "loom-scenesync",
-  "displayName": "Loom for Scene Sync",
-  "description": "VS Code support for writing Loom scene behavior scripts for Scene Sync",
+  "name": "loom-vscode",
+  "displayName": "Loom",
+  "description": "VS Code support for Loom language files and Scene Sync workflows",
   "version": "0.0.1",
   "publisher": "afjk",
   "engines": {
