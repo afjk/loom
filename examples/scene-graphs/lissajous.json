@@ -1,0 +1,36 @@
+{
+  "nodes": [
+    { "id": "clock", "type": "serverClock" },
+    {
+      "id": "sine_x",
+      "type": "sine",
+      "params": {
+        "freq": 0.2,
+        "amplitude": 2,
+        "offset": 0
+      }
+    },
+    {
+      "id": "sine_y",
+      "type": "sine",
+      "params": {
+        "freq": 0.3,
+        "amplitude": 0.5,
+        "offset": 1.2
+      }
+    },
+    {
+      "id": "pos",
+      "type": "sceneSetPosition",
+      "params": {
+        "z": 0
+      }
+    }
+  ],
+  "edges": [
+    { "from": "clock.t", "to": "sine_x.t" },
+    { "from": "clock.t", "to": "sine_y.t" },
+    { "from": "sine_x.out", "to": "pos.x" },
+    { "from": "sine_y.out", "to": "pos.y" }
+  ]
+}

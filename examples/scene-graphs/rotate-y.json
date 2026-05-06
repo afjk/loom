@@ -1,0 +1,24 @@
+{
+  "nodes": [
+    { "id": "clock", "type": "serverClock" },
+    {
+      "id": "angle",
+      "type": "multiply",
+      "params": {
+        "b": 0.5
+      }
+    },
+    {
+      "id": "rot",
+      "type": "sceneSetRotation",
+      "params": {
+        "x": 0,
+        "z": 0
+      }
+    }
+  ],
+  "edges": [
+    { "from": "clock.t", "to": "angle.a" },
+    { "from": "angle.out", "to": "rot.y" }
+  ]
+}
