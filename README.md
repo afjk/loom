@@ -598,3 +598,9 @@ Browser tests are available as a manual GitHub Actions workflow and should be ru
 ## ライセンス
 
 MIT License
+
+## The Loomlet Tour
+
+See `docs/TOUR.md` for tutorial samples.
+
+See `docs/STANDARD_LIBRARY_PLAN.md` for the standard library category plan and missing node list.

@@ -1,0 +1,12 @@
+# Tour: Clock
+# Goal: Read time and print it.
+# Status: runnable
+# Run:
+#   loomlet run examples/tour/signals/01-clock.loom
+# Requires:
+#   - clock
+#   - console.log
+import console
+
+t = clock()
+console.log(t)

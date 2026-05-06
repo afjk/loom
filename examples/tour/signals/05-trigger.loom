@@ -1,0 +1,9 @@
+# Tour: Trigger
+# Goal: Draft signal workflow for trigger.
+# Status: draft
+# Run:
+#   loomlet run examples/tour/signals/05-trigger.loom
+# Requires:
+#   - missing nodes listed below
+# TODO NODE: signal.trigger
+import signal

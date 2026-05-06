@@ -1,0 +1,46 @@
+# Tour: FizzBuzz
+# Goal: Draft map + branching workflow over a generated integer range.
+# Status: draft
+# Run:
+#   loomlet run examples/tour/language/07-fizzbuzz.loom
+# Requires:
+#   - list.range
+#   - list.map
+#   - logic.equals
+#   - logic.and
+#   - logic.select
+#   - text.stringify
+# TODO NODE: list.range(start, end:)
+# TODO NODE: list.map(list, fn:)
+# TODO NODE: logic.equals(value, other:)
+# TODO NODE: logic.and(a, b)
+# TODO NODE: logic.select(condition, whenTrue:, whenFalse:)
+# TODO NODE: text.stringify(value)
+# TODO LANGUAGE: function definitions
+
+import list
+import logic
+import math
+import text
+import console
+
+numbers = list.range(1, end: 100)
+
+fizzbuzz = fn(n) =>
+  isFizz = logic.equals(math.mod(n, 3), other: 0)
+  isBuzz = logic.equals(math.mod(n, 5), other: 0)
+  isFizzBuzz = logic.and(isFizz, isBuzz)
+
+  logic.select(isFizzBuzz,
+    whenTrue: "FizzBuzz",
+    whenFalse: logic.select(isFizz,
+      whenTrue: "Fizz",
+      whenFalse: logic.select(isBuzz,
+        whenTrue: "Buzz",
+        whenFalse: text.stringify(n)
+      )
+    )
+  )
+
+results = list.map(numbers, fn: fizzbuzz)
+console.log(results)

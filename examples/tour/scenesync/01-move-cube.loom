@@ -1,0 +1,16 @@
+# Tour: Move Cube
+# Goal: Drive Scene Sync position updates from a sine signal.
+# Status: runnable
+# Run:
+#   loomlet scenesync dev examples/tour/scenesync/01-move-cube.loom
+# Requires:
+#   - time.serverClock
+#   - math.sine
+#   - scene.setPosition
+import time
+import math
+import scene
+
+t = time.serverClock()
+x = math.sine(t, freq: 0.25, amplitude: 1.5)
+scene.setPosition(objectId: "sample-cube", x: x, y: 0, z: 0)

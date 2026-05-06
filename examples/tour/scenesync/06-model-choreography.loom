@@ -1,0 +1,11 @@
+# Tour: Model Choreography
+# Goal: Draft Scene Sync choreography for model choreography.
+# Status: draft
+# Run:
+#   loomlet scenesync dev examples/tour/scenesync/06-model-choreography.loom
+# Requires:
+#   - missing timeline/scene nodes listed below
+# TODO NODE: timeline.sequence
+# TODO NODE: scene.find
+import timeline
+import scene

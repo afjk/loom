@@ -1,0 +1,9 @@
+# Tour: State
+# Goal: Draft signal workflow for state.
+# Status: draft
+# Run:
+#   loomlet run examples/tour/signals/06-state.loom
+# Requires:
+#   - missing nodes listed below
+# TODO NODE: signal.state
+import signal

@@ -1,0 +1,11 @@
+# Tour: Pulse
+# Goal: Draft live performance patch for pulse.
+# Status: draft
+# Run:
+#   loomlet scenesync dev examples/tour/live/01-pulse.loom
+# Requires:
+#   - missing live/audio/timeline nodes listed below
+# TODO NODE: timeline.cue
+# TODO NODE: audio.level
+import timeline
+import audio

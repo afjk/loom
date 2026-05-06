@@ -1,0 +1,11 @@
+# Tour: Audio Reactive Placeholder
+# Goal: Draft live performance patch for audio reactive placeholder.
+# Status: draft
+# Run:
+#   loomlet scenesync dev examples/tour/live/05-audio-reactive-placeholder.loom
+# Requires:
+#   - missing live/audio/timeline nodes listed below
+# TODO NODE: timeline.cue
+# TODO NODE: audio.level
+import timeline
+import audio

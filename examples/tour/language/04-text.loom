@@ -1,0 +1,18 @@
+# Tour: Text
+# Goal: Show common text processing steps.
+# Status: runnable
+# Run:
+#   loomlet run examples/tour/language/04-text.loom
+# Requires:
+#   - text.trim
+#   - text.replace
+#   - text.upper
+#   - console.log
+import text
+import console
+
+raw = constant(value: "  loomlet-tour  ")
+clean = text.trim(raw)
+renamed = text.replace(clean, search: "-", replacement: " ")
+shout = text.upper(renamed)
+console.log(shout)

@@ -1,0 +1,30 @@
+# Tour: List Map Filter
+# Goal: Draft list transformation pipeline for data prep.
+# Status: draft
+# Run:
+#   loomlet run examples/tour/language/08-list-map-filter.loom
+# Requires:
+#   - list.of
+#   - list.map
+#   - list.filter
+#   - list.reduce
+#   - logic.greaterThan
+# TODO NODE: list.of(...values)
+# TODO NODE: list.map(list, fn:)
+# TODO NODE: list.filter(list, fn:)
+# TODO NODE: list.reduce(list, initial:, fn:)
+# TODO NODE: logic.greaterThan(a, b)
+# TODO LANGUAGE: function definitions
+
+import list
+import logic
+import math
+import console
+
+numbers = list.of(1, 2, 3, 4, 5, 6, 7, 8)
+
+squared = list.map(numbers, fn: fn(n) => math.multiply(n, n))
+large = list.filter(squared, fn: fn(n) => logic.greaterThan(n, 20))
+sum = list.reduce(large, initial: 0, fn: fn(acc, n) => math.add(acc, n))
+
+console.log(sum)
