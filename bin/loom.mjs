@@ -112,7 +112,8 @@ Examples:
   loom format examples/cli-basic.loom --check
   loom inspect examples/cli-basic.loom --json
   loom run examples/cli-basic.loom --get x.out --time 0.25
-  loom scenesync ping --room 121555
+  loom scenesync redeem 238909
+  loom scenesync objects --room <roomId> --session <sessionId>
   loom repl`;
 }
 
@@ -178,15 +179,22 @@ function getSceneSyncHelp() {
   loom scenesync <command> [options]
 
 Commands:
-  ping              Check Scene Sync command connection
+  redeem            Redeem a code for a session
+  ping              Check Scene Sync room connection
   info              Get room information
   objects           List scene objects
   list-objects      Alias for objects
 
 Options:
   --room <room>        Scene Sync room code
+  --session <id>       Scene Sync session ID
   --endpoint <url>     Scene Sync command endpoint. Default: ${DEFAULT_SCENESYNC_ENDPOINT}
-  --json               Print raw JSON response`;
+  --json               Print raw JSON response
+
+Environment Variables:
+  LOOM_SCENESYNC_ROOM              Default room code
+  LOOM_SCENESYNC_SESSION           Default session ID
+  LOOM_SCENESYNC_ENDPOINT          Default endpoint`;
 }
 
 function formatValue(value) {
@@ -240,6 +248,7 @@ async function readSourceFile(file) {
 
 function parseSceneSyncArgs(args) {
   let room = process.env.LOOM_SCENESYNC_ROOM || '';
+  let session = process.env.LOOM_SCENESYNC_SESSION || '';
   let endpoint = process.env.LOOM_SCENESYNC_ENDPOINT || DEFAULT_SCENESYNC_ENDPOINT;
   let json = false;
 
@@ -251,6 +260,13 @@ function parseSceneSyncArgs(args) {
         throw new Error('--room requires a room code');
       }
       room = next;
+      index += 1;
+    } else if (arg === '--session') {
+      const next = args[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--session requires a session ID');
+      }
+      session = next;
       index += 1;
     } else if (arg === '--endpoint') {
       const next = args[index + 1];
@@ -266,12 +282,18 @@ function parseSceneSyncArgs(args) {
     }
   }
 
-  return { room, endpoint, json };
+  return { room, session, endpoint, json };
 }
 
 function requireSceneSyncRoom(room) {
   if (!room) {
-    throw new Error('Scene Sync room is required. Pass --room <room> or set LOOM_SCENESYNC_ROOM.');
+    throw new Error('Scene Sync room is required. Pass --room <roomId> or set LOOM_SCENESYNC_ROOM.');
+  }
+}
+
+function requireSceneSyncSession(session) {
+  if (!session) {
+    throw new Error('Scene Sync session is required. Pass --session <sessionId> or set LOOM_SCENESYNC_SESSION.');
   }
 }
 
@@ -285,48 +307,25 @@ function formatSceneSyncPosition(position) {
   return String(position);
 }
 
-function printSceneSyncInfo(room, result) {
-  const info = result?.result || {};
-  const lines = [`Room: ${room}`];
-
-  if (typeof info.clients === 'number') {
-    lines.push(`Clients: ${info.clients}`);
-  } else if (typeof info.clientCount === 'number') {
-    lines.push(`Clients: ${info.clientCount}`);
-  }
-
-  if (typeof info.objects === 'number') {
-    lines.push(`Objects: ${info.objects}`);
-  } else if (typeof info.objectCount === 'number') {
-    lines.push(`Objects: ${info.objectCount}`);
-  }
-
-  if (lines.length === 1 && Object.keys(info).length > 0) {
-    print(stringifyJson(info));
-    return;
-  }
-
+function printSceneSyncInfo(room, envId, objectCount) {
+  const lines = [
+    `Room: ${room}`,
+    `Environment: ${envId || '<unknown>'}`,
+    `Objects: ${objectCount ?? 0}`
+  ];
   print(lines.join('\n'));
 }
 
-function printSceneSyncObjects(result) {
-  const objects = Array.isArray(result?.result?.objects) ? result.result.objects : null;
-
-  if (objects === null) {
-    print(stringifyJson(result.result ?? result));
-    return;
-  }
-
-  if (objects.length === 0) {
+function printSceneSyncObjects(objects) {
+  if (!objects || typeof objects !== 'object' || Object.keys(objects).length === 0) {
     print('Objects: none');
     return;
   }
 
   print('Objects:');
-  for (const object of objects) {
-    const id = object.id || object.name || '<unknown>';
-    const type = object.type || '<unknown>';
-    const position = object.position !== undefined
+  for (const [id, object] of Object.entries(objects)) {
+    const type = object?.type || '<unknown>';
+    const position = object?.position !== undefined
       ? `  position=${formatSceneSyncPosition(object.position)}`
       : '';
     print(`- ${id}  ${type}${position}`);
@@ -649,44 +648,101 @@ async function handleSceneSync(args) {
     return 0;
   }
 
-  const { room, endpoint, json } = parseSceneSyncArgs(rest);
-  requireSceneSyncRoom(room);
+  if (subcommand === 'redeem') {
+    let code = null;
+    let codeIndex = -1;
 
-  const client = new SceneSyncClient({ endpoint });
-  let result;
+    for (let index = 0; index < rest.length; index += 1) {
+      const arg = rest[index];
+      if (!arg.startsWith('-') && !['--room', '--session', '--endpoint', '--json'].includes(rest[index - 1])) {
+        code = arg;
+        codeIndex = index;
+        break;
+      }
+    }
 
-  if (subcommand === 'ping') {
-    result = await client.ping({ room });
-  } else if (subcommand === 'info') {
-    result = await client.info({ room });
-  } else if (subcommand === 'objects' || subcommand === 'list-objects') {
-    result = await client.listObjects({ room });
-  } else {
-    throw new Error(`Unknown scenesync command: ${subcommand}`);
-  }
+    if (!code && rest.length > 0 && !rest[0].startsWith('-')) {
+      code = rest[0];
+      codeIndex = 0;
+    }
 
-  if (!result.ok) {
-    printError(formatSceneSyncError(result.error));
-    return 1;
-  }
+    if (!code) {
+      throw new Error('redeem requires a code argument');
+    }
 
-  if (json) {
-    print(stringifyJson(result));
+    const argsWithoutCode = codeIndex >= 0 ? rest.filter((_, i) => i !== codeIndex) : rest;
+    const { endpoint, json } = parseSceneSyncArgs(argsWithoutCode);
+    const client = new SceneSyncClient({ endpoint });
+    const result = await client.redeem({ code });
+
+    if (!result.ok) {
+      printError(formatSceneSyncError(result.error));
+      return 1;
+    }
+
+    if (json) {
+      print(stringifyJson(result.data));
+      return 0;
+    }
+
+    const data = result.data || {};
+    const lines = [
+      'Linked Scene Sync room.',
+      `Room: ${data.roomId || '<unknown>'}`,
+      `Session: ${data.sessionId || '<unknown>'}`,
+      `Expires At: ${data.expiresAt || '<unknown>'}`
+    ];
+    print(lines.join('\n'));
     return 0;
   }
 
-  if (subcommand === 'ping') {
-    print(`Scene Sync room ${room} is reachable.`);
+  const { room, session, endpoint, json } = parseSceneSyncArgs(rest);
+
+  if (subcommand === 'ping' || subcommand === 'info' || subcommand === 'objects' || subcommand === 'list-objects') {
+    requireSceneSyncRoom(room);
+    requireSceneSyncSession(session);
+
+    const client = new SceneSyncClient({ endpoint });
+    let result;
+
+    if (subcommand === 'ping') {
+      result = await client.ping({ room, session });
+    } else if (subcommand === 'info') {
+      result = await client.info({ room, session });
+    } else {
+      result = await client.listObjects({ room, session });
+    }
+
+    if (!result.ok) {
+      printError(formatSceneSyncError(result.error));
+      return 1;
+    }
+
+    if (json) {
+      print(stringifyJson(result.data));
+      return 0;
+    }
+
+    if (subcommand === 'ping') {
+      print(`Scene Sync room ${room} is reachable.`);
+      return 0;
+    }
+
+    const data = result.data || {};
+    const envId = data.envId || '<unknown>';
+    const objects = data.objects || {};
+    const objectCount = Object.keys(objects).length;
+
+    if (subcommand === 'info') {
+      printSceneSyncInfo(room, envId, objectCount);
+      return 0;
+    }
+
+    printSceneSyncObjects(objects);
     return 0;
   }
 
-  if (subcommand === 'info') {
-    printSceneSyncInfo(room, result);
-    return 0;
-  }
-
-  printSceneSyncObjects(result);
-  return 0;
+  throw new Error(`Unknown scenesync command: ${subcommand}`);
 }
 
 async function main() {
