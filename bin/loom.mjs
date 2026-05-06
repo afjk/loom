@@ -26,10 +26,7 @@ function printToolErrors(errors) {
   }
 }
 
-function parseBoolean(value, defaultValue) {
-  if (value === undefined) {
-    return defaultValue;
-  }
+function parseBoolean(value) {
   if (value === 'true') {
     return true;
   }
@@ -146,21 +143,22 @@ async function handleCompile(args) {
   for (let index = 0; index < rest.length; index += 1) {
     const arg = rest[index];
     if (arg === '-o' || arg === '--out') {
-      outputPath = rest[index + 1];
+      const next = rest[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error(`${arg} requires a file path`);
+      }
+      outputPath = next;
       index += 1;
     } else if (arg === '--pretty') {
-      pretty = parseBoolean(rest[index + 1], true);
+      const next = rest[index + 1];
+      if (next === undefined || next.startsWith('-')) {
+        throw new Error('--pretty requires true or false');
+      }
+      pretty = parseBoolean(next);
       index += 1;
     } else {
-      throw new Error(`unknown option for compile: ${arg}`);
+      throw new Error(`Unknown option: ${arg}`);
     }
-  }
-
-  if (outputPath === null && rest.includes('-o')) {
-    throw new Error('-o requires a file path');
-  }
-  if (outputPath === null && rest.includes('--out')) {
-    throw new Error('--out requires a file path');
   }
 
   const source = await readSourceFile(file);
@@ -199,7 +197,7 @@ async function handleFormat(args) {
     } else if (arg === '--check') {
       shouldCheck = true;
     } else {
-      throw new Error(`unknown option for format: ${arg}`);
+      throw new Error(`Unknown option: ${arg}`);
     }
   }
 
@@ -250,7 +248,7 @@ async function handleInspect(args) {
     } else if (arg === '--json') {
       showJson = true;
     } else {
-      throw new Error(`unknown option for inspect: ${arg}`);
+      throw new Error(`Unknown option: ${arg}`);
     }
   }
 
@@ -314,7 +312,7 @@ async function handleRun(args) {
     } else if (arg === '--json') {
       json = true;
     } else {
-      throw new Error(`unknown option for run: ${arg}`);
+      throw new Error(`Unknown option: ${arg}`);
     }
   }
 

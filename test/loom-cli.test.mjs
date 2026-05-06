@@ -40,6 +40,42 @@ test('compile -o writes file', async () => {
   assert.ok(Array.isArray(graph.nodes));
 });
 
+test('compile -o without path exits 1', () => {
+  const result = runCli(['compile', 'examples/cli-basic.loom', '-o']);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /requires a file path/);
+});
+
+test('compile --out without path exits 1', () => {
+  const result = runCli(['compile', 'examples/cli-basic.loom', '--out']);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /requires a file path/);
+});
+
+test('compile -o followed by another option exits 1', () => {
+  const result = runCli(['compile', 'examples/cli-basic.loom', '-o', '--pretty', 'false']);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /requires a file path/);
+});
+
+test('compile --pretty without value exits 1', () => {
+  const result = runCli(['compile', 'examples/cli-basic.loom', '--pretty']);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /--pretty requires true or false/);
+});
+
+test('compile --pretty invalid value exits 1', () => {
+  const result = runCli(['compile', 'examples/cli-basic.loom', '--pretty', 'maybe']);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /true or false|Invalid/);
+});
+
+test('compile unknown option exits 1', () => {
+  const result = runCli(['compile', 'examples/cli-basic.loom', '--unknown']);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Unknown option/);
+});
+
 test('format outputs DSL', () => {
   const result = runCli(['format', 'examples/cli-basic.loom']);
   assert.equal(result.status, 0, result.stderr);
@@ -52,6 +88,12 @@ test('format --check succeeds for formatted file', () => {
   assert.equal(result.status, 0, result.stderr);
 });
 
+test('format unknown option exits 1', () => {
+  const result = runCli(['format', 'examples/cli-basic.loom', '--unknown']);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Unknown option/);
+});
+
 test('inspect outputs summary', () => {
   const result = runCli(['inspect', 'examples/cli-basic.loom']);
   assert.equal(result.status, 0, result.stderr);
@@ -61,6 +103,12 @@ test('inspect outputs summary', () => {
   assert.match(result.stdout, /clock/);
   assert.match(result.stdout, /sine/);
   assert.match(result.stdout, /map/);
+});
+
+test('inspect unknown option exits 1', () => {
+  const result = runCli(['inspect', 'examples/cli-basic.loom', '--unknown']);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Unknown option/);
 });
 
 test('parse error exits 1', async () => {
@@ -86,6 +134,12 @@ test('run --json returns object', () => {
   const values = JSON.parse(result.stdout);
   assert.equal(typeof values['x.out'], 'number');
   assert.equal(Number.isFinite(values['x.out']), true);
+});
+
+test('run unknown option exits 1', () => {
+  const result = runCli(['run', 'examples/cli-basic.loom', '--unknown']);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Unknown option/);
 });
 
 test('run rejects browser-only nodes with a clear error', async () => {
