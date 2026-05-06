@@ -43,38 +43,38 @@ Loomlet source files use the `.loom` extension.
 
 ### 06 Conditions
 - Path: `examples/tour/language/06-conditions.loom`
-- Status: Draft
+- Status: Runnable
 - Run: `loomlet run examples/tour/language/06-conditions.loom`
 - Teaches: declarative condition + selection
-- Missing: `logic.equals`, `logic.select`
+- Missing: none
 
 ### 07 FizzBuzz
 - Path: `examples/tour/language/07-fizzbuzz.loom`
 - Status: Draft
 - Run: `loomlet run examples/tour/language/07-fizzbuzz.loom`
 - Teaches: range generation, mapping, nested branching
-- Missing: `list.range`, `list.map`, `logic.equals`, `logic.and`, `logic.select`, `text.stringify`, function definitions
+- Missing: `list.map` function-value execution, function definitions
 
 ### 08 List Map Filter
 - Path: `examples/tour/language/08-list-map-filter.loom`
 - Status: Draft
 - Run: `loomlet run examples/tour/language/08-list-map-filter.loom`
 - Teaches: map/filter/reduce collection flow
-- Missing: `list.of`, `list.map`, `list.filter`, `list.reduce`, `logic.greaterThan`, function definitions
+- Missing: `list.map`, `list.filter`, and `list.reduce` function-value execution; function definitions
 
 ### 09 Factorial
 - Path: `examples/tour/language/09-factorial.loom`
 - Status: Draft
 - Run: `loomlet run examples/tour/language/09-factorial.loom`
 - Teaches: recursive definition with base case selection
-- Missing: `logic.lessOrEqual`, `logic.select`, function definitions, recursion
+- Missing: function definitions, recursion
 
 ### 10 Quicksort
 - Path: `examples/tour/language/10-quicksort.loom`
 - Status: Draft
 - Run: `loomlet run examples/tour/language/10-quicksort.loom`
 - Teaches: recursive partition/sort pattern
-- Missing: `list.first`, `list.drop`, `list.filter`, `list.concat`, `list.length`, `list.of`, `logic.lessThan`, `logic.greaterOrEqual`, `logic.lessOrEqual`, `logic.select`, function definitions, recursion
+- Missing: `list.filter` function-value execution, function definitions, recursion
 
 ## Signals
 
