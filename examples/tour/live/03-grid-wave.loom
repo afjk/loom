@@ -1,0 +1,11 @@
+# Tour: Grid Wave
+# Goal: Draft live performance patch for grid wave.
+# Status: draft
+# Run:
+#   loomlet scenesync dev examples/tour/live/03-grid-wave.loom
+# Requires:
+#   - missing live/audio/timeline nodes listed below
+# TODO NODE: timeline.cue
+# TODO NODE: audio.level
+import timeline
+import audio

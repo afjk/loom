@@ -1,0 +1,11 @@
+# Tour: Color Cycle
+# Goal: Draft live performance patch for color cycle.
+# Status: draft
+# Run:
+#   loomlet scenesync dev examples/tour/live/02-color-cycle.loom
+# Requires:
+#   - missing live/audio/timeline nodes listed below
+# TODO NODE: timeline.cue
+# TODO NODE: audio.level
+import timeline
+import audio

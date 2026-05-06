@@ -362,8 +362,8 @@ test('run defaults to cli and rejects dom import', async () => {
 test('console.log run produces effect on stderr while keeping stdout clean', () => {
   const result = runCli(['run', 'examples/cli-console.loom', '--get', 'message.out']);
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(result.stdout.trim(), 'HELLO LOOM');
-  assert.match(result.stderr, /\[log\] HELLO LOOM/);
+  assert.equal(result.stdout.trim(), 'HELLO LOOMLET');
+  assert.match(result.stderr, /\[log\] HELLO LOOMLET/);
 });
 
 test('run rejects browser-only nodes with a clear error', async () => {

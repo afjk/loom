@@ -1,0 +1,16 @@
+# Tour: Arithmetic
+# Goal: Show arithmetic building blocks.
+# Status: runnable
+# Run:
+#   loomlet run examples/tour/language/05-arithmetic.loom
+# Requires:
+#   - add
+#   - multiply
+#   - console.log
+import console
+
+a = constant(value: 3)
+b = constant(value: 7)
+sum = add(a, b)
+scaled = multiply(sum, 10)
+console.log(scaled)
