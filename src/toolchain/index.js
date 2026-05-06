@@ -5,3 +5,5 @@ export * from './run.js';
 export * from './errors.js';
 export * from './runtime-targets.js';
 export * from './repl-session.js';
+export * from './library-metadata.js';
+export * from './help.js';

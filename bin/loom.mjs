@@ -13,7 +13,11 @@ import {
   runLoomSource,
   formatLoomError,
   isKnownRuntimeTarget,
-  LoomReplSession
+  LoomReplSession,
+  formatLibrariesText,
+  formatLibraryHelpText,
+  formatFunctionHelpText,
+  formatHelpJson
 } from '../src/toolchain/index.js';
 import {
   DEFAULT_ENDPOINT as DEFAULT_SCENESYNC_ENDPOINT,
@@ -116,6 +120,7 @@ Commands:
   inspect <file>   Inspect Loom DSL and print a summary
   run <file>       Evaluate a Loom graph once
   repl             Start an interactive Loom REPL
+  docs             Browse library documentation
   scenesync        Probe Scene Sync rooms
   help             Show help
 
@@ -124,6 +129,9 @@ Examples:
   loom format examples/cli-basic.loom --check
   loom inspect examples/cli-basic.loom --json
   loom run examples/cli-basic.loom --get x.out --time 0.25
+  loom docs
+  loom docs text
+  loom docs text.upper
   loom scenesync redeem 238909
   loom scenesync objects --room <roomId> --session <sessionId>
   loom repl`;
@@ -1445,6 +1453,63 @@ async function handleRun(args) {
   return 0;
 }
 
+async function handleDocs(args) {
+  if (args.includes('--help')) {
+    const lines = [
+      'Usage:',
+      '  loom docs              List all available libraries',
+      '  loom docs <library>    Show functions in a library',
+      '  loom docs <lib.func>   Show function documentation',
+      '',
+      'Options:',
+      '  --json                 Output as JSON',
+      '',
+      'Examples:',
+      '  loom docs',
+      '  loom docs text',
+      '  loom docs text.upper',
+      '  loom docs text.upper --json'
+    ];
+    print(lines.join('\n'));
+    return 0;
+  }
+
+  let query = '';
+  let outputJson = false;
+
+  for (const arg of args) {
+    if (arg === '--json') {
+      outputJson = true;
+    } else if (!arg.startsWith('-')) {
+      query = arg;
+    }
+  }
+
+  try {
+    if (outputJson) {
+      const result = formatHelpJson(query);
+      print(stringifyJson(result));
+    } else {
+      let output;
+      if (!query) {
+        output = formatLibrariesText();
+      } else if (query.includes('.')) {
+        output = formatFunctionHelpText(query);
+      } else {
+        output = formatLibraryHelpText(query);
+      }
+      print(output);
+    }
+    return 0;
+  } catch (error) {
+    if (error.code === 'UNKNOWN_LIBRARY' || error.code === 'UNKNOWN_FUNCTION') {
+      printError(error.message);
+      return 1;
+    }
+    throw error;
+  }
+}
+
 async function handleRepl(args) {
   if (args.includes('--help')) {
     print(getReplHelp());
@@ -1472,6 +1537,31 @@ async function handleRepl(args) {
       }
       if (trimmed === ':help') {
         print(getReplHelp());
+        rl.prompt();
+        return;
+      }
+      if (trimmed === ':libs') {
+        print(formatLibrariesText());
+        rl.prompt();
+        return;
+      }
+      if (trimmed.startsWith(':help ')) {
+        const query = trimmed.slice(6).trim();
+        try {
+          if (query.includes('.')) {
+            print(formatFunctionHelpText(query));
+          } else {
+            print(formatLibraryHelpText(query));
+          }
+        } catch (error) {
+          if (error.code === 'UNKNOWN_LIBRARY') {
+            printError(`UNKNOWN_LIBRARY - No Loom library named "${query}"`);
+          } else if (error.code === 'UNKNOWN_FUNCTION') {
+            printError(`UNKNOWN_FUNCTION - No Loom function named "${query}"`);
+          } else {
+            printError(error.message || String(error));
+          }
+        }
         rl.prompt();
         return;
       }
@@ -2047,6 +2137,8 @@ async function main() {
       exitCode = await handleRun(args.slice(1));
     } else if (command === 'repl') {
       exitCode = await handleRepl(args.slice(1));
+    } else if (command === 'docs') {
+      exitCode = await handleDocs(args.slice(1));
     } else if (command === 'scenesync') {
       exitCode = await handleSceneSync(args.slice(1));
     } else {
