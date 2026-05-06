@@ -161,6 +161,43 @@ export class SceneSyncClient {
   async listObjects({ room, session } = {}) {
     return this.getScene({ room, session });
   }
+
+  async broadcast({ room, session, payload } = {}) {
+    if (!room) {
+      return {
+        ok: false,
+        error: {
+          code: 'ROOM_REQUIRED',
+          message: 'Scene Sync room is required'
+        }
+      };
+    }
+
+    if (!session) {
+      return {
+        ok: false,
+        error: {
+          code: 'SESSION_REQUIRED',
+          message: 'Scene Sync session is required'
+        }
+      };
+    }
+
+    if (!payload || typeof payload !== 'object') {
+      return {
+        ok: false,
+        error: {
+          code: 'PAYLOAD_REQUIRED',
+          message: 'Scene Sync payload is required'
+        }
+      };
+    }
+
+    return this.#request(`/room/${encodeURIComponent(room)}/broadcast`, {
+      sessionId: session,
+      payload
+    });
+  }
 }
 
 export { DEFAULT_ENDPOINT };

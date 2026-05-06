@@ -221,3 +221,108 @@ test('null response returns INVALID_RESPONSE', async () => {
   assert.equal(result.ok, false);
   assert.equal(result.error.code, 'INVALID_RESPONSE');
 });
+
+test('broadcast posts to /room/:room/broadcast', async () => {
+  const calls = [];
+  const fetchImpl = async (url, options) => {
+    calls.push({ url, options });
+    return {
+      ok: true,
+      status: 200,
+      async json() {
+        return {
+          ok: true
+        };
+      }
+    };
+  };
+
+  const client = new SceneSyncClient({
+    endpoint: 'https://example.com/presence/api/ai',
+    fetchImpl
+  });
+
+  const payload = {
+    kind: 'scene-delta',
+    objectId: 'sample-cube',
+    position: [1, 0.5, 0]
+  };
+
+  const result = await client.broadcast({
+    room: 'room-1',
+    session: 'v1.test',
+    payload
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(calls.length, 1);
+  assert.match(String(calls[0].url), /\/room\/room-1\/broadcast$/);
+  const body = JSON.parse(calls[0].options.body);
+  assert.equal(body.sessionId, 'v1.test');
+  assert.deepEqual(body.payload, payload);
+});
+
+test('broadcast missing room returns ROOM_REQUIRED', async () => {
+  const client = new SceneSyncClient({
+    fetchImpl: async () => {
+      throw new Error('should not be called');
+    }
+  });
+
+  const result = await client.broadcast({
+    session: 'v1.test',
+    payload: { kind: 'scene-delta' }
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.error.code, 'ROOM_REQUIRED');
+});
+
+test('broadcast missing session returns SESSION_REQUIRED', async () => {
+  const client = new SceneSyncClient({
+    fetchImpl: async () => {
+      throw new Error('should not be called');
+    }
+  });
+
+  const result = await client.broadcast({
+    room: 'room-1',
+    payload: { kind: 'scene-delta' }
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.error.code, 'SESSION_REQUIRED');
+});
+
+test('broadcast missing payload returns PAYLOAD_REQUIRED', async () => {
+  const client = new SceneSyncClient({
+    fetchImpl: async () => {
+      throw new Error('should not be called');
+    }
+  });
+
+  const result = await client.broadcast({
+    room: 'room-1',
+    session: 'v1.test'
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.error.code, 'PAYLOAD_REQUIRED');
+});
+
+test('broadcast with invalid payload returns PAYLOAD_REQUIRED', async () => {
+  const client = new SceneSyncClient({
+    fetchImpl: async () => {
+      throw new Error('should not be called');
+    }
+  });
+
+  const result = await client.broadcast({
+    room: 'room-1',
+    session: 'v1.test',
+    payload: null
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.error.code, 'PAYLOAD_REQUIRED');
+});
