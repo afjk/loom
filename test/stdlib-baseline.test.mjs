@@ -59,9 +59,9 @@ test('list baseline nodes', () => {
   assert.deepEqual(evalNode('list.take', { list: [1, 2, 3], count: 2 }), [1, 2]);
   assert.deepEqual(evalNode('list.drop', { list: [1, 2, 3], count: 2 }), [3]);
   assert.deepEqual(evalNode('list.concat', { list1: [1], list2: [2, 3] }), [1, 2, 3]);
-  assert.throws(() => evalNode('list.map', { list: [1], fn: null }), (error) => error instanceof LoomError && error.code === 'UNSUPPORTED_FUNCTION_VALUE');
-  assert.throws(() => evalNode('list.filter', { list: [1], fn: null }), /function values/);
-  assert.throws(() => evalNode('list.reduce', { list: [1], fn: null, initial: 0 }), /function values/);
+  assert.throws(() => evalNode('list.map', { list: [1], fn: null }), (error) => error instanceof LoomError && error.code === 'INVALID_FUNCTION_VALUE');
+  assert.throws(() => evalNode('list.filter', { list: [1], fn: null }), /expected fn/);
+  assert.throws(() => evalNode('list.reduce', { list: [1], fn: null, initial: 0 }), /expected fn/);
 });
 
 test('text baseline additions', () => {
@@ -132,6 +132,51 @@ test('fs baseline nodes are CLI-only and access local files', () => {
   assert.ok(evalNode('fs.list', { path: tmpDir }).includes('sample.txt'));
   assert.equal(isLibraryAvailableInTarget('fs', 'cli'), true);
   assert.equal(isLibraryAvailableInTarget('fs', 'web'), false);
+});
+
+
+test('function literals can be assigned, called, and capture outer scope', () => {
+  const result = runLoomSource(`double = fn(x) => math.multiply(x, 2)
+double(21)`, { target: 'cli', get: '_effect1.out' });
+  assert.equal(result.ok, true, JSON.stringify(result.errors));
+  assert.equal(result.values['_effect1.out'], 42);
+
+  const captured = runLoomSource(`base = 10
+addBase = fn(x) => math.add(x, base)
+addBase(5)`, { target: 'cli', get: '_effect1.out' });
+  assert.equal(captured.ok, true, JSON.stringify(captured.errors));
+  assert.equal(captured.values['_effect1.out'], 15);
+});
+
+test('list higher-order nodes accept inline and named functions', () => {
+  const mapped = runLoomSource(`numbers = list.range(1, end: 3)
+list.map(numbers, fn: fn(n) => math.multiply(n, 10))`, { target: 'cli', get: '_effect1.out' });
+  assert.equal(mapped.ok, true, JSON.stringify(mapped.errors));
+  assert.deepEqual(mapped.values['_effect1.out'], [10, 20, 30]);
+
+  const filtered = runLoomSource(`numbers = list.range(1, end: 5)
+isEven = fn(n) => logic.equals(math.mod(n, 2), other: 0)
+list.filter(numbers, fn: isEven)`, { target: 'cli', get: '_effect1.out' });
+  assert.equal(filtered.ok, true, JSON.stringify(filtered.errors));
+  assert.deepEqual(filtered.values['_effect1.out'], [2, 4]);
+
+  const reduced = runLoomSource(`numbers = list.range(1, end: 4)
+sum = list.reduce(numbers, initial: 0, fn: fn(acc, n) => math.add(acc, n))`, { target: 'cli', get: 'sum.out' });
+  assert.equal(reduced.ok, true, JSON.stringify(reduced.errors));
+  assert.equal(reduced.values['sum.out'], 10);
+});
+
+
+test('function body node calls enforce positional and named argument rules', () => {
+  const result = runLoomSource(`bad = fn(x) => logic.greaterThan(x, 2)
+bad(3)`, { target: 'cli', get: '_effect1.out' });
+  assert.equal(result.ok, false);
+  assert.equal(result.errors[0]?.code, 'MISSING_ARGUMENT_NAME');
+
+  const unknown = runLoomSource(`bad = fn(x) => logic.greaterThan(x, nope: 2)
+bad(3)`, { target: 'cli', get: '_effect1.out' });
+  assert.equal(unknown.ok, false);
+  assert.equal(unknown.errors[0]?.code, 'UNKNOWN_ARGUMENT');
 });
 
 test('stdlib metadata corrections', () => {

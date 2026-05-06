@@ -9,15 +9,16 @@ Current:
 - `clock`
 - pipeline `|>`
 - `import`, assignment, comments
+- single-expression function values: `fn(...) => expression`
 Used by tour samples:
 - `constant`, `clock`, `|>`
 Recommended baseline:
 - `identity`
-- function definitions
+- block function bodies and recursion
 Status summary:
-- Implemented: constant/clock/pipe/import/assignment/comments
-- Missing: identity, function definitions
-- Planned: function definitions
+- Implemented: constant/clock/pipe/import/assignment/comments/function values
+- Missing: identity, block function bodies, recursion
+- Planned: block function bodies and recursion
 - Uncertain: module system extensions
 Targets: cli, scenesync, unity, web
 
@@ -62,11 +63,10 @@ Targets: cli, scenesync, unity, web
 ## list
 Purpose: ordered collection processing.
 Current:
-- `list.of`, `list.range`, `list.length`, `list.at`, `list.first`, `list.last`, `list.join`, `list.reverse`, `list.sort`, `list.take`, `list.drop`, `list.concat`
-- `list.map`, `list.filter`, `list.reduce` are metadata/runtime placeholders that throw `UNSUPPORTED_FUNCTION_VALUE` until function values exist
+- `list.of`, `list.range`, `list.length`, `list.at`, `list.first`, `list.last`, `list.map`, `list.filter`, `list.reduce`, `list.join`, `list.reverse`, `list.sort`, `list.take`, `list.drop`, `list.concat`
 Used by tour samples: `list.of`, `list.range`, `list.map`, `list.filter`, `list.reduce`, `list.first`, `list.drop`, `list.concat`, `list.length`, `list.of`
 Recommended baseline: `list.of`, `list.range`, `list.length`, `list.at`, `list.first`, `list.last`, `list.map`, `list.filter`, `list.reduce`, `list.join`, `list.reverse`, `list.sort`, `list.take`, `list.drop`, `list.concat`
-Status summary: Implemented foundational pure list set / Missing function-value execution for map/filter/reduce / Planned high priority
+Status summary: Implemented baseline pure list set including function-value map/filter/reduce / Missing advanced collection helpers / Planned portability polish
 Targets: cli, scenesync, unity, web
 
 ## object
