@@ -141,7 +141,7 @@ export const LIBRARY_METADATA = {
         returns: 'string',
         targets: LIBRARY_COMPATIBILITY.json.targets,
         examples: [
-          'data = {name: "loom", version: 1}',
+          'data = json.parse(\'{"name":"loom","version":1}\')',
           'message = json.stringify(data, pretty: true)',
           'console.log(message)'
         ]
@@ -871,6 +871,36 @@ export const LIBRARY_METADATA = {
         targets: LIBRARY_COMPATIBILITY.state.targets,
         examples: [
           'integrated = integrate(velocity, initial: 0)'
+        ]
+      },
+      smoothLerp: {
+        name: 'smoothLerp',
+        signature: 'smoothLerp(value: 0, rate: 5, initial: 0)',
+        description: 'Exponentially smooths a value with a rate parameter.',
+        args: [
+          {
+            name: 'value',
+            type: 'number',
+            positional: true,
+            description: 'Input value.'
+          },
+          {
+            name: 'rate',
+            type: 'number',
+            positional: false,
+            description: 'Smoothing rate (higher = faster response).'
+          },
+          {
+            name: 'initial',
+            type: 'number',
+            positional: false,
+            description: 'Initial state value.'
+          }
+        ],
+        returns: 'number',
+        targets: LIBRARY_COMPATIBILITY.state.targets,
+        examples: [
+          'smoothed = smoothLerp(input, rate: 5)'
         ]
       }
     }
