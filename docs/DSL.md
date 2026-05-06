@@ -79,6 +79,34 @@ from math import sine
 import math as m
 ```
 
+### Qualified function calls
+
+Loom DSL は `library.nodeName` 形式の qualified function call をサポートします。
+
+```loom
+import text
+
+message = text.upper("hello")
+```
+
+- qualified function call は `library.nodeName`
+- import 名そのものは引き続き単純な識別子だけをサポートします
+- dotted import name は未対応です
+
+### Effect statements
+
+トップレベルの関数呼び出しを、代入なしで effect statement として書けます。
+
+```loom
+import console
+
+message = constant(value: "hello")
+console.log(message)
+```
+
+- effect statement は generated effect node に compile されます
+- 現時点では `console.log` などの output/effect node 用です
+
 ### 代入文
 
 ```

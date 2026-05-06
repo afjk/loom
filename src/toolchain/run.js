@@ -4,6 +4,10 @@ import { normalizeLoomError } from './errors.js';
 
 const CLI_SAFE_CATEGORIES = new Set(['source', 'transform', 'state']);
 
+function isCliSafeSink(nodeTypeName) {
+  return nodeTypeName === 'console.log' || nodeTypeName === 'console.warn' || nodeTypeName === 'console.error';
+}
+
 function getRefsToRead(graph, get) {
   if (Array.isArray(get)) {
     return get;
@@ -32,7 +36,7 @@ function validateCliRunnableGraph(graph) {
     if (!nodeType) {
       throw new LoomError('UNKNOWN_NODE_TYPE', `Unknown node type: ${node.type}`, { nodeId: node.id, type: node.type });
     }
-    if (!CLI_SAFE_CATEGORIES.has(nodeType.category)) {
+    if (!CLI_SAFE_CATEGORIES.has(nodeType.category) && !(nodeType.category === 'sink' && isCliSafeSink(node.type))) {
       throw new LoomError(
         'UNSUPPORTED_RUNTIME_NODE',
         `Node '${node.id}' of type '${node.type}' is not supported by CLI run`,
@@ -67,6 +71,7 @@ export function runLoomGraph(graph, options = {}) {
     return {
       ok: true,
       values: collectRequestedValues(engine, graph, options.get),
+      effects: engine.getEffects(),
       graph,
       errors: []
     };
@@ -74,6 +79,7 @@ export function runLoomGraph(graph, options = {}) {
     return {
       ok: false,
       values: {},
+      effects: [],
       graph,
       errors: [normalizeLoomError(error)]
     };
@@ -86,6 +92,7 @@ export function runLoomSource(source, options = {}) {
     return {
       ok: false,
       values: {},
+      effects: [],
       graph: compiled.graph,
       errors: compiled.errors
     };

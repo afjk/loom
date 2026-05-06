@@ -358,6 +358,10 @@ function sanitizeStateValue(value, initial) {
   return isFiniteNumber(value) ? value : initial;
 }
 
+function stringifyJsonValue(value, pretty = false) {
+  return JSON.stringify(value, null, pretty ? 2 : 0);
+}
+
 // ノード型レジストリ
 export const NODE_TYPES = {
   // Phase 0 ノード
@@ -371,8 +375,8 @@ export const NODE_TYPES = {
   constant: {
     category: 'source',
     inputs: [],
-    outputs: [{ name: 'out', type: 'number', kind: 'behavior' }],
-    params: [{ name: 'value', type: 'number', default: 0 }],
+    outputs: [{ name: 'out', type: 'any', kind: 'behavior' }],
+    params: [{ name: 'value', type: 'any', default: 0 }],
     evaluate: (inputs, params, ctx) => ({ out: params.value })
   },
   sine: {
@@ -910,6 +914,98 @@ export const NODE_TYPES = {
     }
   },
 
+  'text.upper': {
+    category: 'transform',
+    inputs: [{ name: 'value', type: 'any', default: '', kind: 'behavior' }],
+    outputs: [{ name: 'out', type: 'string', kind: 'behavior' }],
+    params: [{ name: 'value', type: 'any', default: '' }],
+    evaluate: (inputs) => ({ out: String(inputs.value ?? '').toUpperCase() })
+  },
+  'text.lower': {
+    category: 'transform',
+    inputs: [{ name: 'value', type: 'any', default: '', kind: 'behavior' }],
+    outputs: [{ name: 'out', type: 'string', kind: 'behavior' }],
+    params: [{ name: 'value', type: 'any', default: '' }],
+    evaluate: (inputs) => ({ out: String(inputs.value ?? '').toLowerCase() })
+  },
+  'text.trim': {
+    category: 'transform',
+    inputs: [{ name: 'value', type: 'any', default: '', kind: 'behavior' }],
+    outputs: [{ name: 'out', type: 'string', kind: 'behavior' }],
+    params: [{ name: 'value', type: 'any', default: '' }],
+    evaluate: (inputs) => ({ out: String(inputs.value ?? '').trim() })
+  },
+  'text.replace': {
+    category: 'transform',
+    inputs: [
+      { name: 'value', type: 'any', default: '', kind: 'behavior' },
+      { name: 'search', type: 'any', default: '', kind: 'behavior' },
+      { name: 'replacement', type: 'any', default: '', kind: 'behavior' }
+    ],
+    outputs: [{ name: 'out', type: 'string', kind: 'behavior' }],
+    params: [
+      { name: 'value', type: 'any', default: '' },
+      { name: 'search', type: 'any', default: '' },
+      { name: 'replacement', type: 'any', default: '' }
+    ],
+    evaluate: (inputs) => ({
+      out: String(inputs.value ?? '').replaceAll(String(inputs.search ?? ''), String(inputs.replacement ?? ''))
+    })
+  },
+  'json.parse': {
+    category: 'transform',
+    inputs: [{ name: 'value', type: 'any', default: '', kind: 'behavior' }],
+    outputs: [{ name: 'out', type: 'any', kind: 'behavior' }],
+    params: [{ name: 'value', type: 'any', default: '' }],
+    evaluate: (inputs) => {
+      try {
+        return { out: JSON.parse(String(inputs.value ?? '')) };
+      } catch (error) {
+        throw new LoomError('INVALID_JSON', `JSON parse failed: ${error.message}`);
+      }
+    }
+  },
+  'json.stringify': {
+    category: 'transform',
+    inputs: [{ name: 'value', type: 'any', default: null, kind: 'behavior' }],
+    outputs: [{ name: 'out', type: 'string', kind: 'behavior' }],
+    params: [
+      { name: 'value', type: 'any', default: null },
+      { name: 'pretty', type: 'boolean', default: false }
+    ],
+    evaluate: (inputs, params) => ({ out: stringifyJsonValue(inputs.value, params.pretty === true) })
+  },
+  'console.log': {
+    category: 'sink',
+    inputs: [{ name: 'value', type: 'any', default: undefined, kind: 'behavior' }],
+    outputs: [],
+    params: [],
+    evaluate: (inputs, params, ctx) => {
+      ctx.engine?._recordEffect({ type: 'console.log', level: 'log', value: inputs.value });
+      return {};
+    }
+  },
+  'console.warn': {
+    category: 'sink',
+    inputs: [{ name: 'value', type: 'any', default: undefined, kind: 'behavior' }],
+    outputs: [],
+    params: [],
+    evaluate: (inputs, params, ctx) => {
+      ctx.engine?._recordEffect({ type: 'console.warn', level: 'warn', value: inputs.value });
+      return {};
+    }
+  },
+  'console.error': {
+    category: 'sink',
+    inputs: [{ name: 'value', type: 'any', default: undefined, kind: 'behavior' }],
+    outputs: [],
+    params: [],
+    evaluate: (inputs, params, ctx) => {
+      ctx.engine?._recordEffect({ type: 'console.error', level: 'error', value: inputs.value });
+      return {};
+    }
+  },
+
   // DOM シンクノード
   setText: {
     category: 'sink',
@@ -1054,6 +1150,7 @@ export class Loom {
     this._startTime = null;
     this._lastTimestamp = null;
     this._inputStates = {};
+    this._effects = [];
 
     // グラフの検証とソートを実行
     this._loadGraphInternal(graph);
@@ -1101,6 +1198,8 @@ export class Loom {
 
     // グラフが設定されていなければ何もしない
     if (!this._currentGraph) return;
+
+    this._effects = [];
 
     const dt = this._computeDeltaTime(frameTimestamp);
 
@@ -1227,6 +1326,14 @@ export class Loom {
 
   getValue(ref) {
     return this._values.get(ref);
+  }
+
+  getEffects() {
+    return [...this._effects];
+  }
+
+  _recordEffect(effect) {
+    this._effects.push(effect);
   }
 
   dispatchEvent(ref, payload) {

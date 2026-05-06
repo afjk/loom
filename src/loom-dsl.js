@@ -92,6 +92,18 @@ export function parseDSLToAST(source) {
     const take = () => tokens[p++];
     const expect = (tt) => { const t = peek(); if (t.type !== tt) throw new LoomDSLError(`Expected ${tt}, got ${t.type}`, t.span.start.line, t.span.start.column, 'UNEXPECTED_TOKEN'); return take(); };
     const skipNL = () => { while (peek().type === TT.NEWLINE) take(); };
+    function parseQualifiedIdentifier() {
+      const first = expect(TT.IDENT);
+      const parts = [first.value];
+      let end = first.span.end;
+      while (peek().type === TT.DOT) {
+        take();
+        const next = expect(TT.IDENT);
+        parts.push(next.value);
+        end = next.span.end;
+      }
+      return { type: 'Identifier', name: parts.join('.'), span: spanFrom(first.span.start, end) };
+    }
 
     function parseExpr() { return parsePipe(); }
     function parsePipe() { let left = parseAtom(); while (true) { if (peek().type === TT.PIPE || (peek().type === TT.NEWLINE && peek(1).type === TT.PIPE)) { if (peek().type === TT.NEWLINE) take(); const pt = take(); const right = parseCall(); left = { type: 'PipeExpression', left, right, span: spanFrom(left.span.start, right.span.end) }; } else break; } return left; }
@@ -103,13 +115,13 @@ export function parseDSLToAST(source) {
       if (t.type === TT.NULL) { take(); return { type: 'NullLiteral', span: t.span }; }
       if (t.type === TT.LBRACKET) return parseArray();
       if (t.type === TT.LBRACE) return parseObject();
-      if (t.type === TT.IDENT) { if (peek(1).type === TT.LPAREN) return parseCall(); take(); return mkIdent(t); }
+      if (t.type === TT.IDENT) { if (peek(1).type === TT.LPAREN || peek(1).type === TT.DOT) return parseCall(); take(); return mkIdent(t); }
       throw new LoomDSLError(`Unexpected token: ${t.type}`, t.span.start.line, t.span.start.column, 'UNEXPECTED_TOKEN');
     }
     function parseArray() { const st = expect(TT.LBRACKET); const elements = []; while (peek().type !== TT.RBRACKET && peek().type !== TT.EOF) { elements.push(parseExpr()); if (peek().type === TT.COMMA) take(); else break; } const ed = expect(TT.RBRACKET); return { type: 'ArrayLiteral', elements, span: spanFrom(st.span.start, ed.span.end) }; }
     function parseObject() { const st = expect(TT.LBRACE); const entries = []; while (peek().type !== TT.RBRACE && peek().type !== TT.EOF) { const kt = peek(); let key; if (kt.type === TT.IDENT) { take(); key = mkIdent(kt); } else if (kt.type === TT.STRING) { take(); key = { type: 'StringLiteral', value: kt.value.value, raw: kt.value.raw, span: kt.span }; } else throw new LoomDSLError('Expected object key', kt.span.start.line, kt.span.start.column, 'UNEXPECTED_TOKEN'); expect(TT.COLON); const value = parseExpr(); entries.push({ type: 'ObjectEntry', key, value, span: spanFrom(key.span.start, value.span.end) }); if (peek().type === TT.COMMA) take(); else break; } const ed = expect(TT.RBRACE); return { type: 'ObjectLiteral', entries, span: spanFrom(st.span.start, ed.span.end) }; }
-    function parseCall() { const nt = expect(TT.IDENT); const callee = mkIdent(nt); expect(TT.LPAREN); skipNL(); const args = []; while (peek().type !== TT.RPAREN && peek().type !== TT.EOF) { skipNL(); const at = peek(); if (at.type === TT.IDENT && peek(1).type === TT.COLON) { const n = mkIdent(take()); take(); skipNL(); const v = parseExpr(); args.push({ type: 'NamedArg', name: n, value: v, span: spanFrom(n.span.start, v.span.end) }); } else { const v = parseExpr(); args.push({ type: 'PositionalArg', value: v, span: v.span }); } skipNL(); if (peek().type === TT.COMMA) take(); skipNL(); }
-      const end = expect(TT.RPAREN); return { type: 'CallExpression', callee, args, span: spanFrom(nt.span.start, end.span.end) }; }
+    function parseCall() { const callee = parseQualifiedIdentifier(); expect(TT.LPAREN); skipNL(); const args = []; while (peek().type !== TT.RPAREN && peek().type !== TT.EOF) { skipNL(); const at = peek(); if (at.type === TT.IDENT && peek(1).type === TT.COLON) { const n = mkIdent(take()); take(); skipNL(); const v = parseExpr(); args.push({ type: 'NamedArg', name: n, value: v, span: spanFrom(n.span.start, v.span.end) }); } else { const v = parseExpr(); args.push({ type: 'PositionalArg', value: v, span: v.span }); } skipNL(); if (peek().type === TT.COMMA) take(); skipNL(); }
+      const end = expect(TT.RPAREN); return { type: 'CallExpression', callee, args, span: spanFrom(callee.span.start, end.span.end) }; }
 
     let blankLines = 0;
     let seenNonImportStatement = false;
@@ -169,6 +181,7 @@ export function parseDSLToAST(source) {
       let stmt;
       if (stTok.type === TT.IDENT && stTok.value === 'render') { take(); const call = parseCall(); stmt = { type: 'RenderStatement', call, span: spanFrom(stTok.span.start, call.span.end) }; }
       else if (stTok.type === TT.IDENT && peek(1).type === TT.ASSIGN) { const target = mkIdent(take()); take(); const value = parseExpr(); stmt = { type: 'AssignmentStatement', target, value, span: spanFrom(target.span.start, value.span.end) }; }
+      else if (stTok.type === TT.IDENT && (peek(1).type === TT.LPAREN || peek(1).type === TT.DOT)) { const expression = parseCall(); stmt = { type: 'ExpressionStatement', expression, span: expression.span }; }
       else throw new LoomDSLError('Expected assignment or render statement', stTok.span.start.line, stTok.span.start.column, 'UNEXPECTED_TOKEN');
       seenNonImportStatement = true;
       if (pendingComments.length) { stmt.leadingComments = pendingComments; pendingComments = []; }
@@ -247,12 +260,16 @@ function astToLegacy(program) {
     imports: (program.imports || []).map((entry) => entry.name),
     statements: program.body
       .filter(s => s.type !== 'CommentStatement')
-      .map(s => s.type === 'RenderStatement' ? { type: 'render', call: convExpr(s.call) } : { type: 'assign', name: s.target.name, expr: convExpr(s.value) })
+      .map((s) => {
+        if (s.type === 'RenderStatement') return { type: 'render', call: convExpr(s.call) };
+        if (s.type === 'ExpressionStatement') return { type: 'effect', expr: convExpr(s.expression) };
+        return { type: 'assign', name: s.target.name, expr: convExpr(s.value) };
+      })
   };
 }
 
 function buildGraph(stmts) { /* mostly original */
-  const nodes = []; const edges = []; let renderConfig = null; let anonCounter = 0; const scope = {};
+  const nodes = []; const edges = []; let renderConfig = null; let anonCounter = 0; let effectCounter = 0; const scope = {};
   const anonId = () => `_anon_${++anonCounter}`;
   const resolveIdent = (name, line, col) => { if (!(name in scope)) throw new LoomDSLError(`Undefined identifier: ${name}`, line, col, 'UNDEFINED_IDENTIFIER'); const node = nodes.find(n => n.id === scope[name]); return `${scope[name]}.${defaultOutputPort(node.type)}`; };
   function buildNode(call, resultId, pipeFrom) { const fnName = call.name; const typeDef = NODE_TYPES[fnName]; if (!typeDef) throw new LoomDSLError(`Unknown node type: ${fnName}`, call.line, call.col, 'UNKNOWN_NODE_TYPE'); const id = resultId || anonId(); const nodeObj = { id, type: fnName }; nodes.push(nodeObj); const inputNames = typeDef.inputs.map(i => i.name); const paramNames = (typeDef.params || []).map(p => p.name); const pos = call.args.filter(a => !a.named); const named = call.args.filter(a => a.named); if (typeDef.commutative && pos.length && named.length) throw new LoomDSLError(`Node '${fnName}' is commutative: arguments must be all positional or all named`, call.line, call.col, 'MISSING_ARGUMENT_NAME'); if (!typeDef.commutative && pos.length > (pipeFrom ? 0 : 1)) throw new LoomDSLError(`Argument at position 2 for '${fnName}' requires a name`, call.line, call.col, 'MISSING_ARGUMENT_NAME'); let idx = 0;
@@ -263,7 +280,11 @@ function buildGraph(stmts) { /* mostly original */
     return id; };
   const buildExpr = (expr, resultId, pipeFrom) => expr.type === 'call' ? buildNode(expr, resultId, pipeFrom) : expr.type === 'pipe' ? (() => { const lId = buildExpr(expr.left, null, null); const ln = nodes.find(n => n.id === lId); return buildNode(expr.call, resultId, `${lId}.${defaultOutputPort(ln.type)}`); })() : expr.type === 'ident' ? scope[expr.name] || (()=>{throw new LoomDSLError(`Undefined identifier: ${expr.name}`, expr.line, expr.col, 'UNDEFINED_IDENTIFIER');})() : (()=>{throw new LoomDSLError('Cannot use literal as expression', expr.line, expr.col, 'UNEXPECTED_TOKEN');})();
   const buildRender = (call) => { const named = {}; for (const a of call.args) { if (!a.named) throw new LoomDSLError('render arguments must be named', call.line, call.col, 'MISSING_ARGUMENT_NAME'); named[a.name] = a.value; } const rv = (e) => e.type === 'ident' ? resolveIdent(e.name, e.line, e.col) : e.value; if (call.name === 'point') return { type: 'point', x: named.x ? rv(named.x) : undefined, y: named.y ? rv(named.y) : undefined, color: named.color ? named.color.value : '#00ff00', trail: named.trail ? named.trail.value : 0.1 }; if (call.name === 'bar') return { type: 'bar', width: named.width ? rv(named.width) : undefined, color: named.color ? named.color.value : '#00ccff', height: named.height ? named.height.value : 40, y: named.y ? rv(named.y) : undefined }; throw new LoomDSLError(`Unknown render function: ${call.name}`, call.line, call.col, 'UNKNOWN_NODE_TYPE'); };
-  for (const s of stmts) { if (s.type === 'render') renderConfig = buildRender(s.call); else { const id = buildExpr(s.expr, s.name, null); scope[s.name] = id; } }
+  for (const s of stmts) {
+    if (s.type === 'render') renderConfig = buildRender(s.call);
+    else if (s.type === 'effect') buildExpr(s.expr, `_effect${++effectCounter}`, null);
+    else { const id = buildExpr(s.expr, s.name, null); scope[s.name] = id; }
+  }
   const r = { nodes, edges }; if (renderConfig) r.render = renderConfig; return r;
 }
 
@@ -328,7 +349,11 @@ export function formatDSL(ast, options = {}) {
   for (const s of ast.body) {
     if (s.type === 'CommentStatement') { lines.push(`#${s.comment.text}`); continue; }
     if (s.leadingComments) for (const c of s.leadingComments) lines.push(`#${c.text}`);
-    const expr = s.type === 'AssignmentStatement' ? `${s.target.name} = ${fmtExpr(s.value, 0)}` : `render ${fmtExpr(s.call, 0)}`;
+    const expr = s.type === 'AssignmentStatement'
+      ? `${s.target.name} = ${fmtExpr(s.value, 0)}`
+      : s.type === 'ExpressionStatement'
+        ? `${fmtExpr(s.expression, 0)}`
+        : `render ${fmtExpr(s.call, 0)}`;
     let line = expr;
     if (s.trailingComment) line += `  #${s.trailingComment.text}`;
     lines.push(line);

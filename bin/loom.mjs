@@ -21,6 +21,17 @@ function printError(message = '') {
   process.stderr.write(`${message}\n`);
 }
 
+function formatEffectValue(value) {
+  if (typeof value === 'string') {
+    return value;
+  }
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
 function printToolErrors(errors) {
   for (const error of errors) {
     printError(formatLoomError(error));
@@ -358,6 +369,10 @@ async function handleRun(args) {
   if (!result.ok) {
     printToolErrors(result.errors);
     return 1;
+  }
+
+  for (const effect of result.effects || []) {
+    printError(`[${effect.level}] ${formatEffectValue(effect.value)}`);
   }
 
   if (!json && get.length === 1) {

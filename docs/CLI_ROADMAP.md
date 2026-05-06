@@ -20,9 +20,9 @@
 
 - fs.readText
 - fs.writeText
-- console.log
-- json.parse
-- text.upper / lower / replace
+- expand beyond initial `console.*`
+- expand beyond initial `json.parse` / `json.stringify`
+- expand beyond initial `text.upper` / `lower` / `trim` / `replace`
 
 ## Phase 4: REPL
 

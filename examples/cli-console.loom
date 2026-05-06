@@ -1,0 +1,5 @@
+import console
+import text
+
+message = text.upper("hello loom")
+console.log(message)
