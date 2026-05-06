@@ -15,7 +15,7 @@ export function listLibraries() {
 export function getLibraryHelp(name) {
   const lib = LIBRARY_METADATA[name];
   if (!lib) {
-    throw new HelpError('UNKNOWN_LIBRARY', `No Loom library named "${name}"`);
+    throw new HelpError('UNKNOWN_LIBRARY', `No Loomlet library named "${name}"`);
   }
   return lib;
 }
@@ -31,12 +31,12 @@ export function getFunctionHelp(qualifiedName) {
 
   const lib = LIBRARY_METADATA[libName];
   if (!lib) {
-    throw new HelpError('UNKNOWN_LIBRARY', `No Loom library named "${libName}"`);
+    throw new HelpError('UNKNOWN_LIBRARY', `No Loomlet library named "${libName}"`);
   }
 
   const func = lib.functions[funcName];
   if (!func) {
-    throw new HelpError('UNKNOWN_FUNCTION', `No Loom function named "${qualifiedName}"`);
+    throw new HelpError('UNKNOWN_FUNCTION', `No Loomlet function named "${qualifiedName}"`);
   }
 
   return func;
@@ -44,7 +44,7 @@ export function getFunctionHelp(qualifiedName) {
 
 export function formatLibrariesText() {
   const libs = listLibraries();
-  const lines = ['Loom libraries:', ''];
+  const lines = ['Loomlet libraries:', ''];
 
   for (const libName of libs) {
     const lib = LIBRARY_METADATA[libName];
@@ -56,8 +56,8 @@ export function formatLibrariesText() {
 
   lines.push('');
   lines.push('Use:');
-  lines.push('  loom docs <library>');
-  lines.push('  loom docs <library.function>');
+  lines.push('  loomlet docs <library>');
+  lines.push('  loomlet docs <library.function>');
 
   return lines.join('\n');
 }
