@@ -14,6 +14,11 @@ import {
   isKnownRuntimeTarget,
   LoomReplSession
 } from '../src/toolchain/index.js';
+import {
+  DEFAULT_ENDPOINT as DEFAULT_SCENESYNC_ENDPOINT,
+  SceneSyncClient,
+  formatSceneSyncError
+} from '../src/scenesync/index.js';
 
 function print(message = '') {
   process.stdout.write(`${message}\n`);
@@ -99,6 +104,7 @@ Commands:
   inspect <file>   Inspect Loom DSL and print a summary
   run <file>       Evaluate a Loom graph once
   repl             Start an interactive Loom REPL
+  scenesync        Probe Scene Sync rooms
   help             Show help
 
 Examples:
@@ -106,6 +112,7 @@ Examples:
   loom format examples/cli-basic.loom --check
   loom inspect examples/cli-basic.loom --json
   loom run examples/cli-basic.loom --get x.out --time 0.25
+  loom scenesync ping --room 121555
   loom repl`;
 }
 
@@ -166,6 +173,22 @@ Commands:
   :exit      Exit the REPL`;
 }
 
+function getSceneSyncHelp() {
+  return `Usage:
+  loom scenesync <command> [options]
+
+Commands:
+  ping              Check Scene Sync command connection
+  info              Get room information
+  objects           List scene objects
+  list-objects      Alias for objects
+
+Options:
+  --room <room>        Scene Sync room code
+  --endpoint <url>     Scene Sync command endpoint. Default: ${DEFAULT_SCENESYNC_ENDPOINT}
+  --json               Print raw JSON response`;
+}
+
 function formatValue(value) {
   if (typeof value === 'string') return value;
   if (typeof value === 'number' || typeof value === 'boolean') return String(value);
@@ -213,6 +236,101 @@ function printSnippetResult(snippet, result) {
 
 async function readSourceFile(file) {
   return readFile(path.resolve(process.cwd(), file), 'utf8');
+}
+
+function parseSceneSyncArgs(args) {
+  let room = process.env.LOOM_SCENESYNC_ROOM || '';
+  let endpoint = process.env.LOOM_SCENESYNC_ENDPOINT || DEFAULT_SCENESYNC_ENDPOINT;
+  let json = false;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--room') {
+      const next = args[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--room requires a room code');
+      }
+      room = next;
+      index += 1;
+    } else if (arg === '--endpoint') {
+      const next = args[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--endpoint requires a URL');
+      }
+      endpoint = next;
+      index += 1;
+    } else if (arg === '--json') {
+      json = true;
+    } else {
+      throw new Error(`Unknown option: ${arg}`);
+    }
+  }
+
+  return { room, endpoint, json };
+}
+
+function requireSceneSyncRoom(room) {
+  if (!room) {
+    throw new Error('Scene Sync room is required. Pass --room <room> or set LOOM_SCENESYNC_ROOM.');
+  }
+}
+
+function formatSceneSyncPosition(position) {
+  if (Array.isArray(position)) {
+    return `(${position.join(', ')})`;
+  }
+  if (position && typeof position === 'object') {
+    return `(${position.x ?? '?'}, ${position.y ?? '?'}, ${position.z ?? '?'})`;
+  }
+  return String(position);
+}
+
+function printSceneSyncInfo(room, result) {
+  const info = result?.result || {};
+  const lines = [`Room: ${room}`];
+
+  if (typeof info.clients === 'number') {
+    lines.push(`Clients: ${info.clients}`);
+  } else if (typeof info.clientCount === 'number') {
+    lines.push(`Clients: ${info.clientCount}`);
+  }
+
+  if (typeof info.objects === 'number') {
+    lines.push(`Objects: ${info.objects}`);
+  } else if (typeof info.objectCount === 'number') {
+    lines.push(`Objects: ${info.objectCount}`);
+  }
+
+  if (lines.length === 1 && Object.keys(info).length > 0) {
+    print(stringifyJson(info));
+    return;
+  }
+
+  print(lines.join('\n'));
+}
+
+function printSceneSyncObjects(result) {
+  const objects = Array.isArray(result?.result?.objects) ? result.result.objects : null;
+
+  if (objects === null) {
+    print(stringifyJson(result.result ?? result));
+    return;
+  }
+
+  if (objects.length === 0) {
+    print('Objects: none');
+    return;
+  }
+
+  print('Objects:');
+  for (const object of objects) {
+    const id = object.id || object.name || '<unknown>';
+    const type = object.type || '<unknown>';
+    const position = object.position !== undefined
+      ? `  position=${formatSceneSyncPosition(object.position)}`
+      : '';
+    print(`- ${id}  ${type}${position}`);
+  }
 }
 
 async function handleCompile(args) {
@@ -519,6 +637,58 @@ async function handleRepl(args) {
   });
 }
 
+async function handleSceneSync(args) {
+  if (args.length === 0 || args.includes('--help')) {
+    print(getSceneSyncHelp());
+    return 0;
+  }
+
+  const [subcommand, ...rest] = args;
+  if (rest.includes('--help')) {
+    print(getSceneSyncHelp());
+    return 0;
+  }
+
+  const { room, endpoint, json } = parseSceneSyncArgs(rest);
+  requireSceneSyncRoom(room);
+
+  const client = new SceneSyncClient({ endpoint });
+  let result;
+
+  if (subcommand === 'ping') {
+    result = await client.ping({ room });
+  } else if (subcommand === 'info') {
+    result = await client.info({ room });
+  } else if (subcommand === 'objects' || subcommand === 'list-objects') {
+    result = await client.listObjects({ room });
+  } else {
+    throw new Error(`Unknown scenesync command: ${subcommand}`);
+  }
+
+  if (!result.ok) {
+    printError(formatSceneSyncError(result.error));
+    return 1;
+  }
+
+  if (json) {
+    print(stringifyJson(result));
+    return 0;
+  }
+
+  if (subcommand === 'ping') {
+    print(`Scene Sync room ${room} is reachable.`);
+    return 0;
+  }
+
+  if (subcommand === 'info') {
+    printSceneSyncInfo(room, result);
+    return 0;
+  }
+
+  printSceneSyncObjects(result);
+  return 0;
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const command = args[0];
@@ -540,6 +710,8 @@ async function main() {
       exitCode = await handleRun(args.slice(1));
     } else if (command === 'repl') {
       exitCode = await handleRepl(args.slice(1));
+    } else if (command === 'scenesync') {
+      exitCode = await handleSceneSync(args.slice(1));
     } else {
       throw new Error(`unknown command: ${command}`);
     }

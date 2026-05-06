@@ -42,20 +42,36 @@
 
 ## Phase 6: SceneSync integration
 
+- read-only room probes via `loom scenesync ping`
+- read-only room probes via `loom scenesync info`
+- read-only room probes via `loom scenesync objects`
+- reusable Scene Sync command schema and client layer
 - compile DSL and send graph
 - target scene scope
 - target object scope
 - clear graph
 - patch graph
 
-## Phase 7: Web Studio integration
+## Phase 7: SceneSync follow-up
+
+- compile DSL and send graph
+- `loom scenesync run <file.loom>`
+- `loom scenesync send-graph <file.json>`
+- target scene scope
+- target object scope
+- clear graph
+- patch graph
+- `loom repl :connect scenesync`
+- `loom repl :objects`
+
+## Phase 8: Web Studio integration
 
 - reuse toolchain modules
 - shared diagnostics
 - target/import compatibility panel
 - inspect panel
 
-## Phase 8: AI/MCP integration
+## Phase 9: AI/MCP integration
 
 - expose compile/format/inspect as tools
 - use inspect summaries to reduce context size
