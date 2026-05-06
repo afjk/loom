@@ -1,6 +1,6 @@
 {
-  "scopeName": "source.loom",
-  "name": "Loom",
+  "scopeName": "source.loomlet",
+  "name": "Loomlet",
   "patterns": [
     { "include": "#comments" },
     { "include": "#strings" },

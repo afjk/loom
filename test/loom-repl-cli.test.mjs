@@ -27,7 +27,7 @@ test('repl smoke flow works', () => {
   );
 
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /Loom REPL/);
+  assert.match(result.stdout, /Loomlet REPL/);
   assert.match(result.stdout, /message\.out = HELLO/);
   assert.match(result.stderr, /\[log\] HELLO/);
   assert.match(result.stdout, /import text/);

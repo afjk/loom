@@ -15,12 +15,12 @@ function activate(context) {
   };
 
   context.subscriptions.push(
-    vscode.languages.registerCompletionItemProvider({ language: 'loom', scheme: 'file' }, provider, '.', '(', ':')
+    vscode.languages.registerCompletionItemProvider({ language: 'loomlet', scheme: 'file' }, provider, '.', '(', ':')
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('loom.runCurrentFile', () => runCurrentFile('run')),
-    vscode.commands.registerCommand('loom.sceneSyncDevCurrentFile', () => runCurrentFile('scenesync dev'))
+    vscode.commands.registerCommand('loomlet.runCurrentFile', () => runCurrentFile('run')),
+    vscode.commands.registerCommand('loomlet.sceneSyncDevCurrentFile', () => runCurrentFile('scenesync dev'))
   );
 }
 
@@ -105,20 +105,20 @@ async function runCurrentFile(command) {
 
   const document = editor.document;
   const filePath = document.uri.fsPath;
-  const isLoom = document.languageId === 'loom' || filePath.endsWith('.loom');
-  if (!isLoom) {
+  const isLoomlet = document.languageId === 'loomlet' || document.languageId === 'loom' || filePath.endsWith('.loom');
+  if (!isLoomlet) {
     vscode.window.showErrorMessage('Active file must be a .loom file.');
     return;
   }
 
   await document.save();
-  const cliPath = await findLoomCli(document.uri);
+  const cliPath = await findLoomletCli(document.uri);
   if (!cliPath) {
-    vscode.window.showErrorMessage('Could not find bin/loom.mjs. Open the Loom repository workspace or run the command from a Loom project.');
+    vscode.window.showErrorMessage('Could not find loomlet CLI. Open the Loomlet repository workspace or run the command from a Loomlet project.');
     return;
   }
 
-  const terminal = getOrCreateTerminal('Loom');
+  const terminal = getOrCreateTerminal('Loomlet');
   const escapedCli = cliPath.replace(/"/g, '\\"');
   const escapedFile = filePath.replace(/"/g, '\\"');
   terminal.show(true);
@@ -138,7 +138,7 @@ function getOrCreateTerminal(name) {
   return vscode.window.createTerminal(name);
 }
 
-async function findLoomCli(startUri) {
+async function findLoomletCli(startUri) {
   const candidateRoots = [];
   if (startUri && startUri.fsPath) {
     candidateRoots.push(path.dirname(startUri.fsPath));
@@ -160,9 +160,13 @@ async function findLoomCli(startUri) {
 function searchUpForCli(startDir) {
   let current = startDir;
   while (true) {
-    const candidate = path.join(current, 'bin', 'loom.mjs');
-    if (fs.existsSync(candidate)) {
-      return candidate;
+    const loomletCandidate = path.join(current, 'bin', 'loomlet.mjs');
+    if (fs.existsSync(loomletCandidate)) {
+      return loomletCandidate;
+    }
+    const loomCandidate = path.join(current, 'bin', 'loom.mjs');
+    if (fs.existsSync(loomCandidate)) {
+      return loomCandidate;
     }
     const parent = path.dirname(current);
     if (parent === current) {
@@ -175,5 +179,5 @@ function searchUpForCli(startDir) {
 module.exports = {
   activate,
   deactivate,
-  findLoomCli
+  findLoomletCli
 };

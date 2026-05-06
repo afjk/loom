@@ -227,7 +227,7 @@ test('inspect includes qualified function node names', async () => {
 test('scenesync help prints command group usage', () => {
   const result = runCli(['scenesync', '--help']);
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /loom scenesync <command>/);
+  assert.match(result.stdout, /loomlet scenesync <command>/);
   assert.match(result.stdout, /ping/);
   assert.match(result.stdout, /objects/);
 });

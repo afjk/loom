@@ -109,37 +109,37 @@ function stringifyJson(value, pretty = true) {
 }
 
 function getGeneralHelp() {
-  return `Loom CLI
+  return `Loomlet CLI
 
 Usage:
-  loom <command> <file> [options]
+  loomlet <command> <file> [options]
 
 Commands:
-  compile <file>   Compile Loom DSL to GraphJSON
-  format <file>    Format Loom DSL
-  inspect <file>   Inspect Loom DSL and print a summary
-  run <file>       Evaluate a Loom graph once
-  repl             Start an interactive Loom REPL
+  compile <file>   Compile Loomlet DSL to GraphJSON
+  format <file>    Format Loomlet DSL
+  inspect <file>   Inspect Loomlet DSL and print a summary
+  run <file>       Evaluate a Loomlet graph once
+  repl             Start an interactive Loomlet REPL
   docs             Browse library documentation
   scenesync        Probe Scene Sync rooms
   help             Show help
 
 Examples:
-  loom compile examples/cli-basic.loom
-  loom format examples/cli-basic.loom --check
-  loom inspect examples/cli-basic.loom --json
-  loom run examples/cli-basic.loom --get x.out --time 0.25
-  loom docs
-  loom docs text
-  loom docs text.upper
-  loom scenesync redeem 238909
-  loom scenesync objects --room <roomId> --session <sessionId>
-  loom repl`;
+  loomlet compile examples/cli-basic.loom
+  loomlet format examples/cli-basic.loom --check
+  loomlet inspect examples/cli-basic.loom --json
+  loomlet run examples/cli-basic.loom --get x.out --time 0.25
+  loomlet docs
+  loomlet docs text
+  loomlet docs text.upper
+  loomlet scenesync redeem 238909
+  loomlet scenesync objects --room <roomId> --session <sessionId>
+  loomlet repl`;
 }
 
 function getCompileHelp() {
   return `Usage:
-  loom compile <file> [--out <file>] [--pretty false] [--target <target>]
+  loomlet compile <file> [--out <file>] [--pretty false] [--target <target>]
 
 Options:
   -o, --out <file>   Write GraphJSON to a file
@@ -149,7 +149,7 @@ Options:
 
 function getFormatHelp() {
   return `Usage:
-  loom format <file> [--write] [--check]
+  loomlet format <file> [--write] [--check]
 
 Options:
   --write   Overwrite the input file
@@ -158,7 +158,7 @@ Options:
 
 function getInspectHelp() {
   return `Usage:
-  loom inspect <file> [--ast] [--graph] [--json] [--target <target>]
+  loomlet inspect <file> [--ast] [--graph] [--json] [--target <target>]
 
 Options:
   --ast    Print Source AST JSON
@@ -169,19 +169,19 @@ Options:
 
 function getRunHelp() {
   return `Usage:
-  loom run <file> --get <ref> [--time <number>] [--dt <number>] [--json] [--target <target>]
+  loomlet run <file> --get <ref> [--time <number>] [--dt <number>] [--json] [--target <target>]
 
 Options:
   --get <ref>       Output reference to read. Repeatable.
   --time <number>   Evaluation time in seconds. Default: 0
   --dt <number>     Delta time in seconds. Default: 0
   --json            Print result values as JSON
-  --target <target> Only cli is supported by loom run in this version. Default: cli`;
+  --target <target> Only cli is supported by loomlet run in this version. Default: cli`;
 }
 
 function getReplHelp() {
   return `Usage:
-  loom repl
+  loomlet repl
 
 Commands:
   :help              Show REPL help
@@ -199,19 +199,19 @@ Commands:
 
 function getSceneSyncHelp() {
   return `Usage:
-  loom scenesync <command> [options]
+  loomlet scenesync <command> [options]
 
 Commands:
   redeem <code>            Redeem a Scene Sync AI link code
   session                  Show saved Scene Sync session
   status                   Alias for session
   logout                   Clear saved Scene Sync session
-  run <file>               Convert Loom scene effects to Scene Sync broadcast payload
-  graph-compile <file>     Compile Loom DSL to Scene Sync behavior graph
-  graph-run <file>         Compile and set a Scene Sync graph from Loom DSL
-  graph-set <obj> <g>      Set a Loom graph behavior on a Scene Sync object
-  graph-clear <obj>        Clear Loom graph behavior from a Scene Sync object
-  dev <file>               Watch Loom DSL and live-send Scene Sync graph updates
+  run <file>               Convert Loomlet scene effects to Scene Sync broadcast payload
+  graph-compile <file>     Compile Loomlet DSL to Scene Sync behavior graph
+  graph-run <file>         Compile and set a Scene Sync graph from Loomlet DSL
+  graph-set <obj> <g>      Set a Loomlet graph behavior on a Scene Sync object
+  graph-clear <obj>        Clear Loomlet graph behavior from a Scene Sync object
+  dev <file>               Watch Loomlet DSL and live-send Scene Sync graph updates
   ping                     Check Scene Sync room connection
   info                     Get room information
   objects                  List scene objects
@@ -229,16 +229,16 @@ Options:
   --json               Print raw JSON response
 
 Examples:
-  loom scenesync run examples/scene-effects.loom
-  loom scenesync run examples/scene-effects.loom --send
-  loom scenesync graph-compile examples/lissajous.loom
-  loom scenesync graph-compile examples/lissajous.loom --object sample-cube
-  loom scenesync graph-compile examples/lissajous.loom --scene
-  loom scenesync graph-run examples/lissajous.loom --object sample-cube
-  loom scenesync graph-run examples/lissajous.loom --object sample-cube --send
-  loom scenesync graph-set sample-cube examples/scene-graphs/lissajous.json
-  loom scenesync graph-set sample-cube examples/scene-graphs/lissajous.json --send
-  loom scenesync graph-clear sample-cube --send
+  loomlet scenesync run examples/scene-effects.loom
+  loomlet scenesync run examples/scene-effects.loom --send
+  loomlet scenesync graph-compile examples/lissajous.loom
+  loomlet scenesync graph-compile examples/lissajous.loom --object sample-cube
+  loomlet scenesync graph-compile examples/lissajous.loom --scene
+  loomlet scenesync graph-run examples/lissajous.loom --object sample-cube
+  loomlet scenesync graph-run examples/lissajous.loom --object sample-cube --send
+  loomlet scenesync graph-set sample-cube examples/scene-graphs/lissajous.json
+  loomlet scenesync graph-set sample-cube examples/scene-graphs/lissajous.json --send
+  loomlet scenesync graph-clear sample-cube --send
 
 Graph Commands:
   By default graph-set, graph-clear, and graph-run are dry-run. Pass --send to broadcast.
@@ -247,12 +247,12 @@ Graph Commands:
   If neither is specified, scope is inferred from DSL.
 
 Environment Variables:
-  LOOM_SCENESYNC_ROOM              Default room code
-  LOOM_SCENESYNC_SESSION           Default session ID
-  LOOM_SCENESYNC_ENDPOINT          Default endpoint
+  LOOMLET_SCENESYNC_ROOM              Default room code
+  LOOMLET_SCENESYNC_SESSION           Default session ID
+  LOOMLET_SCENESYNC_ENDPOINT          Default endpoint
 
 Saved session path:
-  ~/.config/loom/scenesync-session.json`;
+  ~/.config/loomlet/scenesync-session.json`;
 }
 
 function formatValue(value) {
@@ -358,21 +358,21 @@ async function parseSceneSyncArgs(args) {
   const savedData = savedSession.ok && savedSession.session ? savedSession.session : null;
 
   if (!room) {
-    room = process.env.LOOM_SCENESYNC_ROOM || '';
+    room = process.env.LOOMLET_SCENESYNC_ROOM || process.env.LOOM_SCENESYNC_ROOM || '';
     if (!room && savedData) {
       room = savedData.roomId || '';
     }
   }
 
   if (!session) {
-    session = process.env.LOOM_SCENESYNC_SESSION || '';
+    session = process.env.LOOMLET_SCENESYNC_SESSION || process.env.LOOM_SCENESYNC_SESSION || '';
     if (!session && savedData) {
       session = savedData.sessionId || '';
     }
   }
 
   if (!endpoint) {
-    endpoint = process.env.LOOM_SCENESYNC_ENDPOINT || '';
+    endpoint = process.env.LOOMLET_SCENESYNC_ENDPOINT || process.env.LOOM_SCENESYNC_ENDPOINT || '';
     if (!endpoint && savedData) {
       endpoint = savedData.endpoint || '';
     }
@@ -485,21 +485,21 @@ async function parseSceneSyncRunArgs(args) {
   const savedData = savedSession.ok && savedSession.session ? savedSession.session : null;
 
   if (!room) {
-    room = process.env.LOOM_SCENESYNC_ROOM || '';
+    room = process.env.LOOMLET_SCENESYNC_ROOM || process.env.LOOM_SCENESYNC_ROOM || '';
     if (!room && savedData) {
       room = savedData.roomId || '';
     }
   }
 
   if (!session) {
-    session = process.env.LOOM_SCENESYNC_SESSION || '';
+    session = process.env.LOOMLET_SCENESYNC_SESSION || process.env.LOOM_SCENESYNC_SESSION || '';
     if (!session && savedData) {
       session = savedData.sessionId || '';
     }
   }
 
   if (!endpoint) {
-    endpoint = process.env.LOOM_SCENESYNC_ENDPOINT || '';
+    endpoint = process.env.LOOMLET_SCENESYNC_ENDPOINT || process.env.LOOM_SCENESYNC_ENDPOINT || '';
     if (!endpoint && savedData) {
       endpoint = savedData.endpoint || '';
     }
@@ -577,21 +577,21 @@ async function parseSceneSyncGraphSetArgs(args) {
   const savedData = savedSession.ok && savedSession.session ? savedSession.session : null;
 
   if (!room && send) {
-    room = process.env.LOOM_SCENESYNC_ROOM || '';
+    room = process.env.LOOMLET_SCENESYNC_ROOM || process.env.LOOM_SCENESYNC_ROOM || '';
     if (!room && savedData) {
       room = savedData.roomId || '';
     }
   }
 
   if (!session && send) {
-    session = process.env.LOOM_SCENESYNC_SESSION || '';
+    session = process.env.LOOMLET_SCENESYNC_SESSION || process.env.LOOM_SCENESYNC_SESSION || '';
     if (!session && savedData) {
       session = savedData.sessionId || '';
     }
   }
 
   if (!endpoint) {
-    endpoint = process.env.LOOM_SCENESYNC_ENDPOINT || '';
+    endpoint = process.env.LOOMLET_SCENESYNC_ENDPOINT || process.env.LOOM_SCENESYNC_ENDPOINT || '';
     if (!endpoint && savedData) {
       endpoint = savedData.endpoint || '';
     }
@@ -657,21 +657,21 @@ async function parseSceneSyncGraphClearArgs(args) {
   const savedData = savedSession.ok && savedSession.session ? savedSession.session : null;
 
   if (!room && send) {
-    room = process.env.LOOM_SCENESYNC_ROOM || '';
+    room = process.env.LOOMLET_SCENESYNC_ROOM || process.env.LOOM_SCENESYNC_ROOM || '';
     if (!room && savedData) {
       room = savedData.roomId || '';
     }
   }
 
   if (!session && send) {
-    session = process.env.LOOM_SCENESYNC_SESSION || '';
+    session = process.env.LOOMLET_SCENESYNC_SESSION || process.env.LOOM_SCENESYNC_SESSION || '';
     if (!session && savedData) {
       session = savedData.sessionId || '';
     }
   }
 
   if (!endpoint) {
-    endpoint = process.env.LOOM_SCENESYNC_ENDPOINT || '';
+    endpoint = process.env.LOOMLET_SCENESYNC_ENDPOINT || process.env.LOOM_SCENESYNC_ENDPOINT || '';
     if (!endpoint && savedData) {
       endpoint = savedData.endpoint || '';
     }
@@ -801,21 +801,21 @@ async function parseSceneSyncGraphRunArgs(args) {
   const savedData = savedSession.ok && savedSession.session ? savedSession.session : null;
 
   if (!room && send) {
-    room = process.env.LOOM_SCENESYNC_ROOM || '';
+    room = process.env.LOOMLET_SCENESYNC_ROOM || process.env.LOOM_SCENESYNC_ROOM || '';
     if (!room && savedData) {
       room = savedData.roomId || '';
     }
   }
 
   if (!session && send) {
-    session = process.env.LOOM_SCENESYNC_SESSION || '';
+    session = process.env.LOOMLET_SCENESYNC_SESSION || process.env.LOOM_SCENESYNC_SESSION || '';
     if (!session && savedData) {
       session = savedData.sessionId || '';
     }
   }
 
   if (!endpoint) {
-    endpoint = process.env.LOOM_SCENESYNC_ENDPOINT || '';
+    endpoint = process.env.LOOMLET_SCENESYNC_ENDPOINT || process.env.LOOM_SCENESYNC_ENDPOINT || '';
     if (!endpoint && savedData) {
       endpoint = savedData.endpoint || '';
     }
@@ -936,21 +936,21 @@ async function parseSceneSyncDevArgs(args) {
   const savedData = savedSession.ok && savedSession.session ? savedSession.session : null;
 
   if (!room && !dryRun) {
-    room = process.env.LOOM_SCENESYNC_ROOM || '';
+    room = process.env.LOOMLET_SCENESYNC_ROOM || process.env.LOOM_SCENESYNC_ROOM || '';
     if (!room && savedData) {
       room = savedData.roomId || '';
     }
   }
 
   if (!session && !dryRun) {
-    session = process.env.LOOM_SCENESYNC_SESSION || '';
+    session = process.env.LOOMLET_SCENESYNC_SESSION || process.env.LOOM_SCENESYNC_SESSION || '';
     if (!session && savedData) {
       session = savedData.sessionId || '';
     }
   }
 
   if (!endpoint) {
-    endpoint = process.env.LOOM_SCENESYNC_ENDPOINT || '';
+    endpoint = process.env.LOOMLET_SCENESYNC_ENDPOINT || process.env.LOOM_SCENESYNC_ENDPOINT || '';
     if (!endpoint && savedData) {
       endpoint = savedData.endpoint || '';
     }
@@ -986,7 +986,7 @@ function formatTimestamp() {
 async function handleSceneSyncDev(args) {
   if (args.includes('--help')) {
     print(`Usage:
-  loom scenesync dev <file> [--object <id>] [--scene] [--debounce <ms>] [--dry-run] [--json] [--once]
+  loomlet scenesync dev <file> [--object <id>] [--scene] [--debounce <ms>] [--dry-run] [--json] [--once]
 
 Options:
   --object <id>      Use object-level graph scope
@@ -997,10 +997,10 @@ Options:
   --once             Run startup compile/send once and exit (test mode)
 
 Examples:
-  loom scenesync dev examples/lissajous.loom
-  loom scenesync dev examples/lissajous.loom --object sample-cube
-  loom scenesync dev examples/scene-control.loom --scene
-  loom scenesync dev examples/lissajous.loom --dry-run --once`);
+  loomlet scenesync dev examples/lissajous.loom
+  loomlet scenesync dev examples/lissajous.loom --object sample-cube
+  loomlet scenesync dev examples/scene-control.loom --scene
+  loomlet scenesync dev examples/lissajous.loom --dry-run --once`);
     return 0;
   }
 
@@ -1460,18 +1460,18 @@ async function handleDocs(args) {
   if (args.includes('--help')) {
     const lines = [
       'Usage:',
-      '  loom docs              List all available libraries',
-      '  loom docs <library>    Show functions in a library',
-      '  loom docs <lib.func>   Show function documentation',
+      '  loomlet docs              List all available libraries',
+      '  loomlet docs <library>    Show functions in a library',
+      '  loomlet docs <lib.func>   Show function documentation',
       '',
       'Options:',
       '  --json                 Output as JSON',
       '',
       'Examples:',
-      '  loom docs',
-      '  loom docs text',
-      '  loom docs text.upper',
-      '  loom docs text.upper --json'
+      '  loomlet docs',
+      '  loomlet docs text',
+      '  loomlet docs text.upper',
+      '  loomlet docs text.upper --json'
     ];
     print(lines.join('\n'));
     return 0;
@@ -1527,7 +1527,7 @@ async function handleRepl(args) {
   }
 
   const session = new LoomReplSession({ target: 'cli', time: 0, dt: 0 });
-  print('Loom REPL');
+  print('Loomlet REPL');
   print('Type :help for commands, :quit to exit.');
 
   const rl = readline.createInterface({
