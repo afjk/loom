@@ -235,19 +235,51 @@ The REPL recompiles the accumulated source after each snippet, but it only displ
 
 ### Scene Sync probe commands
 
-Loom CLI includes early read-only Scene Sync probe commands.
+Loom CLI includes read-only Scene Sync probe commands to interact with the afjk.jp AI wrapper.
+
+#### Redeem a code
 
 ```bash
-node bin/loom.mjs scenesync ping --room 121555
-node bin/loom.mjs scenesync objects --room 121555
-node bin/loom.mjs scenesync info --room 121555
+node bin/loom.mjs scenesync redeem 238909
 ```
 
-You can also configure defaults:
+Output:
+```
+Linked Scene Sync room.
+Room: <roomId>
+Session: <sessionId>
+Expires At: <expiresAt>
+```
+
+#### List objects in a room
 
 ```bash
-export LOOM_SCENESYNC_ENDPOINT=https://afjk.jp/pipe
-export LOOM_SCENESYNC_ROOM=121555
+node bin/loom.mjs scenesync objects --room <roomId> --session <sessionId>
+```
+
+#### Get room information
+
+```bash
+node bin/loom.mjs scenesync info --room <roomId> --session <sessionId>
+```
+
+#### Check room connectivity
+
+```bash
+node bin/loom.mjs scenesync ping --room <roomId> --session <sessionId>
+```
+
+`ping` currently performs a lightweight scene snapshot request because the existing AI wrapper does not expose a dedicated ping endpoint.
+
+#### Configure defaults
+
+```bash
+export LOOM_SCENESYNC_ROOM=<roomId>
+export LOOM_SCENESYNC_SESSION=<sessionId>
+export LOOM_SCENESYNC_ENDPOINT=https://afjk.jp/presence/api/ai
+
+# Now you can omit --room and --session
+node bin/loom.mjs scenesync objects
 ```
 
 These commands are read-only. Sending Loom graphs to Scene Sync is planned for a later phase.
