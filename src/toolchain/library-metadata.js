@@ -907,8 +907,8 @@ export const LIBRARY_METADATA = {
   },
   fs: {
     name: 'fs',
-    description: LIBRARY_COMPATIBILITY.fs.description,
-    status: 'planned',
+    description: 'CLI-only file system access',
+    status: 'implemented',
     targets: LIBRARY_COMPATIBILITY.fs.targets,
     functions: {}
   },
@@ -998,17 +998,17 @@ LIBRARY_METADATA.logic = {
   description: LIBRARY_COMPATIBILITY.logic.description,
   targets: LIBRARY_COMPATIBILITY.logic.targets,
   functions: Object.fromEntries([
-    ['not', ['logic.not(value)', 'Boolean negation using JavaScript truthiness.', 'boolean']],
-    ['and', ['logic.and(a, b)', 'Boolean AND, returned as a boolean.', 'boolean']],
-    ['or', ['logic.or(a, b)', 'Boolean OR, returned as a boolean.', 'boolean']],
+    ['not', ['logic.not(value)', 'Boolean negation using JavaScript-style truthiness.', 'boolean']],
+    ['and', ['logic.and(a, b)', 'Boolean AND using JavaScript-style truthiness, returned as a boolean.', 'boolean']],
+    ['or', ['logic.or(a, b)', 'Boolean OR using JavaScript-style truthiness, returned as a boolean.', 'boolean']],
     ['equals', ['logic.equals(value, other: value)', 'Strict equality using Object.is.', 'boolean']],
     ['notEquals', ['logic.notEquals(value, other: value)', 'Inverse of logic.equals.', 'boolean']],
     ['greaterThan', ['logic.greaterThan(value, other: 0)', 'Numeric greater-than comparison.', 'boolean']],
     ['lessThan', ['logic.lessThan(value, other: 0)', 'Numeric less-than comparison.', 'boolean']],
     ['greaterOrEqual', ['logic.greaterOrEqual(value, other: 0)', 'Numeric greater-or-equal comparison.', 'boolean']],
     ['lessOrEqual', ['logic.lessOrEqual(value, other: 0)', 'Numeric less-or-equal comparison.', 'boolean']],
-    ['select', ['logic.select(condition, whenTrue: value, whenFalse: value)', 'Returns whenTrue for truthy condition, otherwise whenFalse.', 'any']],
-    ['when', ['logic.when(condition, value: value)', 'Returns value for truthy condition, otherwise null.', 'any']]
+    ['select', ['logic.select(condition, whenTrue: value, whenFalse: value)', 'Returns whenTrue when condition is truthy using JavaScript-style truthiness, otherwise whenFalse.', 'any']],
+    ['when', ['logic.when(condition, value: value)', 'Returns value when condition is truthy using JavaScript-style truthiness, otherwise null.', 'any']]
   ].map(([name, [signature, description, returns]]) => [name, makeFunctionMetadata('logic', name, signature, description, returns)]))
 };
 

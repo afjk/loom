@@ -37,9 +37,9 @@ export const LIBRARY_COMPATIBILITY = {
     description: 'JSON parse/stringify utilities'
   },
   random: {
-    targets: ['cli', 'web', 'scenesync', 'unity'],
-    kind: 'pure',
-    description: 'Random value generation nodes'
+    targets: ['cli', 'web'],
+    kind: 'source',
+    description: 'Non-deterministic random value generation nodes'
   },
   debug: {
     targets: ['cli', 'web', 'unity'],

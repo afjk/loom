@@ -182,7 +182,7 @@ Current:
 Used by tour samples: none
 Recommended baseline: `random.value`, `random.range`, `random.int`, `random.choice`, `random.seeded`, `random.noise`
 Status summary: unseeded baseline implemented; seeded/noise planned
-Targets: cli, scenesync, unity, web
+Targets: cli, web
 
 ## debug
 Purpose: graph-level diagnostics.

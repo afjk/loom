@@ -385,7 +385,7 @@ function collectInputs(inputs, names) {
   return names.map((name) => inputs[name]).filter((value) => value !== undefined);
 }
 
-function unsupportedFunctionValueNode(name) {
+function unsupportedFunctionValueNode(name, outputType = 'array') {
   return {
     category: 'transform',
     inputs: [
@@ -393,7 +393,7 @@ function unsupportedFunctionValueNode(name) {
       { name: 'fn', type: 'function', default: null, kind: 'behavior' },
       { name: 'initial', type: 'any', default: null, kind: 'behavior' }
     ],
-    outputs: [{ name: 'out', type: 'array', kind: 'behavior' }],
+    outputs: [{ name: 'out', type: outputType, kind: 'behavior' }],
     params: [
       { name: 'fn', type: 'function', default: null },
       { name: 'initial', type: 'any', default: null }
@@ -1010,7 +1010,6 @@ export const NODE_TYPES = {
 
   'text.concat': {
     category: 'transform',
-    commutative: true,
     inputs: Array.from({ length: 8 }, (_, i) => ({ name: `value${i + 1}`, type: 'any', default: undefined, kind: 'behavior' })),
     outputs: [{ name: 'out', type: 'string', kind: 'behavior' }],
     params: Array.from({ length: 8 }, (_, i) => ({ name: `value${i + 1}`, type: 'any', default: undefined })),
@@ -1157,21 +1156,21 @@ export const NODE_TYPES = {
   'logic.select': { category: 'transform', inputs: [{ name: 'condition', type: 'any', default: false, kind: 'behavior' }, { name: 'whenTrue', type: 'any', default: null, kind: 'behavior' }, { name: 'whenFalse', type: 'any', default: null, kind: 'behavior' }], outputs: [{ name: 'out', type: 'any', kind: 'behavior' }], params: [{ name: 'condition', type: 'any', default: false }, { name: 'whenTrue', type: 'any', default: null }, { name: 'whenFalse', type: 'any', default: null }], evaluate: (inputs) => ({ out: inputs.condition ? inputs.whenTrue : inputs.whenFalse }) },
   'logic.when': { category: 'transform', inputs: [{ name: 'condition', type: 'any', default: false, kind: 'behavior' }, { name: 'value', type: 'any', default: null, kind: 'behavior' }], outputs: [{ name: 'out', type: 'any', kind: 'behavior' }], params: [{ name: 'condition', type: 'any', default: false }, { name: 'value', type: 'any', default: null }], evaluate: (inputs) => ({ out: inputs.condition ? inputs.value : null }) },
 
-  'list.of': { category: 'transform', commutative: true, inputs: Array.from({ length: 8 }, (_, i) => ({ name: `value${i + 1}`, type: 'any', default: undefined, kind: 'behavior' })), outputs: [{ name: 'out', type: 'array', kind: 'behavior' }], params: Array.from({ length: 8 }, (_, i) => ({ name: `value${i + 1}`, type: 'any', default: undefined })), evaluate: (inputs) => ({ out: collectInputs(inputs, Array.from({ length: 8 }, (_, i) => `value${i + 1}`)) }) },
+  'list.of': { category: 'transform', inputs: Array.from({ length: 8 }, (_, i) => ({ name: `value${i + 1}`, type: 'any', default: undefined, kind: 'behavior' })), outputs: [{ name: 'out', type: 'array', kind: 'behavior' }], params: Array.from({ length: 8 }, (_, i) => ({ name: `value${i + 1}`, type: 'any', default: undefined })), evaluate: (inputs) => ({ out: collectInputs(inputs, Array.from({ length: 8 }, (_, i) => `value${i + 1}`)) }) },
   'list.range': { category: 'transform', inputs: [{ name: 'start', type: 'number', default: 0, kind: 'behavior' }, { name: 'end', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'array', kind: 'behavior' }], params: [{ name: 'start', type: 'number', default: 0 }, { name: 'end', type: 'number', default: 0 }], evaluate: (inputs) => { const start = Math.trunc(inputs.start); const end = Math.trunc(inputs.end); const step = start <= end ? 1 : -1; const out = []; for (let n = start; step > 0 ? n <= end : n >= end; n += step) out.push(n); return { out }; } },
   'list.length': { category: 'transform', inputs: [{ name: 'list', type: 'array', default: [], kind: 'behavior' }], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [{ name: 'list', type: 'array', default: [] }], evaluate: (inputs) => ({ out: toArray(inputs.list).length }) },
   'list.at': { category: 'transform', inputs: [{ name: 'list', type: 'array', default: [], kind: 'behavior' }, { name: 'index', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'any', kind: 'behavior' }], params: [{ name: 'list', type: 'array', default: [] }, { name: 'index', type: 'number', default: 0 }], evaluate: (inputs) => { const list = toArray(inputs.list); const raw = Math.trunc(inputs.index); const index = raw < 0 ? list.length + raw : raw; return { out: index >= 0 && index < list.length ? list[index] : null }; } },
   'list.first': { category: 'transform', inputs: [{ name: 'list', type: 'array', default: [], kind: 'behavior' }], outputs: [{ name: 'out', type: 'any', kind: 'behavior' }], params: [{ name: 'list', type: 'array', default: [] }], evaluate: (inputs) => ({ out: toArray(inputs.list)[0] ?? null }) },
   'list.last': { category: 'transform', inputs: [{ name: 'list', type: 'array', default: [], kind: 'behavior' }], outputs: [{ name: 'out', type: 'any', kind: 'behavior' }], params: [{ name: 'list', type: 'array', default: [] }], evaluate: (inputs) => { const list = toArray(inputs.list); return { out: list.length ? list[list.length - 1] : null }; } },
-  'list.map': unsupportedFunctionValueNode('list.map'),
-  'list.filter': unsupportedFunctionValueNode('list.filter'),
-  'list.reduce': unsupportedFunctionValueNode('list.reduce'),
+  'list.map': unsupportedFunctionValueNode('list.map', 'array'),
+  'list.filter': unsupportedFunctionValueNode('list.filter', 'array'),
+  'list.reduce': unsupportedFunctionValueNode('list.reduce', 'any'),
   'list.join': { category: 'transform', inputs: [{ name: 'list', type: 'array', default: [], kind: 'behavior' }, { name: 'separator', type: 'any', default: ',', kind: 'behavior' }], outputs: [{ name: 'out', type: 'string', kind: 'behavior' }], params: [{ name: 'list', type: 'array', default: [] }, { name: 'separator', type: 'any', default: ',' }], evaluate: (inputs) => ({ out: toArray(inputs.list).map((value) => stringifyTextValue(value)).join(stringifyTextValue(inputs.separator)) }) },
   'list.reverse': { category: 'transform', inputs: [{ name: 'list', type: 'array', default: [], kind: 'behavior' }], outputs: [{ name: 'out', type: 'array', kind: 'behavior' }], params: [{ name: 'list', type: 'array', default: [] }], evaluate: (inputs) => ({ out: [...toArray(inputs.list)].reverse() }) },
   'list.sort': { category: 'transform', inputs: [{ name: 'list', type: 'array', default: [], kind: 'behavior' }], outputs: [{ name: 'out', type: 'array', kind: 'behavior' }], params: [{ name: 'list', type: 'array', default: [] }], evaluate: (inputs) => { const list = [...toArray(inputs.list)]; if (list.every((value) => typeof value === 'number')) list.sort((a, b) => a - b); else list.sort((a, b) => String(a).localeCompare(String(b))); return { out: list }; } },
   'list.take': { category: 'transform', inputs: [{ name: 'list', type: 'array', default: [], kind: 'behavior' }, { name: 'count', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'array', kind: 'behavior' }], params: [{ name: 'list', type: 'array', default: [] }, { name: 'count', type: 'number', default: 0 }], evaluate: (inputs) => ({ out: toArray(inputs.list).slice(0, Math.max(0, Math.trunc(inputs.count))) }) },
   'list.drop': { category: 'transform', inputs: [{ name: 'list', type: 'array', default: [], kind: 'behavior' }, { name: 'count', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'array', kind: 'behavior' }], params: [{ name: 'list', type: 'array', default: [] }, { name: 'count', type: 'number', default: 0 }], evaluate: (inputs) => ({ out: toArray(inputs.list).slice(Math.max(0, Math.trunc(inputs.count))) }) },
-  'list.concat': { category: 'transform', commutative: true, inputs: Array.from({ length: 4 }, (_, i) => ({ name: `list${i + 1}`, type: 'array', default: undefined, kind: 'behavior' })), outputs: [{ name: 'out', type: 'array', kind: 'behavior' }], params: Array.from({ length: 4 }, (_, i) => ({ name: `list${i + 1}`, type: 'array', default: undefined })), evaluate: (inputs) => ({ out: collectInputs(inputs, Array.from({ length: 4 }, (_, i) => `list${i + 1}`)).flatMap((value) => toArray(value)) }) },
+  'list.concat': { category: 'transform', inputs: Array.from({ length: 4 }, (_, i) => ({ name: `list${i + 1}`, type: 'array', default: undefined, kind: 'behavior' })), outputs: [{ name: 'out', type: 'array', kind: 'behavior' }], params: Array.from({ length: 4 }, (_, i) => ({ name: `list${i + 1}`, type: 'array', default: undefined })), evaluate: (inputs) => ({ out: collectInputs(inputs, Array.from({ length: 4 }, (_, i) => `list${i + 1}`)).flatMap((value) => toArray(value)) }) },
 
   'math.add': { category: 'transform', commutative: true, inputs: [{ name: 'a', type: 'number', default: 0, kind: 'behavior' }, { name: 'b', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [{ name: 'a', type: 'number', default: 0 }, { name: 'b', type: 'number', default: 0 }], evaluate: (inputs) => ({ out: inputs.a + inputs.b }) },
   'math.subtract': { category: 'transform', inputs: [{ name: 'a', type: 'number', default: 0, kind: 'behavior' }, { name: 'b', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [{ name: 'a', type: 'number', default: 0 }, { name: 'b', type: 'number', default: 0 }], evaluate: (inputs) => ({ out: inputs.a - inputs.b }) },
