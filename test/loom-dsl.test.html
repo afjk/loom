@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Loom DSL テスト</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 { color: #333; }
+    h2 { color: #666; margin-top: 30px; font-size: 18px; }
+    #results { margin: 20px 0; }
+    .test-result { padding: 8px 12px; margin: 4px 0; border-radius: 4px; font-size: 14px; }
+    .test-pass { background: #e8f5e9; color: #2e7d32; }
+    .test-fail { background: #ffebee; color: #c62828; }
+    .summary { margin-top: 20px; padding: 16px; border-radius: 4px; font-size: 18px; font-weight: bold; }
+    .summary-pass { background: #c8e6c9; color: #1b5e20; }
+    .summary-fail { background: #ffcdd2; color: #b71c1c; }
+  </style>
+</head>
+<body>
+  <h1>Loom DSL テスト</h1>
+  <div id="results"></div>
+  <script type="module">
+    import { parseDSL, parseDSLToAST, compileToGraph, formatDSL, LoomDSLError } from "../src/loom-dsl.js";
+    import { presets } from "../editor/presets.js";
+
+    const results = [];
+    function test(name, fn) { results.push({ name, fn }); }
+
+    function assert(cond, msg) {
+      if (!cond) throw new Error(msg || "assertion failed");
+    }
+    function assertEqual(a, b, msg) {
+      const av = JSON.stringify(a), bv = JSON.stringify(b);
+      if (av !== bv) throw new Error(msg || `expected ${bv}, got ${av}`);
+    }
+    function assertThrows(fn, code) {
+      try { fn(); }
+      catch (e) {
+        if (e.code === code) return;
+        throw new Error(`expected LoomDSLError code ${code}, got ${e.code || e.message}`);
+      }
+      throw new Error(`expected throw with code ${code}, but no error thrown`);
+    }
+    function hasEdge(edges, from, to) {
+      return edges.some(e => e.from === from && e.to === to);
+    }
+    function hasNode(nodes, id, type) {
+      return nodes.some(n => n.id === id && n.type === type);
+    }
+
+    // ── Test 1: simple assignment ─────────────────────────────────────────────
+    test("1. 単純な代入: t = clock()", () => {
+      const g = parseDSL("t = clock()");
+      assert(hasNode(g.nodes, "t", "clock"), "clock node exists");
+      assertEqual(g.edges, []);
+    });
+
+    // ── Test 2: named argument ────────────────────────────────────────────────
+    test("2. 名前付き引数: sine(t, freq: 0.3)", () => {
+      const g = parseDSL(`t = clock()\nwave = sine(t, freq: 0.3)`);
+      assert(hasNode(g.nodes, "wave", "sine"), "sine node");
+      assert(hasEdge(g.edges, "t.t", "wave.t"), "t → wave.t edge");
+      assertEqual(g.nodes.find(n => n.id === "wave").params, { freq: 0.3 });
+    });
+
+    // ── Test 3: single pipe ───────────────────────────────────────────────────
+    test("3. パイプ単一: t |> sine(freq: 0.3)", () => {
+      const g = parseDSL(`t = clock()\nwave = t |> sine(freq: 0.3)`);
+      assert(hasNode(g.nodes, "wave", "sine"), "sine node");
+      assert(hasEdge(g.edges, "t.t", "wave.t"), "t → wave.t edge");
+      assertEqual(g.nodes.find(n => n.id === "wave").params, { freq: 0.3 });
+    });
+
+    // ── Test 4: pipe chain (3+ stages) ───────────────────────────────────────
+    test("4. パイプチェーン 3段: t |> sine |> map", () => {
+      const dsl = `t = clock()
+result = t |> sine(freq: 0.3) |> map(inMin: -1, inMax: 1, outMin: 100, outMax: 700)`;
+      const g = parseDSL(dsl);
+      assert(hasNode(g.nodes, "result", "map"), "map node");
+      // intermediate sine node should exist
+      const sineNode = g.nodes.find(n => n.type === "sine");
+      assert(sineNode, "sine node exists");
+      assert(hasEdge(g.edges, "t.t", `${sineNode.id}.t`), "t → sine.t");
+      assert(hasEdge(g.edges, `${sineNode.id}.out`, "result.value"), "sine → map");
+    });
+
+    // ── Test 5: multi-line continuation with indent ───────────────────────────
+    test("5. インデント継続 (|> を次行に)", () => {
+      const dsl = `t = clock()
+result = t
+  |> sine(freq: 0.3)
+  |> map(inMin: -1, inMax: 1, outMin: 100, outMax: 700)`;
+      const g = parseDSL(dsl);
+      assert(hasNode(g.nodes, "result", "map"), "map node");
+      const sineNode = g.nodes.find(n => n.type === "sine");
+      assert(sineNode, "sine node");
+      assert(hasEdge(g.edges, `${sineNode.id}.out`, "result.value"), "sine → map");
+    });
+
+    // ── Test 6: multi-line args inside parens ─────────────────────────────────
+    test("6. 括弧内の改行", () => {
+      const dsl = `t = clock()
+result = map(
+  t,
+  inMin: 0,
+  inMax: 10,
+  outMin: 100,
+  outMax: 700
+)`;
+      const g = parseDSL(dsl);
+      assert(hasNode(g.nodes, "result", "map"), "map node");
+      assert(hasEdge(g.edges, "t.t", "result.value"), "t → result");
+      const mp = g.nodes.find(n => n.id === "result").params;
+      assertEqual(mp.inMin, 0);
+      assertEqual(mp.outMax, 700);
+    });
+
+    // ── Test 7: comment lines are skipped ────────────────────────────────────
+    test("7. コメント行のスキップ", () => {
+      const dsl = `# 時間ソース
+t = clock()  # クロック
+# 波形
+wave = sine(t, freq: 0.5)`;
+      const g = parseDSL(dsl);
+      assert(hasNode(g.nodes, "t", "clock"));
+      assert(hasNode(g.nodes, "wave", "sine"));
+    });
+
+    // ── Test 8: blank line breaks pipe chain ──────────────────────────────────
+    test("8. 空行でチェーンが切れる (エラー)", () => {
+      const dsl = `t = clock()
+result = t
+
+  |> sine(freq: 0.3)`;
+      // blank line before |> – the |> on the next line starts a new statement → error
+      assertThrows(() => parseDSL(dsl), 'UNEXPECTED_TOKEN');
+    });
+
+    // ── Test 9: commutative positional args ───────────────────────────────────
+    test("9. 可換ノードの位置引数: add(a, b)", () => {
+      const dsl = `t = clock()
+wave = sine(t, freq: 0.5)
+result = add(t, wave)`;
+      const g = parseDSL(dsl);
+      assert(hasNode(g.nodes, "result", "add"), "add node");
+      assert(hasEdge(g.edges, "t.t", "result.a"), "t → result.a");
+      assert(hasEdge(g.edges, "wave.out", "result.b"), "wave → result.b");
+    });
+
+    // ── Test 10: non-commutative positional arg error ─────────────────────────
+    test("10. 非可換ノードで位置引数 → エラー", () => {
+      const dsl = `t = clock()
+wave = sine(t, freq: 0.5)
+result = subtract(t, wave)`;
+      assertThrows(() => parseDSL(dsl), 'MISSING_ARGUMENT_NAME');
+    });
+
+    // ── Test 11: render statement ─────────────────────────────────────────────
+    test("11. render 文: render point(x: x, y: y)", () => {
+      const dsl = `t = clock()
+x = sine(t, freq: 0.3)
+y = cosine(t, freq: 0.5)
+render point(x: x, y: y, color: "#00ff00", trail: 0.05)`;
+      const g = parseDSL(dsl);
+      assert(g.render, "render config exists");
+      assertEqual(g.render.type, "point");
+      assertEqual(g.render.color, "#00ff00");
+      assertEqual(g.render.trail, 0.05);
+      assert(g.render.x.includes("x."), "x ref");
+      assert(g.render.y.includes("y."), "y ref");
+    });
+
+    // ── Test 12: identifier reference and edge generation ────────────────────
+    test("12. 識別子参照とエッジ生成", () => {
+      const dsl = `t = clock()
+a = sine(t, freq: 0.3)
+b = cosine(a, freq: 0.5)`;
+      const g = parseDSL(dsl);
+      assert(hasEdge(g.edges, "t.t", "a.t"), "t → a.t");
+      assert(hasEdge(g.edges, "a.out", "b.t"), "a.out → b.t");
+    });
+
+    // ── Test 13: numeric literal goes to params ───────────────────────────────
+    test("13. 数値リテラルの params 格納", () => {
+      const dsl = `t = clock()
+wave = sine(t, freq: 0.3, amplitude: 2)`;
+      const g = parseDSL(dsl);
+      const params = g.nodes.find(n => n.id === "wave").params;
+      assertEqual(params.freq, 0.3);
+      assertEqual(params.amplitude, 2);
+    });
+
+    // ── Test 14: undefined identifier error ──────────────────────────────────
+    test("14. 未定義識別子 → エラー", () => {
+      assertThrows(() => parseDSL("wave = sine(undef, freq: 0.3)"), 'UNDEFINED_IDENTIFIER');
+    });
+
+    // ── Test 15: lissajous full preset equivalence ────────────────────────────
+    test("15. lissajous プリセット: DSL ≡ JSON グラフ", () => {
+      const preset = presets.lissajous;
+      const g = parseDSL(preset.dsl);
+
+      // Check all node types exist
+      const types = g.nodes.map(n => n.type);
+      assert(types.includes("clock"), "clock node");
+      assert(types.includes("sine"), "sine node");
+      assert(types.includes("cosine"), "cosine node");
+      const mapNodes = g.nodes.filter(n => n.type === "map");
+      assertEqual(mapNodes.length, 2, "two map nodes");
+
+      // Check render config
+      assert(g.render, "render present");
+      assertEqual(g.render.type, "point");
+      assertEqual(g.render.color, "#00ff00");
+      assertEqual(g.render.trail, 0.05);
+
+      // Check edge count: clock→sine, clock→cosine, sine→mapX, cosine→mapY = 4 edges
+      assertEqual(g.edges.length, 4, "4 edges total");
+
+      // Verify node params
+      const sineNode = g.nodes.find(n => n.type === "sine");
+      assertEqual(sineNode.params.freq, 0.3);
+      const cosineNode = g.nodes.find(n => n.type === "cosine");
+      assertEqual(cosineNode.params.freq, 0.5);
+    });
+
+    // ── Run tests ─────────────────────────────────────────────────────────────
+    test("16. parseDSLToAST: assignment/call schema", () => {
+      const { ast, errors } = parseDSLToAST("t = clock()");
+      assertEqual(errors.length, 0);
+      const s = ast.body[0];
+      assertEqual(s.type, "AssignmentStatement");
+      assertEqual(s.target.type, "Identifier");
+      assertEqual(s.value.type, "CallExpression");
+    });
+
+    test("16b. parseDSLToAST: import metadata", () => {
+      const { ast, errors } = parseDSLToAST("import math\nimport fs\n\nx = constant(value: 1)");
+      assertEqual(errors.length, 0);
+      assertEqual(ast.imports.map(x => x.name), ["math", "fs"]);
+      assertEqual(ast.body[0].type, "AssignmentStatement");
+    });
+    test("16c. parseDSLToAST: qualified call and effect statement", () => {
+      const { ast, errors } = parseDSLToAST("import console\nimport text\n\nmessage = text.upper(\"hello\")\nconsole.log(message)");
+      assertEqual(errors.length, 0);
+      assertEqual(ast.body[0].value.callee.name, "text.upper");
+      assertEqual(ast.body[1].type, "ExpressionStatement");
+      assertEqual(ast.body[1].expression.callee.name, "console.log");
+    });
+
+    test("17. parseDSLToAST: pipe expression and comments", () => {
+      const src = `# lead\na = clock() # tail\n# lone\nb = a |> sine(freq: 0.3)`;
+      const { ast } = parseDSLToAST(src);
+      const b = ast.body.find(x => x.type === "AssignmentStatement" && x.target.name === "b");
+      assert(b.leadingComments && b.leadingComments.length === 1, "adjacent comment becomes leading");
+      assertEqual(b.value.type, "PipeExpression");
+      assertEqual(b.value.right.type, "CallExpression");
+    });
+    test("17b. parseDSLToAST: leading/trailing/standalone comment split", () => {
+      const src = `# lead\na = clock() # trail\n\n# standalone`;
+      const { ast } = parseDSLToAST(src);
+      const stmt = ast.body.find(x => x.type === "AssignmentStatement");
+      assert(stmt.leadingComments && stmt.leadingComments.length === 1, "leading comment attached");
+      assert(stmt.trailingComment, "trailing comment attached");
+      const standalone = ast.body.filter(x => x.type === "CommentStatement");
+      assertEqual(standalone.length, 1, "only free comment becomes CommentStatement");
+    });
+
+    test("18. compileToGraph is non-throwing", () => {
+      const { ast } = parseDSLToAST("a = unknownNode()");
+      const { errors } = compileToGraph(ast);
+      assert(errors.length > 0, "compile error returned");
+    });
+    test("18b. compileToGraph supports null/array/object literal params", () => {
+      const src = `c = constant(value: null)\na = constant(value: [1, 2, 3])\no = constant(value: {x: 1, y: true})`;
+      const { ast } = parseDSLToAST(src);
+      const out = compileToGraph(ast);
+      assertEqual(out.errors.length, 0);
+      assertEqual(out.graph.nodes.find(n => n.id === "c").params.value, null);
+      assertEqual(out.graph.nodes.find(n => n.id === "a").params.value[2], 3);
+      assertEqual(out.graph.nodes.find(n => n.id === "o").params.value.x, 1);
+    });
+    test("18c. compileToGraph nested expression in object returns CompileError with span", () => {
+      const src = `t = clock()\na = constant(value: {x: t})`;
+      const { ast } = parseDSLToAST(src);
+      const out = compileToGraph(ast);
+      assert(out.errors.length > 0, "compile error exists");
+      assert(out.errors[0].span && out.errors[0].span.start.line > 0, "span exists");
+    });
+    test("18d. compileToGraph includes imports metadata", () => {
+      const src = `import math\nimport fs\n\nx = constant(value: 1)`;
+      const { ast } = parseDSLToAST(src);
+      const out = compileToGraph(ast);
+      assertEqual(out.errors.length, 0);
+      assertEqual(out.graph.imports, ["math", "fs"]);
+    });
+    test("18e. compileToGraph lowers effect statements to effect nodes", () => {
+      const src = `import console\nmessage = constant(value: "hello")\nconsole.log(message)`;
+      const { ast } = parseDSLToAST(src);
+      const out = compileToGraph(ast);
+      assertEqual(out.errors.length, 0);
+      assert(out.graph.nodes.some(n => n.id === "_effect1" && n.type === "console.log"), "effect node generated");
+      assert(out.graph.edges.some(e => e.to === "_effect1.value"), "effect edge generated");
+    });
+
+    test("19. parseDSLToAST parse error is non-throwing", () => {
+      const out = parseDSLToAST("a = ");
+      assert(out.errors.length > 0, "parse errors returned");
+    });
+    test("19b. Source AST v1 has no EdgeStatement nodes", () => {
+      const { ast } = parseDSLToAST("t = clock()");
+      assert(!ast.body.some(s => s.type === "EdgeStatement"), "no EdgeStatement in v1 AST body");
+    });
+
+    test("20. formatDSL roundtrip keeps pipe/raw", () => {
+      const src = `t = clock()\nwave = t |> sine(freq: 4.5e-2)\nrender point(x: wave, color: '#00ff00')`;
+      const a1 = parseDSLToAST(src).ast;
+      const formatted = formatDSL(a1);
+      const a2 = parseDSLToAST(formatted).ast;
+      assert(formatted.includes("|>"), "pipe kept");
+      assert(formatted.includes("4.5e-2"), "raw number kept");
+      assertEqual(JSON.stringify(a1, (k,v)=>k==="span"?undefined:v), JSON.stringify(a2, (k,v)=>k==="span"?undefined:v));
+    });
+
+    test("21. formatDSL call multiline + deterministic", () => {
+      const src = `result = map(t, inMin: 0, inMax: 10, outMin: 100, outMax: 700)`;
+      const ast = parseDSLToAST(src).ast;
+      const out1 = formatDSL(ast, { maxInlineParams: 2 });
+      const out2 = formatDSL(ast, { maxInlineParams: 2 });
+      assert(out1.includes("map(\n"), "multiline call");
+      assertEqual(out1, out2, "deterministic");
+    });
+    test("21b. formatDSL preserves imports and blank line", () => {
+      const src = `import math\nimport fs\n\nx = constant(value: 1)`;
+      const ast = parseDSLToAST(src).ast;
+      const out = formatDSL(ast);
+      assert(out.startsWith("import math\nimport fs\n\nx = constant(value: 1)\n"), "imports kept at top");
+    });
+    test("21c. formatDSL preserves qualified calls and effect statements", () => {
+      const src = `import console\nimport text\n\nmessage = text.upper("hello")\nconsole.log(message)`;
+      const ast = parseDSLToAST(src).ast;
+      const out = formatDSL(ast);
+      assert(out.includes('message = text.upper("hello")'), "qualified assignment preserved");
+      assert(out.includes('console.log(message)'), "effect statement preserved");
+    });
+
+    const el = document.getElementById("results");
+    let pass = 0, fail = 0;
+    const failures = [];
+
+    for (const { name, fn } of results) {
+      const div = document.createElement("div");
+      div.className = "test-result";
+      try {
+        fn();
+        div.classList.add("test-pass");
+        div.textContent = `✅ ${name}`;
+        pass++;
+      } catch (e) {
+        div.classList.add("test-fail");
+        div.textContent = `❌ ${name}: ${e.message}`;
+        fail++;
+        failures.push({ name, message: e.message });
+      }
+      el.appendChild(div);
+    }
+
+    const summary = document.createElement("div");
+    summary.className = `summary ${fail === 0 ? "summary-pass" : "summary-fail"}`;
+    summary.textContent = `${pass} passed, ${fail} failed`;
+    el.appendChild(summary);
+
+    window.__loomTestResults = { pass, fail, failures };
+  </script>
+</body>
+</html>

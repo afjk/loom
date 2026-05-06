@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>DOM Transform Sink Demo</title>
+  <style>
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: radial-gradient(circle at 20% 20%, #151a2a, #090b12 55%); color: #e7ebff; font-family: Inter, sans-serif; }
+    #card { --glow: 0.35; --hue: 210; width: 280px; padding: 20px; border-radius: 16px; background: hsl(var(--hue), 80%, 55%); box-shadow: 0 12px 42px hsla(var(--hue), 90%, 60%, var(--glow)); transform-origin: center; text-align: center; color: #0a1022; font-weight: 700; }
+    #readout { font-family: ui-monospace, monospace; font-size: 13px; margin-top: 8px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div id="card">
+    DOM Transform Sink
+    <div id="readout">starting...</div>
+  </div>
+
+  <script type="module">
+    import { Loom } from "../src/loom.js";
+
+    const graph = {
+      nodes: [
+        { id: "t", type: "clock" },
+        { id: "sx", type: "sine", params: { freq: 0.15, amplitude: 1 } },
+        { id: "cy", type: "cosine", params: { freq: 0.12, amplitude: 1 } },
+        { id: "scaleWave", type: "sine", params: { freq: 0.08, amplitude: 1 } },
+        { id: "rotWave", type: "sine", params: { freq: 0.05, amplitude: 1 } },
+        { id: "hueWave", type: "sine", params: { freq: 0.06, amplitude: 1 } },
+
+        { id: "mapX", type: "map", params: { inMin: -1, inMax: 1, outMin: -120, outMax: 120 } },
+        { id: "mapY", type: "map", params: { inMin: -1, inMax: 1, outMin: -80, outMax: 80 } },
+        { id: "mapScale", type: "map", params: { inMin: -1, inMax: 1, outMin: 0.9, outMax: 1.15 } },
+        { id: "mapRotate", type: "map", params: { inMin: -1, inMax: 1, outMin: -18, outMax: 18 } },
+        { id: "mapGlow", type: "map", params: { inMin: -1, inMax: 1, outMin: 0.2, outMax: 0.75 } },
+        { id: "mapHue", type: "map", params: { inMin: -1, inMax: 1, outMin: 180, outMax: 320 } },
+
+        { id: "transform", type: "setTransform2D", params: { target: "#card", unit: "px", rotateUnit: "deg" } },
+        { id: "setGlow", type: "setCssVar", params: { target: "#card", name: "glow" } },
+        { id: "setHue", type: "setCssVar", params: { target: "#card", name: "--hue" } },
+        { id: "text", type: "setText", params: { target: "#readout" } }
+      ],
+      edges: [
+        { from: "t.t", to: "sx.t" }, { from: "t.t", to: "cy.t" }, { from: "t.t", to: "scaleWave.t" }, { from: "t.t", to: "rotWave.t" }, { from: "t.t", to: "hueWave.t" },
+        { from: "sx.out", to: "mapX.value" }, { from: "cy.out", to: "mapY.value" }, { from: "scaleWave.out", to: "mapScale.value" }, { from: "rotWave.out", to: "mapRotate.value" },
+        { from: "scaleWave.out", to: "mapGlow.value" }, { from: "hueWave.out", to: "mapHue.value" },
+        { from: "mapX.out", to: "transform.x" }, { from: "mapY.out", to: "transform.y" }, { from: "mapScale.out", to: "transform.scale" }, { from: "mapRotate.out", to: "transform.rotate" },
+        { from: "mapGlow.out", to: "setGlow.value" }, { from: "mapHue.out", to: "setHue.value" },
+        { from: "mapHue.out", to: "text.value" }
+      ]
+    };
+
+    new Loom(graph).start();
+  </script>
+</body>
+</html>

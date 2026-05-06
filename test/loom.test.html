@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Loom テスト</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+    }
+    h2 {
+      color: #666;
+      margin-top: 30px;
+      font-size: 18px;
+    }
+    #results {
+      margin: 20px 0;
+    }
+    .test-result {
+      padding: 8px 12px;
+      margin: 4px 0;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .test-pass {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    .test-fail {
+      background: #ffebee;
+      color: #c62828;
+    }
+    .summary {
+      margin-top: 20px;
+      padding: 16px;
+      border-radius: 4px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .summary-pass {
+      background: #c8e6c9;
+      color: #1b5e20;
+    }
+    .summary-fail {
+      background: #ffcdd2;
+      color: #b71c1c;
+    }
+  </style>
+</head>
+<body>
+  <h1>Loom テスト</h1>
+  <div id="results"></div>
+  <script type="module">
+    import { Loom, LoomError, NODE_TYPES } from "../src/loom.js";
+    import { parseDSL, LoomDSLError } from "../src/loom-dsl.js";
+
+    const tests = [];
+    function test(name, fn) { tests.push({ name, fn }); }
+    function assert(cond, msg) { if (!cond) throw new Error(msg || "assertion failed"); }
+    function assertEqual(a, b, msg) {
+      if (Math.abs(a - b) > 1e-9 && a !== b) {
+        throw new Error(msg || `expected ${b}, got ${a}`);
+      }
+    }
+    function assertThrows(fn, code) {
+      try { fn(); }
+      catch (e) {
+        if (e.code === code) return;
+        throw new Error(`expected LoomError code ${code}, got ${e.code || e.message}`);
+      }
+      throw new Error(`expected throw with code ${code}, but no error thrown`);
+    }
+    function assertApprox(a, b, epsilon = 1e-6, msg) {
+      if (Math.abs(a - b) > epsilon) {
+        throw new Error(msg || `expected ${b} ± ${epsilon}, got ${a}`);
+      }
+    }
+    function runTimes(engine, times) {
+      for (const time of times) {
+        engine.evaluateAt(time);
+      }
+    }
+
+    // ノード単体の動作テスト
+    test("clock ノードが時刻を出力する", () => {
+      const graph = {
+        nodes: [{ id: "timer", type: "clock" }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(1.5);
+      assertEqual(engine.getValue("timer.t"), 1.5);
+    });
+
+    test("constant ノードが値を出力する", () => {
+      const graph = {
+        nodes: [{ id: "const", type: "constant", params: { value: 42 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("const.out"), 42);
+    });
+
+    test("sine ノードが t=0 で 0 を出力する", () => {
+      const graph = {
+        nodes: [
+          { id: "timer", type: "clock" },
+          { id: "wave", type: "sine" }
+        ],
+        edges: [{ from: "timer.t", to: "wave.t" }]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("wave.out"), 0, "sine(0) should be 0");
+    });
+
+    test("sine ノードが t=0.25, freq=1 で 1 を出力する", () => {
+      const graph = {
+        nodes: [
+          { id: "timer", type: "clock" },
+          { id: "wave", type: "sine" }
+        ],
+        edges: [{ from: "timer.t", to: "wave.t" }]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0.25);
+      assertEqual(engine.getValue("wave.out"), 1, "sine(0.25 * 2π) should be 1");
+    });
+
+    test("add ノードが加算を行う", () => {
+      const graph = {
+        nodes: [{ id: "adder", type: "add", params: { a: 3, b: 4 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("adder.out"), 7);
+    });
+
+    test("multiply ノードが乗算を行う", () => {
+      const graph = {
+        nodes: [{ id: "multiplier", type: "multiply", params: { a: 3, b: 4 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("multiplier.out"), 12);
+    });
+
+    // 第1陣: 基本演算系
+    test("subtract ノードが減算を行う", () => {
+      const graph = {
+        nodes: [{ id: "subtracter", type: "subtract", params: { a: 10, b: 3 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("subtracter.out"), 7);
+    });
+
+    test("divide ノードが除算を行う", () => {
+      const graph = {
+        nodes: [{ id: "divider", type: "divide", params: { a: 12, b: 3 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("divider.out"), 4);
+    });
+
+    test("divide ノードが b=0 の場合 0 を返す", () => {
+      const graph = {
+        nodes: [{ id: "divider", type: "divide", params: { a: 10, b: 0 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("divider.out"), 0);
+    });
+
+    test("mod ノードが剰余を返す", () => {
+      const graph = {
+        nodes: [{ id: "modder", type: "mod", params: { a: 7, b: 3 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("modder.out"), 1);
+    });
+
+    test("mod ノードが負の入力で正を返す", () => {
+      const graph = {
+        nodes: [{ id: "modder", type: "mod", params: { a: -1, b: 3 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("modder.out"), 2);
+    });
+
+    test("negate ノードが符号反転を行う", () => {
+      const graph = {
+        nodes: [{ id: "negater", type: "negate", params: { a: 5 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("negater.out"), -5);
+    });
+
+    test("abs ノードが絶対値を返す", () => {
+      const graph = {
+        nodes: [{ id: "abser", type: "abs", params: { a: -7 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("abser.out"), 7);
+    });
+
+    // 第2陣: 範囲操作系＋コサイン
+    test("clamp ノードが範囲内の値をクランプする", () => {
+      const graph = {
+        nodes: [{ id: "clamper", type: "clamp", params: { value: 0.5, min: 0, max: 1 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("clamper.out"), 0.5);
+    });
+
+    test("clamp ノードが最小値より小さい値をクランプする", () => {
+      const graph = {
+        nodes: [{ id: "clamper", type: "clamp", params: { value: -0.5, min: 0, max: 1 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("clamper.out"), 0);
+    });
+
+    test("clamp ノードが min > max の場合 min を返す", () => {
+      const graph = {
+        nodes: [{ id: "clamper", type: "clamp", params: { value: 0.5, min: 1, max: 0 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("clamper.out"), 1);
+    });
+
+    test("lerp ノードが線形補間を行う", () => {
+      const graph = {
+        nodes: [{ id: "lerper", type: "lerp", params: { a: 0, b: 10, t: 0.5 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("lerper.out"), 5);
+    });
+
+    test("smoothstep ノードが edge0 === edge1 の場合の境界判定を行う", () => {
+      const graph = {
+        nodes: [{ id: "smoother", type: "smoothstep", params: { x: 0.5, edge0: 1, edge1: 1 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("smoother.out"), 0);
+    });
+
+    test("map ノードが inMin === inMax の場合 outMin を返す", () => {
+      const graph = {
+        nodes: [{ id: "mapper", type: "map", params: { value: 5, inMin: 1, inMax: 1, outMin: 10, outMax: 20 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("mapper.out"), 10);
+    });
+
+    test("map ノードが clamp=false で外挿を行う", () => {
+      const graph = {
+        nodes: [{ id: "mapper", type: "map", params: { value: 2, inMin: 0, inMax: 1, outMin: 0, outMax: 10, clamp: false } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("mapper.out"), 20);
+    });
+
+    test("map ノードが clamp=true で外挿をクランプする", () => {
+      const graph = {
+        nodes: [{ id: "mapper", type: "map", params: { value: 2, inMin: 0, inMax: 1, outMin: 0, outMax: 10, clamp: true } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("mapper.out"), 10);
+    });
+
+    test("cosine ノードが t=0 で amplitude+offset を返す", () => {
+      const graph = {
+        nodes: [{ id: "cosiner", type: "cosine", params: { t: 0, freq: 1, amplitude: 1, phase: 0, offset: 0 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("cosiner.out"), 1);
+    });
+
+    // 入力解決ルールのテスト
+    test("エッジ接続がある場合、上流の値が使われる", () => {
+      const graph = {
+        nodes: [
+          { id: "a", type: "constant", params: { value: 10 } },
+          { id: "b", type: "add", params: { a: 100, b: 5 } }
+        ],
+        edges: [{ from: "a.out", to: "b.a" }]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("b.out"), 15, "edge value (10) should override params (100)");
+    });
+
+    test("エッジ接続がなく params がある場合、params の値が使われる", () => {
+      const graph = {
+        nodes: [{ id: "adder", type: "add", params: { a: 10, b: 20 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("adder.out"), 30);
+    });
+
+    test("どちらもない場合、ノード型のデフォルトが使われる", () => {
+      const graph = {
+        nodes: [{ id: "adder", type: "add" }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("adder.out"), 0, "add defaults are 0, 0");
+    });
+
+    test("add で a のみ接続、b は params の混在パターン", () => {
+      const graph = {
+        nodes: [
+          { id: "const5", type: "constant", params: { value: 5 } },
+          { id: "adder", type: "add", params: { b: 10 } }
+        ],
+        edges: [{ from: "const5.out", to: "adder.a" }]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("adder.out"), 15);
+    });
+
+    // グラフ評価のテスト
+    test("clock → sine グラフが正しく評価される", () => {
+      const graph = {
+        nodes: [
+          { id: "timer", type: "clock" },
+          { id: "wave", type: "sine", params: { freq: 1 } }
+        ],
+        edges: [{ from: "timer.t", to: "wave.t" }]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0.25);
+      const expected = Math.sin(0.25 * 2 * Math.PI);
+      assertEqual(engine.getValue("wave.out"), expected);
+    });
+
+    test("const10 + clock → multiply×2 グラフが評価される", () => {
+      const graph = {
+        nodes: [
+          { id: "const10", type: "constant", params: { value: 10 } },
+          { id: "timer", type: "clock" },
+          { id: "adder", type: "add" },
+          { id: "doubler", type: "multiply", params: { b: 2 } }
+        ],
+        edges: [
+          { from: "const10.out", to: "adder.a" },
+          { from: "timer.t", to: "adder.b" },
+          { from: "adder.out", to: "doubler.a" }
+        ]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(5);
+      // 10 + 5 = 15, 15 * 2 = 30
+      assertEqual(engine.getValue("doubler.out"), 30);
+    });
+
+    // エラー検出のテスト
+    test("DUPLICATE_NODE_ID エラー", () => {
+      const graph = {
+        nodes: [
+          { id: "node1", type: "constant" },
+          { id: "node1", type: "constant" }
+        ],
+        edges: []
+      };
+      assertThrows(() => new Loom(graph), 'DUPLICATE_NODE_ID');
+    });
+
+    test("UNKNOWN_NODE_TYPE エラー", () => {
+      const graph = {
+        nodes: [{ id: "node1", type: "unknown" }],
+        edges: []
+      };
+      assertThrows(() => new Loom(graph), 'UNKNOWN_NODE_TYPE');
+    });
+
+    test("UNKNOWN_NODE エラー", () => {
+      const graph = {
+        nodes: [{ id: "node1", type: "constant" }],
+        edges: [{ from: "node2.out", to: "node1.out" }]
+      };
+      assertThrows(() => new Loom(graph), 'UNKNOWN_NODE');
+    });
+
+    test("UNKNOWN_PORT (output) エラー", () => {
+      const graph = {
+        nodes: [
+          { id: "node1", type: "constant" },
+          { id: "node2", type: "add" }
+        ],
+        edges: [{ from: "node1.unknown", to: "node2.a" }]
+      };
+      assertThrows(() => new Loom(graph), 'UNKNOWN_PORT');
+    });
+
+    test("UNKNOWN_PORT (input) エラー", () => {
+      const graph = {
+        nodes: [
+          { id: "node1", type: "constant" },
+          { id: "node2", type: "add" }
+        ],
+        edges: [{ from: "node1.out", to: "node2.unknown" }]
+      };
+      assertThrows(() => new Loom(graph), 'UNKNOWN_PORT');
+    });
+
+    test("DUPLICATE_INPUT_EDGE エラー", () => {
+      const graph = {
+        nodes: [
+          { id: "const1", type: "constant" },
+          { id: "const2", type: "constant" },
+          { id: "adder", type: "add" }
+        ],
+        edges: [
+          { from: "const1.out", to: "adder.a" },
+          { from: "const2.out", to: "adder.a" }
+        ]
+      };
+      assertThrows(() => new Loom(graph), 'DUPLICATE_INPUT_EDGE');
+    });
+
+    test("CYCLE エラー", () => {
+      const graph = {
+        nodes: [
+          { id: "a", type: "add" },
+          { id: "b", type: "add" }
+        ],
+        edges: [
+          { from: "a.out", to: "b.a" },
+          { from: "b.out", to: "a.a" }
+        ]
+      };
+      assertThrows(() => new Loom(graph), 'CYCLE');
+    });
+
+    test("INVALID_GRAPH: nodes が配列でない", () => {
+      const graph = {
+        nodes: { id: "node1" },
+        edges: []
+      };
+      assertThrows(() => new Loom(graph), 'INVALID_GRAPH');
+    });
+
+    // load() の動作テスト
+    test("load() 直後 getValue は古いグラフの値を返す", () => {
+      const graph1 = {
+        nodes: [{ id: "const1", type: "constant", params: { value: 10 } }],
+        edges: []
+      };
+      const graph2 = {
+        nodes: [{ id: "const2", type: "constant", params: { value: 20 } }],
+        edges: []
+      };
+      const engine = new Loom(graph1);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("const1.out"), 10);
+
+      engine.load(graph2);
+      assertEqual(engine.getValue("const1.out"), 10, "should still be old graph value");
+    });
+
+    test("load() 後の evaluateAt で新しいグラフに切り替わる", () => {
+      const graph1 = {
+        nodes: [{ id: "const1", type: "constant", params: { value: 10 } }],
+        edges: []
+      };
+      const graph2 = {
+        nodes: [{ id: "const2", type: "constant", params: { value: 20 } }],
+        edges: []
+      };
+      const engine = new Loom(graph1);
+      engine.evaluateAt(0);
+      engine.load(graph2);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("const2.out"), 20);
+    });
+
+    test("不正なグラフを load() するとエラーがスローされる", () => {
+      const graph1 = {
+        nodes: [{ id: "const1", type: "constant", params: { value: 10 } }],
+        edges: []
+      };
+      const graph2 = {
+        nodes: [
+          { id: "a", type: "add" },
+          { id: "b", type: "add" }
+        ],
+        edges: [
+          { from: "a.out", to: "b.a" },
+          { from: "b.out", to: "a.a" }
+        ]
+      };
+      const engine = new Loom(graph1);
+      engine.evaluateAt(0);
+      assertThrows(() => engine.load(graph2), 'CYCLE');
+      // 保留中グラフが更新されていないことを確認
+      assertEqual(engine.getValue("const1.out"), 10);
+    });
+
+    // state ノード
+    test("smoothLerp: dt=1 で指数収束する", () => {
+      const result = NODE_TYPES.smoothLerp.evaluate(
+        { value: 10 },
+        { rate: 5, initial: 0 },
+        { prevOut: 0, dt: 1 }
+      );
+      assertApprox(result.out, 10 * (1 - Math.exp(-5)), 1e-6);
+    });
+
+    test("smoothLerp: 繰り返し評価で単調増加し 100 に近づく", () => {
+      let prevOut = 0;
+      let last = prevOut;
+      for (let i = 0; i < 10; i++) {
+        const result = NODE_TYPES.smoothLerp.evaluate(
+          { value: 100 },
+          { rate: 10, initial: 0 },
+          { prevOut, dt: 0.1 }
+        );
+        assert(result.out >= last, `expected monotonic increase, got ${result.out} after ${last}`);
+        last = result.out;
+        prevOut = result.out;
+      }
+      assert(last > 90, `expected final value > 90, got ${last}`);
+    });
+
+    test("lowpass: tau=0.2, dt=0.2 で 5.0 になる", () => {
+      const result = NODE_TYPES.lowpass.evaluate(
+        { value: 10 },
+        { tau: 0.2, initial: 0 },
+        { prevOut: 0, dt: 0.2 }
+      );
+      assertApprox(result.out, 5.0, 1e-9);
+    });
+
+    test("lowpass: tau=0 で即時追従する", () => {
+      const result = NODE_TYPES.lowpass.evaluate(
+        { value: 10 },
+        { tau: 0, initial: 0 },
+        { prevOut: 3, dt: 0.016 }
+      );
+      assertEqual(result.out, 10);
+    });
+
+    test("delay1: 1フレーム前の入力を返す", () => {
+      let state = 0;
+
+      let result = NODE_TYPES.delay1.evaluate(
+        { value: 5 },
+        { initial: 0 },
+        { prevOut: state, dt: 0.1 }
+      );
+      assertEqual(result.out, 0);
+      state = result._newState;
+
+      result = NODE_TYPES.delay1.evaluate(
+        { value: 7 },
+        { initial: 0 },
+        { prevOut: state, dt: 0.1 }
+      );
+      assertEqual(result.out, 5);
+      state = result._newState;
+
+      result = NODE_TYPES.delay1.evaluate(
+        { value: 9 },
+        { initial: 0 },
+        { prevOut: state, dt: 0.1 }
+      );
+      assertEqual(result.out, 7);
+    });
+
+    test("integrate: max クランプが効く", () => {
+      let prevOut = 0;
+      let result = NODE_TYPES.integrate.evaluate(
+        { value: 2 },
+        { initial: 0, min: 0, max: 1 },
+        { prevOut, dt: 0.3 }
+      );
+      assertApprox(result.out, 0.6, 1e-9);
+      prevOut = result.out;
+
+      result = NODE_TYPES.integrate.evaluate(
+        { value: 2 },
+        { initial: 0, min: 0, max: 1 },
+        { prevOut, dt: 0.3 }
+      );
+      assertApprox(result.out, 1.0, 1e-9);
+    });
+
+    test("integrate: min クランプが効く", () => {
+      const result = NODE_TYPES.integrate.evaluate(
+        { value: -3 },
+        { initial: 0.2, min: 0, max: 1 },
+        { prevOut: 0.2, dt: 0.2 }
+      );
+      assertApprox(result.out, 0, 1e-9);
+    });
+
+    test("state: 同じ id で load() すると prevOut を維持する", () => {
+      const engine = new Loom({
+        nodes: [{ id: "acc", type: "integrate", params: { value: 1, initial: 0 } }],
+        edges: []
+      });
+
+      runTimes(engine, [0, 0.05, 0.1]);
+      assertApprox(engine.getValue("acc.out"), 0.1, 1e-9);
+
+      engine.load({
+        nodes: [{ id: "acc", type: "integrate", params: { value: 1, initial: 999 } }],
+        edges: []
+      });
+      engine.evaluateAt(0.15);
+
+      assertApprox(engine.getValue("acc.out"), 0.15, 1e-9);
+    });
+
+    test("state: 新しい id で load() すると initial から始まる", () => {
+      const engine = new Loom({
+        nodes: [{ id: "acc", type: "integrate", params: { value: 1, initial: 0 } }],
+        edges: []
+      });
+
+      runTimes(engine, [0, 0.05, 0.1]);
+      engine.load({
+        nodes: [{ id: "fresh", type: "integrate", params: { value: 1, initial: 5 } }],
+        edges: []
+      });
+      engine.evaluateAt(0.15);
+
+      assertApprox(engine.getValue("fresh.out"), 5.05, 1e-9);
+      assert(engine._prevOuts.has("fresh"), "fresh state should be tracked");
+      assert(!engine._prevOuts.has("acc"), "removed node state should be dropped");
+    });
+
+    test("state: 巨大な dt は 0.1 秒にクランプされる", () => {
+      const engine = new Loom({
+        nodes: [{ id: "acc", type: "integrate", params: { value: 1, initial: 0 } }],
+        edges: []
+      });
+
+      engine.evaluateAt(0);
+      engine.evaluateAt(1);
+      assertApprox(engine.getValue("acc.out"), 0.1, 1e-9);
+    });
+
+    test("state: smoothLerp は 60fps と 30fps でほぼ同じ最終値になる", () => {
+      const graph = {
+        nodes: [{ id: "smooth", type: "smoothLerp", params: { value: 100, rate: 5, initial: 0 } }],
+        edges: []
+      };
+      const engine60 = new Loom(graph);
+      const engine30 = new Loom(graph);
+
+      engine60.evaluateAt(0);
+      for (let i = 1; i <= 60; i++) {
+        engine60.evaluateAt(i / 60);
+      }
+
+      engine30.evaluateAt(0);
+      for (let i = 1; i <= 30; i++) {
+        engine30.evaluateAt(i / 30);
+      }
+
+      const v60 = engine60.getValue("smooth.out");
+      const v30 = engine30.getValue("smooth.out");
+      assertApprox(v60, v30, 1.0, `expected 60fps and 30fps to be within 1, got ${v60} vs ${v30}`);
+    });
+
+    // getValue の境界テスト
+    test("存在しないノード ID で undefined を返す", () => {
+      const graph = {
+        nodes: [{ id: "const1", type: "constant", params: { value: 10 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assert(engine.getValue("nonexistent.out") === undefined);
+    });
+
+    test("存在するノードの存在しないポート名で undefined を返す", () => {
+      const graph = {
+        nodes: [{ id: "const1", type: "constant", params: { value: 10 } }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assert(engine.getValue("const1.nonexistent") === undefined);
+    });
+
+    // sine の詳細テスト
+    test("sine: amplitude が機能する", () => {
+      const graph = {
+        nodes: [
+          { id: "timer", type: "clock" },
+          { id: "wave", type: "sine", params: { amplitude: 2 } }
+        ],
+        edges: [{ from: "timer.t", to: "wave.t" }]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0.25);
+      assertEqual(engine.getValue("wave.out"), 2);
+    });
+
+    test("sine: offset が機能する", () => {
+      const graph = {
+        nodes: [
+          { id: "timer", type: "clock" },
+          { id: "wave", type: "sine", params: { offset: 5 } }
+        ],
+        edges: [{ from: "timer.t", to: "wave.t" }]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("wave.out"), 5);
+    });
+
+    test("sine: phase が機能する", () => {
+      const graph = {
+        nodes: [
+          { id: "timer", type: "clock" },
+          { id: "wave", type: "sine", params: { phase: Math.PI / 2 } }
+        ],
+        edges: [{ from: "timer.t", to: "wave.t" }]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("wave.out"), 1, "sin(π/2) = 1");
+    });
+
+    // ========================================
+    // Phase 1 追加テスト
+    // ========================================
+
+    // 型検査テスト
+    test("TYPE_MISMATCH: Behavior → Event 接続で エラー", () => {
+      const graph = {
+        nodes: [
+          { id: "const1", type: "constant" },
+          { id: "filter1", type: "filter" }
+        ],
+        edges: [{ from: "const1.out", to: "filter1.event" }]
+      };
+      assertThrows(() => new Loom(graph), 'TYPE_MISMATCH');
+    });
+
+    test("TYPE_MISMATCH: Event → Behavior 接続でエラー", () => {
+      const graph = {
+        nodes: [
+          { id: "kd", type: "keyDown" },
+          { id: "add1", type: "add" }
+        ],
+        edges: [{ from: "kd.event", to: "add1.a" }]
+      };
+      assertThrows(() => new Loom(graph), 'TYPE_MISMATCH');
+    });
+
+    test("sample.value への Behavior 接続は許容される", () => {
+      const graph = {
+        nodes: [
+          { id: "const1", type: "constant", params: { value: 42 } },
+          { id: "kd", type: "keyDown" },
+          { id: "samp", type: "sample" }
+        ],
+        edges: [
+          { from: "const1.out", to: "samp.value" },
+          { from: "kd.event", to: "samp.trigger" }
+        ]
+      };
+      // エラーが投げられない（成功テスト）
+      const engine = new Loom(graph);
+      assert(engine !== null);
+    });
+
+    // dispatchEvent テスト
+    test("dispatchEvent: 単発のイベント dispatch が働く", () => {
+      const graph = {
+        nodes: [{ id: "kd", type: "keyDown" }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      engine.dispatchEvent("kd.event", "a");
+      engine.evaluateAt(0);
+      const val = engine.getValue("kd.event");
+      assert(Array.isArray(val) && val.length === 1 && val[0] === "a");
+    });
+
+    test("dispatchEvent: 同一 tick 内で複数 dispatch される", () => {
+      const graph = {
+        nodes: [{ id: "kd", type: "keyDown" }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      engine.dispatchEvent("kd.event", "a");
+      engine.dispatchEvent("kd.event", "b");
+      engine.evaluateAt(0);
+      const val = engine.getValue("kd.event");
+      assert(Array.isArray(val) && val.length === 2 && val[0] === "a" && val[1] === "b");
+    });
+
+    test("dispatchEvent: 次フレームではクリアされる", () => {
+      const graph = {
+        nodes: [{ id: "kd", type: "keyDown" }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      engine.dispatchEvent("kd.event", "a");
+      engine.evaluateAt(0);
+      const v1 = engine.getValue("kd.event");
+      assert(Array.isArray(v1) && v1.length === 1 && v1[0] === "a");
+      engine.evaluateAt(0);
+      const v2 = engine.getValue("kd.event");
+      assert(Array.isArray(v2) && v2.length === 0);
+    });
+
+    test("dispatchEvent: 未知のノードで UNKNOWN_NODE エラー", () => {
+      const graph = {
+        nodes: [{ id: "kd", type: "keyDown" }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      assertThrows(() => engine.dispatchEvent("unknown.event", "x"), 'UNKNOWN_NODE');
+    });
+
+    test("dispatchEvent: 未知のポートで UNKNOWN_PORT エラー", () => {
+      const graph = {
+        nodes: [{ id: "kd", type: "keyDown" }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      assertThrows(() => engine.dispatchEvent("kd.unknown", "x"), 'UNKNOWN_PORT');
+    });
+
+    test("dispatchEvent: Behavior ポートに対してエラー", () => {
+      const graph = {
+        nodes: [{ id: "const1", type: "constant" }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      assertThrows(() => engine.dispatchEvent("const1.out", 42), 'TYPE_MISMATCH');
+    });
+
+    // filter テスト
+    test("filter: 正の値のみ通す predicate", () => {
+      const graph = {
+        nodes: [
+          { id: "kd", type: "keyDown" },
+          { id: "f", type: "filter", params: { predicate: "value > 0" } }
+        ],
+        edges: [{ from: "kd.event", to: "f.event" }]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      engine.dispatchEvent("kd.event", 5);
+      engine.dispatchEvent("kd.event", -3);
+      engine.evaluateAt(0);
+      const val = engine.getValue("f.event");
+      assert(Array.isArray(val) && val.length === 1 && val[0] === 5);
+    });
+
+    test("filter: predicate 構文エラーで INVALID_GRAPH", () => {
+      const graph = {
+        nodes: [
+          { id: "kd", type: "keyDown" },
+          { id: "f", type: "filter", params: { predicate: "value >>>" } }
+        ],
+        edges: [{ from: "kd.event", to: "f.event" }]
+      };
+      assertThrows(() => new Loom(graph), 'INVALID_GRAPH');
+    });
+
+    test("filter: key パラメータが渡される", () => {
+      const graph = {
+        nodes: [
+          { id: "kd", type: "keyDown" },
+          { id: "f", type: "filter", params: { predicate: "key == 'Enter'" } }
+        ],
+        edges: [{ from: "kd.event", to: "f.event" }]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      engine.dispatchEvent("kd.event", "Enter");
+      engine.dispatchEvent("kd.event", "a");
+      engine.evaluateAt(0);
+      const val = engine.getValue("f.event");
+      assert(Array.isArray(val) && val.length === 1 && val[0] === "Enter");
+    });
+
+    // sample テスト
+    test("sample: trigger が発火した時の value をキャプチャ", () => {
+      const graph = {
+        nodes: [
+          { id: "const1", type: "constant", params: { value: 42 } },
+          { id: "kd", type: "keyDown" },
+          { id: "samp", type: "sample" }
+        ],
+        edges: [
+          { from: "const1.out", to: "samp.value" },
+          { from: "kd.event", to: "samp.trigger" }
+        ]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      engine.dispatchEvent("kd.event", "Space");
+      engine.evaluateAt(0);
+      const val = engine.getValue("samp.event");
+      assert(Array.isArray(val) && val.length === 1 && val[0] === 42);
+    });
+
+    test("sample: trigger がない場合は何も出力しない", () => {
+      const graph = {
+        nodes: [
+          { id: "const1", type: "constant", params: { value: 42 } },
+          { id: "kd", type: "keyDown" },
+          { id: "samp", type: "sample" }
+        ],
+        edges: [
+          { from: "const1.out", to: "samp.value" },
+          { from: "kd.event", to: "samp.trigger" }
+        ]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      // dispatchEvent しない
+      engine.evaluateAt(0);
+      const val = engine.getValue("samp.event");
+      assert(Array.isArray(val) && val.length === 0);
+    });
+
+    // merge テスト
+    test("merge: a と b が同時発火で a→b 順で出力", () => {
+      const graph = {
+        nodes: [
+          { id: "kd1", type: "keyDown" },
+          { id: "kd2", type: "keyDown" },
+          { id: "m", type: "merge" }
+        ],
+        edges: [
+          { from: "kd1.event", to: "m.a" },
+          { from: "kd2.event", to: "m.b" }
+        ]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      engine.dispatchEvent("kd1.event", "a");
+      engine.dispatchEvent("kd2.event", "b");
+      engine.evaluateAt(0);
+      const val = engine.getValue("m.event");
+      assert(Array.isArray(val) && val.length === 2 && val[0] === "a" && val[1] === "b");
+    });
+
+    // pointerPosition テスト
+    test("pointerPosition: 初期値は {x:0, y:0}", () => {
+      const graph = {
+        nodes: [{ id: "pp", type: "pointerPosition" }],
+        edges: []
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      const pos = engine.getValue("pp.pos");
+      assert(pos && pos.x === 0 && pos.y === 0);
+    });
+
+    // グラフ切替テスト
+    test("load() で新グラフ切替後、イベントノードが正しく初期化される", () => {
+      const graph1 = {
+        nodes: [{ id: "const1", type: "constant", params: { value: 10 } }],
+        edges: []
+      };
+      const graph2 = {
+        nodes: [{ id: "kd", type: "keyDown" }],
+        edges: []
+      };
+      const engine = new Loom(graph1);
+      engine.evaluateAt(0);
+      engine.load(graph2);
+      engine.evaluateAt(0);
+      // graph2 に切り替わって dispatchEvent できることを確認
+      engine.dispatchEvent("kd.event", "x");
+      engine.evaluateAt(0);
+      const val = engine.getValue("kd.event");
+      assert(Array.isArray(val) && val[0] === "x");
+    });
+
+    // イベント型ノードの複合テスト
+    test("filter → merge チェーン", () => {
+      const graph = {
+        nodes: [
+          { id: "kd1", type: "keyDown" },
+          { id: "kd2", type: "keyDown" },
+          { id: "f1", type: "filter", params: { predicate: "key == 'a'" } },
+          { id: "f2", type: "filter", params: { predicate: "key == 'b'" } },
+          { id: "m", type: "merge" }
+        ],
+        edges: [
+          { from: "kd1.event", to: "f1.event" },
+          { from: "kd2.event", to: "f2.event" },
+          { from: "f1.event", to: "m.a" },
+          { from: "f2.event", to: "m.b" }
+        ]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      engine.dispatchEvent("kd1.event", "a");
+      engine.dispatchEvent("kd1.event", "x");
+      engine.dispatchEvent("kd2.event", "b");
+      engine.evaluateAt(0);
+      const val = engine.getValue("m.event");
+      // f1 が "a" のみ通し、f2 が "b" を通し、merge で "a", "b" 順
+      assert(Array.isArray(val) && val.length === 2 && val[0] === "a" && val[1] === "b");
+    });
+
+    // DOM シンクノードのテスト
+    test("setText がターゲットの textContent を更新する", () => {
+      const div = document.createElement("div");
+      div.id = "sink-test-1";
+      document.body.appendChild(div);
+      try {
+        const graph = {
+          nodes: [
+            { id: "const", type: "constant", params: { value: "Hello" } },
+            { id: "sink", type: "setText", params: { target: "#sink-test-1" } }
+          ],
+          edges: [
+            { from: "const.out", to: "sink.value" }
+          ]
+        };
+        const engine = new Loom(graph);
+        engine.evaluateAt(0);
+        assert(div.textContent === "Hello", `expected "Hello", got "${div.textContent}"`);
+      } finally {
+        document.body.removeChild(div);
+      }
+    });
+
+    test("setStyle がターゲットの style プロパティと unit を組み合わせて設定する", () => {
+      const div = document.createElement("div");
+      div.id = "sink-test-2";
+      document.body.appendChild(div);
+      try {
+        const graph = {
+          nodes: [
+            { id: "const", type: "constant", params: { value: 50 } },
+            { id: "sink", type: "setStyle", params: { target: "#sink-test-2", property: "width", unit: "px" } }
+          ],
+          edges: [
+            { from: "const.out", to: "sink.value" }
+          ]
+        };
+        const engine = new Loom(graph);
+        engine.evaluateAt(0);
+        assert(div.style.width === "50px", `expected "50px", got "${div.style.width}"`);
+      } finally {
+        document.body.removeChild(div);
+      }
+    });
+
+    test("setAttr がターゲットの属性を更新する", () => {
+      const div = document.createElement("div");
+      div.id = "sink-test-3";
+      document.body.appendChild(div);
+      try {
+        const graph = {
+          nodes: [
+            { id: "const", type: "constant", params: { value: "my-value" } },
+            { id: "sink", type: "setAttr", params: { target: "#sink-test-3", name: "data-test" } }
+          ],
+          edges: [
+            { from: "const.out", to: "sink.value" }
+          ]
+        };
+        const engine = new Loom(graph);
+        engine.evaluateAt(0);
+        assert(div.getAttribute("data-test") === "my-value", `expected "my-value", got "${div.getAttribute("data-test")}"`);
+      } finally {
+        document.body.removeChild(div);
+      }
+    });
+
+    test("存在しないセレクタの setStyle でもエラーにならない", () => {
+      const graph = {
+        nodes: [
+          { id: "const", type: "constant", params: { value: 100 } },
+          { id: "sink", type: "setStyle", params: { target: "#nonexistent-element", property: "width", unit: "px" } }
+        ],
+        edges: [
+          { from: "const.out", to: "sink.value" }
+        ]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      // エラーが発生しなければ成功
+      assert(true);
+    });
+    test("setClass が class を付与/削除し、存在しない selector でも throw しない", () => {
+      const div = document.createElement("div");
+      div.id = "sink-test-class";
+      document.body.appendChild(div);
+      try {
+        const graph = {
+          nodes: [
+            { id: "flag", type: "constant", params: { value: true } },
+            { id: "sink", type: "setClass", params: { target: "#sink-test-class", className: "is-hot" } }
+          ],
+          edges: [{ from: "flag.out", to: "sink.enabled" }]
+        };
+        const engine = new Loom(graph);
+        engine.evaluateAt(0);
+        assert(div.classList.contains("is-hot"), "class should be added");
+
+        engine.load({
+          nodes: [
+            { id: "flag", type: "constant", params: { value: false } },
+            { id: "sink", type: "setClass", params: { target: "#sink-test-class", className: "is-hot" } }
+          ],
+          edges: [{ from: "flag.out", to: "sink.enabled" }]
+        });
+        engine.evaluateAt(0);
+        assert(!div.classList.contains("is-hot"), "class should be removed");
+
+        const engine2 = new Loom({
+          nodes: [
+            { id: "flag", type: "constant", params: { value: true } },
+            { id: "sink", type: "setClass", params: { target: "#no-such-target", className: "is-hot" } }
+          ],
+          edges: [{ from: "flag.out", to: "sink.enabled" }]
+        });
+        engine2.evaluateAt(0);
+        assert(true);
+      } finally {
+        document.body.removeChild(div);
+      }
+    });
+    test("setCssVar が CSS 変数を設定し、name の -- 補完と非存在 selector を扱う", () => {
+      const div = document.createElement("div");
+      div.id = "sink-test-cssvar";
+      document.body.appendChild(div);
+      try {
+        const engine = new Loom({
+          nodes: [
+            { id: "v", type: "constant", params: { value: 10 } },
+            { id: "sink", type: "setCssVar", params: { target: "#sink-test-cssvar", name: "--x", unit: "px" } }
+          ],
+          edges: [{ from: "v.out", to: "sink.value" }]
+        });
+        engine.evaluateAt(0);
+        assertEqual(div.style.getPropertyValue("--x"), "10px");
+
+        const engine2 = new Loom({
+          nodes: [
+            { id: "v", type: "constant", params: { value: 20 } },
+            { id: "sink", type: "setCssVar", params: { target: "#sink-test-cssvar", name: "x", unit: "px" } }
+          ],
+          edges: [{ from: "v.out", to: "sink.value" }]
+        });
+        engine2.evaluateAt(0);
+        assertEqual(div.style.getPropertyValue("--x"), "20px");
+
+        const engine3 = new Loom({
+          nodes: [
+            { id: "v", type: "constant", params: { value: 1 } },
+            { id: "sink", type: "setCssVar", params: { target: "#no-such-target", name: "x", unit: "px" } }
+          ],
+          edges: [{ from: "v.out", to: "sink.value" }]
+        });
+        engine3.evaluateAt(0);
+        assert(true);
+      } finally {
+        document.body.removeChild(div);
+      }
+    });
+    test("setTransform2D が transform を設定し、未接続入力で default を使う", () => {
+      const div = document.createElement("div");
+      div.id = "sink-test-transform";
+      document.body.appendChild(div);
+      try {
+        const engine = new Loom({
+          nodes: [
+            { id: "x", type: "constant", params: { value: 10 } },
+            { id: "y", type: "constant", params: { value: 20 } },
+            { id: "s", type: "constant", params: { value: 1.5 } },
+            { id: "r", type: "constant", params: { value: 45 } },
+            { id: "sink", type: "setTransform2D", params: { target: "#sink-test-transform" } }
+          ],
+          edges: [
+            { from: "x.out", to: "sink.x" },
+            { from: "y.out", to: "sink.y" },
+            { from: "s.out", to: "sink.scale" },
+            { from: "r.out", to: "sink.rotate" }
+          ]
+        });
+        engine.evaluateAt(0);
+        assertEqual(div.style.transform, "translate(10px, 20px) scale(1.5) rotate(45deg)");
+
+        const engine2 = new Loom({
+          nodes: [
+            { id: "x", type: "constant", params: { value: 8 } },
+            { id: "sink", type: "setTransform2D", params: { target: "#sink-test-transform" } }
+          ],
+          edges: [{ from: "x.out", to: "sink.x" }]
+        });
+        engine2.evaluateAt(0);
+        assertEqual(div.style.transform, "translate(8px, 0px) scale(1) rotate(0deg)");
+
+        const engine3 = new Loom({
+          nodes: [{ id: "sink", type: "setTransform2D", params: { target: "#no-such-target" } }],
+          edges: []
+        });
+        engine3.evaluateAt(0);
+        assert(true);
+      } finally {
+        document.body.removeChild(div);
+      }
+    });
+    test("greaterThan / lessThan が期待通りで、edge 接続値を使う", () => {
+      const engine = new Loom({
+        nodes: [
+          { id: "gt1", type: "greaterThan", params: { value: 2, threshold: 1 } },
+          { id: "gt2", type: "greaterThan", params: { value: 1, threshold: 2 } },
+          { id: "lt1", type: "lessThan", params: { value: 1, threshold: 2 } },
+          { id: "lt2", type: "lessThan", params: { value: 2, threshold: 1 } },
+          { id: "v", type: "constant", params: { value: 5 } },
+          { id: "th", type: "constant", params: { value: 3 } },
+          { id: "gtEdge", type: "greaterThan" }
+        ],
+        edges: [
+          { from: "v.out", to: "gtEdge.value" },
+          { from: "th.out", to: "gtEdge.threshold" }
+        ]
+      });
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("gt1.out"), true);
+      assertEqual(engine.getValue("gt2.out"), false);
+      assertEqual(engine.getValue("lt1.out"), true);
+      assertEqual(engine.getValue("lt2.out"), false);
+      assertEqual(engine.getValue("gtEdge.out"), true);
+    });
+
+    test("複数シンクノードがそれぞれ DOM を更新する", () => {
+      const div1 = document.createElement("div");
+      const div2 = document.createElement("div");
+      div1.id = "sink-test-multi-1";
+      div2.id = "sink-test-multi-2";
+      document.body.appendChild(div1);
+      document.body.appendChild(div2);
+      try {
+        const graph = {
+          nodes: [
+            { id: "const1", type: "constant", params: { value: "first" } },
+            { id: "const2", type: "constant", params: { value: "second" } },
+            { id: "sink1", type: "setText", params: { target: "#sink-test-multi-1" } },
+            { id: "sink2", type: "setText", params: { target: "#sink-test-multi-2" } }
+          ],
+          edges: [
+            { from: "const1.out", to: "sink1.value" },
+            { from: "const2.out", to: "sink2.value" }
+          ]
+        };
+        const engine = new Loom(graph);
+        engine.evaluateAt(0);
+        assert(div1.textContent === "first", `expected "first", got "${div1.textContent}"`);
+        assert(div2.textContent === "second", `expected "second", got "${div2.textContent}"`);
+      } finally {
+        document.body.removeChild(div1);
+        document.body.removeChild(div2);
+      }
+    });
+
+
+    test("DSL: setCssVar の named argument を input/params に正しく分類する", () => {
+      const parsed = parseDSL(`
+mapGlow = constant(value: 0.42)
+glow = setCssVar(mapGlow, target: "#demo-card", name: "glow")
+`);
+      const glowNode = parsed.nodes.find(n => n.id === "glow");
+      assert(glowNode, "glow node not found");
+      assertEqual(glowNode.params.target, "#demo-card");
+      assertEqual(glowNode.params.name, "glow");
+      assert(parsed.edges.some(e => e.from === "mapGlow.out" && e.to === "glow.value"), "expected edge mapGlow.out -> glow.value");
+    });
+
+    test("DSL: setClass の enabled は input、target/className は params になる", () => {
+      const parsed = parseDSL(`
+isHot = constant(value: true)
+hotClass = setClass(enabled: isHot, target: "#demo-lamp", className: "is-hot")
+`);
+      const hotClassNode = parsed.nodes.find(n => n.id === "hotClass");
+      assert(hotClassNode, "hotClass node not found");
+      assertEqual(hotClassNode.params.target, "#demo-lamp");
+      assertEqual(hotClassNode.params.className, "is-hot");
+      assert(parsed.edges.some(e => e.from === "isHot.out" && e.to === "hotClass.enabled"), "expected edge isHot.out -> hotClass.enabled");
+    });
+
+    test("DSL: unknown named argument は UNKNOWN_ARGUMENT エラーになる", () => {
+      try {
+        parseDSL(`
+v = constant(value: 1)
+sink = setCssVar(v, target: "#demo-card", nope: "x")
+`);
+        throw new Error("expected LoomDSLError");
+      } catch (e) {
+        assert(e instanceof LoomDSLError, `expected LoomDSLError, got ${e?.name || e}`);
+        assertEqual(e.code, "UNKNOWN_ARGUMENT");
+      }
+    });
+
+    // 実行とレポート
+    const root = document.getElementById("results");
+    let pass = 0, fail = 0;
+    const failures = [];
+    for (const t of tests) {
+      const div = document.createElement("div");
+      div.className = "test-result";
+      try {
+        t.fn();
+        div.textContent = "✅ " + t.name;
+        div.className += " test-pass";
+        pass++;
+      } catch (e) {
+        div.textContent = "❌ " + t.name + " — " + e.message;
+        div.className += " test-fail";
+        fail++;
+        failures.push({ name: t.name, message: e.message });
+      }
+      root.appendChild(div);
+    }
+
+    const summary = document.createElement("div");
+    summary.className = "summary";
+    if (fail === 0) {
+      summary.className += " summary-pass";
+      summary.textContent = `✅ ${pass} 成功, ${fail} 失敗`;
+    } else {
+      summary.className += " summary-fail";
+      summary.textContent = `❌ ${pass} 成功, ${fail} 失敗`;
+    }
+    root.prepend(summary);
+
+    // Export results for CI automation
+    window.__loomTestResults = { pass, fail, failures };
+  </script>
+</body>
+</html>

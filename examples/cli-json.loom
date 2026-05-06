@@ -1,0 +1,4 @@
+import json
+
+parsed = json.parse('{"name":"loom","version":1}')
+message = json.stringify(parsed)
