@@ -377,6 +377,40 @@ Use `graph-clear` to stop a running graph:
 node bin/loom.mjs scenesync graph-clear sample-cube --send
 ```
 
+### Live Scene Sync development
+
+Use `scenesync dev` to watch a Loom DSL file and send Scene Sync graph updates whenever it changes.
+
+```bash
+node bin/loom.mjs scenesync dev examples/lissajous.loom
+```
+
+This compiles the DSL to a Scene Sync behavior graph and sends `scene-graph-set` on each save.
+
+To watch in dry-run mode (without sending to Scene Sync):
+
+```bash
+node bin/loom.mjs scenesync dev examples/lissajous.loom --dry-run
+```
+
+To watch a specific object:
+
+```bash
+node bin/loom.mjs scenesync dev examples/lissajous.loom --object sample-cube
+```
+
+To watch a scene-level graph:
+
+```bash
+node bin/loom.mjs scenesync dev examples/scene-control.loom --scene
+```
+
+Press Ctrl+C to stop watching. The graph remains active in Scene Sync; use `graph-clear` to remove it:
+
+```bash
+node bin/loom.mjs scenesync graph-clear sample-cube --send
+```
+
 ## ライブエディタと DSL
 
 ### エディタ一覧
