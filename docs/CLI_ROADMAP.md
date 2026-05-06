@@ -58,9 +58,10 @@
 - ✓ `loom scenesync run <file.loom>` (with dry-run payload generation)
 - ✓ `loom scenesync graph-compile <file.loom>` (compile to Scene Sync behavior graph)
 - ✓ `loom scenesync graph-run <file.loom> --object <id> [--send]` (compile and set graph)
+- ✓ `loom scenesync dev <file.loom>` (watch Loom DSL and live-send graph updates)
+- ✓ `loom scenesync graph-run` supports `--scene` scope
+- ✓ `loom scenesync graph-compile` supports `--scene` scope
 - `loom scenesync graph-patch <file.loom>` (patch graph)
-- target scene scope
-- target object scope
 - `loom repl :connect scenesync`
 - `loom repl :objects`
 
