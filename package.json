@@ -12,9 +12,21 @@
     "url": "https://github.com/afjk/loomlet/issues"
   },
   "homepage": "https://github.com/afjk/loomlet#readme",
+  "license": "MIT",
+  "keywords": [
+    "loomlet",
+    "dsl",
+    "dataflow",
+    "scene",
+    "scenesync",
+    "repl",
+    "cli"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "bin": {
-    "loomlet": "./bin/loomlet.mjs",
-    "loom": "./bin/loom.mjs"
+    "loomlet": "./bin/loomlet.mjs"
   },
   "scripts": {
     "test": "npm run test:unit",
