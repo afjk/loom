@@ -5,8 +5,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { Loom, LoomError } from '../src/loom.js';
+import { Loom, LoomError, NODE_TYPES } from '../src/loom.js';
 import { runLoomSource } from '../src/toolchain/run.js';
+import { LIBRARY_METADATA } from '../src/toolchain/library-metadata.js';
 import { isLibraryAvailableInTarget } from '../src/toolchain/runtime-targets.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -42,6 +43,7 @@ test('logic baseline nodes', () => {
 });
 
 test('list baseline nodes', () => {
+  assert.deepEqual(evalNode('list.range', { start: 1, end: 3 }), [1, 2, 3]);
   assert.deepEqual(evalNode('list.range', { start: 1, end: 5 }), [1, 2, 3, 4, 5]);
   assert.deepEqual(evalNode('list.range', { start: 5, end: 1 }), [5, 4, 3, 2, 1]);
   assert.equal(evalNode('list.length', { list: [1, 2, 3] }), 3);
@@ -132,10 +134,22 @@ test('fs baseline nodes are CLI-only and access local files', () => {
   assert.equal(isLibraryAvailableInTarget('fs', 'web'), false);
 });
 
+test('stdlib metadata corrections', () => {
+  assert.equal(isLibraryAvailableInTarget('random', 'cli'), true);
+  assert.equal(isLibraryAvailableInTarget('random', 'web'), true);
+  assert.equal(isLibraryAvailableInTarget('random', 'scenesync'), false);
+  assert.equal(LIBRARY_METADATA.fs.status, 'implemented');
+  assert.equal(NODE_TYPES['list.reduce'].outputs[0].type, 'any');
+  assert.equal(NODE_TYPES['text.concat'].commutative, undefined);
+  assert.equal(NODE_TYPES['list.of'].commutative, undefined);
+  assert.equal(NODE_TYPES['list.concat'].commutative, undefined);
+});
+
 test('CLI docs and conditions smoke tests', () => {
   for (const args of [
     ['docs', 'logic'],
     ['docs', 'list'],
+    ['docs', 'fs'],
     ['docs', 'text.stringify'],
     ['docs', 'random.value'],
     ['docs', 'debug.trace'],
@@ -145,6 +159,12 @@ test('CLI docs and conditions smoke tests', () => {
     const result = spawnSync(process.execPath, [cliPath, ...args], { cwd: projectRoot, encoding: 'utf8' });
     assert.equal(result.status, 0, `${args.join(' ')}\n${result.stderr}`);
   }
+
+  const fsDocs = spawnSync(process.execPath, [cliPath, 'docs', 'fs'], { cwd: projectRoot, encoding: 'utf8' });
+  assert.match(fsDocs.stdout, /fs\.readText/);
+  assert.match(fsDocs.stdout, /fs\.writeText/);
+  assert.match(fsDocs.stdout, /fs\.exists/);
+  assert.match(fsDocs.stdout, /fs\.list/);
 
   const sample = runLoomSource('import logic\nvalue = logic.select(constant(value: true), whenTrue: "three", whenFalse: "other")', { target: 'cli', get: 'value.out' });
   assert.equal(sample.ok, true, JSON.stringify(sample.errors));
