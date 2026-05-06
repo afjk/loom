@@ -9,6 +9,7 @@ import {
   formatFunctionHelpText,
   formatHelpJson
 } from '../src/toolchain/help.js';
+import { LIBRARY_COMPATIBILITY } from '../src/toolchain/runtime-targets.js';
 
 test('listLibraries returns all libraries', () => {
   const libs = listLibraries();
@@ -18,7 +19,14 @@ test('listLibraries returns all libraries', () => {
   assert.ok(libs.includes('scene'));
   assert.ok(libs.includes('time'));
   assert.ok(libs.includes('math'));
-  assert.equal(libs.length, 6);
+  assert.ok(libs.includes('state'));
+  assert.ok(libs.includes('fs'));
+  assert.ok(libs.includes('dom'));
+  assert.ok(libs.includes('canvas'));
+  assert.ok(libs.includes('three'));
+  assert.ok(libs.includes('unity'));
+  assert.ok(libs.includes('scenesync'));
+  assert.equal(libs.length, 13);
 });
 
 test('getLibraryHelp returns library metadata', () => {
@@ -172,4 +180,80 @@ test('time.serverClock is documented', () => {
 test('console.log is documented', () => {
   const func = getFunctionHelp('console.log');
   assert.equal(func.name, 'log');
+});
+
+test('all known libraries from LIBRARY_COMPATIBILITY are in metadata', () => {
+  const libs = listLibraries();
+  for (const libName of Object.keys(LIBRARY_COMPATIBILITY)) {
+    assert.ok(libs.includes(libName), `Missing library: ${libName}`);
+  }
+});
+
+test('library targets match LIBRARY_COMPATIBILITY', () => {
+  for (const [libName, compat] of Object.entries(LIBRARY_COMPATIBILITY)) {
+    const lib = getLibraryHelp(libName);
+    assert.deepEqual(
+      lib.targets.sort(),
+      compat.targets.sort(),
+      `Targets mismatch for ${libName}`
+    );
+  }
+});
+
+test('function targets match library targets', () => {
+  const textLib = getLibraryHelp('text');
+  for (const func of Object.values(textLib.functions)) {
+    if (func && func.targets) {
+      assert.ok(Array.isArray(func.targets), 'Function targets should be array');
+      assert.deepEqual(func.targets, textLib.targets, 'Function targets should match library targets');
+    }
+  }
+});
+
+test('all documented libraries have descriptions', () => {
+  const libs = listLibraries();
+  for (const libName of libs) {
+    const lib = getLibraryHelp(libName);
+    assert.ok(lib.description, `Missing description for ${libName}`);
+  }
+});
+
+test('math functions all documented', () => {
+  const mathFuncs = ['sine', 'cosine', 'add', 'multiply', 'subtract', 'divide', 'mod', 'clamp', 'map', 'negate', 'abs', 'lerp', 'smoothstep', 'greaterThan', 'lessThan'];
+  const mathLib = getLibraryHelp('math');
+  for (const func of mathFuncs) {
+    assert.ok(mathLib.functions[func], `Missing math function: ${func}`);
+  }
+});
+
+test('state functions all documented', () => {
+  const stateFuncs = ['lowpass', 'delay1', 'integrate'];
+  const stateLib = getLibraryHelp('state');
+  for (const func of stateFuncs) {
+    assert.ok(stateLib.functions[func], `Missing state function: ${func}`);
+  }
+});
+
+test('formatLibrariesText includes all libraries', () => {
+  const text = formatLibrariesText();
+  const libs = listLibraries();
+  for (const libName of libs) {
+    assert.ok(text.includes(libName), `Missing library in text: ${libName}`);
+  }
+});
+
+test('formatLibrariesText shows planned status', () => {
+  const text = formatLibrariesText();
+  assert.ok(text.includes('(planned)'), 'Should indicate planned libraries');
+});
+
+test('formatLibraryHelpText shows planned status', () => {
+  const text = formatLibraryHelpText('fs');
+  assert.ok(text.includes('Status: planned'));
+});
+
+test('planned library has empty functions', () => {
+  const fsLib = getLibraryHelp('fs');
+  assert.equal(Object.keys(fsLib.functions).length, 0);
+  assert.equal(fsLib.status, 'planned');
 });
