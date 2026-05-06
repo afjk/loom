@@ -184,14 +184,17 @@ function getReplHelp() {
   loom repl
 
 Commands:
-  :help      Show REPL help
-  :source    Show accumulated source
-  :inspect   Show current graph summary
-  :graph     Show current GraphJSON
-  :reset     Clear current session
-  :quit      Exit the REPL
-  :q         Exit the REPL
-  :exit      Exit the REPL`;
+  :help              Show REPL help
+  :libs              List all available libraries
+  :help <library>    Show functions in a library
+  :help <lib.func>   Show function documentation
+  :source            Show accumulated source
+  :inspect           Show current graph summary
+  :graph             Show current GraphJSON
+  :reset             Clear current session
+  :quit              Exit the REPL
+  :q                 Exit the REPL
+  :exit              Exit the REPL`;
 }
 
 function getSceneSyncHelp() {
@@ -1476,11 +1479,18 @@ async function handleDocs(args) {
 
   let query = '';
   let outputJson = false;
+  let positionalCount = 0;
 
   for (const arg of args) {
     if (arg === '--json') {
       outputJson = true;
-    } else if (!arg.startsWith('-')) {
+    } else if (arg.startsWith('-')) {
+      throw new Error(`Unknown option: ${arg}`);
+    } else {
+      positionalCount += 1;
+      if (positionalCount > 1) {
+        throw new Error('docs command accepts at most one positional argument');
+      }
       query = arg;
     }
   }

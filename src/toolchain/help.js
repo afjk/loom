@@ -1,4 +1,4 @@
-import { LIBRARY_METADATA } from './library-metadata.js';
+import { LIBRARY_METADATA, getAllLibraries } from './library-metadata.js';
 
 class HelpError extends Error {
   constructor(code, message) {
@@ -9,7 +9,7 @@ class HelpError extends Error {
 }
 
 export function listLibraries() {
-  return Object.keys(LIBRARY_METADATA).sort();
+  return getAllLibraries();
 }
 
 export function getLibraryHelp(name) {
@@ -46,7 +46,10 @@ export function formatLibrariesText() {
 
   for (const libName of libs) {
     const lib = LIBRARY_METADATA[libName];
-    lines.push(`- ${libName.padEnd(12)} ${lib.description}`);
+    const status = lib.status ? ` (${lib.status})` : '';
+    const funcCount = Object.keys(lib.functions).length;
+    const funcInfo = funcCount > 0 ? ` - ${funcCount} function${funcCount !== 1 ? 's' : ''}` : '';
+    lines.push(`- ${libName.padEnd(12)} ${lib.description}${funcInfo}${status}`);
   }
 
   lines.push('');
@@ -61,11 +64,19 @@ export function formatLibraryHelpText(name) {
   const lib = getLibraryHelp(name);
   const lines = [lib.name, '', lib.description, ''];
 
+  if (lib.status) {
+    lines.push(`Status: ${lib.status}`, '');
+  }
+
   const funcNames = Object.keys(lib.functions).sort();
-  lines.push('Functions:');
-  for (const funcName of funcNames) {
-    const func = lib.functions[funcName];
-    lines.push(`- ${func.signature}`);
+  if (funcNames.length > 0) {
+    lines.push('Functions:');
+    for (const funcName of funcNames) {
+      const func = lib.functions[funcName];
+      lines.push(`- ${func.signature}`);
+    }
+  } else {
+    lines.push('(No functions documented yet.)');
   }
 
   return lines.join('\n');
@@ -115,11 +126,16 @@ export function formatHelpJson(query) {
     const libs = listLibraries();
     return {
       type: 'libraries',
-      libraries: libs.map(name => ({
-        name: LIBRARY_METADATA[name].name,
-        description: LIBRARY_METADATA[name].description,
-        targets: LIBRARY_METADATA[name].targets
-      }))
+      libraries: libs.map(name => {
+        const lib = LIBRARY_METADATA[name];
+        return {
+          name: lib.name,
+          description: lib.description,
+          targets: lib.targets,
+          status: lib.status || 'implemented',
+          functionCount: Object.keys(lib.functions).length
+        };
+      })
     };
   }
 
@@ -133,6 +149,7 @@ export function formatHelpJson(query) {
         name: lib.name,
         description: lib.description,
         targets: lib.targets,
+        status: lib.status || 'implemented',
         functions: Object.entries(lib.functions).map(([, func]) => ({
           name: func.name,
           signature: func.signature,
