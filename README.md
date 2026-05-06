@@ -222,14 +222,16 @@ loom> console.log(message)
 [log] HELLO LOOM
 loom> :source
 import text
-message = text.upper("hello loom")
 import console
+
+message = text.upper("hello loom")
 console.log(message)
 loom> :quit
 ```
 
 The REPL currently recompiles the accumulated source after each snippet. Invalid snippets are rejected and do not modify the current session.
 Import snippets are hoisted into the import block automatically, so you can add imports later while exploring.
+The REPL recompiles the accumulated source after each snippet, but it only displays effects introduced by the latest snippet.
 
 ## ライブエディタと DSL
 
