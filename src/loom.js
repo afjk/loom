@@ -1219,6 +1219,37 @@ export const NODE_TYPES = {
       console.log(params.label || 'log', inputs.value);
       return {};
     }
+  },
+
+  'time.serverClock': {
+    category: 'source',
+    inputs: [],
+    outputs: [{ name: 't', type: 'number', kind: 'behavior' }],
+    params: [],
+    evaluate: (inputs, params, ctx) => ({ t: ctx.time })
+  },
+
+  'math.sine': {
+    category: 'transform',
+    inputs: [
+      { name: 't', type: 'number', default: 0, kind: 'behavior' },
+      { name: 'freq', type: 'number', default: 1, kind: 'behavior' },
+      { name: 'amplitude', type: 'number', default: 1, kind: 'behavior' },
+      { name: 'offset', type: 'number', default: 0, kind: 'behavior' }
+    ],
+    outputs: [{ name: 'out', type: 'number', kind: 'behavior' }],
+    params: [
+      { name: 'freq', type: 'number', default: 1 },
+      { name: 'amplitude', type: 'number', default: 1 },
+      { name: 'offset', type: 'number', default: 0 }
+    ],
+    evaluate: (inputs, params, ctx) => {
+      const t = inputs.t;
+      const freq = inputs.freq;
+      const amplitude = inputs.amplitude;
+      const offset = inputs.offset;
+      return { out: Math.sin(t * freq * 2 * Math.PI) * amplitude + offset };
+    }
   }
 };
 
