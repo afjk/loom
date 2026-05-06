@@ -64,6 +64,7 @@ export class LoomReplSession {
     this.source = '';
     this.graph = null;
     this.lastResult = null;
+    this.seenEffectNodeIds = new Set();
   }
 
   evaluateSnippet(source) {
@@ -100,10 +101,26 @@ export class LoomReplSession {
       };
     }
 
+    const allEffects = result.effects || [];
+    const newEffects = allEffects.filter((effect) => {
+      if (!effect?.nodeId) {
+        return true;
+      }
+      return !this.seenEffectNodeIds.has(effect.nodeId);
+    });
+
     this.source = nextSource;
     this.sourceLines = this.source.split(/\r?\n/);
     this.graph = result.graph;
-    this.lastResult = result;
+    this.lastResult = {
+      ...result,
+      effects: newEffects
+    };
+    this.seenEffectNodeIds = new Set(
+      allEffects
+        .map((effect) => effect?.nodeId)
+        .filter((nodeId) => typeof nodeId === 'string' && nodeId.length > 0)
+    );
 
     return {
       ok: true,
@@ -111,7 +128,7 @@ export class LoomReplSession {
       source: this.source,
       graph: result.graph,
       values: result.values,
-      effects: result.effects || [],
+      effects: newEffects,
       errors: []
     };
   }
@@ -125,6 +142,7 @@ export class LoomReplSession {
     this.source = '';
     this.graph = null;
     this.lastResult = null;
+    this.seenEffectNodeIds = new Set();
   }
 
   inspect() {
