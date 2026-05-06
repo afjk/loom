@@ -343,6 +343,40 @@ The `--json` flag outputs the payload and effects as JSON:
 node bin/loom.mjs scenesync run examples/scene-effects.loom --json
 ```
 
+### Compile Loom DSL to a Scene Sync behavior graph
+
+Loom DSL can be compiled directly to Scene Sync behavior graphs with `graph-compile`:
+
+```bash
+node bin/loom.mjs scenesync graph-compile examples/lissajous.loom
+```
+
+This outputs a Scene Sync graph JSON containing `serverClock`, `sine`, and `sceneSetPosition` nodes.
+
+### Run a Loom behavior graph on a Scene Sync object
+
+Loom DSL graphs can be compiled and sent to Scene Sync objects using `graph-run`:
+
+```bash
+node bin/loom.mjs scenesync graph-run examples/lissajous.loom --object sample-cube
+```
+
+By default this is a dry run and only prints the `scene-graph-set` payload.
+
+To send it to the linked Scene Sync room:
+
+```bash
+node bin/loom.mjs scenesync graph-run examples/lissajous.loom --object sample-cube --send
+```
+
+The `--object` parameter can be omitted if the DSL includes an object ID in `scene.setPosition()`.
+
+Use `graph-clear` to stop a running graph:
+
+```bash
+node bin/loom.mjs scenesync graph-clear sample-cube --send
+```
+
 ## ライブエディタと DSL
 
 ### エディタ一覧

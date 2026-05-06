@@ -54,13 +54,13 @@
 
 ## Phase 7: SceneSync follow-up
 
-- compile DSL and send graph
+- ✓ compile DSL and send graph
 - ✓ `loom scenesync run <file.loom>` (with dry-run payload generation)
-- `loom scenesync send-graph <file.json>`
+- ✓ `loom scenesync graph-compile <file.loom>` (compile to Scene Sync behavior graph)
+- ✓ `loom scenesync graph-run <file.loom> --object <id> [--send]` (compile and set graph)
+- `loom scenesync graph-patch <file.loom>` (patch graph)
 - target scene scope
 - target object scope
-- clear graph
-- patch graph
 - `loom repl :connect scenesync`
 - `loom repl :objects`
 

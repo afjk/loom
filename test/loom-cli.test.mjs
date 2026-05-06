@@ -513,3 +513,116 @@ test('scenesync run with invalid file exits 1', () => {
 
   assert.equal(result.status, 1);
 });
+
+test('scenesync graph-compile compiles example to Scene Sync graph', () => {
+  const result = runCli(['scenesync', 'graph-compile', 'examples/lissajous.loom']);
+
+  assert.equal(result.status, 0, result.stderr);
+  const output = JSON.parse(result.stdout);
+  assert.ok(output.nodes);
+  assert.ok(output.edges);
+  assert.ok(output.nodes.some((n) => n.type === 'serverClock'));
+  assert.ok(output.nodes.some((n) => n.type === 'sine'));
+  assert.ok(output.nodes.some((n) => n.type === 'sceneSetPosition'));
+});
+
+test('scenesync graph-compile --json prints metadata', () => {
+  const result = runCli(['scenesync', 'graph-compile', 'examples/lissajous.loom', '--json']);
+
+  assert.equal(result.status, 0, result.stderr);
+  const output = JSON.parse(result.stdout);
+  assert.equal(output.ok, true);
+  assert.deepEqual(output.scope, { object: 'sample-cube' });
+  assert.ok(output.graph.nodes);
+  assert.ok(output.graph.edges);
+});
+
+test('scenesync graph-compile --object overrides object id', () => {
+  const result = runCli(['scenesync', 'graph-compile', 'examples/lissajous.loom', '--object', 'other-cube', '--json']);
+
+  assert.equal(result.status, 0, result.stderr);
+  const output = JSON.parse(result.stdout);
+  assert.deepEqual(output.scope, { object: 'other-cube' });
+});
+
+test('scenesync graph-compile without file exits 1', () => {
+  const result = runCli(['scenesync', 'graph-compile']);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /file path/);
+});
+
+test('scenesync graph-run dry-run prints payload', () => {
+  const result = runCli(['scenesync', 'graph-run', 'examples/lissajous.loom', '--object', 'sample-cube']);
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Scene Sync graph-set payload/);
+  assert.match(result.stdout, /"type":\s*"scene-graph-set"/);
+  assert.match(result.stdout, /sample-cube/);
+  assert.match(result.stdout, /Dry run only/);
+});
+
+test('scenesync graph-run --json prints JSON', () => {
+  const result = runCli(['scenesync', 'graph-run', 'examples/lissajous.loom', '--object', 'sample-cube', '--json']);
+
+  assert.equal(result.status, 0, result.stderr);
+  const output = JSON.parse(result.stdout);
+  assert.equal(output.ok, true);
+  assert.equal(output.dryRun, true);
+  assert.ok(output.payload);
+});
+
+test('scenesync graph-run without --object uses DSL object id', () => {
+  const result = runCli(['scenesync', 'graph-run', 'examples/lissajous.loom']);
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /sample-cube/);
+});
+
+test('scenesync graph-run without scope exits 1', async () => {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-no-object-'));
+  const file = path.join(tmpDir, 'no-object.loom');
+  await fsp.writeFile(file, 'import time\nimport math\n\nt = time.serverClock()\nx = math.sine(t, freq: 1, amplitude: 1, offset: 0)\n', 'utf8');
+
+  const result = runCli(['scenesync', 'graph-run', file]);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /SCOPE_REQUIRED/);
+});
+
+test('scenesync graph-run without file exits 1', () => {
+  const result = runCli(['scenesync', 'graph-run']);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /file path/);
+});
+
+test('scenesync graph-compile --scene creates scene scope', () => {
+  const result = runCli(['scenesync', 'graph-compile', 'examples/lissajous.loom', '--scene', '--json']);
+
+  assert.equal(result.status, 0, result.stderr);
+  const output = JSON.parse(result.stdout);
+  assert.deepEqual(output.scope, { scene: true });
+});
+
+test('scenesync graph-run --scene creates scene scope', () => {
+  const result = runCli(['scenesync', 'graph-run', 'examples/lissajous.loom', '--scene', '--json']);
+
+  assert.equal(result.status, 0, result.stderr);
+  const output = JSON.parse(result.stdout);
+  assert.deepEqual(output.payload.scope, { scene: true });
+});
+
+test('scenesync graph-compile --object and --scene exits 1', () => {
+  const result = runCli(['scenesync', 'graph-compile', 'examples/lissajous.loom', '--object', 'cube', '--scene']);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /SCOPE_CONFLICT/);
+});
+
+test('scenesync graph-run --object and --scene exits 1', () => {
+  const result = runCli(['scenesync', 'graph-run', 'examples/lissajous.loom', '--object', 'cube', '--scene']);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /SCOPE_CONFLICT/);
+});
