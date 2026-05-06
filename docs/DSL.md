@@ -46,7 +46,9 @@ import fs
 import scene
 ```
 
-現時点の `import` は metadata / target validation 用です。実際の module loading や node library の自動登録はまだ行いません。
+現時点の `import` は主に metadata / target validation 用です。
+`text`, `json`, `console` など一部の標準ライブラリノードは実行できますが、
+`import` による動的 module loading や node registry の厳密な import-driven 切り替えはまだ行いません。
 
 `import` は、代入文や `render` 文より前に書く必要があります。
 
@@ -78,6 +80,36 @@ import { sine } from math
 from math import sine
 import math as m
 ```
+
+### Qualified function calls
+
+Loom DSL は `library.nodeName` 形式の qualified function call をサポートします。
+
+```loom
+import text
+
+message = text.upper("hello")
+```
+
+- qualified function call は `library.nodeName`
+- import 名そのものは引き続き単純な識別子だけをサポートします
+- dotted import name は未対応です
+
+`text.upper`, `json.parse`, `console.log` などの一部の qualified function は標準ライブラリノードとして実行できます。
+
+### Effect statements
+
+トップレベルの関数呼び出しを、代入なしで effect statement として書けます。
+
+```loom
+import console
+
+message = constant(value: "hello")
+console.log(message)
+```
+
+- effect statement は generated effect node に compile されます
+- 現時点では `console.log` などの output/effect node 用です
 
 ### 代入文
 

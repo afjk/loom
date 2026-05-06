@@ -18,9 +18,10 @@ Some libraries are universal and should work across every host. Others are inten
 |---|---:|---:|---:|---:|---|
 | math | yes | yes | yes | yes | Pure math |
 | state | yes | yes | yes | yes | Explicit state nodes |
-| text | yes | yes | yes | yes | String processing |
-| json | yes | yes | yes | yes | JSON utilities |
+| text | yes | yes | yes | yes | String processing, including `text.upper`, `text.lower`, `text.trim`, `text.replace` |
+| json | yes | yes | yes | yes | JSON utilities, including `json.parse` and `json.stringify` |
 | fs | yes | no | no | no/partial | File I/O |
+| console | yes | yes | yes | yes | Host logging, including `console.log`, `console.warn`, `console.error` |
 | dom | no | yes | no | no | DOM operations |
 | canvas | no | yes | no | no | Canvas preview |
 | scene | no | partial | yes | yes | Scene object control |

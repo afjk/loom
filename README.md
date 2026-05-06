@@ -170,6 +170,7 @@ npm run loom -- inspect examples/cli-basic.loom
 npm run loom -- run examples/cli-basic.loom --get x.out --time 1
 npm run loom -- compile script.loom --target cli
 npm run loom -- inspect script.loom --target web
+node bin/loom.mjs run examples/cli-text.loom --get message.out
 ```
 
 ```bash
@@ -193,6 +194,12 @@ x = constant(value: 1)
 ```
 
 `compile` と `inspect` の `--target` は省略時に `any` として扱われ、runtime-specific import を generic workflow 用に許可します。`run` は省略時に `cli` で検証するため、たとえば `import dom` は CLI 実行時に失敗します。
+
+初期の CLI-safe library nodes:
+
+- `text.upper`, `text.lower`, `text.trim`, `text.replace`
+- `json.parse`, `json.stringify`
+- `console.log`, `console.warn`, `console.error`
 
 ## ライブエディタと DSL
 

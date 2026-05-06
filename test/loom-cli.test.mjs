@@ -87,6 +87,18 @@ test('compile includes imports in GraphJSON', async () => {
   assert.deepEqual(graph.imports, ['math', 'fs']);
 });
 
+test('console.log effect statement compiles', async () => {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-console-compile-'));
+  const file = path.join(tmpDir, 'console.loom');
+  await fsp.writeFile(file, 'import console\nmessage = constant(value: "hello")\nconsole.log(message)\n', 'utf8');
+
+  const result = runCli(['compile', file]);
+  assert.equal(result.status, 0, result.stderr);
+  const graph = JSON.parse(result.stdout);
+  assert.ok(graph.nodes.some((node) => node.type === 'console.log'));
+  assert.ok(graph.nodes.some((node) => node.id === '_effect1'));
+});
+
 test('unknown import fails when target is specific', async () => {
   const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-unknown-import-'));
   const file = path.join(tmpDir, 'unknown-import.loom');
@@ -150,6 +162,16 @@ test('format preserves imports', async () => {
   assert.match(result.stdout, /^import math\nimport fs\n\nx = constant\(value: 1\)\n$/);
 });
 
+test('format preserves qualified calls and effect statements', async () => {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-format-effects-'));
+  const file = path.join(tmpDir, 'format-effects.loom');
+  await fsp.writeFile(file, 'import console\nimport text\n\nmessage = text.upper("hello")\nconsole.log(message)\n', 'utf8');
+
+  const result = runCli(['format', file]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /^import console\nimport text\n\nmessage = text\.upper\("hello"\)\nconsole\.log\(message\)\n$/);
+});
+
 test('inspect outputs summary', () => {
   const result = runCli(['inspect', 'examples/cli-basic.loom']);
   assert.equal(result.status, 0, result.stderr);
@@ -181,6 +203,16 @@ test('inspect shows imports and compatible targets', async () => {
   assert.match(result.stdout, /cli/);
 });
 
+test('inspect includes qualified function node names', async () => {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-inspect-qualified-'));
+  const file = path.join(tmpDir, 'inspect-qualified.loom');
+  await fsp.writeFile(file, 'import text\nmessage = text.upper("hello")\n', 'utf8');
+
+  const result = runCli(['inspect', file]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /text\.upper/);
+});
+
 test('parse error exits 1', async () => {
   const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-invalid-'));
   const invalidFile = path.join(tmpDir, 'invalid.loom');
@@ -196,6 +228,38 @@ test('run --get returns finite number', () => {
   assert.equal(result.status, 0, result.stderr);
   const value = Number(result.stdout.trim());
   assert.equal(Number.isFinite(value), true);
+});
+
+test('text.upper run returns uppercased string', () => {
+  const result = runCli(['run', 'examples/cli-text.loom', '--get', 'message.out']);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout.trim(), 'HELLO LOOM');
+});
+
+test('text.replace run returns replaced string', async () => {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-text-replace-'));
+  const file = path.join(tmpDir, 'text-replace.loom');
+  await fsp.writeFile(file, 'import text\nmessage = text.replace("hello world", search: "world", replacement: "loom")\n', 'utf8');
+
+  const result = runCli(['run', file, '--get', 'message.out']);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout.trim(), 'hello loom');
+});
+
+test('json.stringify run returns compact JSON string', () => {
+  const result = runCli(['run', 'examples/cli-json.loom', '--get', 'message.out']);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout.trim(), '{"name":"loom","version":1}');
+});
+
+test('json.parse invalid JSON fails clearly', async () => {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-json-invalid-'));
+  const file = path.join(tmpDir, 'json-invalid.loom');
+  await fsp.writeFile(file, 'import json\nvalue = json.parse("{bad")\n', 'utf8');
+
+  const result = runCli(['run', file, '--get', 'value.out']);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /JSON|INVALID_JSON|RUNTIME/);
 });
 
 test('run accepts --target cli', () => {
@@ -265,6 +329,13 @@ test('run defaults to cli and rejects dom import', async () => {
   const result = runCli(['run', file, '--get', 'x.out']);
   assert.equal(result.status, 1);
   assert.match(result.stderr, /UNSUPPORTED_IMPORT/);
+});
+
+test('console.log run produces effect on stderr while keeping stdout clean', () => {
+  const result = runCli(['run', 'examples/cli-console.loom', '--get', 'message.out']);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout.trim(), 'HELLO LOOM');
+  assert.match(result.stderr, /\[log\] HELLO LOOM/);
 });
 
 test('run rejects browser-only nodes with a clear error', async () => {
