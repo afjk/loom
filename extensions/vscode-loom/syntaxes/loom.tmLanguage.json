@@ -1,0 +1,85 @@
+{
+  "scopeName": "source.loom",
+  "name": "Loom",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#keywords" },
+    { "include": "#constants" },
+    { "include": "#pipeline" },
+    { "include": "#qualified" },
+    { "include": "#namedArgs" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.number-sign.loom",
+          "match": "#.*$"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.loom",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            { "name": "constant.character.escape.loom", "match": "\\\\." }
+          ]
+        },
+        {
+          "name": "string.quoted.single.loom",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            { "name": "constant.character.escape.loom", "match": "\\\\." }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.loom",
+          "match": "\\b-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?\\b"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        { "name": "keyword.control.import.loom", "match": "\\bimport\\b" },
+        { "name": "keyword.control.render.loom", "match": "\\brender\\b" }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        { "name": "constant.language.boolean.loom", "match": "\\b(?:true|false)\\b" },
+        { "name": "constant.language.null.loom", "match": "\\bnull\\b" }
+      ]
+    },
+    "pipeline": {
+      "patterns": [
+        { "name": "keyword.operator.pipeline.loom", "match": "\\|>" }
+      ]
+    },
+    "qualified": {
+      "patterns": [
+        {
+          "name": "entity.name.function.qualified.loom",
+          "match": "\\b([A-Za-z_][\\w]*)\\.([A-Za-z_][\\w]*)\\b"
+        }
+      ]
+    },
+    "namedArgs": {
+      "patterns": [
+        {
+          "name": "variable.parameter.named.loom",
+          "match": "\\b([A-Za-z_][\\w]*)\\s*:"
+        }
+      ]
+    }
+  }
+}

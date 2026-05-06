@@ -84,3 +84,17 @@
 - Web Studio should call `src/toolchain/compile.js`, `format.js`, and `inspect.js` directly.
 - Scene Sync integrations should compile DSL to GraphJSON with the same toolchain before sending `scene-graph-set` or `scene-graph-patch`.
 - MCP/GPTs tools should also call the same toolchain modules instead of re-implementing parsing or compile logic.
+
+
+## VS Code extension
+
+MVP location:
+
+`extensions/vscode-loom`
+
+Initial features:
+
+- syntax highlighting
+- completion provider
+- run current file
+- Scene Sync dev current file
