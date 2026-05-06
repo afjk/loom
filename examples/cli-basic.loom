@@ -1,0 +1,13 @@
+t = clock()
+wave = sine(
+  t,
+  freq: 0.5,
+  amplitude: 2
+)
+x = wave
+  |> map(
+    inMin: -2,
+    inMax: 2,
+    outMin: 0,
+    outMax: 100
+  )

@@ -1067,25 +1067,26 @@ export class Loom {
     NODE_TYPES[name] = definition;
   }
 
-  evaluateAt(time, frameTimestamp = time * 1000) {
-    // 保留中グラフがあれば切り替え
-    if (this._pendingGraph !== null) {
-      // 旧グラフのノードの onStop を呼ぶ
-      if (this._currentGraph) {
-        for (const node of this._currentGraph.nodes) {
-          const nodeType = NODE_TYPES[node.type];
-          if (nodeType.onStop) {
-            nodeType.onStop(node, this);
-          }
+  _activatePendingGraph(runLifecycle = true) {
+    if (this._pendingGraph === null) {
+      return;
+    }
+
+    if (runLifecycle && this._currentGraph) {
+      for (const node of this._currentGraph.nodes) {
+        const nodeType = NODE_TYPES[node.type];
+        if (nodeType.onStop) {
+          nodeType.onStop(node, this);
         }
       }
+    }
 
-      this._reconcileStateForGraph(this._pendingGraph);
-      this._currentGraph = this._pendingGraph;
-      this._sortedNodeIds = this._pendingNodeIds;
-      this._pendingGraph = null;
+    this._reconcileStateForGraph(this._pendingGraph);
+    this._currentGraph = this._pendingGraph;
+    this._sortedNodeIds = this._pendingNodeIds;
+    this._pendingGraph = null;
 
-      // 新グラフのノードの onStart を呼ぶ
+    if (runLifecycle && this._currentGraph) {
       for (const node of this._currentGraph.nodes) {
         const nodeType = NODE_TYPES[node.type];
         if (nodeType.onStart) {
@@ -1093,6 +1094,10 @@ export class Loom {
         }
       }
     }
+  }
+
+  evaluateAt(time, frameTimestamp = time * 1000) {
+    this._activatePendingGraph(true);
 
     // グラフが設定されていなければ何もしない
     if (!this._currentGraph) return;
@@ -1208,6 +1213,16 @@ export class Loom {
         }
       }
     }
+  }
+
+  evaluateOnce({ time = 0, dt = 0 } = {}) {
+    const safeTime = Number.isFinite(time) ? time : 0;
+    const safeDt = Number.isFinite(dt) ? Math.max(0, dt) : 0;
+    const frameTimestamp = safeTime * 1000;
+
+    this._activatePendingGraph(false);
+    this._lastTimestamp = frameTimestamp - (safeDt * 1000);
+    this.evaluateAt(safeTime, frameTimestamp);
   }
 
   getValue(ref) {
