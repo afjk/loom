@@ -233,6 +233,25 @@ The REPL currently recompiles the accumulated source after each snippet. Invalid
 Import snippets are hoisted into the import block automatically, so you can add imports later while exploring.
 The REPL recompiles the accumulated source after each snippet, but it only displays effects introduced by the latest snippet.
 
+### Scene Sync probe commands
+
+Loom CLI includes early read-only Scene Sync probe commands.
+
+```bash
+node bin/loom.mjs scenesync ping --room 121555
+node bin/loom.mjs scenesync objects --room 121555
+node bin/loom.mjs scenesync info --room 121555
+```
+
+You can also configure defaults:
+
+```bash
+export LOOM_SCENESYNC_ENDPOINT=https://afjk.jp/pipe
+export LOOM_SCENESYNC_ROOM=121555
+```
+
+These commands are read-only. Sending Loom graphs to Scene Sync is planned for a later phase.
+
 ## ライブエディタと DSL
 
 ### エディタ一覧
