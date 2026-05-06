@@ -8,12 +8,20 @@
 #   - list.drop
 #   - list.filter
 #   - list.concat
+#   - list.length
+#   - list.of
+#   - logic.select
+#   - logic.lessOrEqual
 #   - logic.lessThan
 #   - logic.greaterOrEqual
 # TODO NODE: list.first(list)
 # TODO NODE: list.drop(list, count:)
 # TODO NODE: list.filter(list, fn:)
 # TODO NODE: list.concat(...lists)
+# TODO NODE: list.length(list)
+# TODO NODE: list.of(...values)
+# TODO NODE: logic.select(condition, whenTrue:, whenFalse:)
+# TODO NODE: logic.lessOrEqual(a, b)
 # TODO NODE: logic.lessThan(a, b)
 # TODO NODE: logic.greaterOrEqual(a, b)
 # TODO LANGUAGE: function definitions
@@ -24,7 +32,6 @@ import logic
 import console
 
 quicksort = fn(items) =>
-  # TODO NODE: list.length(list)
   logic.select(logic.lessOrEqual(list.length(items), 1),
     whenTrue: items,
     whenFalse:
