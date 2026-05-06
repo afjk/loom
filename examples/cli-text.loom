@@ -1,0 +1,3 @@
+import text
+
+message = text.upper("hello loom")
