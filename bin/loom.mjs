@@ -649,25 +649,29 @@ async function handleSceneSync(args) {
   }
 
   if (subcommand === 'redeem') {
-    const { endpoint, json } = parseSceneSyncArgs(rest);
     let code = null;
+    let codeIndex = -1;
 
     for (let index = 0; index < rest.length; index += 1) {
       const arg = rest[index];
       if (!arg.startsWith('-') && !['--room', '--session', '--endpoint', '--json'].includes(rest[index - 1])) {
         code = arg;
+        codeIndex = index;
         break;
       }
     }
 
     if (!code && rest.length > 0 && !rest[0].startsWith('-')) {
       code = rest[0];
+      codeIndex = 0;
     }
 
     if (!code) {
       throw new Error('redeem requires a code argument');
     }
 
+    const argsWithoutCode = codeIndex >= 0 ? rest.filter((_, i) => i !== codeIndex) : rest;
+    const { endpoint, json } = parseSceneSyncArgs(argsWithoutCode);
     const client = new SceneSyncClient({ endpoint });
     const result = await client.redeem({ code });
 
