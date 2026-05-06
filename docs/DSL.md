@@ -46,7 +46,9 @@ import fs
 import scene
 ```
 
-現時点の `import` は metadata / target validation 用です。実際の module loading や node library の自動登録はまだ行いません。
+現時点の `import` は主に metadata / target validation 用です。
+`text`, `json`, `console` など一部の標準ライブラリノードは実行できますが、
+`import` による動的 module loading や node registry の厳密な import-driven 切り替えはまだ行いません。
 
 `import` は、代入文や `render` 文より前に書く必要があります。
 
@@ -92,6 +94,8 @@ message = text.upper("hello")
 - qualified function call は `library.nodeName`
 - import 名そのものは引き続き単純な識別子だけをサポートします
 - dotted import name は未対応です
+
+`text.upper`, `json.parse`, `console.log` などの一部の qualified function は標準ライブラリノードとして実行できます。
 
 ### Effect statements
 
