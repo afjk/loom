@@ -1,6 +1,11 @@
 export const RUNTIME_TARGETS = ['cli', 'web', 'scenesync', 'unity', 'any'];
 
 export const LIBRARY_COMPATIBILITY = {
+  time: {
+    targets: ['cli', 'web', 'scenesync', 'unity'],
+    kind: 'source',
+    description: 'Time-based source nodes'
+  },
   math: {
     targets: ['cli', 'web', 'scenesync', 'unity'],
     kind: 'pure',

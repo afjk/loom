@@ -26,7 +26,9 @@ import {
   sceneEffectsToBroadcastOps,
   sceneEffectsToBroadcastPayload,
   createSceneGraphSetPayload,
-  createSceneGraphClearPayload
+  createSceneGraphClearPayload,
+  compileLoomToSceneSyncGraph,
+  loomGraphToSceneSyncGraph
 } from '../src/scenesync/index.js';
 
 function print(message = '') {
@@ -188,22 +190,25 @@ function getSceneSyncHelp() {
   loom scenesync <command> [options]
 
 Commands:
-  redeem <code>        Redeem a Scene Sync AI link code
-  session              Show saved Scene Sync session
-  status               Alias for session
-  logout               Clear saved Scene Sync session
-  run <file>           Convert Loom scene effects to Scene Sync broadcast payload
-  graph-set <obj> <g>  Set a Loom graph behavior on a Scene Sync object
-  graph-clear <obj>    Clear Loom graph behavior from a Scene Sync object
-  ping                 Check Scene Sync room connection
-  info                 Get room information
-  objects              List scene objects
-  list-objects         Alias for objects
+  redeem <code>            Redeem a Scene Sync AI link code
+  session                  Show saved Scene Sync session
+  status                   Alias for session
+  logout                   Clear saved Scene Sync session
+  run <file>               Convert Loom scene effects to Scene Sync broadcast payload
+  graph-compile <file>     Compile Loom DSL to Scene Sync behavior graph
+  graph-run <file>         Compile and set a Scene Sync graph from Loom DSL
+  graph-set <obj> <g>      Set a Loom graph behavior on a Scene Sync object
+  graph-clear <obj>        Clear Loom graph behavior from a Scene Sync object
+  ping                     Check Scene Sync room connection
+  info                     Get room information
+  objects                  List scene objects
+  list-objects             Alias for objects
 
 Options:
   --save               Save redeemed session locally
   --dry-run            Print payload without sending (default for run, graph-set, graph-clear)
   --send               Broadcast payload to Scene Sync
+  --object <id>        Scene object ID (for graph-compile and graph-run)
   --room <room>        Scene Sync room code
   --session <id>       Scene Sync session ID
   --endpoint <url>     Scene Sync command endpoint. Default: ${DEFAULT_SCENESYNC_ENDPOINT}
@@ -212,13 +217,16 @@ Options:
 Examples:
   loom scenesync run examples/scene-effects.loom
   loom scenesync run examples/scene-effects.loom --send
+  loom scenesync graph-compile examples/lissajous.loom
+  loom scenesync graph-run examples/lissajous.loom --object sample-cube
+  loom scenesync graph-run examples/lissajous.loom --object sample-cube --send
   loom scenesync graph-set sample-cube examples/scene-graphs/lissajous.json
   loom scenesync graph-set sample-cube examples/scene-graphs/lissajous.json --send
   loom scenesync graph-clear sample-cube --send
 
 Graph Commands:
-  By default graph-set and graph-clear are dry-run. Pass --send to broadcast.
-  graph-set does not require room/session in dry-run mode.
+  By default graph-set, graph-clear, and graph-run are dry-run. Pass --send to broadcast.
+  graph-compile and graph-run do not require room/session in dry-run mode.
 
 Environment Variables:
   LOOM_SCENESYNC_ROOM              Default room code
@@ -655,6 +663,122 @@ async function parseSceneSyncGraphClearArgs(args) {
   }
 
   return { objectId, room, session, endpoint, dryRun, send, json };
+}
+
+async function parseSceneSyncGraphCompileArgs(args) {
+  let file = null;
+  let objectId = null;
+  let json = false;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (file === null && !arg.startsWith('-')) {
+      file = arg;
+    } else if (arg === '--object') {
+      const next = args[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--object requires an object ID');
+      }
+      objectId = next;
+      index += 1;
+    } else if (arg === '--json') {
+      json = true;
+    } else {
+      throw new Error(`Unknown option: ${arg}`);
+    }
+  }
+
+  if (!file) {
+    throw new Error('graph-compile requires a file path');
+  }
+
+  return { file, objectId, json };
+}
+
+async function parseSceneSyncGraphRunArgs(args) {
+  let file = null;
+  let objectId = null;
+  let room = '';
+  let session = '';
+  let endpoint = '';
+  let dryRun = true;
+  let send = false;
+  let json = false;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (file === null && !arg.startsWith('-')) {
+      file = arg;
+    } else if (arg === '--object') {
+      const next = args[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--object requires an object ID');
+      }
+      objectId = next;
+      index += 1;
+    } else if (arg === '--room') {
+      const next = args[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--room requires a room code');
+      }
+      room = next;
+      index += 1;
+    } else if (arg === '--session') {
+      const next = args[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--session requires a session ID');
+      }
+      session = next;
+      index += 1;
+    } else if (arg === '--endpoint') {
+      const next = args[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--endpoint requires a URL');
+      }
+      endpoint = next;
+      index += 1;
+    } else if (arg === '--send') {
+      send = true;
+      dryRun = false;
+    } else if (arg === '--json') {
+      json = true;
+    } else {
+      throw new Error(`Unknown option: ${arg}`);
+    }
+  }
+
+  if (!file) {
+    throw new Error('graph-run requires a file path');
+  }
+
+  const savedSession = await loadSceneSyncSession();
+  const savedData = savedSession.ok && savedSession.session ? savedSession.session : null;
+
+  if (!room && send) {
+    room = process.env.LOOM_SCENESYNC_ROOM || '';
+    if (!room && savedData) {
+      room = savedData.roomId || '';
+    }
+  }
+
+  if (!session && send) {
+    session = process.env.LOOM_SCENESYNC_SESSION || '';
+    if (!session && savedData) {
+      session = savedData.sessionId || '';
+    }
+  }
+
+  if (!endpoint) {
+    endpoint = process.env.LOOM_SCENESYNC_ENDPOINT || '';
+    if (!endpoint && savedData) {
+      endpoint = savedData.endpoint || '';
+    }
+    if (!endpoint) {
+      endpoint = DEFAULT_SCENESYNC_ENDPOINT;
+    }
+  }
+
+  return { file, objectId, room, session, endpoint, dryRun, send, json };
 }
 
 async function handleCompile(args) {
@@ -1291,6 +1415,95 @@ async function handleSceneSync(args) {
             'Cleared Scene Sync graph.',
             `Room: ${room}`,
             `Object: ${objectId}`
+          ];
+          print(lines.join('\n'));
+        }
+        return 0;
+      }
+    } catch (error) {
+      printError(error.message || String(error));
+      return 1;
+    }
+  }
+
+  if (subcommand === 'graph-compile') {
+    const { file, objectId, json: jsonOutput } = await parseSceneSyncGraphCompileArgs(rest);
+
+    try {
+      const source = await readSourceFile(file);
+      const result = compileLoomToSceneSyncGraph(source, { objectId });
+
+      if (jsonOutput) {
+        print(stringifyJson({
+          ok: true,
+          objectId: result.objectId,
+          graph: result.graph
+        }));
+      } else {
+        print(stringifyJson(result.graph, true));
+      }
+      return 0;
+    } catch (error) {
+      printError(error.message || String(error));
+      return 1;
+    }
+  }
+
+  if (subcommand === 'graph-run') {
+    const { file, objectId, room, session, endpoint, dryRun, send, json: jsonOutput } = await parseSceneSyncGraphRunArgs(rest);
+
+    try {
+      const source = await readSourceFile(file);
+      const result = compileLoomToSceneSyncGraph(source, { objectId });
+
+      if (!result.objectId) {
+        throw new Error('OBJECT_REQUIRED - Pass --object <objectId> or include an object id in scene.setPosition(...)');
+      }
+
+      const payload = createSceneGraphSetPayload(result.objectId, result.graph);
+
+      if (dryRun) {
+        if (jsonOutput) {
+          print(stringifyJson({
+            ok: true,
+            dryRun: true,
+            payload
+          }));
+        } else {
+          print('Scene Sync graph-set payload:');
+          print(stringifyJson(payload, true));
+          print('Dry run only. Pass --send to broadcast to Scene Sync.');
+        }
+        return 0;
+      }
+
+      if (send) {
+        requireSceneSyncRoom(room);
+        requireSceneSyncSession(session);
+
+        const client = new SceneSyncClient({ endpoint });
+        const broadcastResult = await client.broadcast({ room, session, payload });
+
+        if (!broadcastResult.ok) {
+          printError(formatSceneSyncError(broadcastResult.error));
+          return 1;
+        }
+
+        if (jsonOutput) {
+          print(stringifyJson({
+            ok: true,
+            room,
+            objectId: result.objectId,
+            nodeCount: result.graph.nodes.length,
+            edgeCount: result.graph.edges.length
+          }));
+        } else {
+          const lines = [
+            'Sent Scene Sync graph.',
+            `Room: ${room}`,
+            `Object: ${result.objectId}`,
+            `Nodes: ${result.graph.nodes.length}`,
+            `Edges: ${result.graph.edges.length}`
           ];
           print(lines.join('\n'));
         }
