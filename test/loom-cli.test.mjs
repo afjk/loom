@@ -18,6 +18,17 @@ function runCli(args) {
   });
 }
 
+function runCliWithEnv(args, env) {
+  return spawnSync(process.execPath, [cliPath, ...args], {
+    cwd: projectRoot,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      ...env
+    }
+  });
+}
+
 test('compile outputs GraphJSON', () => {
   const result = runCli(['compile', 'examples/cli-basic.loom']);
   assert.equal(result.status, 0, result.stderr);
@@ -211,6 +222,23 @@ test('inspect includes qualified function node names', async () => {
   const result = runCli(['inspect', file]);
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /text\.upper/);
+});
+
+test('scenesync help prints command group usage', () => {
+  const result = runCli(['scenesync', '--help']);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /loom scenesync <command>/);
+  assert.match(result.stdout, /ping/);
+  assert.match(result.stdout, /objects/);
+});
+
+test('scenesync requires room via arg or env', () => {
+  const result = runCliWithEnv(['scenesync', 'ping'], {
+    LOOM_SCENESYNC_ROOM: '',
+    LOOM_SCENESYNC_ENDPOINT: ''
+  });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Scene Sync room is required/);
 });
 
 test('parse error exits 1', async () => {
