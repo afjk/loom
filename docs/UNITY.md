@@ -1,14 +1,14 @@
-# Loom Unity 対応ガイド
+# Loomlet Unity 対応ガイド
 
 Unity 向け C# ランタイムを `unity/com.afjk.loom` に追加しています。
 
 ## 概要
 
-Unity 版 Loom は JavaScript 版と同じ JSON グラフを評価します。  
+Unity 版 Loomlet は JavaScript 版と同じ JSON グラフを評価します。  
 グラフ DSL は Unity 側では直接扱わず、DSL をパースした後の JSON グラフを入力とします。
 
 ```text
-Graph DSL → JSON graph → Web Loom / Unity Loom で評価
+Graph DSL → JSON graph → Web Loomlet / Unity Loomlet で評価
 ```
 
 IL2CPP 互換を想定しており、Roslyn・動的コンパイル・外部 NuGet 依存は不要です。
@@ -57,7 +57,7 @@ Unity Package Manager を開き、**「+ > Add package from disk...」** で `un
 ```json
 {
   "dependencies": {
-    "com.afjk.loom": "https://github.com/afjk/loom.git?path=unity/com.afjk.loom"
+    "com.afjk.loom": "https://github.com/afjk/loomlet.git?path=unity/com.afjk.loom"
   }
 }
 ```

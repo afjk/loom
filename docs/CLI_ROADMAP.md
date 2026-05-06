@@ -1,4 +1,4 @@
-# Loom CLI Roadmap
+# Loomlet CLI Roadmap
 
 ## Phase 1: CLI MVP
 
@@ -42,9 +42,9 @@
 
 ## Phase 6: SceneSync integration
 
-- read-only room probes via `loom scenesync ping`
-- read-only room probes via `loom scenesync info`
-- read-only room probes via `loom scenesync objects`
+- read-only room probes via `loomlet scenesync ping`
+- read-only room probes via `loomlet scenesync info`
+- read-only room probes via `loomlet scenesync objects`
 - reusable Scene Sync command schema and client layer
 - compile DSL and send graph
 - target scene scope
@@ -55,15 +55,15 @@
 ## Phase 7: SceneSync follow-up
 
 - ✓ compile DSL and send graph
-- ✓ `loom scenesync run <file.loom>` (with dry-run payload generation)
-- ✓ `loom scenesync graph-compile <file.loom>` (compile to Scene Sync behavior graph)
-- ✓ `loom scenesync graph-run <file.loom> --object <id> [--send]` (compile and set graph)
-- ✓ `loom scenesync dev <file.loom>` (watch Loom DSL and live-send graph updates)
-- ✓ `loom scenesync graph-run` supports `--scene` scope
-- ✓ `loom scenesync graph-compile` supports `--scene` scope
-- `loom scenesync graph-patch <file.loom>` (patch graph)
-- `loom repl :connect scenesync`
-- `loom repl :objects`
+- ✓ `loomlet scenesync run <file.loom>` (with dry-run payload generation)
+- ✓ `loomlet scenesync graph-compile <file.loom>` (compile to Scene Sync behavior graph)
+- ✓ `loomlet scenesync graph-run <file.loom> --object <id> [--send]` (compile and set graph)
+- ✓ `loomlet scenesync dev <file.loom>` (watch Loomlet DSL and live-send graph updates)
+- ✓ `loomlet scenesync graph-run` supports `--scene` scope
+- ✓ `loomlet scenesync graph-compile` supports `--scene` scope
+- `loomlet scenesync graph-patch <file.loom>` (patch graph)
+- `loomlet repl :connect scenesync`
+- `loomlet repl :objects`
 
 ## Phase 8: Web Studio integration
 
