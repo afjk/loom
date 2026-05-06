@@ -1,145 +1,183 @@
 # Standard Library Plan (Category-Based)
 
-Each node includes gap metadata: status (implemented/missing/planned/uncertain), source (required-by-sample/recommended-baseline/future-experimental), and priority (high/medium/low).
+Source of truth for **Current** sections: `loomlet docs` output as of this PR.
 
 ## core
-Purpose: foundational language/dataflow primitives.
-Current: `constant`, pipeline `|>`, `import`, assignment.
-Used by tour samples: `constant`, `pipe`.
-Recommended baseline: `constant`, `identity`, `pipe` plus language-level `function definitions`.
-Status summary: Implemented: constant/pipe/import/assignment. Missing: identity as first-class node, function defs. Planned: function defs. Uncertain: macro-like helpers.
-Targets: cli, scenesync, unity, web.
+Purpose: language/dataflow fundamentals.
+Current:
+- `constant`
+- `clock`
+- pipeline `|>`
+- `import`, assignment, comments
+Used by tour samples:
+- `constant`, `clock`, `|>`
+Recommended baseline:
+- `identity`
+- function definitions
+Status summary:
+- Implemented: constant/clock/pipe/import/assignment/comments
+- Missing: identity, function definitions
+- Planned: function definitions
+- Uncertain: module system extensions
+Targets: cli, scenesync, unity, web
 
 ## logic
-Purpose: boolean ops and branching.
-Current: none as library nodes.
-Used by tour samples: `logic.equals`, `logic.select`, `logic.and`.
-Recommended baseline: `logic.not`, `logic.and`, `logic.or`, `logic.equals`, `logic.notEquals`, `logic.greaterThan`, `logic.lessThan`, `logic.greaterOrEqual`, `logic.lessOrEqual`, `logic.select`, `logic.when`.
-Status summary: Missing high-priority baseline for language tour drafts.
-Targets: cli, scenesync, unity, web.
+Purpose: boolean algebra and branching.
+Current:
+- none (no `logic` library today)
+Used by tour samples:
+- `logic.equals`, `logic.select`, `logic.and`, `logic.greaterThan`, `logic.lessOrEqual`, `logic.lessThan`, `logic.greaterOrEqual`
+Recommended baseline:
+- `logic.not`, `logic.and`, `logic.or`, `logic.equals`, `logic.notEquals`, `logic.greaterThan`, `logic.lessThan`, `logic.greaterOrEqual`, `logic.lessOrEqual`, `logic.select`, `logic.when`
+Status summary: Implemented: none / Missing: baseline set / Planned: full baseline / Uncertain: event-gated forms
+Targets: cli, scenesync, unity, web
 
 ## math
-Purpose: numeric transforms and shaping.
-Current: add/subtract/multiply/divide/mod/abs/floor/ceil/round/min/max/clamp/map/lerp/smoothstep/sine/cosine/tan/sqrt/pow (existing runtime family).
-Used by tour samples: `math.add`, `math.multiply`, `math.clamp`, `math.map`, `math.sine`.
-Recommended baseline: all listed in task.
-Status summary: Mostly implemented; verify parity aliases (`sine` vs `math.sine`) across targets.
-Targets: cli, scenesync, unity, web.
+Purpose: numeric transforms.
+Current:
+- `abs`, `add`, `clamp`, `cosine`, `divide`, `greaterThan`, `lerp`, `lessThan`, `map`, `mod`, `multiply`, `negate`, `math.sine`, `smoothstep`, `subtract`
+Used by tour samples:
+- `add`, `multiply`, `map`, `clamp`, `math.sine`, `mod`
+Recommended baseline:
+- add missing candidates: `floor`, `ceil`, `round`, `min`, `max`, `tan`, `sqrt`, `pow`
+Status summary: Implemented: current set above / Missing: baseline expansion / Planned: portability review / Uncertain: naming unification (`sine` vs `math.sine`)
+Targets: cli, scenesync, unity, web
 
 ## text
-Purpose: string shaping and formatting.
-Current: `text.upper`, `text.lower`, `text.trim`, `text.replace`.
-Used by tour samples: `text.upper`, `text.trim`, `text.replace`, `text.stringify`.
-Recommended baseline: add `text.concat`, `text.split`, `text.join`, `text.includes`, `text.startsWith`, `text.endsWith`, `text.length`, `text.isEmpty`, `text.stringify`.
-Status summary: partial implementation; stringify/concat are high priority.
-Targets: cli, scenesync, unity, web.
+Purpose: string processing.
+Current:
+- `text.upper`, `text.lower`, `text.trim`, `text.replace`
+Used by tour samples:
+- `text.upper`, `text.trim`, `text.replace`, `text.stringify` (draft)
+Recommended baseline:
+- `text.concat`, `text.split`, `text.join`, `text.includes`, `text.startsWith`, `text.endsWith`, `text.length`, `text.isEmpty`, `text.stringify`
+Status summary: Implemented: 4 core ops / Missing: stringify and composition helpers / Planned: baseline completion / Uncertain: locale-specific transforms
+Targets: cli, scenesync, unity, web
 
 ## list
-Purpose: ordered collection operations.
-Current: none.
-Used by tour samples: range/map/filter/reduce/sort patterns.
-Recommended baseline: `list.of`, `list.range`, `list.length`, `list.at`, `list.first`, `list.last`, `list.map`, `list.filter`, `list.reduce`, `list.join`, `list.reverse`, `list.sort`, `list.take`, `list.drop`.
-Status summary: fully missing; foundational for advanced language tours.
-Targets: cli, scenesync, unity, web.
+Purpose: ordered collection processing.
+Current: none
+Used by tour samples: `list.of`, `list.range`, `list.map`, `list.filter`, `list.reduce`, `list.first`, `list.drop`, `list.concat`, `list.length`, `list.of`
+Recommended baseline: `list.of`, `list.range`, `list.length`, `list.at`, `list.first`, `list.last`, `list.map`, `list.filter`, `list.reduce`, `list.join`, `list.reverse`, `list.sort`, `list.take`, `list.drop`, `list.concat`
+Status summary: Implemented none / Missing foundational set / Planned high priority
+Targets: cli, scenesync, unity, web
 
 ## object
-Purpose: object and property operations.
-Current: none.
-Used by tour samples: indirect use in future scene batching.
-Recommended baseline: `object.get`, `object.set`, `object.has`, `object.keys`, `object.values`, `object.entries`, `object.merge`, `object.pick`.
-Status summary: missing.
-Targets: cli, scenesync, unity, web.
+Purpose: object/property operations.
+Current: none
+Used by tour samples: none directly
+Recommended baseline: `object.get`, `object.set`, `object.has`, `object.keys`, `object.values`, `object.entries`, `object.merge`, `object.pick`
+Status summary: Missing baseline
+Targets: cli, scenesync, unity, web
 
 ## json
-Purpose: structured data serialization.
-Current: `json.parse`, `json.stringify`.
-Used by tour samples: none directly in tour yet.
-Recommended baseline: parse/stringify only.
-Status summary: implemented.
-Targets: cli, scenesync, unity, web.
+Purpose: structured serialization.
+Current:
+- `json.parse`, `json.stringify`
+Used by tour samples: none
+Recommended baseline: parse/stringify
+Status summary: Implemented
+Targets: cli, scenesync, unity, web
 
 ## time
-Purpose: clock and frame timing.
-Current: `time.clock`, `time.serverClock`.
-Used by tour samples: both.
-Recommended baseline: `time.now`, `time.clock`, `time.serverClock`, `time.delta`, `time.elapsed`.
-Status summary: partial.
-Targets: cli, scenesync, unity, web.
+Purpose: host and synchronized clocks.
+Current:
+- core source: `clock()`
+- library: `time.serverClock()`
+Used by tour samples:
+- `clock()`, `time.serverClock()`
+Recommended baseline:
+- `time.now`, `time.delta`, `time.elapsed`
+Status summary: Implemented partial / Missing frame/time helpers
+Targets: cli, scenesync, unity, web
 
 ## signal
-Purpose: pure time-varying helpers.
-Current: partial via math oscillators.
-Used by tour samples: draft `signal.lfo` et al.
-Recommended baseline: `signal.sine`, `signal.cosine`, `signal.osc`, `signal.lfo`, `signal.pulse`, `signal.saw`, `signal.triangle`, `signal.noise`, `signal.phase`, `signal.loop`, `signal.sample`.
-Status summary: mostly missing as dedicated namespace.
-Targets: cli, scenesync, unity, web.
+Purpose: signal-focused oscillator/modulation utilities.
+Current:
+- no `signal` namespace
+- partial capability via math oscillators (`math.sine`, `cosine`)
+Used by tour samples:
+- `signal.lfo`, `signal.smooth`, `signal.trigger`, `signal.state`
+Recommended baseline:
+- `signal.sine`, `signal.cosine`, `signal.osc`, `signal.lfo`, `signal.pulse`, `signal.saw`, `signal.triangle`, `signal.noise`, `signal.phase`, `signal.loop`, `signal.sample`
+Status summary: Missing namespace; planned as API layer over core math/time
+Targets: cli, scenesync, unity, web
 
 ## state
-Purpose: explicit temporal state.
-Current: `state.lowpass`, `state.smoothLerp`, `state.delay1`, `state.integrate`.
-Used by tour samples: draft state/control patterns.
-Recommended baseline: add `state.hold`, `state.toggle`, `state.counter`.
-Status summary: partial.
-Targets: cli, scenesync, unity, web.
+Purpose: explicit temporal integration and memory.
+Current:
+- `state.lowpass`, `state.smoothLerp`, `state.delay1`, `state.integrate`
+Used by tour samples:
+- future smoothing/toggle patterns
+Recommended baseline:
+- `state.hold`, `state.toggle`, `state.counter`
+Status summary: partial
+Targets: cli, scenesync, unity, web
 
 ## console
-Purpose: host logging.
-Current: `console.log`, `console.warn`, `console.error`.
-Used by tour samples: log.
-Recommended baseline: add `console.table`.
-Status summary: mostly implemented.
-Targets: cli, scenesync, unity, web.
+Purpose: host logging and diagnostics sink.
+Current:
+- `console.log`, `console.warn`, `console.error`
+Used by tour samples: `console.log`
+Recommended baseline: `console.table`
+Status summary: mostly implemented
+Targets: cli, scenesync, unity, web
 
 ## fs
-Purpose: file IO (mainly cli/tooling).
-Current: none runtime.
-Used by tour samples: none.
-Recommended baseline: `fs.readText`, `fs.writeText`, `fs.exists`, `fs.list`.
-Status summary: planned CLI-first.
-Targets: cli primarily.
+Purpose: file IO.
+Current: none (`fs` library is planned)
+Used by tour samples: none
+Recommended baseline: `fs.readText`, `fs.writeText`, `fs.exists`, `fs.list`
+Status summary: missing/planned
+Targets: cli
 
 ## scene
-Purpose: host scene graph operations.
-Current: `scene.setPosition`, `scene.setRotation`, `scene.setScale`.
-Used by tour samples: setPosition.
-Recommended baseline: add `scene.setColor`, `scene.setVisible`, `scene.setText`, `scene.setMaterial`, `scene.emit`, `scene.find`, `scene.getPosition`.
-Status summary: partial with high-priority `scene.find` for choreography.
-Targets: scenesync, unity, web.
+Purpose: scene graph output control.
+Current:
+- `scene.setPosition`, `scene.setRotation`, `scene.setScale`
+Used by tour samples:
+- `scene.setPosition`; drafts need `scene.find`
+Recommended baseline:
+- `scene.setColor`, `scene.setVisible`, `scene.setText`, `scene.setMaterial`, `scene.emit`, `scene.find`, `scene.getPosition`
+Status summary: partial; discovery helpers missing
+Targets: scenesync, unity, web
 
 ## input
-Purpose: user/device input.
-Current: legacy engine inputs exist; loomlet library namespace not standardized.
-Used by tour samples: none.
-Recommended baseline: `input.keyboard`, `input.pointer`, `input.button`, `input.axis`, `input.event`.
-Status summary: uncertain normalization.
-Targets: web, unity, scenesync.
+Purpose: user input abstraction.
+Current: none in standard `input` library namespace
+Used by tour samples: none
+Recommended baseline: `input.keyboard`, `input.pointer`, `input.button`, `input.axis`, `input.event`
+Status summary: planned
+Targets: web, unity, scenesync
 
 ## audio
-Purpose: audio analysis/control signals.
-Current: none.
-Used by tour samples: live draft placeholder.
-Recommended baseline: `audio.level`, `audio.band`, `audio.beat`, `audio.fft`.
-Status summary: missing.
-Targets: web, unity, scenesync.
+Purpose: audio-reactive analysis inputs.
+Current: none
+Used by tour samples: `audio.level` (live draft)
+Recommended baseline: `audio.level`, `audio.band`, `audio.beat`, `audio.fft`
+Status summary: planned
+Targets: web, unity, scenesync
 
 ## timeline
 Purpose: cue/sequence/choreography control.
-Current: none.
-Used by tour samples: live/scenesync draft set.
-Recommended baseline: `timeline.at`, `timeline.between`, `timeline.sequence`, `timeline.cue`, `timeline.loop`, `timeline.progress`.
-Status summary: missing.
-Targets: cli (offline eval), scenesync, unity, web.
+Current: none
+Used by tour samples: `timeline.sequence`, `timeline.cue`
+Recommended baseline: `timeline.at`, `timeline.between`, `timeline.sequence`, `timeline.cue`, `timeline.loop`, `timeline.progress`
+Status summary: planned high-priority for live/scenesync drafts
+Targets: cli, scenesync, unity, web
 
 ## random
-Purpose: stochastic/seeded generation.
-Current: none.
-Recommended baseline: `random.value`, `random.range`, `random.int`, `random.choice`, `random.seeded`, `random.noise`.
-Status summary: planned.
-Targets: cli, scenesync, unity, web.
+Purpose: controlled randomness.
+Current: none
+Used by tour samples: none
+Recommended baseline: `random.value`, `random.range`, `random.int`, `random.choice`, `random.seeded`, `random.noise`
+Status summary: planned
+Targets: cli, scenesync, unity, web
 
 ## debug
-Purpose: diagnostics and invariants.
-Current: none standardized.
-Recommended baseline: `debug.inspect`, `debug.trace`, `debug.assert`.
-Status summary: planned.
-Targets: cli, scenesync, unity, web.
+Purpose: graph-level diagnostics.
+Current: none
+Used by tour samples: none
+Recommended baseline: `debug.inspect`, `debug.trace`, `debug.assert`
+Status summary: planned
+Targets: cli, scenesync, unity, web
