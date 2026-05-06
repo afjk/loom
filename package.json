@@ -7,10 +7,12 @@
     "loom": "./bin/loom.mjs"
   },
   "scripts": {
-    "test": "node ci/run-tests.mjs",
+    "test": "npm run test:unit",
+    "test:unit": "node test/loom-cli.test.mjs && node test/loom-repl-session.test.mjs && node test/loom-repl-cli.test.mjs",
     "loom": "node bin/loom.mjs",
-    "test:cli": "node test/loom-cli.test.mjs && node test/loom-repl-session.test.mjs && node test/loom-repl-cli.test.mjs",
-    "test:repl": "node test/loom-repl-session.test.mjs"
+    "test:cli": "node test/loom-cli.test.mjs",
+    "test:repl": "node test/loom-repl-session.test.mjs && node test/loom-repl-cli.test.mjs",
+    "test:browser": "node ci/run-tests.mjs"
   },
   "devDependencies": {
     "http-server": "^14.1.1",
