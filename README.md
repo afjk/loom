@@ -107,6 +107,13 @@ state ノードとして、以下を同梱しています。
 - `delay1`: 1 フレーム遅延
 - `integrate`: 時間積分と min/max クランプ
 
+
+## VS Code support
+
+A minimal VS Code extension is available under `extensions/vscode-loom`.
+
+It is named **Loom for Scene Sync** and provides `.loom` file association, syntax highlighting, basic completions, and commands for running the current Loom file or starting `scenesync dev`.
+
 ## Unity 対応
 
 Unity 向け C# ランタイムを `unity/com.afjk.loom` に追加しています。
