@@ -313,7 +313,35 @@ export LOOM_SCENESYNC_ENDPOINT=https://afjk.jp/presence/api/ai
 node bin/loom.mjs scenesync objects
 ```
 
-These commands are read-only. Sending Loom graphs to Scene Sync is planned for a later phase.
+### Dry-run Scene Sync broadcasts
+
+Loom scene effects can be converted to Scene Sync broadcast payloads:
+
+```bash
+node bin/loom.mjs scenesync run examples/scene-effects.loom
+```
+
+By default this is a dry run and only prints the payload.
+
+To send it to the linked Scene Sync room:
+
+```bash
+node bin/loom.mjs scenesync run examples/scene-effects.loom --send
+```
+
+`--send` uses the saved session from:
+
+```text
+~/.config/loom/scenesync-session.json
+```
+
+or `LOOM_SCENESYNC_ROOM` / `LOOM_SCENESYNC_SESSION`.
+
+The `--json` flag outputs the payload and effects as JSON:
+
+```bash
+node bin/loom.mjs scenesync run examples/scene-effects.loom --json
+```
 
 ## ライブエディタと DSL
 
