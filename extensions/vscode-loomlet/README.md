@@ -1,4 +1,4 @@
-# Loom for Scene Sync
+# Loomlet for Scene Sync
 
 A minimal VS Code extension for writing `.loom` scene behavior scripts used with Scene Sync.
 
@@ -9,8 +9,8 @@ A minimal VS Code extension for writing `.loom` scene behavior scripts used with
 - import completion
 - `time.`, `math.`, and `scene.` completions
 - named argument completion
-- `Loom: Run Current File`
-- `Loom: Scene Sync Dev Current File`
+- `Loomlet: Run Current File`
+- `Loomlet: Scene Sync Dev Current File`
 
 ## Development
 
@@ -18,19 +18,19 @@ Open this folder in VS Code and press F5 to launch an Extension Development Host
 
 ## Commands
 
-### Loom: Run Current File
+### Loomlet: Run Current File
 
 Runs:
 
-node bin/loom.mjs run <current-file>
+loomlet run <current-file>
 
-### Loom: Scene Sync Dev Current File
+### Loomlet: Scene Sync Dev Current File
 
 Runs:
 
-node bin/loom.mjs scenesync dev <current-file>
+loomlet scenesync dev <current-file>
 
-This uses the existing Loom CLI Scene Sync session configuration.
+This uses the existing Loomlet CLI Scene Sync session configuration.
 
 ## Limitations
 

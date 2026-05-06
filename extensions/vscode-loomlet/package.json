@@ -1,7 +1,7 @@
 {
-  "name": "loom-vscode",
-  "displayName": "Loom",
-  "description": "VS Code support for Loom language files and Scene Sync workflows",
+  "name": "loomlet-vscode",
+  "displayName": "Loomlet",
+  "description": "VS Code support for Loomlet language files and Scene Sync workflows",
   "version": "0.0.1",
   "publisher": "afjk",
   "engines": {
@@ -12,15 +12,16 @@
   ],
   "main": "./src/extension.js",
   "activationEvents": [
-    "onLanguage:loom",
-    "onCommand:loom.runCurrentFile",
-    "onCommand:loom.sceneSyncDevCurrentFile"
+    "onLanguage:loomlet",
+    "onCommand:loomlet.runCurrentFile",
+    "onCommand:loomlet.sceneSyncDevCurrentFile"
   ],
   "contributes": {
     "languages": [
       {
-        "id": "loom",
+        "id": "loomlet",
         "aliases": [
+          "Loomlet",
           "Loom"
         ],
         "extensions": [
@@ -31,19 +32,19 @@
     ],
     "grammars": [
       {
-        "language": "loom",
-        "scopeName": "source.loom",
+        "language": "loomlet",
+        "scopeName": "source.loomlet",
         "path": "./syntaxes/loom.tmLanguage.json"
       }
     ],
     "commands": [
       {
-        "command": "loom.runCurrentFile",
-        "title": "Loom: Run Current File"
+        "command": "loomlet.runCurrentFile",
+        "title": "Loomlet: Run Current File"
       },
       {
-        "command": "loom.sceneSyncDevCurrentFile",
-        "title": "Loom: Scene Sync Dev Current File"
+        "command": "loomlet.sceneSyncDevCurrentFile",
+        "title": "Loomlet: Scene Sync Dev Current File"
       }
     ]
   },

@@ -1,8 +1,8 @@
-# Loom
+# Loomlet
 
-[![Tests](https://github.com/afjk/loom/actions/workflows/test.yml/badge.svg)](https://github.com/afjk/loom/actions/workflows/test.yml)
+[![Tests](https://github.com/afjk/loomlet/actions/workflows/test.yml/badge.svg)](https://github.com/afjk/loomlet/actions/workflows/test.yml)
 
-A browser dataflow engine with stateless transforms and explicit time-based state nodes. Build reactive visual, audio, and 3D content by composing small graph parts.
+A small dataflow language for weaving values, signals, and scene behavior. Build reactive visual, audio, and 3D content by composing small graph parts.
 
 ---
 
@@ -10,7 +10,7 @@ A browser dataflow engine with stateless transforms and explicit time-based stat
 
 ## 設計思想
 
-Loom は原則としてステートレスなデータフローを基本とし、時間的な追従・遅延・累積が必要な場合のみ、明示的な state ノード(explicit temporal state)に状態を隔離します。これにより graph JSON は宣言的・再現可能なまま保たれ、状態を持つ挙動も graph の中で可視化されます。
+Loomlet は原則としてステートレスなデータフローを基本とし、時間的な追従・遅延・累積が必要な場合のみ、明示的な state ノード(explicit temporal state)に状態を隔離します。これにより graph JSON は宣言的・再現可能なまま保たれ、状態を持つ挙動も graph の中で可視化されます。
 
 加えて、Source AST API（`parseDSLToAST` / `compileToGraph` / `formatDSL`）を公開しており、AI 補助編集・DSL formatter・ビジュアルエディタの基盤として利用できます。詳細は [SPEC.md の AST 章](docs/SPEC.md#astabstract-syntax-tree) を参照してください。
 
@@ -42,7 +42,7 @@ DSL → Source AST → GraphJSON → EditorModel → (将来) Rete 描画
 
 アート、インタラクティブ作品、ゲームなどのリアルタイムなコンテンツでは、視覚・音響・3D 空間の変化を時々刻々と計算する必要があります。こうしたシステムは状態管理が複雑になりがちで、デバッグや再現が難しいという課題があります。
 
-Loom は、データフロー思想に基づき、現在時刻と入力値だけから出力が決まる設計を基本とします。状態が必要な処理は state ノードに限定して局所化します。これにより：
+Loomlet は、データフロー思想に基づき、現在時刻と入力値だけから出力が決まる設計を基本とします。状態が必要な処理は state ノードに限定して局所化します。これにより：
 
 - 任意のタイミングで同じ計算を再実行しても、同じ結果が得られる
 - 動作が予測可能で、デバッグが容易
@@ -53,7 +53,7 @@ Loom は、データフロー思想に基づき、現在時刻と入力値だけ
 
 ## 設計原則
 
-Loom の設計は、以下の 4 つの原則に基づいています。
+Loomlet の設計は、以下の 4 つの原則に基づいています。
 
 1. **ステートレスを基本とする**  
    状態（過去を引きずる値）を持たず、現在時刻と入力だけから出力が決まる純粋なデータフローを基盤とします。これにより、誰が計算しても同じ結果になり、マルチプレイの同期が単純になります。
@@ -110,9 +110,9 @@ state ノードとして、以下を同梱しています。
 
 ## VS Code support
 
-A minimal VS Code extension is available under `extensions/vscode-loom`.
+A minimal VS Code extension is available under `extensions/vscode-loomlet`.
 
-It is named **Loom for Scene Sync** and provides `.loom` file association, syntax highlighting, basic completions, and commands for running the current Loom file or starting `scenesync dev`.
+It is named **Loomlet** and provides `.loom` file association, syntax highlighting, basic completions, and commands for running the current Loomlet file or starting `loomlet scenesync dev`.
 
 ## Unity 対応
 
@@ -164,25 +164,25 @@ Graph DSL → JSON graph → Web Loom / Unity Loom で評価
 
 ## CLI
 
-Loom CLI は Loom DSL の最初のターミナルインターフェースです。CLI 自体に処理を閉じ込めず、`src/toolchain/` の compile / format / inspect / run を Web Studio / Scene Sync / AI toolchain からも再利用できる前提で追加しています。
+Loomlet CLI は Loomlet DSL の最初のターミナルインターフェースです。CLI 自体に処理を閉じ込めず、`src/toolchain/` の compile / format / inspect / run を Web Studio / Scene Sync / AI toolchain からも再利用できる前提で追加しています。
 
-現在の CLI は、Loom DSL を GraphJSON に変換し、整形し、要約を取り、単純な pure/source/transform/state グラフを 1 回実行する用途に向いています。
+現在の CLI は、Loomlet DSL を GraphJSON に変換し、整形し、要約を取り、単純な pure/source/transform/state グラフを 1 回実行する用途に向いています。
 
 最小の import metadata と target validation もサポートしています。
 
 ```bash
-npm run loom -- compile examples/cli-basic.loom
-npm run loom -- format examples/cli-basic.loom
-npm run loom -- inspect examples/cli-basic.loom
-npm run loom -- run examples/cli-basic.loom --get x.out --time 1
-npm run loom -- compile script.loom --target cli
-npm run loom -- inspect script.loom --target web
-node bin/loom.mjs run examples/cli-text.loom --get message.out
+loomlet compile examples/cli-basic.loom
+loomlet format examples/cli-basic.loom
+loomlet inspect examples/cli-basic.loom
+loomlet run examples/cli-basic.loom --get x.out --time 1
+loomlet compile script.loom --target cli
+loomlet inspect script.loom --target web
+loomlet run examples/cli-text.loom --get message.out
 ```
 
 ```bash
-node bin/loom.mjs compile examples/cli-basic.loom
-node bin/loom.mjs run examples/cli-basic.loom --get x.out --time 1
+loomlet compile examples/cli-basic.loom
+loomlet run examples/cli-basic.loom --get x.out --time 1
 ```
 
 現時点の制約:
@@ -211,30 +211,30 @@ CLI-safe library nodes:
 
 ### REPL
 
-Start an interactive Loom session:
+Start an interactive Loomlet session:
 
 ```bash
-node bin/loom.mjs repl
+loomlet repl
 ```
 
 Example:
 
 ```text
-loom> import text
+loomlet> import text
 imported text
-loom> message = text.upper("hello loom")
-message.out = HELLO LOOM
-loom> import console
+loomlet> message = text.upper("hello loomlet")
+message.out = HELLO LOOMLET
+loomlet> import console
 imported console
-loom> console.log(message)
-[log] HELLO LOOM
-loom> :source
+loomlet> console.log(message)
+[log] HELLO LOOMLET
+loomlet> :source
 import text
 import console
 
-message = text.upper("hello loom")
+message = text.upper("hello loomlet")
 console.log(message)
-loom> :quit
+loomlet> :quit
 ```
 
 The REPL currently recompiles the accumulated source after each snippet. Invalid snippets are rejected and do not modify the current session.
@@ -243,68 +243,68 @@ The REPL recompiles the accumulated source after each snippet, but it only displ
 
 ### Scene Sync probe commands
 
-Loom CLI includes read-only Scene Sync probe commands to interact with the afjk.jp AI wrapper.
+Loomlet CLI includes read-only Scene Sync probe commands to interact with the afjk.jp AI wrapper.
 
 #### Save a Scene Sync session
 
 Redeem and save a Scene Sync AI link code:
 
 ```bash
-node bin/loom.mjs scenesync redeem 301398 --save
+loomlet scenesync redeem 301398 --save
 ```
 
 Output:
 ```
 Linked Scene Sync room.
 Room: <roomId>
-Session: saved to ~/.config/loom/scenesync-session.json
+Session: saved to ~/.config/loomlet/scenesync-session.json
 Expires At: <expiresAt>
 ```
 
 Then use probe commands without passing a long session token:
 
 ```bash
-node bin/loom.mjs scenesync ping
-node bin/loom.mjs scenesync info
-node bin/loom.mjs scenesync objects
+loomlet scenesync ping
+loomlet scenesync info
+loomlet scenesync objects
 ```
 
-Saved sessions are stored in `~/.config/loom/scenesync-session.json`. The session token is a secret and should not be committed to a repository.
+Saved sessions are stored in `~/.config/loomlet/scenesync-session.json`. The session token is a secret and should not be committed to a repository.
 
 #### Show saved session
 
 ```bash
-node bin/loom.mjs scenesync session
+loomlet scenesync session
 ```
 
 or the alias:
 
 ```bash
-node bin/loom.mjs scenesync status
+loomlet scenesync status
 ```
 
 #### Clear saved session
 
 ```bash
-node bin/loom.mjs scenesync logout
+loomlet scenesync logout
 ```
 
 #### List objects in a room
 
 ```bash
-node bin/loom.mjs scenesync objects --room <roomId> --session <sessionId>
+loomlet scenesync objects --room <roomId> --session <sessionId>
 ```
 
 #### Get room information
 
 ```bash
-node bin/loom.mjs scenesync info --room <roomId> --session <sessionId>
+loomlet scenesync info --room <roomId> --session <sessionId>
 ```
 
 #### Check room connectivity
 
 ```bash
-node bin/loom.mjs scenesync ping --room <roomId> --session <sessionId>
+loomlet scenesync ping --room <roomId> --session <sessionId>
 ```
 
 `ping` currently performs a lightweight scene snapshot request because the existing AI wrapper does not expose a dedicated ping endpoint.
@@ -312,20 +312,20 @@ node bin/loom.mjs scenesync ping --room <roomId> --session <sessionId>
 #### Configure defaults
 
 ```bash
-export LOOM_SCENESYNC_ROOM=<roomId>
-export LOOM_SCENESYNC_SESSION=<sessionId>
-export LOOM_SCENESYNC_ENDPOINT=https://afjk.jp/presence/api/ai
+export LOOMLET_SCENESYNC_ROOM=<roomId>
+export LOOMLET_SCENESYNC_SESSION=<sessionId>
+export LOOMLET_SCENESYNC_ENDPOINT=https://afjk.jp/presence/api/ai
 
 # Now you can omit --room and --session
-node bin/loom.mjs scenesync objects
+loomlet scenesync objects
 ```
 
 ### Dry-run Scene Sync broadcasts
 
-Loom scene effects can be converted to Scene Sync broadcast payloads:
+Loomlet scene effects can be converted to Scene Sync broadcast payloads:
 
 ```bash
-node bin/loom.mjs scenesync run examples/scene-effects.loom
+loomlet scenesync run examples/scene-effects.loom
 ```
 
 By default this is a dry run and only prints the payload.
@@ -333,39 +333,39 @@ By default this is a dry run and only prints the payload.
 To send it to the linked Scene Sync room:
 
 ```bash
-node bin/loom.mjs scenesync run examples/scene-effects.loom --send
+loomlet scenesync run examples/scene-effects.loom --send
 ```
 
 `--send` uses the saved session from:
 
 ```text
-~/.config/loom/scenesync-session.json
+~/.config/loomlet/scenesync-session.json
 ```
 
-or `LOOM_SCENESYNC_ROOM` / `LOOM_SCENESYNC_SESSION`.
+or `LOOMLET_SCENESYNC_ROOM` / `LOOMLET_SCENESYNC_SESSION`.
 
 The `--json` flag outputs the payload and effects as JSON:
 
 ```bash
-node bin/loom.mjs scenesync run examples/scene-effects.loom --json
+loomlet scenesync run examples/scene-effects.loom --json
 ```
 
-### Compile Loom DSL to a Scene Sync behavior graph
+### Compile Loomlet DSL to a Scene Sync behavior graph
 
-Loom DSL can be compiled directly to Scene Sync behavior graphs with `graph-compile`:
+Loomlet DSL can be compiled directly to Scene Sync behavior graphs with `graph-compile`:
 
 ```bash
-node bin/loom.mjs scenesync graph-compile examples/lissajous.loom
+loomlet scenesync graph-compile examples/lissajous.loom
 ```
 
 This outputs a Scene Sync graph JSON containing `serverClock`, `sine`, and `sceneSetPosition` nodes.
 
-### Run a Loom behavior graph on a Scene Sync object
+### Run a Loomlet behavior graph on a Scene Sync object
 
-Loom DSL graphs can be compiled and sent to Scene Sync objects using `graph-run`:
+Loomlet DSL graphs can be compiled and sent to Scene Sync objects using `graph-run`:
 
 ```bash
-node bin/loom.mjs scenesync graph-run examples/lissajous.loom --object sample-cube
+loomlet scenesync graph-run examples/lissajous.loom --object sample-cube
 ```
 
 By default this is a dry run and only prints the `scene-graph-set` payload.
@@ -373,7 +373,7 @@ By default this is a dry run and only prints the `scene-graph-set` payload.
 To send it to the linked Scene Sync room:
 
 ```bash
-node bin/loom.mjs scenesync graph-run examples/lissajous.loom --object sample-cube --send
+loomlet scenesync graph-run examples/lissajous.loom --object sample-cube --send
 ```
 
 The `--object` parameter can be omitted if the DSL includes an object ID in `scene.setPosition()`.
@@ -381,15 +381,15 @@ The `--object` parameter can be omitted if the DSL includes an object ID in `sce
 Use `graph-clear` to stop a running graph:
 
 ```bash
-node bin/loom.mjs scenesync graph-clear sample-cube --send
+loomlet scenesync graph-clear sample-cube --send
 ```
 
 ### Live Scene Sync development
 
-Use `scenesync dev` to watch a Loom DSL file and send Scene Sync graph updates whenever it changes.
+Use `scenesync dev` to watch a Loomlet DSL file and send Scene Sync graph updates whenever it changes.
 
 ```bash
-node bin/loom.mjs scenesync dev examples/lissajous.loom
+loomlet scenesync dev examples/lissajous.loom
 ```
 
 This compiles the DSL to a Scene Sync behavior graph and sends `scene-graph-set` on each save.
@@ -397,25 +397,25 @@ This compiles the DSL to a Scene Sync behavior graph and sends `scene-graph-set`
 To watch in dry-run mode (without sending to Scene Sync):
 
 ```bash
-node bin/loom.mjs scenesync dev examples/lissajous.loom --dry-run
+loomlet scenesync dev examples/lissajous.loom --dry-run
 ```
 
 To watch a specific object:
 
 ```bash
-node bin/loom.mjs scenesync dev examples/lissajous.loom --object sample-cube
+loomlet scenesync dev examples/lissajous.loom --object sample-cube
 ```
 
 To watch a scene-level graph:
 
 ```bash
-node bin/loom.mjs scenesync dev examples/scene-control.loom --scene
+loomlet scenesync dev examples/scene-control.loom --scene
 ```
 
 Press Ctrl+C to stop watching. The graph remains active in Scene Sync; use `graph-clear` to remove it:
 
 ```bash
-node bin/loom.mjs scenesync graph-clear sample-cube --send
+loomlet scenesync graph-clear sample-cube --send
 ```
 
 ## ライブエディタと DSL
@@ -424,9 +424,9 @@ node bin/loom.mjs scenesync graph-clear sample-cube --send
 
 | エディタ | URL | 特徴 |
 |---|---|---|
-| シンプル版 (`editor/`) | [editor/](https://afjk.github.io/loom/editor/) | 依存ゼロ・軽量・textarea ベース |
-| **Pro 版** (`editor-pro/`) | [editor-pro/dist/](https://afjk.github.io/loom/editor-pro/dist/) | **補完・構文ハイライト・lint 付き、オーバーレイ UI** |
-| **Studio MVP** (`editor-studio/`) | [editor-studio/dist/](https://afjk.github.io/loom/editor-studio/dist/) | **DSL + ノードエディタ並行編集 MVP** |
+| シンプル版 (`editor/`) | [editor/](https://afjk.github.io/loomlet/editor/) | 依存ゼロ・軽量・textarea ベース |
+| **Pro 版** (`editor-pro/`) | [editor-pro/dist/](https://afjk.github.io/loomlet/editor-pro/dist/) | **補完・構文ハイライト・lint 付き、オーバーレイ UI** |
+| **Studio MVP** (`editor-studio/`) | [editor-studio/dist/](https://afjk.github.io/loomlet/editor-studio/dist/) | **DSL + ノードエディタ並行編集 MVP** |
 
 **シンプル版** はライブラリ依存ゼロで手軽に使えるテキストエリアベースのエディタです。
 
@@ -439,7 +439,7 @@ node bin/loom.mjs scenesync graph-clear sample-cube --send
 
 ライブエディタ（`editor/index.html`）では **JSON** モードと **DSL** モードを切り替えてグラフを編集できます。
 
-DSL（Domain Specific Language）は JSON より簡潔にグラフを記述するためのテキスト形式です。各代入文がノードに、識別子参照がエッジに自動変換されます。
+DSL（Domain Specific Language）は JSON より簡潔にグラフを記述するためのテキスト形式です。各代入文がノードに、識別子参照がエッジに自動変換されます。Loomlet source files use the `.loom` extension.
 
 ```
 # リサジュー曲線の DSL 例
@@ -465,7 +465,7 @@ x = timer |> sine(freq: 0.3) |> map(inMin: -1, inMax: 1, outMin: 100, outMax: 70
 
 `editor-studio` は DSL と Rete.js v2 ノードエディタを左右に並べた協調編集スタジオです。
 
-- GitHub Pages: https://afjk.github.io/loom/editor-studio/dist/
+- GitHub Pages: https://afjk.github.io/loomlet/editor-studio/dist/
 
 ローカル開発:
 
@@ -500,28 +500,28 @@ npm run dev
 
 GitHub Pages で公開されているデモを、ブラウザから直接確認できます。
 
-* 基本デモ：https://afjk.github.io/loom/examples/01-basic.html
-* 揺れる箱デモ：https://afjk.github.io/loom/examples/02-moving-box.html
-* ポインタ追従デモ：https://afjk.github.io/loom/examples/03-pointer.html
-* キー入力カウンタ：https://afjk.github.io/loom/examples/04-keydown.html
-* シンクノードデモ：https://afjk.github.io/loom/examples/05-sink-box.html
-* Three.js デモ：https://afjk.github.io/loom/examples/06-three-cube.html
-* SceneSync モックデモ：https://afjk.github.io/loom/examples/07-scenesync-mock.html
-* Lissajous 曲線：https://afjk.github.io/loom/examples/08-lissajous.html
-* ポインタ軌跡：https://afjk.github.io/loom/examples/09-lerp-tween.html
-* 位相ずらし波：https://afjk.github.io/loom/examples/10-multi-phase.html
-* 色相循環 (Three.js)：https://afjk.github.io/loom/examples/11-color-cycle.html
-* 円運動：https://afjk.github.io/loom/examples/12-circular-motion.html
-* 範囲リマップ：https://afjk.github.io/loom/examples/13-clamp-map.html
-* DOM Transform Sink デモ：https://afjk.github.io/loom/examples/14-dom-transform-sink.html
-* Threshold Class Sink デモ：https://afjk.github.io/loom/examples/15-threshold-class-sink.html
-* smoothLerp 追従デモ：https://afjk.github.io/loom/examples/16-smooth-pointer.html
-* lowpass 平滑化デモ：https://afjk.github.io/loom/examples/17-jitter-free-trail.html
-* integrate チャージゲージ：https://afjk.github.io/loom/examples/18-charge-gauge.html
-* **ライブエディタ（シンプル版）**：https://afjk.github.io/loom/editor/
-* **ライブエディタ（Pro 版）**：https://afjk.github.io/loom/editor-pro/dist/
-* **Studio MVP**：https://afjk.github.io/loom/editor-studio/dist/
-* テスト結果：https://afjk.github.io/loom/test/loom.test.html
+* 基本デモ：https://afjk.github.io/loomlet/examples/01-basic.html
+* 揺れる箱デモ：https://afjk.github.io/loomlet/examples/02-moving-box.html
+* ポインタ追従デモ：https://afjk.github.io/loomlet/examples/03-pointer.html
+* キー入力カウンタ：https://afjk.github.io/loomlet/examples/04-keydown.html
+* シンクノードデモ：https://afjk.github.io/loomlet/examples/05-sink-box.html
+* Three.js デモ：https://afjk.github.io/loomlet/examples/06-three-cube.html
+* SceneSync モックデモ：https://afjk.github.io/loomlet/examples/07-scenesync-mock.html
+* Lissajous 曲線：https://afjk.github.io/loomlet/examples/08-lissajous.html
+* ポインタ軌跡：https://afjk.github.io/loomlet/examples/09-lerp-tween.html
+* 位相ずらし波：https://afjk.github.io/loomlet/examples/10-multi-phase.html
+* 色相循環 (Three.js)：https://afjk.github.io/loomlet/examples/11-color-cycle.html
+* 円運動：https://afjk.github.io/loomlet/examples/12-circular-motion.html
+* 範囲リマップ：https://afjk.github.io/loomlet/examples/13-clamp-map.html
+* DOM Transform Sink デモ：https://afjk.github.io/loomlet/examples/14-dom-transform-sink.html
+* Threshold Class Sink デモ：https://afjk.github.io/loomlet/examples/15-threshold-class-sink.html
+* smoothLerp 追従デモ：https://afjk.github.io/loomlet/examples/16-smooth-pointer.html
+* lowpass 平滑化デモ：https://afjk.github.io/loomlet/examples/17-jitter-free-trail.html
+* integrate チャージゲージ：https://afjk.github.io/loomlet/examples/18-charge-gauge.html
+* **ライブエディタ（シンプル版）**：https://afjk.github.io/loomlet/editor/
+* **ライブエディタ（Pro 版）**：https://afjk.github.io/loomlet/editor-pro/dist/
+* **Studio MVP**：https://afjk.github.io/loomlet/editor-studio/dist/
+* テスト結果：https://afjk.github.io/loomlet/test/loom.test.html
 
 ローカルで確認する場合は、ESM を使うため、ローカルファイル直接 (`file://`) ではなく HTTP サーバから配信する必要があります。
 
@@ -568,6 +568,7 @@ GitHub Pages で公開されているデモを、ブラウザから直接確認�
 
 * **ライブエディタ（シンプル版）**：`http://localhost:8000/editor/`
 * **ライブエディタ（Pro 版）**：`http://localhost:8000/editor-pro/dist/`
+* **Studio MVP**：`http://localhost:8000/editor-studio/dist/`
 
 * テスト：`http://localhost:8000/test/loom.test.html`
 

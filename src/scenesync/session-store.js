@@ -1,10 +1,27 @@
-import { mkdir, writeFile, readFile, chmod, rm } from 'node:fs/promises';
+import { mkdir, writeFile, readFile, chmod, rm, access } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 
 export function getDefaultSceneSyncSessionPath(env = process.env) {
   const configHome = env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
-  return path.join(configHome, 'loom', 'scenesync-session.json');
+  return path.join(configHome, 'loomlet', 'scenesync-session.json');
+}
+
+export async function getDefaultSceneSyncSessionPathWithFallback(env = process.env) {
+  const newPath = getDefaultSceneSyncSessionPath(env);
+  const oldPath = path.join(env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), 'loom', 'scenesync-session.json');
+
+  try {
+    await access(newPath);
+    return newPath;
+  } catch {
+    try {
+      await access(oldPath);
+      return oldPath;
+    } catch {
+      return newPath;
+    }
+  }
 }
 
 export async function saveSceneSyncSession(session, options = {}) {
@@ -34,7 +51,10 @@ export async function saveSceneSyncSession(session, options = {}) {
 }
 
 export async function loadSceneSyncSession(options = {}) {
-  const { path: filePath = getDefaultSceneSyncSessionPath() } = options;
+  let filePath = options.path;
+  if (!filePath) {
+    filePath = await getDefaultSceneSyncSessionPathWithFallback();
+  }
 
   try {
     const content = await readFile(filePath, 'utf8');
