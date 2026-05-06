@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Loom Three.js Adapter Tests</title>
+  <script src="../src/loom.js" type="module"></script>
+</head>
+<body>
+  <h1>Loom Three.js Adapter Tests</h1>
+  <div id="results"></div>
+
+  <script type="module">
+    import { Loom } from '../src/loom.js';
+    import { registerThreeNodes } from '../src/loom-three.js';
+
+    // モックオブジェクトの生成関数
+    function makeMockObject() {
+      return {
+        position: { x: 0, y: 0, z: 0, set(x, y, z) { this.x = x; this.y = y; this.z = z; } },
+        rotation: { x: 0, y: 0, z: 0, set(x, y, z) { this.x = x; this.y = y; this.z = z; } },
+        scale: { x: 1, y: 1, z: 1, set(x, y, z) { this.x = x; this.y = y; this.z = z; } },
+        material: { color: { r: 1, g: 1, b: 1, setRGB(r, g, b) { this.r = r; this.g = g; this.b = b; } } },
+        visible: true
+      };
+    }
+
+    const results = [];
+
+    function test(name, fn) {
+      try {
+        fn();
+        results.push({ name, pass: true });
+        console.log(`✓ ${name}`);
+      } catch (e) {
+        results.push({ name, pass: false, error: e.message });
+        console.error(`✗ ${name}: ${e.message}`);
+      }
+    }
+
+    function assert(condition, message) {
+      if (!condition) throw new Error(message);
+    }
+
+    function assertEqual(actual, expected, message) {
+      if (actual !== expected) {
+        throw new Error(message || `Expected ${expected}, got ${actual}`);
+      }
+    }
+
+    // ノード型を最初に一度だけ登録
+    registerThreeNodes(Loom, {});
+
+    // テスト: setPosition が position.set を正しく呼ぶ
+    test('setPosition: position.set を正しく呼ぶ', () => {
+      const cube = makeMockObject();
+      registerThreeNodes(Loom, { cube });
+
+      const graph = {
+        nodes: [
+          { id: 'src', type: 'constant', params: { value: 2 } },
+          { id: 'pos', type: 'setPosition', params: { target: 'cube' } }
+        ],
+        edges: [
+          { from: 'src.out', to: 'pos.x' },
+          { from: 'src.out', to: 'pos.y' },
+          { from: 'src.out', to: 'pos.z' }
+        ]
+      };
+
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+
+      assertEqual(cube.position.x, 2, 'position.x should be 2');
+      assertEqual(cube.position.y, 2, 'position.y should be 2');
+      assertEqual(cube.position.z, 2, 'position.z should be 2');
+    });
+
+    // テスト: setRotation が rotation.set を正しく呼ぶ
+    test('setRotation: rotation.set を正しく呼ぶ', () => {
+      const cube = makeMockObject();
+      registerThreeNodes(Loom, { cube });
+
+      const graph = {
+        nodes: [
+          { id: 'src1', type: 'constant', params: { value: 1.57 } },
+          { id: 'src2', type: 'constant', params: { value: 3.14 } },
+          { id: 'rot', type: 'setRotation', params: { target: 'cube' } }
+        ],
+        edges: [
+          { from: 'src1.out', to: 'rot.x' },
+          { from: 'src2.out', to: 'rot.y' },
+          { from: 'src1.out', to: 'rot.z' }
+        ]
+      };
+
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+
+      assertEqual(cube.rotation.x, 1.57, 'rotation.x should be 1.57');
+      assertEqual(cube.rotation.y, 3.14, 'rotation.y should be 3.14');
+      assertEqual(cube.rotation.z, 1.57, 'rotation.z should be 1.57');
+    });
+
+    // テスト: setScale が scale.set を正しく呼ぶ
+    test('setScale: scale.set を正しく呼ぶ', () => {
+      const cube = makeMockObject();
+      registerThreeNodes(Loom, { cube });
+
+      const graph = {
+        nodes: [
+          { id: 'src', type: 'constant', params: { value: 2 } },
+          { id: 'scale', type: 'setScale', params: { target: 'cube' } }
+        ],
+        edges: [
+          { from: 'src.out', to: 'scale.x' },
+          { from: 'src.out', to: 'scale.y' },
+          { from: 'src.out', to: 'scale.z' }
+        ]
+      };
+
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+
+      assertEqual(cube.scale.x, 2, 'scale.x should be 2');
+      assertEqual(cube.scale.y, 2, 'scale.y should be 2');
+      assertEqual(cube.scale.z, 2, 'scale.z should be 2');
+    });
+
+    // テスト: setColor が material.color.setRGB を正しく呼ぶ
+    test('setColor: material.color.setRGB を正しく呼ぶ', () => {
+      const cube = makeMockObject();
+      registerThreeNodes(Loom, { cube });
+
+      const graph = {
+        nodes: [
+          { id: 'r', type: 'constant', params: { value: 1 } },
+          { id: 'g', type: 'constant', params: { value: 0.5 } },
+          { id: 'b', type: 'constant', params: { value: 0.2 } },
+          { id: 'color', type: 'setColor', params: { target: 'cube' } }
+        ],
+        edges: [
+          { from: 'r.out', to: 'color.r' },
+          { from: 'g.out', to: 'color.g' },
+          { from: 'b.out', to: 'color.b' }
+        ]
+      };
+
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+
+      assertEqual(cube.material.color.r, 1, 'color.r should be 1');
+      assertEqual(cube.material.color.g, 0.5, 'color.g should be 0.5');
+      assertEqual(cube.material.color.b, 0.2, 'color.b should be 0.2');
+    });
+
+    // テスト: setColor が material が配列の場合は最初の要素を対象とする
+    test('setColor: material が配列の場合は最初の要素を操作', () => {
+      const cube = makeMockObject();
+      cube.material = [
+        { color: { r: 1, g: 1, b: 1, setRGB(r, g, b) { this.r = r; this.g = g; this.b = b; } } },
+        { color: { r: 1, g: 1, b: 1, setRGB(r, g, b) { this.r = r; this.g = g; this.b = b; } } }
+      ];
+      registerThreeNodes(Loom, { cube });
+
+      const graph = {
+        nodes: [
+          { id: 'r', type: 'constant', params: { value: 0.3 } },
+          { id: 'g', type: 'constant', params: { value: 0.4 } },
+          { id: 'b', type: 'constant', params: { value: 0.5 } },
+          { id: 'color', type: 'setColor', params: { target: 'cube' } }
+        ],
+        edges: [
+          { from: 'r.out', to: 'color.r' },
+          { from: 'g.out', to: 'color.g' },
+          { from: 'b.out', to: 'color.b' }
+        ]
+      };
+
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+
+      assertEqual(cube.material[0].color.r, 0.3, 'first material color.r should be 0.3');
+      assertEqual(cube.material[0].color.g, 0.4, 'first material color.g should be 0.4');
+      assertEqual(cube.material[0].color.b, 0.5, 'first material color.b should be 0.5');
+      assertEqual(cube.material[1].color.r, 1, 'second material should not be modified');
+    });
+
+    // テスト: setVisible が visible プロパティを更新する
+    test('setVisible: visible プロパティを更新する', () => {
+      const cube = makeMockObject();
+      registerThreeNodes(Loom, { cube });
+
+      const graph = {
+        nodes: [
+          { id: 'src', type: 'constant', params: { value: 0 } },
+          { id: 'vis', type: 'setVisible', params: { target: 'cube' } }
+        ],
+        edges: [
+          { from: 'src.out', to: 'vis.visible' }
+        ]
+      };
+
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+
+      assert(cube.visible === false, 'visible should be false when input is 0');
+    });
+
+    // テスト: setVisible が true の値を正しく処理する
+    test('setVisible: true の値を正しく処理する', () => {
+      const cube = makeMockObject();
+      cube.visible = false;
+      registerThreeNodes(Loom, { cube });
+
+      const graph = {
+        nodes: [
+          { id: 'src', type: 'constant', params: { value: 1 } },
+          { id: 'vis', type: 'setVisible', params: { target: 'cube' } }
+        ],
+        edges: [
+          { from: 'src.out', to: 'vis.visible' }
+        ]
+      };
+
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+
+      assert(cube.visible === true, 'visible should be true when input is 1');
+    });
+
+    // テスト: 未登録の target 名の場合、エラーにならず無視される
+    test('未登録の target: エラーにならず無視される', () => {
+      const cube = makeMockObject();
+      registerThreeNodes(Loom, { cube });
+
+      const graph = {
+        nodes: [
+          { id: 'src', type: 'constant', params: { value: 5 } },
+          { id: 'pos', type: 'setPosition', params: { target: 'nonexistent' } }
+        ],
+        edges: [
+          { from: 'src.out', to: 'pos.x' }
+        ]
+      };
+
+      const engine = new Loom(graph);
+      // エラーをスローしないことを確認
+      engine.evaluateAt(0);
+
+      // cube は変更されていないはず
+      assertEqual(cube.position.x, 0, 'cube position should not be changed');
+    });
+
+    // テスト: registerThreeNodes を複数回呼んでも例外にならず objects が追加される
+    test('registerThreeNodes: 複数回呼んでも例外にならず objects が追加される', () => {
+      const cubeA = makeMockObject();
+      const cubeB = makeMockObject();
+
+      registerThreeNodes(Loom, { cubeA });
+      registerThreeNodes(Loom, { cubeB });
+
+      const graph = {
+        nodes: [
+          { id: 'src', type: 'constant', params: { value: 3 } },
+          { id: 'pos', type: 'setPosition', params: { target: 'cubeB' } }
+        ],
+        edges: [
+          { from: 'src.out', to: 'pos.x' }
+        ]
+      };
+
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+
+      assertEqual(cubeB.position.x, 3, 'cubeB should be updated');
+      assertEqual(cubeA.position.x, 0, 'cubeA should not be updated');
+    });
+
+    // 結果を表示＋CI用に window.__loomTestResults を設定
+    function displayResults() {
+      const passed = results.filter(r => r.pass).length;
+      const failed = results.filter(r => !r.pass).length;
+      const total = results.length;
+
+      let html = `<h2>Results: ${passed}/${total} passed</h2>`;
+      html += '<ul>';
+
+      for (const result of results) {
+        const status = result.pass ? '✓' : '✗';
+        const style = result.pass ? 'color: green' : 'color: red';
+        html += `<li style="${style}">${status} ${result.name}`;
+        if (!result.pass) {
+          html += `<br><small>${result.error}</small>`;
+        }
+        html += '</li>';
+      }
+
+      html += '</ul>';
+      document.getElementById('results').innerHTML = html;
+
+      // CI ランナー用に結果を設定
+      window.__loomTestResults = {
+        pass: passed,
+        fail: failed,
+        failures: results
+          .filter(r => !r.pass)
+          .map(r => ({
+            name: r.name,
+            error: r.error
+          }))
+      };
+    }
+
+    displayResults();
+  </script>
+</body>
+</html>

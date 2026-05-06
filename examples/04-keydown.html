@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Loom デモ 04 - キー入力カウンタ</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 40px;
+      background: #1a1a1a;
+      color: #fff;
+      font-family: monospace;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    #container {
+      text-align: center;
+    }
+    #counter {
+      font-size: 72px;
+      font-weight: bold;
+      color: #0f0;
+      margin: 20px 0;
+    }
+    #info {
+      font-size: 14px;
+      color: #aaa;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <h1>スペースキー カウンタ</h1>
+    <div id="counter">0</div>
+    <div id="info">スペースキーを押してください</div>
+  </div>
+
+  <script type="module">
+    import { Loom } from "../src/loom.js";
+
+    const counterDiv = document.getElementById("counter");
+
+    // グラフ定義：keyDown で スペースキー押下イベントをキャプチャ
+    const graph = {
+      nodes: [
+        {
+          id: "space",
+          type: "keyDown",
+          params: { key: " " } // スペースキーのみ
+        }
+      ],
+      edges: []
+    };
+
+    const engine = new Loom(graph);
+    engine.start();
+
+    let count = 0;
+
+    // カウント更新ループ
+    const loop = () => {
+      // keyDown イベントを確認
+      const event = engine.getValue("space.event");
+      if (event !== undefined && Array.isArray(event) && event.length > 0) {
+        // イベントが発火した回数だけカウント加算
+        count += event.length;
+        counterDiv.textContent = count;
+      }
+
+      requestAnimationFrame(loop);
+    };
+    loop();
+  </script>
+</body>
+</html>

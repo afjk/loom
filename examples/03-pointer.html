@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Loom デモ 03 - ポインタ追従</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #fff;
+      font-family: monospace;
+      overflow: hidden;
+    }
+    #canvas {
+      border: 1px solid #666;
+      background: #222;
+      display: block;
+    }
+    #info {
+      margin-top: 10px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="600" height="400"></canvas>
+  <div id="info">マウスを動かしてください。グラフに接続された pointerPosition ノードが座標を出力します。</div>
+
+  <script type="module">
+    import { Loom } from "../src/loom.js";
+
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    // グラフ定義：pointerPosition で マウス座標をキャプチャし、それに従う箱を描画
+    const graph = {
+      nodes: [
+        {
+          id: "pp",
+          type: "pointerPosition",
+          params: { target: "window" }
+        }
+      ],
+      edges: []
+    };
+
+    const engine = new Loom(graph);
+    engine.start();
+
+    // 描画ループ
+    const loop = () => {
+      // キャンバスをクリア
+      ctx.fillStyle = "#222";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // pointerPosition から座標を取得
+      const pos = engine.getValue("pp.pos");
+      if (pos) {
+        // マウス座標に基づいて箱を描画
+        const x = Math.max(0, Math.min(canvas.width - 50, pos.x - canvas.getBoundingClientRect().left - 25));
+        const y = Math.max(0, Math.min(canvas.height - 50, pos.y - canvas.getBoundingClientRect().top - 25));
+
+        ctx.fillStyle = "#0f0";
+        ctx.fillRect(x, y, 50, 50);
+
+        // 座標を表示
+        ctx.fillStyle = "#fff";
+        ctx.font = "12px monospace";
+        ctx.fillText(`x: ${Math.round(pos.x)}`, 10, 20);
+        ctx.fillText(`y: ${Math.round(pos.y)}`, 10, 35);
+      }
+
+      requestAnimationFrame(loop);
+    };
+    loop();
+  </script>
+</body>
+</html>

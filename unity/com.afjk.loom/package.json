@@ -1,0 +1,13 @@
+{
+  "name": "com.afjk.loom",
+  "version": "0.1.0",
+  "displayName": "Loom",
+  "description": "Unity C# runtime for the Loom dataflow engine. Evaluates the same JSON graphs as the JavaScript version.",
+  "unity": "2021.3",
+  "keywords": ["loom", "dataflow", "reactive", "scenesync"],
+  "author": {
+    "name": "afjk",
+    "url": "https://github.com/afjk"
+  },
+  "license": "MIT"
+}
