@@ -35,3 +35,26 @@ test('repl smoke flow works', () => {
   assert.match(result.stdout, /message = text\.upper/);
   assert.match(result.stdout, /import text\s+import console\s+\s*message = text\.upper/s);
 });
+
+test('repl does not print previous console effect again after later snippet', () => {
+  const result = spawnSync(
+    process.execPath,
+    [cliPath, 'repl'],
+    {
+      cwd: projectRoot,
+      input: [
+        'import console',
+        'message = constant(value: "hello")',
+        'console.log(message)',
+        'x = constant(value: 1)',
+        ':quit'
+      ].join('\n'),
+      encoding: 'utf8'
+    }
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  const matches = result.stderr.match(/\[log\] hello/g) || [];
+  assert.equal(matches.length, 1);
+  assert.match(result.stdout, /x\.out = 1/);
+});

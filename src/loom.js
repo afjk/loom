@@ -981,7 +981,7 @@ export const NODE_TYPES = {
     outputs: [],
     params: [],
     evaluate: (inputs, params, ctx) => {
-      ctx.engine?._recordEffect({ type: 'console.log', level: 'log', value: inputs.value });
+      ctx.engine?._recordEffect({ type: 'console.log', level: 'log', value: inputs.value, nodeId: ctx.currentNodeId });
       return {};
     }
   },
@@ -991,7 +991,7 @@ export const NODE_TYPES = {
     outputs: [],
     params: [],
     evaluate: (inputs, params, ctx) => {
-      ctx.engine?._recordEffect({ type: 'console.warn', level: 'warn', value: inputs.value });
+      ctx.engine?._recordEffect({ type: 'console.warn', level: 'warn', value: inputs.value, nodeId: ctx.currentNodeId });
       return {};
     }
   },
@@ -1001,7 +1001,7 @@ export const NODE_TYPES = {
     outputs: [],
     params: [],
     evaluate: (inputs, params, ctx) => {
-      ctx.engine?._recordEffect({ type: 'console.error', level: 'error', value: inputs.value });
+      ctx.engine?._recordEffect({ type: 'console.error', level: 'error', value: inputs.value, nodeId: ctx.currentNodeId });
       return {};
     }
   },
@@ -1298,7 +1298,7 @@ export class Loom {
           outputs = { out: stateCtx.prevOut };
         }
       } else {
-        outputs = nodeType.evaluate(inputs, params, ctx);
+        outputs = nodeType.evaluate(inputs, params, { ...ctx, currentNodeId: nodeId });
       }
 
       // 出力値を保存
