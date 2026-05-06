@@ -17,7 +17,12 @@ import {
 import {
   DEFAULT_ENDPOINT as DEFAULT_SCENESYNC_ENDPOINT,
   SceneSyncClient,
-  formatSceneSyncError
+  formatSceneSyncError,
+  getDefaultSceneSyncSessionPath,
+  saveSceneSyncSession,
+  loadSceneSyncSession,
+  clearSceneSyncSession,
+  maskSessionId
 } from '../src/scenesync/index.js';
 
 function print(message = '') {
@@ -179,13 +184,17 @@ function getSceneSyncHelp() {
   loom scenesync <command> [options]
 
 Commands:
-  redeem            Redeem a code for a session
-  ping              Check Scene Sync room connection
-  info              Get room information
-  objects           List scene objects
-  list-objects      Alias for objects
+  redeem <code>      Redeem a Scene Sync AI link code
+  session            Show saved Scene Sync session
+  status             Alias for session
+  logout             Clear saved Scene Sync session
+  ping               Check Scene Sync room connection
+  info               Get room information
+  objects            List scene objects
+  list-objects       Alias for objects
 
 Options:
+  --save               Save redeemed session locally
   --room <room>        Scene Sync room code
   --session <id>       Scene Sync session ID
   --endpoint <url>     Scene Sync command endpoint. Default: ${DEFAULT_SCENESYNC_ENDPOINT}
@@ -194,7 +203,10 @@ Options:
 Environment Variables:
   LOOM_SCENESYNC_ROOM              Default room code
   LOOM_SCENESYNC_SESSION           Default session ID
-  LOOM_SCENESYNC_ENDPOINT          Default endpoint`;
+  LOOM_SCENESYNC_ENDPOINT          Default endpoint
+
+Saved session path:
+  ~/.config/loom/scenesync-session.json`;
 }
 
 function formatValue(value) {
@@ -246,10 +258,11 @@ async function readSourceFile(file) {
   return readFile(path.resolve(process.cwd(), file), 'utf8');
 }
 
-function parseSceneSyncArgs(args) {
-  let room = process.env.LOOM_SCENESYNC_ROOM || '';
-  let session = process.env.LOOM_SCENESYNC_SESSION || '';
-  let endpoint = process.env.LOOM_SCENESYNC_ENDPOINT || DEFAULT_SCENESYNC_ENDPOINT;
+async function parseSceneSyncArgs(args) {
+  let room = '';
+  let session = '';
+  let endpoint = '';
+  let save = false;
   let json = false;
 
   for (let index = 0; index < args.length; index += 1) {
@@ -275,6 +288,8 @@ function parseSceneSyncArgs(args) {
       }
       endpoint = next;
       index += 1;
+    } else if (arg === '--save') {
+      save = true;
     } else if (arg === '--json') {
       json = true;
     } else {
@@ -282,7 +297,34 @@ function parseSceneSyncArgs(args) {
     }
   }
 
-  return { room, session, endpoint, json };
+  const savedSession = await loadSceneSyncSession();
+  const savedData = savedSession.ok && savedSession.session ? savedSession.session : null;
+
+  if (!room) {
+    room = process.env.LOOM_SCENESYNC_ROOM || '';
+    if (!room && savedData) {
+      room = savedData.roomId || '';
+    }
+  }
+
+  if (!session) {
+    session = process.env.LOOM_SCENESYNC_SESSION || '';
+    if (!session && savedData) {
+      session = savedData.sessionId || '';
+    }
+  }
+
+  if (!endpoint) {
+    endpoint = process.env.LOOM_SCENESYNC_ENDPOINT || '';
+    if (!endpoint && savedData) {
+      endpoint = savedData.endpoint || '';
+    }
+    if (!endpoint) {
+      endpoint = DEFAULT_SCENESYNC_ENDPOINT;
+    }
+  }
+
+  return { room, session, endpoint, save, json };
 }
 
 function requireSceneSyncRoom(room) {
@@ -648,13 +690,60 @@ async function handleSceneSync(args) {
     return 0;
   }
 
+  if (subcommand === 'session' || subcommand === 'status') {
+    const { json } = await parseSceneSyncArgs(rest);
+    const result = await loadSceneSyncSession();
+
+    if (!result.ok) {
+      printError(formatSceneSyncError(result.error));
+      return 1;
+    }
+
+    if (!result.session) {
+      print('No saved Scene Sync session.');
+      print('Use: loom scenesync redeem <code> --save');
+      return 0;
+    }
+
+    if (json) {
+      print(stringifyJson(result.session));
+      return 0;
+    }
+
+    const session = result.session;
+    const sessionPath = getDefaultSceneSyncSessionPath();
+    const maskedId = maskSessionId(session.sessionId);
+    const lines = [
+      'Scene Sync session:',
+      `Endpoint: ${session.endpoint || DEFAULT_SCENESYNC_ENDPOINT}`,
+      `Room: ${session.roomId || '<unknown>'}`,
+      `Session: ${maskedId}`,
+      `Expires At: ${session.expiresAt || '<unknown>'}`,
+      `Path: ${sessionPath}`
+    ];
+    print(lines.join('\n'));
+    return 0;
+  }
+
+  if (subcommand === 'logout') {
+    const result = await clearSceneSyncSession();
+
+    if (!result.ok) {
+      printError(formatSceneSyncError(result.error));
+      return 1;
+    }
+
+    print('Cleared saved Scene Sync session.');
+    return 0;
+  }
+
   if (subcommand === 'redeem') {
     let code = null;
     let codeIndex = -1;
 
     for (let index = 0; index < rest.length; index += 1) {
       const arg = rest[index];
-      if (!arg.startsWith('-') && !['--room', '--session', '--endpoint', '--json'].includes(rest[index - 1])) {
+      if (!arg.startsWith('-') && !['--room', '--session', '--endpoint', '--json', '--save'].includes(rest[index - 1])) {
         code = arg;
         codeIndex = index;
         break;
@@ -671,7 +760,7 @@ async function handleSceneSync(args) {
     }
 
     const argsWithoutCode = codeIndex >= 0 ? rest.filter((_, i) => i !== codeIndex) : rest;
-    const { endpoint, json } = parseSceneSyncArgs(argsWithoutCode);
+    const { endpoint, save, json } = await parseSceneSyncArgs(argsWithoutCode);
     const client = new SceneSyncClient({ endpoint });
     const result = await client.redeem({ code });
 
@@ -680,12 +769,45 @@ async function handleSceneSync(args) {
       return 1;
     }
 
+    const data = result.data || {};
+
+    if (save) {
+      try {
+        const savedPath = await saveSceneSyncSession({
+          endpoint,
+          roomId: data.roomId,
+          sessionId: data.sessionId,
+          expiresAt: data.expiresAt
+        });
+
+        if (json) {
+          print(stringifyJson({
+            ok: true,
+            data,
+            savedPath
+          }));
+          return 0;
+        }
+
+        const lines = [
+          'Linked Scene Sync room.',
+          `Room: ${data.roomId || '<unknown>'}`,
+          `Session: saved to ${savedPath}`,
+          `Expires At: ${data.expiresAt || '<unknown>'}`
+        ];
+        print(lines.join('\n'));
+        return 0;
+      } catch (error) {
+        printError(`Failed to save session: ${error.message || String(error)}`);
+        return 1;
+      }
+    }
+
     if (json) {
       print(stringifyJson(result.data));
       return 0;
     }
 
-    const data = result.data || {};
     const lines = [
       'Linked Scene Sync room.',
       `Room: ${data.roomId || '<unknown>'}`,
@@ -696,7 +818,7 @@ async function handleSceneSync(args) {
     return 0;
   }
 
-  const { room, session, endpoint, json } = parseSceneSyncArgs(rest);
+  const { room, session, endpoint, json } = await parseSceneSyncArgs(rest);
 
   if (subcommand === 'ping' || subcommand === 'info' || subcommand === 'objects' || subcommand === 'list-objects') {
     requireSceneSyncRoom(room);
