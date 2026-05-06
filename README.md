@@ -201,6 +201,35 @@ x = constant(value: 1)
 - `json.parse`, `json.stringify`
 - `console.log`, `console.warn`, `console.error`
 
+### REPL
+
+Start an interactive Loom session:
+
+```bash
+node bin/loom.mjs repl
+```
+
+Example:
+
+```text
+loom> import text
+imported text
+loom> message = text.upper("hello loom")
+message.out = HELLO LOOM
+loom> import console
+imported console
+loom> console.log(message)
+[log] HELLO LOOM
+loom> :source
+import text
+message = text.upper("hello loom")
+import console
+console.log(message)
+loom> :quit
+```
+
+The REPL currently recompiles the accumulated source after each snippet. Invalid snippets are rejected and do not modify the current session.
+
 ## ライブエディタと DSL
 
 ### エディタ一覧

@@ -49,7 +49,17 @@ function validateCliRunnableGraph(graph) {
 function collectRequestedValues(engine, graph, get) {
   const requestedRefs = getRefsToRead(graph, get);
   if (requestedRefs === null) {
-    throw new LoomError('GET_REQUIRED', 'run requires --get in this version');
+    const values = {};
+    for (const node of graph.nodes) {
+      const nodeType = NODE_TYPES[node.type];
+      if (!nodeType || !Array.isArray(nodeType.outputs)) {
+        continue;
+      }
+      for (const output of nodeType.outputs) {
+        values[`${node.id}.${output.name}`] = engine.getValue(`${node.id}.${output.name}`);
+      }
+    }
+    return values;
   }
 
   const values = {};

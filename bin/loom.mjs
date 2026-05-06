@@ -3,6 +3,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
+import readline from 'node:readline';
 import {
   compileLoomSource,
   formatLoomSource,
@@ -10,7 +11,8 @@ import {
   formatInspectionSummary,
   runLoomSource,
   formatLoomError,
-  isKnownRuntimeTarget
+  isKnownRuntimeTarget,
+  LoomReplSession
 } from '../src/toolchain/index.js';
 
 function print(message = '') {
@@ -96,13 +98,15 @@ Commands:
   format <file>    Format Loom DSL
   inspect <file>   Inspect Loom DSL and print a summary
   run <file>       Evaluate a Loom graph once
+  repl             Start an interactive Loom REPL
   help             Show help
 
 Examples:
   loom compile examples/cli-basic.loom
   loom format examples/cli-basic.loom --check
   loom inspect examples/cli-basic.loom --json
-  loom run examples/cli-basic.loom --get x.out --time 0.25`;
+  loom run examples/cli-basic.loom --get x.out --time 0.25
+  loom repl`;
 }
 
 function getCompileHelp() {
@@ -145,6 +149,66 @@ Options:
   --dt <number>     Delta time in seconds. Default: 0
   --json            Print result values as JSON
   --target <target> Only cli is supported by loom run in this version. Default: cli`;
+}
+
+function getReplHelp() {
+  return `Usage:
+  loom repl
+
+Commands:
+  :help      Show REPL help
+  :source    Show accumulated source
+  :inspect   Show current graph summary
+  :graph     Show current GraphJSON
+  :reset     Clear current session
+  :quit      Exit the REPL
+  :q         Exit the REPL
+  :exit      Exit the REPL`;
+}
+
+function formatValue(value) {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return JSON.stringify(value);
+}
+
+function printEffects(effects) {
+  for (const effect of effects || []) {
+    printError(`[${effect.level}] ${formatEffectValue(effect.value)}`);
+  }
+}
+
+function getAssignedIdentifier(snippet) {
+  const match = snippet.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/);
+  return match ? match[1] : null;
+}
+
+function getImportedLibrary(snippet) {
+  const match = snippet.trim().match(/^import\s+([A-Za-z_][A-Za-z0-9_]*)$/);
+  return match ? match[1] : null;
+}
+
+function printSnippetResult(snippet, result) {
+  printEffects(result.effects || []);
+
+  const imported = getImportedLibrary(snippet);
+  if (imported) {
+    print(`imported ${imported}`);
+    return;
+  }
+
+  const assigned = getAssignedIdentifier(snippet);
+  if (!assigned) {
+    return;
+  }
+
+  const refsToTry = [`${assigned}.out`, `${assigned}.t`, `${assigned}.pos`];
+  for (const ref of refsToTry) {
+    if (Object.hasOwn(result.values, ref) && result.values[ref] !== undefined) {
+      print(`${ref} = ${formatValue(result.values[ref])}`);
+      return;
+    }
+  }
 }
 
 async function readSourceFile(file) {
@@ -371,9 +435,7 @@ async function handleRun(args) {
     return 1;
   }
 
-  for (const effect of result.effects || []) {
-    printError(`[${effect.level}] ${formatEffectValue(effect.value)}`);
-  }
+  printEffects(result.effects || []);
 
   if (!json && get.length === 1) {
     print(String(result.values[get[0]]));
@@ -382,6 +444,79 @@ async function handleRun(args) {
 
   print(stringifyJson(result.values));
   return 0;
+}
+
+async function handleRepl(args) {
+  if (args.includes('--help')) {
+    print(getReplHelp());
+    return 0;
+  }
+
+  const session = new LoomReplSession({ target: 'cli', time: 0, dt: 0 });
+  print('Loom REPL');
+  print('Type :help for commands, :quit to exit.');
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    prompt: 'loom> '
+  });
+
+  return await new Promise((resolve) => {
+    rl.prompt();
+
+    rl.on('line', (line) => {
+      const trimmed = line.trim();
+      if (trimmed === ':quit' || trimmed === ':q' || trimmed === ':exit') {
+        rl.close();
+        return;
+      }
+      if (trimmed === ':help') {
+        print(getReplHelp());
+        rl.prompt();
+        return;
+      }
+      if (trimmed === ':source') {
+        print(session.getSource() || '<empty>');
+        rl.prompt();
+        return;
+      }
+      if (trimmed === ':inspect') {
+        const inspection = session.inspect();
+        if (!inspection.ok) {
+          printToolErrors(inspection.errors);
+        } else {
+          print(formatInspectionSummary(inspection.summary));
+        }
+        rl.prompt();
+        return;
+      }
+      if (trimmed === ':graph') {
+        const graph = session.getGraph();
+        print(graph ? stringifyJson(graph) : '<no graph>');
+        rl.prompt();
+        return;
+      }
+      if (trimmed === ':reset') {
+        session.reset();
+        print('session reset');
+        rl.prompt();
+        return;
+      }
+
+      const result = session.evaluateSnippet(line);
+      if (!result.ok) {
+        printToolErrors(result.errors);
+      } else if (!result.empty) {
+        printSnippetResult(line, result);
+      }
+      rl.prompt();
+    });
+
+    rl.on('close', () => {
+      resolve(0);
+    });
+  });
 }
 
 async function main() {
@@ -403,6 +538,8 @@ async function main() {
       exitCode = await handleInspect(args.slice(1));
     } else if (command === 'run') {
       exitCode = await handleRun(args.slice(1));
+    } else if (command === 'repl') {
+      exitCode = await handleRepl(args.slice(1));
     } else {
       throw new Error(`unknown command: ${command}`);
     }
