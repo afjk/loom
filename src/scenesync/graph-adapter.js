@@ -39,6 +39,16 @@ function generateStableNodeId(originalId, nodeType) {
   return originalId;
 }
 
+function normalizeScope(options = {}) {
+  if (options.scope) {
+    return options.scope;
+  }
+  if (options.objectId) {
+    return { object: options.objectId };
+  }
+  return null;
+}
+
 export function compileLoomToSceneSyncGraph(source, options = {}) {
   const result = compileLoomSource(source, { target: 'scenesync' });
 
@@ -114,11 +124,12 @@ export function loomGraphToSceneSyncGraph(loomGraph, options = {}) {
     }
   }
 
-  let objectId = options.objectId;
-  if (!objectId) {
+  let scope = normalizeScope(options);
+
+  if (!scope) {
     for (const node of loomGraph.nodes) {
       if (node.type === 'scene.setPosition' && node.params?.objectId) {
-        objectId = node.params.objectId;
+        scope = { object: node.params.objectId };
         break;
       }
     }
@@ -129,6 +140,6 @@ export function loomGraphToSceneSyncGraph(loomGraph, options = {}) {
       nodes,
       edges
     },
-    objectId
+    scope
   };
 }
