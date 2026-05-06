@@ -237,18 +237,48 @@ The REPL recompiles the accumulated source after each snippet, but it only displ
 
 Loom CLI includes read-only Scene Sync probe commands to interact with the afjk.jp AI wrapper.
 
-#### Redeem a code
+#### Save a Scene Sync session
+
+Redeem and save a Scene Sync AI link code:
 
 ```bash
-node bin/loom.mjs scenesync redeem 238909
+node bin/loom.mjs scenesync redeem 301398 --save
 ```
 
 Output:
 ```
 Linked Scene Sync room.
 Room: <roomId>
-Session: <sessionId>
+Session: saved to ~/.config/loom/scenesync-session.json
 Expires At: <expiresAt>
+```
+
+Then use probe commands without passing a long session token:
+
+```bash
+node bin/loom.mjs scenesync ping
+node bin/loom.mjs scenesync info
+node bin/loom.mjs scenesync objects
+```
+
+Saved sessions are stored in `~/.config/loom/scenesync-session.json`. The session token is a secret and should not be committed to a repository.
+
+#### Show saved session
+
+```bash
+node bin/loom.mjs scenesync session
+```
+
+or the alias:
+
+```bash
+node bin/loom.mjs scenesync status
+```
+
+#### Clear saved session
+
+```bash
+node bin/loom.mjs scenesync logout
 ```
 
 #### List objects in a room
