@@ -147,3 +147,77 @@ test('network error returns NETWORK_ERROR', async () => {
   assert.equal(result.ok, false);
   assert.equal(result.error.code, 'NETWORK_ERROR');
 });
+
+test('getScene accepts raw scene snapshot response', async () => {
+  const client = new SceneSyncClient({
+    endpoint: 'https://example.com/presence/api/ai',
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      async json() {
+        return {
+          envId: 'outdoor_day',
+          objects: {
+            'sample-cube': {
+              name: 'sample-cube',
+              position: [0, 0.5, 0],
+              rotation: [0, 0, 0, 1],
+              scale: [1, 1, 1]
+            }
+          }
+        };
+      }
+    })
+  });
+
+  const result = await client.getScene({
+    room: 'jwjsy8',
+    session: 'v1.test'
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.envId, 'outdoor_day');
+  assert.equal(result.data.objects['sample-cube'].name, 'sample-cube');
+});
+
+test('array response returns INVALID_RESPONSE', async () => {
+  const client = new SceneSyncClient({
+    endpoint: 'https://example.com/presence/api/ai',
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      async json() {
+        return [];
+      }
+    })
+  });
+
+  const result = await client.getScene({
+    room: 'room-1',
+    session: 'v1.test'
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.error.code, 'INVALID_RESPONSE');
+});
+
+test('null response returns INVALID_RESPONSE', async () => {
+  const client = new SceneSyncClient({
+    endpoint: 'https://example.com/presence/api/ai',
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      async json() {
+        return null;
+      }
+    })
+  });
+
+  const result = await client.getScene({
+    room: 'room-1',
+    session: 'v1.test'
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.error.code, 'INVALID_RESPONSE');
+});
