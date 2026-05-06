@@ -112,7 +112,7 @@ state ノードとして、以下を同梱しています。
 
 A minimal VS Code extension is available under `extensions/vscode-loomlet`.
 
-It is named **Loomlet** and provides `.loom` file association, syntax highlighting, basic completions, and commands for running the current Loomlet file or starting `scenesync dev`.
+It is named **Loomlet** and provides `.loom` file association, syntax highlighting, basic completions, and commands for running the current Loomlet file or starting `loomlet scenesync dev`.
 
 ## Unity 対応
 

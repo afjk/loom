@@ -358,21 +358,21 @@ async function parseSceneSyncArgs(args) {
   const savedData = savedSession.ok && savedSession.session ? savedSession.session : null;
 
   if (!room) {
-    room = process.env.LOOM_SCENESYNC_ROOM || '';
+    room = process.env.LOOMLET_SCENESYNC_ROOM || process.env.LOOM_SCENESYNC_ROOM || '';
     if (!room && savedData) {
       room = savedData.roomId || '';
     }
   }
 
   if (!session) {
-    session = process.env.LOOM_SCENESYNC_SESSION || '';
+    session = process.env.LOOMLET_SCENESYNC_SESSION || process.env.LOOM_SCENESYNC_SESSION || '';
     if (!session && savedData) {
       session = savedData.sessionId || '';
     }
   }
 
   if (!endpoint) {
-    endpoint = process.env.LOOM_SCENESYNC_ENDPOINT || '';
+    endpoint = process.env.LOOMLET_SCENESYNC_ENDPOINT || process.env.LOOM_SCENESYNC_ENDPOINT || '';
     if (!endpoint && savedData) {
       endpoint = savedData.endpoint || '';
     }
@@ -485,21 +485,21 @@ async function parseSceneSyncRunArgs(args) {
   const savedData = savedSession.ok && savedSession.session ? savedSession.session : null;
 
   if (!room) {
-    room = process.env.LOOM_SCENESYNC_ROOM || '';
+    room = process.env.LOOMLET_SCENESYNC_ROOM || process.env.LOOM_SCENESYNC_ROOM || '';
     if (!room && savedData) {
       room = savedData.roomId || '';
     }
   }
 
   if (!session) {
-    session = process.env.LOOM_SCENESYNC_SESSION || '';
+    session = process.env.LOOMLET_SCENESYNC_SESSION || process.env.LOOM_SCENESYNC_SESSION || '';
     if (!session && savedData) {
       session = savedData.sessionId || '';
     }
   }
 
   if (!endpoint) {
-    endpoint = process.env.LOOM_SCENESYNC_ENDPOINT || '';
+    endpoint = process.env.LOOMLET_SCENESYNC_ENDPOINT || process.env.LOOM_SCENESYNC_ENDPOINT || '';
     if (!endpoint && savedData) {
       endpoint = savedData.endpoint || '';
     }
@@ -577,21 +577,21 @@ async function parseSceneSyncGraphSetArgs(args) {
   const savedData = savedSession.ok && savedSession.session ? savedSession.session : null;
 
   if (!room && send) {
-    room = process.env.LOOM_SCENESYNC_ROOM || '';
+    room = process.env.LOOMLET_SCENESYNC_ROOM || process.env.LOOM_SCENESYNC_ROOM || '';
     if (!room && savedData) {
       room = savedData.roomId || '';
     }
   }
 
   if (!session && send) {
-    session = process.env.LOOM_SCENESYNC_SESSION || '';
+    session = process.env.LOOMLET_SCENESYNC_SESSION || process.env.LOOM_SCENESYNC_SESSION || '';
     if (!session && savedData) {
       session = savedData.sessionId || '';
     }
   }
 
   if (!endpoint) {
-    endpoint = process.env.LOOM_SCENESYNC_ENDPOINT || '';
+    endpoint = process.env.LOOMLET_SCENESYNC_ENDPOINT || process.env.LOOM_SCENESYNC_ENDPOINT || '';
     if (!endpoint && savedData) {
       endpoint = savedData.endpoint || '';
     }
@@ -657,21 +657,21 @@ async function parseSceneSyncGraphClearArgs(args) {
   const savedData = savedSession.ok && savedSession.session ? savedSession.session : null;
 
   if (!room && send) {
-    room = process.env.LOOM_SCENESYNC_ROOM || '';
+    room = process.env.LOOMLET_SCENESYNC_ROOM || process.env.LOOM_SCENESYNC_ROOM || '';
     if (!room && savedData) {
       room = savedData.roomId || '';
     }
   }
 
   if (!session && send) {
-    session = process.env.LOOM_SCENESYNC_SESSION || '';
+    session = process.env.LOOMLET_SCENESYNC_SESSION || process.env.LOOM_SCENESYNC_SESSION || '';
     if (!session && savedData) {
       session = savedData.sessionId || '';
     }
   }
 
   if (!endpoint) {
-    endpoint = process.env.LOOM_SCENESYNC_ENDPOINT || '';
+    endpoint = process.env.LOOMLET_SCENESYNC_ENDPOINT || process.env.LOOM_SCENESYNC_ENDPOINT || '';
     if (!endpoint && savedData) {
       endpoint = savedData.endpoint || '';
     }
@@ -801,21 +801,21 @@ async function parseSceneSyncGraphRunArgs(args) {
   const savedData = savedSession.ok && savedSession.session ? savedSession.session : null;
 
   if (!room && send) {
-    room = process.env.LOOM_SCENESYNC_ROOM || '';
+    room = process.env.LOOMLET_SCENESYNC_ROOM || process.env.LOOM_SCENESYNC_ROOM || '';
     if (!room && savedData) {
       room = savedData.roomId || '';
     }
   }
 
   if (!session && send) {
-    session = process.env.LOOM_SCENESYNC_SESSION || '';
+    session = process.env.LOOMLET_SCENESYNC_SESSION || process.env.LOOM_SCENESYNC_SESSION || '';
     if (!session && savedData) {
       session = savedData.sessionId || '';
     }
   }
 
   if (!endpoint) {
-    endpoint = process.env.LOOM_SCENESYNC_ENDPOINT || '';
+    endpoint = process.env.LOOMLET_SCENESYNC_ENDPOINT || process.env.LOOM_SCENESYNC_ENDPOINT || '';
     if (!endpoint && savedData) {
       endpoint = savedData.endpoint || '';
     }
@@ -936,21 +936,21 @@ async function parseSceneSyncDevArgs(args) {
   const savedData = savedSession.ok && savedSession.session ? savedSession.session : null;
 
   if (!room && !dryRun) {
-    room = process.env.LOOM_SCENESYNC_ROOM || '';
+    room = process.env.LOOMLET_SCENESYNC_ROOM || process.env.LOOM_SCENESYNC_ROOM || '';
     if (!room && savedData) {
       room = savedData.roomId || '';
     }
   }
 
   if (!session && !dryRun) {
-    session = process.env.LOOM_SCENESYNC_SESSION || '';
+    session = process.env.LOOMLET_SCENESYNC_SESSION || process.env.LOOM_SCENESYNC_SESSION || '';
     if (!session && savedData) {
       session = savedData.sessionId || '';
     }
   }
 
   if (!endpoint) {
-    endpoint = process.env.LOOM_SCENESYNC_ENDPOINT || '';
+    endpoint = process.env.LOOMLET_SCENESYNC_ENDPOINT || process.env.LOOM_SCENESYNC_ENDPOINT || '';
     if (!endpoint && savedData) {
       endpoint = savedData.endpoint || '';
     }

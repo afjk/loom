@@ -16,12 +16,12 @@ test('getDefaultSceneSyncSessionPath respects XDG_CONFIG_HOME', () => {
     XDG_CONFIG_HOME: '/tmp/config'
   });
 
-  assert.equal(result, '/tmp/config/loom/scenesync-session.json');
+  assert.equal(result, '/tmp/config/loomlet/scenesync-session.json');
 });
 
 test('getDefaultSceneSyncSessionPath uses ~/.config when XDG_CONFIG_HOME is not set', () => {
   const result = getDefaultSceneSyncSessionPath({});
-  assert.match(result, /\.config.*loom.*scenesync-session\.json/);
+  assert.match(result, /\.config.*loomlet.*scenesync-session\.json/);
 });
 
 test('save and load session', async () => {
