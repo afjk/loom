@@ -195,11 +195,12 @@ x = constant(value: 1)
 
 `compile` と `inspect` の `--target` は省略時に `any` として扱われ、runtime-specific import を generic workflow 用に許可します。`run` は省略時に `cli` で検証するため、たとえば `import dom` は CLI 実行時に失敗します。
 
-初期の CLI-safe library nodes:
+CLI-safe library nodes:
 
 - `text.upper`, `text.lower`, `text.trim`, `text.replace`
 - `json.parse`, `json.stringify`
 - `console.log`, `console.warn`, `console.error`
+- `scene.setPosition`, `scene.setRotation`, `scene.setScale`
 
 ### REPL
 
