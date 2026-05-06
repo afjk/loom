@@ -1,17 +1,30 @@
 # Tour: List Map Filter
-# Goal: Draft future language style for list map filter.
+# Goal: Draft list transformation pipeline for data prep.
 # Status: draft
 # Run:
 #   loomlet run examples/tour/language/08-list-map-filter.loom
 # Requires:
-#   - missing nodes and language features listed below
-# TODO NODE: logic.equals(value, other:)
-# TODO NODE: logic.select(condition, whenTrue:, whenFalse:)
+#   - list.of
+#   - list.map
+#   - list.filter
+#   - list.reduce
+#   - logic.greaterThan
+# TODO NODE: list.of(...values)
+# TODO NODE: list.map(list, fn:)
+# TODO NODE: list.filter(list, fn:)
+# TODO NODE: list.reduce(list, initial:, fn:)
+# TODO NODE: logic.greaterThan(a, b)
 # TODO LANGUAGE: function definitions
-# TODO LANGUAGE: list literals
-# TODO LANGUAGE: recursion
-import logic
+
 import list
+import logic
+import math
 import console
 
-# Draft sketch intentionally not runnable today.
+numbers = list.of(1, 2, 3, 4, 5, 6, 7, 8)
+
+squared = list.map(numbers, fn: fn(n) => math.multiply(n, n))
+large = list.filter(squared, fn: fn(n) => logic.greaterThan(n, 20))
+sum = list.reduce(large, initial: 0, fn: fn(acc, n) => math.add(acc, n))
+
+console.log(sum)

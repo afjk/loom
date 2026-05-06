@@ -4,25 +4,27 @@
 - logic.equals
 - logic.select
 - logic.and
+- logic.lessOrEqual
 - list.range
 - list.map
 - list.filter
 - text.stringify
-- text.concat
 - scene.find
 - timeline.cue
 
 ## Medium priority
+- list.reduce
+- list.concat
 - signal.lfo
-- signal.pulse
+- signal.smooth
+- signal.trigger
 - state.toggle
 - state.counter
-- scene.setColor
-- input.pointer
-- random.seeded
+- timeline.sequence
+- audio.level
 
 ## Low priority
 - console.table
+- random.seeded
 - debug.inspect
-- debug.trace
 - fs.list

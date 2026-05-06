@@ -1,17 +1,20 @@
 # Tour: Conditions
-# Goal: Draft future language style for conditions.
+# Goal: Draft future Loomlet style for value selection.
 # Status: draft
 # Run:
 #   loomlet run examples/tour/language/06-conditions.loom
 # Requires:
-#   - missing nodes and language features listed below
+#   - logic.equals
+#   - logic.select
+#   - console.log
 # TODO NODE: logic.equals(value, other:)
 # TODO NODE: logic.select(condition, whenTrue:, whenFalse:)
-# TODO LANGUAGE: function definitions
-# TODO LANGUAGE: list literals
-# TODO LANGUAGE: recursion
+
 import logic
-import list
 import console
 
-# Draft sketch intentionally not runnable today.
+n = 3
+isThree = logic.equals(n, other: 3)
+label = logic.select(isThree, whenTrue: "three", whenFalse: "other")
+
+console.log(label)

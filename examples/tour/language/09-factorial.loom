@@ -1,17 +1,27 @@
 # Tour: Factorial
-# Goal: Draft future language style for factorial.
+# Goal: Draft recursion and base-case selection style.
 # Status: draft
 # Run:
 #   loomlet run examples/tour/language/09-factorial.loom
 # Requires:
-#   - missing nodes and language features listed below
-# TODO NODE: logic.equals(value, other:)
+#   - logic.lessOrEqual
+#   - logic.select
+#   - math.multiply
+#   - math.subtract
+# TODO NODE: logic.lessOrEqual(a, b)
 # TODO NODE: logic.select(condition, whenTrue:, whenFalse:)
 # TODO LANGUAGE: function definitions
-# TODO LANGUAGE: list literals
 # TODO LANGUAGE: recursion
+
 import logic
-import list
+import math
 import console
 
-# Draft sketch intentionally not runnable today.
+factorial = fn(n) =>
+  logic.select(logic.lessOrEqual(n, 1),
+    whenTrue: 1,
+    whenFalse: math.multiply(n, factorial(math.subtract(n, 1)))
+  )
+
+value = factorial(6)
+console.log(value)
