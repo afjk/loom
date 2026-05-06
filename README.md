@@ -390,7 +390,24 @@ GitHub Pages で公開されているデモを、ブラウザから直接確認�
 
 ## CI と自動テスト
 
-GitHub Actions で自動テストを実行しています。ローカルで `npm test` を実行する場合は、`package.json` が必要ですが、これは CI 自動化専用です。`src/loom.js` は依存ライブラリゼロの単一ファイル配布であり、package.json は開発用ツール（Playwright、http-server）のみを含みます。
+Fast Node/unit tests:
+
+```bash
+npm test
+# or
+npm run test:unit
+```
+
+Browser tests:
+
+```bash
+npm run test:browser
+```
+
+GitHub Actions runs unit tests automatically for pull requests and pushes to `main`.
+Browser tests are available as a manual GitHub Actions workflow and should be run when changing browser examples, renderer behavior, Web Studio, or DOM/Canvas-related code.
+
+`src/loom.js` は依存ライブラリゼロの単一ファイル配布であり、`package.json` は開発用ツール（Playwright、http-server）と CLI / toolchain 用テストを含みます。
 
 ## ライセンス
 
