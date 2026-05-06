@@ -24,14 +24,23 @@
 - expand beyond initial `json.parse` / `json.stringify`
 - expand beyond initial `text.upper` / `lower` / `trim` / `replace`
 
-## Phase 4: REPL
+## Phase 4: REPL MVP
 
 - interactive prompt
-- incremental graph patching
-- inspect current graph
-- watch values
+- accumulated source session
+- `:source`, `:inspect`, `:graph`, `:reset`, `:quit`
+- recompile-and-run after each snippet
 
-## Phase 5: SceneSync integration
+## Phase 5: REPL follow-up
+
+- multiline input
+- watch/live ticking
+- command history persistence
+- autocomplete
+- notebook-style cells
+- incremental graph patching
+
+## Phase 6: SceneSync integration
 
 - compile DSL and send graph
 - target scene scope
@@ -39,14 +48,14 @@
 - clear graph
 - patch graph
 
-## Phase 6: Web Studio integration
+## Phase 7: Web Studio integration
 
 - reuse toolchain modules
 - shared diagnostics
 - target/import compatibility panel
 - inspect panel
 
-## Phase 7: AI/MCP integration
+## Phase 8: AI/MCP integration
 
 - expose compile/format/inspect as tools
 - use inspect summaries to reduce context size
