@@ -155,6 +155,30 @@ Graph DSL → JSON graph → Web Loom / Unity Loom で評価
 
 詳細な API・ノード仕様は [docs/SPEC.md](docs/SPEC.md) をご覧ください。
 
+## CLI
+
+Loom CLI は Loom DSL の最初のターミナルインターフェースです。CLI 自体に処理を閉じ込めず、`src/toolchain/` の compile / format / inspect / run を Web Studio / Scene Sync / AI toolchain からも再利用できる前提で追加しています。
+
+現在の CLI は、Loom DSL を GraphJSON に変換し、整形し、要約を取り、単純な pure/source/transform/state グラフを 1 回実行する用途に向いています。
+
+```bash
+npm run loom -- compile examples/cli-basic.loom
+npm run loom -- format examples/cli-basic.loom
+npm run loom -- inspect examples/cli-basic.loom
+npm run loom -- run examples/cli-basic.loom --get x.out --time 1
+```
+
+```bash
+node bin/loom.mjs compile examples/cli-basic.loom
+node bin/loom.mjs run examples/cli-basic.loom --get x.out --time 1
+```
+
+現時点の制約:
+
+- CLI run は pure/source/transform/state ノード中心の実行にフォーカスしています。
+- DOM / Three.js / Unity / SceneSync アダプタは CLI からは実行しません。
+- file I/O ノードと import syntax は今後の作業です。
+
 ## ライブエディタと DSL
 
 ### エディタ一覧

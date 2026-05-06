@@ -3,8 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "bin": {
+    "loom": "./bin/loom.mjs"
+  },
   "scripts": {
-    "test": "node ci/run-tests.mjs"
+    "test": "node ci/run-tests.mjs",
+    "loom": "node bin/loom.mjs",
+    "test:cli": "node test/loom-cli.test.mjs"
   },
   "devDependencies": {
     "http-server": "^14.1.1",
