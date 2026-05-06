@@ -8,7 +8,7 @@ function normalizeEndpoint(endpoint) {
 }
 
 function normalizeApiResponse(payload) {
-  if (!payload || typeof payload !== 'object') {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
     return {
       ok: false,
       error: {
@@ -31,6 +31,13 @@ function normalizeApiResponse(payload) {
   }
 
   if (payload.ok === true) {
+    return {
+      ok: true,
+      data: payload
+    };
+  }
+
+  if (payload.ok === undefined) {
     return {
       ok: true,
       data: payload
