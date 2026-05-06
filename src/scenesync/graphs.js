@@ -36,16 +36,44 @@ function validateSceneGraph(graph) {
   }
 }
 
-export function createSceneGraphSetPayload(objectId, graph) {
-  if (typeof objectId !== 'string' || objectId.length === 0) {
+function validateScope(scope) {
+  if (!scope || typeof scope !== 'object') {
+    throw new Error('scope must be an object');
+  }
+  if (scope.object && (typeof scope.object !== 'string' || scope.object.length === 0)) {
+    throw new Error('scope.object must be a non-empty string');
+  }
+  if (scope.scene !== undefined && typeof scope.scene !== 'boolean') {
+    throw new Error('scope.scene must be a boolean');
+  }
+  if (!scope.object && !scope.scene) {
+    throw new Error('scope must have either object or scene');
+  }
+}
+
+export function createSceneGraphSetPayload(scopeOrObjectId, graphOrUndefined) {
+  let scope;
+  let graph;
+
+  if (typeof scopeOrObjectId === 'string') {
+    if (scopeOrObjectId.length === 0) {
+      throw new Error('objectId must be a non-empty string');
+    }
+    scope = { object: scopeOrObjectId };
+    graph = graphOrUndefined;
+  } else if (typeof scopeOrObjectId === 'object' && scopeOrObjectId !== null) {
+    scope = scopeOrObjectId;
+    graph = graphOrUndefined;
+  } else {
     throw new Error('objectId must be a non-empty string');
   }
 
+  validateScope(scope);
   validateSceneGraph(graph);
 
   return {
     type: 'scene-graph-set',
-    scope: { object: objectId },
+    scope,
     graph
   };
 }
