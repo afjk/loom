@@ -1,14 +1,18 @@
-import { compileLoomSource } from './compile.js';
+import { RUNTIME_TARGETS } from './runtime-targets.js';
+import { compileLoomSource, getCompatibleTargetsForImports } from './compile.js';
 
 function summarizeGraph(graph) {
+  const imports = Array.isArray(graph.imports) ? graph.imports : [];
   return {
     nodeCount: graph.nodes.length,
     edgeCount: graph.edges.length,
     renderType: graph.render?.type || 'none',
     nodes: graph.nodes.map((node) => ({ id: node.id, type: node.type })),
-    imports: [],
-    requiredCapabilities: [],
-    compatibleTargets: []
+    imports,
+    requiredCapabilities: [...imports],
+    compatibleTargets: imports.length > 0
+      ? getCompatibleTargetsForImports(imports)
+      : RUNTIME_TARGETS.filter((target) => target !== 'any')
   };
 }
 
@@ -38,10 +42,22 @@ export function inspectLoomSource(source, options = {}) {
 }
 
 export function formatInspectionSummary(summary) {
+  const importLines = summary.imports.length > 0
+    ? summary.imports.map((entry) => `- ${entry}`)
+    : ['Imports: none'];
+  const compatibleTargetLines = summary.compatibleTargets.length > 0
+    ? summary.compatibleTargets.map((entry) => `- ${entry}`)
+    : ['- none'];
   const lines = [
     `Nodes: ${summary.nodeCount}`,
     `Edges: ${summary.edgeCount}`,
     `Render: ${summary.renderType}`,
+    '',
+    summary.imports.length > 0 ? 'Imports:' : importLines[0],
+    ...(summary.imports.length > 0 ? importLines : []),
+    '',
+    'Compatible targets:',
+    ...compatibleTargetLines,
     '',
     'Node list:'
   ];

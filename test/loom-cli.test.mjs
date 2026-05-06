@@ -76,6 +76,52 @@ test('compile unknown option exits 1', () => {
   assert.match(result.stderr, /Unknown option/);
 });
 
+test('compile includes imports in GraphJSON', async () => {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-imports-'));
+  const file = path.join(tmpDir, 'imports.loom');
+  await fsp.writeFile(file, 'import math\nimport fs\n\nx = constant(value: 1)\n', 'utf8');
+
+  const result = runCli(['compile', file]);
+  assert.equal(result.status, 0, result.stderr);
+  const graph = JSON.parse(result.stdout);
+  assert.deepEqual(graph.imports, ['math', 'fs']);
+});
+
+test('unknown import fails when target is specific', async () => {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-unknown-import-'));
+  const file = path.join(tmpDir, 'unknown-import.loom');
+  await fsp.writeFile(file, 'import doesNotExist\nx = constant(value: 1)\n', 'utf8');
+
+  const result = runCli(['compile', file, '--target', 'cli']);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /UNKNOWN_IMPORT/);
+});
+
+test('unsupported import fails for target', async () => {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-unsupported-import-'));
+  const file = path.join(tmpDir, 'unsupported-import.loom');
+  await fsp.writeFile(file, 'import fs\nx = constant(value: 1)\n', 'utf8');
+
+  const result = runCli(['compile', file, '--target', 'web']);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /UNSUPPORTED_IMPORT/);
+});
+
+test('compile default target any allows fs', async () => {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-any-import-'));
+  const file = path.join(tmpDir, 'any-import.loom');
+  await fsp.writeFile(file, 'import fs\nx = constant(value: 1)\n', 'utf8');
+
+  const result = runCli(['compile', file]);
+  assert.equal(result.status, 0, result.stderr);
+});
+
+test('compile invalid target exits 1', () => {
+  const result = runCli(['compile', 'examples/cli-basic.loom', '--target', 'banana']);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Unknown runtime target/);
+});
+
 test('format outputs DSL', () => {
   const result = runCli(['format', 'examples/cli-basic.loom']);
   assert.equal(result.status, 0, result.stderr);
@@ -92,6 +138,16 @@ test('format unknown option exits 1', () => {
   const result = runCli(['format', 'examples/cli-basic.loom', '--unknown']);
   assert.equal(result.status, 1);
   assert.match(result.stderr, /Unknown option/);
+});
+
+test('format preserves imports', async () => {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-format-imports-'));
+  const file = path.join(tmpDir, 'format-imports.loom');
+  await fsp.writeFile(file, 'import math\nimport fs\n\nx = constant(value: 1)\n', 'utf8');
+
+  const result = runCli(['format', file]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /^import math\nimport fs\n\nx = constant\(value: 1\)\n$/);
 });
 
 test('inspect outputs summary', () => {
@@ -111,6 +167,20 @@ test('inspect unknown option exits 1', () => {
   assert.match(result.stderr, /Unknown option/);
 });
 
+test('inspect shows imports and compatible targets', async () => {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-inspect-imports-'));
+  const file = path.join(tmpDir, 'inspect-imports.loom');
+  await fsp.writeFile(file, 'import math\nimport fs\nx = constant(value: 1)\n', 'utf8');
+
+  const result = runCli(['inspect', file]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Imports:/);
+  assert.match(result.stdout, /math/);
+  assert.match(result.stdout, /fs/);
+  assert.match(result.stdout, /Compatible targets:/);
+  assert.match(result.stdout, /cli/);
+});
+
 test('parse error exits 1', async () => {
   const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-invalid-'));
   const invalidFile = path.join(tmpDir, 'invalid.loom');
@@ -128,6 +198,23 @@ test('run --get returns finite number', () => {
   assert.equal(Number.isFinite(value), true);
 });
 
+test('run accepts --target cli', () => {
+  const result = runCli([
+    'run',
+    'examples/cli-basic.loom',
+    '--target',
+    'cli',
+    '--get',
+    'x.out',
+    '--time',
+    '0.25'
+  ]);
+
+  assert.equal(result.status, 0, result.stderr);
+  const value = Number(result.stdout.trim());
+  assert.equal(Number.isFinite(value), true);
+});
+
 test('run --json returns object', () => {
   const result = runCli(['run', 'examples/cli-basic.loom', '--get', 'x.out', '--time', '0.25', '--json']);
   assert.equal(result.status, 0, result.stderr);
@@ -140,6 +227,44 @@ test('run unknown option exits 1', () => {
   const result = runCli(['run', 'examples/cli-basic.loom', '--unknown']);
   assert.equal(result.status, 1);
   assert.match(result.stderr, /Unknown option/);
+});
+
+test('run rejects non-cli target', () => {
+  const result = runCli([
+    'run',
+    'examples/cli-basic.loom',
+    '--target',
+    'web',
+    '--get',
+    'x.out'
+  ]);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /only supports --target cli/);
+});
+
+test('run rejects target any', () => {
+  const result = runCli([
+    'run',
+    'examples/cli-basic.loom',
+    '--target',
+    'any',
+    '--get',
+    'x.out'
+  ]);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /only supports --target cli/);
+});
+
+test('run defaults to cli and rejects dom import', async () => {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-run-dom-'));
+  const file = path.join(tmpDir, 'run-dom.loom');
+  await fsp.writeFile(file, 'import dom\nx = constant(value: 1)\n', 'utf8');
+
+  const result = runCli(['run', file, '--get', 'x.out']);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /UNSUPPORTED_IMPORT/);
 });
 
 test('run rejects browser-only nodes with a clear error', async () => {

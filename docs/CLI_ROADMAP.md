@@ -9,6 +9,8 @@
 
 ## Phase 2: Import syntax
 
+- minimal `import math` / `import fs` / `import scene`
+- runtime target validation
 - import math
 - import scene
 - import fs

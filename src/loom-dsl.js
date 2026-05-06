@@ -86,6 +86,7 @@ export function parseDSLToAST(source) {
     const tokens = tokenize(source);
     let p = 0;
     const body = [];
+    const imports = [];
     let pendingComments = [];
     const peek = (o = 0) => tokens[Math.min(p + o, tokens.length - 1)];
     const take = () => tokens[p++];
@@ -111,6 +112,7 @@ export function parseDSLToAST(source) {
       const end = expect(TT.RPAREN); return { type: 'CallExpression', callee, args, span: spanFrom(nt.span.start, end.span.end) }; }
 
     let blankLines = 0;
+    let seenNonImportStatement = false;
     function flushPendingAsStandalone() {
       if (!pendingComments.length) return;
       for (const c of pendingComments) body.push({ type: 'CommentStatement', comment: c, span: c.span });
@@ -132,10 +134,43 @@ export function parseDSLToAST(source) {
       }
       blankLines = 0;
       const stTok = peek();
+      if (stTok.type === TT.IDENT && stTok.value === 'import') {
+        if (seenNonImportStatement) {
+          throw new LoomDSLError('Import statements must appear before other statements', stTok.span.start.line, stTok.span.start.column, 'IMPORT_MUST_BE_TOP_LEVEL');
+        }
+        take();
+        const libTok = peek();
+        if (libTok.type !== TT.IDENT) {
+          throw new LoomDSLError('Expected library name after import', stTok.span.end.line, stTok.span.end.column, 'UNEXPECTED_TOKEN');
+        }
+        take();
+        if (peek().type !== TT.NEWLINE && peek().type !== TT.EOF && peek().type !== TT.COMMENT) {
+          throw new LoomDSLError('Import names must be simple identifiers', peek().span.start.line, peek().span.start.column, 'UNEXPECTED_TOKEN');
+        }
+        const importDecl = {
+          type: 'ImportDeclaration',
+          name: libTok.value,
+          line: stTok.span.start.line,
+          column: stTok.span.start.column,
+          span: spanFrom(stTok.span.start, libTok.span.end)
+        };
+        if (pendingComments.length) {
+          importDecl.leadingComments = pendingComments;
+          pendingComments = [];
+        }
+        if (peek().type === TT.COMMENT) {
+          const ct = take();
+          importDecl.trailingComment = { type: 'Comment', text: ct.value, variant: 'line', span: ct.span };
+        }
+        if (peek().type === TT.NEWLINE) take();
+        imports.push(importDecl);
+        continue;
+      }
       let stmt;
       if (stTok.type === TT.IDENT && stTok.value === 'render') { take(); const call = parseCall(); stmt = { type: 'RenderStatement', call, span: spanFrom(stTok.span.start, call.span.end) }; }
       else if (stTok.type === TT.IDENT && peek(1).type === TT.ASSIGN) { const target = mkIdent(take()); take(); const value = parseExpr(); stmt = { type: 'AssignmentStatement', target, value, span: spanFrom(target.span.start, value.span.end) }; }
       else throw new LoomDSLError('Expected assignment or render statement', stTok.span.start.line, stTok.span.start.column, 'UNEXPECTED_TOKEN');
+      seenNonImportStatement = true;
       if (pendingComments.length) { stmt.leadingComments = pendingComments; pendingComments = []; }
       if (peek().type === TT.COMMENT) { const ct = take(); stmt.trailingComment = { type: 'Comment', text: ct.value, variant: 'line', span: ct.span }; }
       if (peek().type === TT.NEWLINE) take();
@@ -143,7 +178,7 @@ export function parseDSLToAST(source) {
     }
     flushPendingAsStandalone();
     const end = tokens[tokens.length - 1].span.end;
-    return { ast: { type: 'Program', body, span: spanFrom(posFrom(1, 1, 0), end) }, errors };
+    return { ast: { type: 'Program', imports, body, span: spanFrom(posFrom(1, 1, 0), end) }, errors };
   } catch (e) {
     // TODO: support error recovery to collect multiple errors
     errors.push({ type: 'ParseError', message: e.message, code: e.code || 'UNEXPECTED_TOKEN', span: { start: { line: e.line || 1, column: e.column || 1, offset: 0 }, end: { line: e.line || 1, column: e.column || 1, offset: 0 } } });
@@ -164,7 +199,10 @@ export function compileToGraph(ast) { /* bridge via existing shape */
   const errors = []; if (!ast) return { graph: { nodes: [], edges: [] }, errors };
   try {
     const textAst = astToLegacy(ast);
-    const graph = buildGraph(textAst);
+    const graph = buildGraph(textAst.statements);
+    if (textAst.imports.length > 0) {
+      graph.imports = textAst.imports;
+    }
     return { graph, errors };
   } catch (e) {
     const span = (typeof e.line === 'number' && typeof e.column === 'number')
@@ -205,7 +243,12 @@ function astToLegacy(program) {
     }
     throw new LoomDSLError('Unsupported JSON literal', line, col, 'UNEXPECTED_TOKEN');
   }
-  return program.body.filter(s => s.type !== 'CommentStatement').map(s => s.type === 'RenderStatement' ? { type: 'render', call: convExpr(s.call) } : { type: 'assign', name: s.target.name, expr: convExpr(s.value) });
+  return {
+    imports: (program.imports || []).map((entry) => entry.name),
+    statements: program.body
+      .filter(s => s.type !== 'CommentStatement')
+      .map(s => s.type === 'RenderStatement' ? { type: 'render', call: convExpr(s.call) } : { type: 'assign', name: s.target.name, expr: convExpr(s.value) })
+  };
 }
 
 function buildGraph(stmts) { /* mostly original */
@@ -274,6 +317,13 @@ export function formatDSL(ast, options = {}) {
     return `${call.callee.name}(\n${body}\n${indent(level)})`;
   }
 
+  const importLines = [];
+  for (const entry of ast.imports || []) {
+    if (entry.leadingComments) for (const c of entry.leadingComments) importLines.push(`#${c.text}`);
+    let line = `import ${entry.name}`;
+    if (entry.trailingComment) line += `  #${entry.trailingComment.text}`;
+    importLines.push(line);
+  }
   const lines = [];
   for (const s of ast.body) {
     if (s.type === 'CommentStatement') { lines.push(`#${s.comment.text}`); continue; }
@@ -283,7 +333,10 @@ export function formatDSL(ast, options = {}) {
     if (s.trailingComment) line += `  #${s.trailingComment.text}`;
     lines.push(line);
   }
-  return `${lines.join('\n')}\n`;
+  const sections = [];
+  if (importLines.length > 0) sections.push(importLines.join('\n'));
+  if (lines.length > 0) sections.push(lines.join('\n'));
+  return `${sections.join('\n\n')}\n`;
 }
 
 export function parseDSL(text) {

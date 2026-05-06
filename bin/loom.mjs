@@ -9,7 +9,8 @@ import {
   inspectLoomSource,
   formatInspectionSummary,
   runLoomSource,
-  formatLoomError
+  formatLoomError,
+  isKnownRuntimeTarget
 } from '../src/toolchain/index.js';
 
 function print(message = '') {
@@ -42,6 +43,16 @@ function parseNumber(value, optionName) {
     throw new Error(`${optionName} expects a finite number`);
   }
   return parsed;
+}
+
+function parseTarget(value) {
+  if (!value || value.startsWith('-')) {
+    throw new Error('--target requires a runtime target');
+  }
+  if (!isKnownRuntimeTarget(value)) {
+    throw new Error(`Unknown runtime target: ${value}`);
+  }
+  return value;
 }
 
 function parseCommonCommandArgs(args) {
@@ -85,11 +96,12 @@ Examples:
 
 function getCompileHelp() {
   return `Usage:
-  loom compile <file> [--out <file>] [--pretty false]
+  loom compile <file> [--out <file>] [--pretty false] [--target <target>]
 
 Options:
   -o, --out <file>   Write GraphJSON to a file
-  --pretty false     Print compact JSON`;
+  --pretty false     Print compact JSON
+  --target <target>  Validate imports for a runtime target. Default: any`;
 }
 
 function getFormatHelp() {
@@ -103,23 +115,25 @@ Options:
 
 function getInspectHelp() {
   return `Usage:
-  loom inspect <file> [--ast] [--graph] [--json]
+  loom inspect <file> [--ast] [--graph] [--json] [--target <target>]
 
 Options:
   --ast    Print Source AST JSON
   --graph  Print GraphJSON
-  --json   Print the full inspection result as JSON`;
+  --json   Print the full inspection result as JSON
+  --target <target>  Validate imports for a runtime target. Default: any`;
 }
 
 function getRunHelp() {
   return `Usage:
-  loom run <file> --get <ref> [--time <number>] [--dt <number>] [--json]
+  loom run <file> --get <ref> [--time <number>] [--dt <number>] [--json] [--target <target>]
 
 Options:
   --get <ref>       Output reference to read. Repeatable.
   --time <number>   Evaluation time in seconds. Default: 0
   --dt <number>     Delta time in seconds. Default: 0
-  --json            Print result values as JSON`;
+  --json            Print result values as JSON
+  --target <target> Only cli is supported by loom run in this version. Default: cli`;
 }
 
 async function readSourceFile(file) {
@@ -139,6 +153,7 @@ async function handleCompile(args) {
 
   let outputPath = null;
   let pretty = true;
+  let target = 'any';
 
   for (let index = 0; index < rest.length; index += 1) {
     const arg = rest[index];
@@ -156,13 +171,16 @@ async function handleCompile(args) {
       }
       pretty = parseBoolean(next);
       index += 1;
+    } else if (arg === '--target') {
+      target = parseTarget(rest[index + 1]);
+      index += 1;
     } else {
       throw new Error(`Unknown option: ${arg}`);
     }
   }
 
   const source = await readSourceFile(file);
-  const result = compileLoomSource(source, { filename: file, target: 'cli' });
+  const result = compileLoomSource(source, { filename: file, target });
   if (!result.ok) {
     printToolErrors(result.errors);
     return 1;
@@ -239,21 +257,26 @@ async function handleInspect(args) {
   let showAst = false;
   let showGraph = false;
   let showJson = false;
+  let target = 'any';
 
-  for (const arg of rest) {
+  for (let index = 0; index < rest.length; index += 1) {
+    const arg = rest[index];
     if (arg === '--ast') {
       showAst = true;
     } else if (arg === '--graph') {
       showGraph = true;
     } else if (arg === '--json') {
       showJson = true;
+    } else if (arg === '--target') {
+      target = parseTarget(rest[index + 1]);
+      index += 1;
     } else {
       throw new Error(`Unknown option: ${arg}`);
     }
   }
 
   const source = await readSourceFile(file);
-  const result = inspectLoomSource(source, { filename: file, target: 'cli' });
+  const result = inspectLoomSource(source, { filename: file, target });
   if (!result.ok) {
     printToolErrors(result.errors);
     return 1;
@@ -293,6 +316,7 @@ async function handleRun(args) {
   let time = 0;
   let dt = 0;
   let json = false;
+  let target = 'cli';
 
   for (let index = 0; index < rest.length; index += 1) {
     const arg = rest[index];
@@ -311,15 +335,22 @@ async function handleRun(args) {
       index += 1;
     } else if (arg === '--json') {
       json = true;
+    } else if (arg === '--target') {
+      target = parseTarget(rest[index + 1]);
+      index += 1;
     } else {
       throw new Error(`Unknown option: ${arg}`);
     }
   }
 
+  if (target !== 'cli') {
+    throw new Error('loom run currently only supports --target cli');
+  }
+
   const source = await readSourceFile(file);
   const result = runLoomSource(source, {
     filename: file,
-    target: 'cli',
+    target,
     get: get.length === 1 ? get[0] : get.length > 1 ? get : undefined,
     time,
     dt

@@ -238,6 +238,13 @@ wave = sine(t, freq: 0.3, amplitude: 2)`;
       assertEqual(s.value.type, "CallExpression");
     });
 
+    test("16b. parseDSLToAST: import metadata", () => {
+      const { ast, errors } = parseDSLToAST("import math\nimport fs\n\nx = constant(value: 1)");
+      assertEqual(errors.length, 0);
+      assertEqual(ast.imports.map(x => x.name), ["math", "fs"]);
+      assertEqual(ast.body[0].type, "AssignmentStatement");
+    });
+
     test("17. parseDSLToAST: pipe expression and comments", () => {
       const src = `# lead\na = clock() # tail\n# lone\nb = a |> sine(freq: 0.3)`;
       const { ast } = parseDSLToAST(src);
@@ -277,6 +284,13 @@ wave = sine(t, freq: 0.3, amplitude: 2)`;
       assert(out.errors.length > 0, "compile error exists");
       assert(out.errors[0].span && out.errors[0].span.start.line > 0, "span exists");
     });
+    test("18d. compileToGraph includes imports metadata", () => {
+      const src = `import math\nimport fs\n\nx = constant(value: 1)`;
+      const { ast } = parseDSLToAST(src);
+      const out = compileToGraph(ast);
+      assertEqual(out.errors.length, 0);
+      assertEqual(out.graph.imports, ["math", "fs"]);
+    });
 
     test("19. parseDSLToAST parse error is non-throwing", () => {
       const out = parseDSLToAST("a = ");
@@ -304,6 +318,12 @@ wave = sine(t, freq: 0.3, amplitude: 2)`;
       const out2 = formatDSL(ast, { maxInlineParams: 2 });
       assert(out1.includes("map(\n"), "multiline call");
       assertEqual(out1, out2, "deterministic");
+    });
+    test("21b. formatDSL preserves imports and blank line", () => {
+      const src = `import math\nimport fs\n\nx = constant(value: 1)`;
+      const ast = parseDSLToAST(src).ast;
+      const out = formatDSL(ast);
+      assert(out.startsWith("import math\nimport fs\n\nx = constant(value: 1)\n"), "imports kept at top");
     });
 
     const el = document.getElementById("results");

@@ -36,6 +36,49 @@ wave = sine(t, freq: 0.3)
 t = clock()  # 時間ソース
 ```
 
+### import 文
+
+Loom DSL はトップレベルの `import` 文をサポートします。
+
+```text
+import math
+import fs
+import scene
+```
+
+現時点の `import` は metadata / target validation 用です。実際の module loading や node library の自動登録はまだ行いません。
+
+`import` は、代入文や `render` 文より前に書く必要があります。
+
+```text
+import math
+
+t = clock()
+x = sine(t, freq: 0.5)
+```
+
+以下はエラーです。
+
+```text
+t = clock()
+import math
+```
+
+library name は単純な識別子のみ対応します。
+
+```text
+import math
+```
+
+以下は未対応です。
+
+```text
+import math.extra
+import { sine } from math
+from math import sine
+import math as m
+```
+
 ### 代入文
 
 ```
@@ -229,6 +272,10 @@ smooth = smoothLerp(wave, rate: 5, initial: 0)
 | `UNKNOWN_NODE_TYPE` | 未知のノード型 |
 | `MISSING_ARGUMENT_NAME` | 引数名が必要 |
 | `UNDEFINED_IDENTIFIER` | 未定義の識別子 |
+| `IMPORT_MUST_BE_TOP_LEVEL` | `import` 文が代入文または `render` 文の後に書かれている |
+| `UNKNOWN_IMPORT` | 未知の import library |
+| `UNSUPPORTED_IMPORT` | 指定 runtime target で利用できない import library |
+| `UNKNOWN_RUNTIME_TARGET` | 未知の runtime target |
 
 ---
 

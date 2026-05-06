@@ -18,6 +18,9 @@ function getSpanLocation(error) {
 }
 
 function inferErrorSource(error) {
+  if (typeof error?.source === 'string' && ['parse', 'compile', 'runtime', 'unknown'].includes(error.source)) {
+    return error.source;
+  }
   const type = error?.type;
   const name = error?.name;
 
