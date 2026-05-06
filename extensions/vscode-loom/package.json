@@ -1,0 +1,53 @@
+{
+  "name": "loom-scenesync",
+  "displayName": "Loom for Scene Sync",
+  "description": "VS Code support for writing Loom scene behavior scripts for Scene Sync",
+  "version": "0.0.1",
+  "publisher": "afjk",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "main": "./src/extension.js",
+  "activationEvents": [
+    "onLanguage:loom",
+    "onCommand:loom.runCurrentFile",
+    "onCommand:loom.sceneSyncDevCurrentFile"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "loom",
+        "aliases": [
+          "Loom"
+        ],
+        "extensions": [
+          ".loom"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "loom",
+        "scopeName": "source.loom",
+        "path": "./syntaxes/loom.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "loom.runCurrentFile",
+        "title": "Loom: Run Current File"
+      },
+      {
+        "command": "loom.sceneSyncDevCurrentFile",
+        "title": "Loom: Scene Sync Dev Current File"
+      }
+    ]
+  },
+  "scripts": {
+    "test": "node test/completion-context.test.mjs"
+  }
+}
