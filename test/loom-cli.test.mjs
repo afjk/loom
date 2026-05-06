@@ -460,3 +460,56 @@ test('evaluateOnce supports Node-safe one-shot evaluation', async () => {
 
   assert.equal(Number.isFinite(value), true);
 });
+
+test('scenesync run prints dry-run payload', () => {
+  const result = runCli(['scenesync', 'run', 'examples/scene-effects.loom']);
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Scene Sync broadcast payload/);
+  assert.match(result.stdout, /scene-batch/);
+  assert.match(result.stdout, /sample-cube/);
+  assert.match(result.stdout, /Dry run only/);
+});
+
+test('scenesync run --dry-run prints payload', () => {
+  const result = runCli(['scenesync', 'run', 'examples/scene-effects.loom', '--dry-run']);
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Scene Sync broadcast payload/);
+  assert.match(result.stdout, /scene-batch/);
+});
+
+test('scenesync run --json prints JSON', () => {
+  const result = runCli(['scenesync', 'run', 'examples/scene-effects.loom', '--json']);
+
+  assert.equal(result.status, 0, result.stderr);
+  const output = JSON.parse(result.stdout);
+  assert.equal(output.ok, true);
+  assert.equal(output.dryRun, true);
+  assert.ok(output.payload);
+  assert.ok(Array.isArray(output.effects));
+});
+
+test('scenesync run exits 0 with no scene effects', async () => {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-no-effects-'));
+  const file = path.join(tmpDir, 'no-effects.loom');
+  await fsp.writeFile(file, 'x = constant(value: 1)\n', 'utf8');
+
+  const result = runCli(['scenesync', 'run', file]);
+
+  assert.equal(result.status, 0);
+  assert.match(result.stdout, /No Scene Sync scene effects found/);
+});
+
+test('scenesync run without file exits 1', () => {
+  const result = runCli(['scenesync', 'run']);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /file path/);
+});
+
+test('scenesync run with invalid file exits 1', () => {
+  const result = runCli(['scenesync', 'run', 'nonexistent.loom']);
+
+  assert.equal(result.status, 1);
+});
