@@ -626,3 +626,62 @@ test('scenesync graph-run --object and --scene exits 1', () => {
   assert.equal(result.status, 1);
   assert.match(result.stderr, /SCOPE_CONFLICT/);
 });
+
+test('scenesync dev --dry-run --once compiles', () => {
+  const result = runCli(['scenesync', 'dev', 'examples/lissajous.loom', '--dry-run', '--once']);
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Scene Sync dev mode/);
+  assert.match(result.stdout, /compiled/);
+  assert.match(result.stdout, /nodes/);
+  assert.match(result.stdout, /edges/);
+});
+
+test('scenesync dev --dry-run --once with --object', () => {
+  const result = runCli(['scenesync', 'dev', 'examples/lissajous.loom', '--object', 'sample-cube', '--dry-run', '--once']);
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Scene Sync dev mode/);
+  assert.match(result.stdout, /sample-cube/);
+});
+
+test('scenesync dev --dry-run --once with --scene', () => {
+  const result = runCli(['scenesync', 'dev', 'examples/lissajous.loom', '--scene', '--dry-run', '--once']);
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Scene Sync dev mode/);
+  assert.match(result.stdout, /Scope: scene/);
+});
+
+test('scenesync dev --object and --scene exits 1', () => {
+  const result = runCli(['scenesync', 'dev', 'examples/lissajous.loom', '--object', 'cube', '--scene', '--dry-run', '--once']);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr + result.stdout, /SCOPE_CONFLICT/);
+});
+
+test('scenesync dev invalid --debounce exits 1', () => {
+  const result = runCli(['scenesync', 'dev', 'examples/lissajous.loom', '--debounce', 'abc', '--dry-run', '--once']);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr + result.stdout, /INVALID_DEBOUNCE/);
+});
+
+test('scenesync dev without file exits 1', () => {
+  const result = runCli(['scenesync', 'dev', '--dry-run', '--once']);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr + result.stdout, /file path/);
+});
+
+test('scenesync dev --json outputs JSON', () => {
+  const result = runCli(['scenesync', 'dev', 'examples/lissajous.loom', '--dry-run', '--once', '--json']);
+
+  assert.equal(result.status, 0, result.stderr);
+  const lines = result.stdout.split('\n').filter(line => line.trim());
+  const jsonLines = lines.filter(line => line.startsWith('{'));
+  assert.ok(jsonLines.length > 0);
+  const events = jsonLines.map(line => JSON.parse(line));
+  assert.ok(events.some(e => e.event === 'start'));
+  assert.ok(events.some(e => e.event === 'compiled'));
+});

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { readFile, writeFile } from 'node:fs/promises';
+import { watch } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import readline from 'node:readline';
@@ -199,6 +200,7 @@ Commands:
   graph-run <file>         Compile and set a Scene Sync graph from Loom DSL
   graph-set <obj> <g>      Set a Loom graph behavior on a Scene Sync object
   graph-clear <obj>        Clear Loom graph behavior from a Scene Sync object
+  dev <file>               Watch Loom DSL and live-send Scene Sync graph updates
   ping                     Check Scene Sync room connection
   info                     Get room information
   objects                  List scene objects
@@ -814,6 +816,404 @@ async function parseSceneSyncGraphRunArgs(args) {
   return { file, scope, room, session, endpoint, dryRun, send, json };
 }
 
+async function compileSceneSyncGraphFile(filePath, options = {}) {
+  const source = await readFile(path.resolve(process.cwd(), filePath), 'utf8');
+  const result = compileLoomToSceneSyncGraph(source, { scope: options.scope });
+
+  if (!result.scope) {
+    throw new Error('SCOPE_REQUIRED - Pass --object <objectId>, --scene, or include an object id in scene.setPosition(...)');
+  }
+
+  const payload = createSceneGraphSetPayload(result.scope, result.graph);
+
+  return {
+    scope: result.scope,
+    graph: result.graph,
+    payload
+  };
+}
+
+async function sendSceneSyncGraphPayload({ client, room, session, payload }) {
+  return client.broadcast({ room, session, payload });
+}
+
+async function parseSceneSyncDevArgs(args) {
+  let file = null;
+  let objectId = null;
+  let scene = false;
+  let room = '';
+  let session = '';
+  let endpoint = '';
+  let dryRun = false;
+  let json = false;
+  let once = false;
+  let debounce = '300';
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (file === null && !arg.startsWith('-')) {
+      file = arg;
+    } else if (arg === '--object') {
+      const next = args[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--object requires an object ID');
+      }
+      objectId = next;
+      index += 1;
+    } else if (arg === '--scene') {
+      scene = true;
+    } else if (arg === '--debounce') {
+      const next = args[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--debounce requires a number');
+      }
+      debounce = next;
+      index += 1;
+    } else if (arg === '--dry-run') {
+      dryRun = true;
+    } else if (arg === '--json') {
+      json = true;
+    } else if (arg === '--once') {
+      once = true;
+    } else if (arg === '--room') {
+      const next = args[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--room requires a room code');
+      }
+      room = next;
+      index += 1;
+    } else if (arg === '--session') {
+      const next = args[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--session requires a session ID');
+      }
+      session = next;
+      index += 1;
+    } else if (arg === '--endpoint') {
+      const next = args[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--endpoint requires a URL');
+      }
+      endpoint = next;
+      index += 1;
+    } else {
+      throw new Error(`Unknown option: ${arg}`);
+    }
+  }
+
+  if (objectId && scene) {
+    throw new Error('SCOPE_CONFLICT - Use either --object or --scene, not both.');
+  }
+
+  const debounceMs = Number.parseInt(debounce, 10);
+  if (!Number.isFinite(debounceMs) || debounceMs < 0) {
+    throw new Error('INVALID_DEBOUNCE - --debounce must be a non-negative number');
+  }
+
+  if (!file) {
+    throw new Error('dev requires a file path');
+  }
+
+  let scope = null;
+  if (objectId) {
+    scope = { object: objectId };
+  } else if (scene) {
+    scope = { scene: true };
+  }
+
+  const savedSession = await loadSceneSyncSession();
+  const savedData = savedSession.ok && savedSession.session ? savedSession.session : null;
+
+  if (!room && !dryRun) {
+    room = process.env.LOOM_SCENESYNC_ROOM || '';
+    if (!room && savedData) {
+      room = savedData.roomId || '';
+    }
+  }
+
+  if (!session && !dryRun) {
+    session = process.env.LOOM_SCENESYNC_SESSION || '';
+    if (!session && savedData) {
+      session = savedData.sessionId || '';
+    }
+  }
+
+  if (!endpoint) {
+    endpoint = process.env.LOOM_SCENESYNC_ENDPOINT || '';
+    if (!endpoint && savedData) {
+      endpoint = savedData.endpoint || '';
+    }
+    if (!endpoint) {
+      endpoint = DEFAULT_SCENESYNC_ENDPOINT;
+    }
+  }
+
+  return { file, scope, room, session, endpoint, dryRun, json, once, debounceMs };
+}
+
+function formatScopeForDisplay(scope) {
+  if (!scope) return 'unknown';
+  if (scope.object) return `object(${scope.object})`;
+  if (scope.scene) return 'scene';
+  return 'unknown';
+}
+
+function logEvent(event, jsonMode) {
+  if (jsonMode) {
+    print(stringifyJson(event, false));
+  }
+}
+
+function formatTimestamp() {
+  const now = new Date();
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  return `${hours}:${minutes}:${seconds}`;
+}
+
+async function handleSceneSyncDev(args) {
+  if (args.includes('--help')) {
+    print(`Usage:
+  loom scenesync dev <file> [--object <id>] [--scene] [--debounce <ms>] [--dry-run] [--json] [--once]
+
+Options:
+  --object <id>      Use object-level graph scope
+  --scene            Use scene-level graph scope
+  --debounce <ms>    Debounce file changes. Default: 300
+  --dry-run          Compile on changes but do not send
+  --json             Output JSON event logs
+  --once             Run startup compile/send once and exit (test mode)
+
+Examples:
+  loom scenesync dev examples/lissajous.loom
+  loom scenesync dev examples/lissajous.loom --object sample-cube
+  loom scenesync dev examples/scene-control.loom --scene
+  loom scenesync dev examples/lissajous.loom --dry-run --once`);
+    return 0;
+  }
+
+  let parsedArgs;
+  try {
+    parsedArgs = await parseSceneSyncDevArgs(args);
+  } catch (error) {
+    printError(error.message || String(error));
+    return 1;
+  }
+
+  const { file, scope, room, session, endpoint, dryRun, json: jsonMode, once, debounceMs } = parsedArgs;
+
+  let client = null;
+  if (!dryRun) {
+    if (!room) {
+      printError('Scene Sync room is required. Pass --room <roomId> or set LOOM_SCENESYNC_ROOM.');
+      return 1;
+    }
+    if (!session) {
+      printError('Scene Sync session is required. Pass --session <sessionId> or set LOOM_SCENESYNC_SESSION.');
+      return 1;
+    }
+    client = new SceneSyncClient({ endpoint });
+  }
+
+  const filePath = path.resolve(process.cwd(), file);
+  const resolvedFile = path.relative(process.cwd(), filePath);
+  let lastValidGraph = null;
+  let inferredScope = scope;
+  let isFirstRun = true;
+  let compileTimer = null;
+
+  function log(message) {
+    print(`[${formatTimestamp()}] ${message}`);
+  }
+
+  const startupMode = dryRun ? ' (dry-run)' : '';
+  const scopeDisplay = scope ? formatScopeForDisplay(scope) : '(will be determined after first compile)';
+  const lines = [
+    `Scene Sync dev mode${startupMode}`,
+    `File: ${resolvedFile}`,
+    `Scope: ${scopeDisplay}`,
+    `Debounce: ${debounceMs}ms`
+  ];
+  print(lines.join('\n'));
+
+  if (jsonMode) {
+    logEvent({
+      event: 'start',
+      file: resolvedFile,
+      scope,
+      dryRun,
+      debounceMs
+    }, true);
+  }
+
+  async function runCompileAndSend() {
+    try {
+      log('compiling');
+
+      let compileResult;
+      try {
+        compileResult = await compileSceneSyncGraphFile(file, { scope });
+      } catch (error) {
+        const errorCode = error.message?.split(' - ')[0] || 'COMPILE_ERROR';
+        const errorMsg = error.message || String(error);
+        log(`compile failed`);
+        if (jsonMode) {
+          logEvent({
+            event: 'compile_error',
+            error: {
+              code: errorCode,
+              message: errorMsg
+            }
+          }, true);
+        } else {
+          printError(`${errorCode} - ${errorMsg}`);
+        }
+        return;
+      }
+
+      // Update inferred scope after first successful compile if not explicitly set
+      if (isFirstRun && !scope) {
+        inferredScope = compileResult.scope;
+        const scopeDisplay = formatScopeForDisplay(inferredScope);
+        log(`scope: ${scopeDisplay}`);
+      }
+
+      lastValidGraph = compileResult.graph;
+      const nodeCount = compileResult.graph.nodes.length;
+      const edgeCount = compileResult.graph.edges.length;
+
+      log(`compiled ${nodeCount} nodes, ${edgeCount} edges`);
+
+      if (jsonMode) {
+        logEvent({
+          event: 'compiled',
+          nodeCount,
+          edgeCount
+        }, true);
+      }
+
+      if (dryRun) {
+        if (!jsonMode) {
+          print('dry-run graph-set payload:');
+          print(stringifyJson(compileResult.payload, true));
+        } else {
+          logEvent({
+            event: 'dry_run_payload',
+            payload: compileResult.payload
+          }, true);
+        }
+      } else {
+        try {
+          await sendSceneSyncGraphPayload({
+            client,
+            room,
+            session,
+            payload: compileResult.payload
+          });
+
+          log('sent graph-set');
+
+          if (jsonMode) {
+            logEvent({
+              event: 'sent',
+              room,
+              nodeCount,
+              edgeCount
+            }, true);
+          }
+        } catch (sendError) {
+          const errorCode = sendError.message?.split(' - ')[0] || 'SCENESYNC_ERROR';
+          const errorMsg = sendError.message || String(sendError);
+          log('send failed');
+          if (jsonMode) {
+            logEvent({
+              event: 'send_error',
+              error: {
+                code: errorCode,
+                message: errorMsg
+              }
+            }, true);
+          } else {
+            printError(`${errorCode} - ${errorMsg}`);
+          }
+        }
+      }
+    } catch (error) {
+      const errorCode = 'UNEXPECTED_ERROR';
+      const errorMsg = error.message || String(error);
+      log('unexpected error');
+      if (jsonMode) {
+        logEvent({
+          event: 'error',
+          error: {
+            code: errorCode,
+            message: errorMsg
+          }
+        }, true);
+      } else {
+        printError(`${errorCode} - ${errorMsg}`);
+      }
+    }
+  }
+
+  async function scheduleReload() {
+    if (!isFirstRun) {
+      log('file changed');
+    }
+    clearTimeout(compileTimer);
+    compileTimer = setTimeout(() => {
+      runCompileAndSend().catch(() => {});
+    }, debounceMs);
+  }
+
+  try {
+    await runCompileAndSend();
+    isFirstRun = false;
+
+    if (once) {
+      if (jsonMode) {
+        logEvent({ event: 'stop' }, true);
+      }
+      return 0;
+    }
+
+    print('Watching for changes. Press Ctrl+C to stop.');
+
+    const watcher = watch(filePath, { persistent: true }, () => {
+      scheduleReload().catch(() => {});
+    });
+
+    return await new Promise((resolve) => {
+      process.on('SIGINT', () => {
+        watcher.close();
+        clearTimeout(compileTimer);
+        if (jsonMode) {
+          logEvent({ event: 'stop' }, true);
+        } else {
+          print('Stopped Scene Sync dev mode.');
+          if (!dryRun) {
+            print('Graph remains active. Use `loom scenesync graph-clear ... --send` to clear it.');
+          }
+        }
+        resolve(0);
+      });
+    });
+  } catch (error) {
+    printError(error.message || String(error));
+    if (jsonMode) {
+      logEvent({
+        event: 'error',
+        error: {
+          code: 'FATAL_ERROR',
+          message: error.message || String(error)
+        }
+      }, true);
+    }
+    return 1;
+  }
+}
+
 async function handleCompile(args) {
   if (args.includes('--help')) {
     print(getCompileHelp());
@@ -1119,13 +1519,26 @@ async function handleRepl(args) {
 }
 
 async function handleSceneSync(args) {
-  if (args.length === 0 || args.includes('--help')) {
+  if (args.length === 0) {
     print(getSceneSyncHelp());
     return 0;
   }
 
   const [subcommand, ...rest] = args;
-  if (rest.includes('--help')) {
+
+  // Allow these subcommands to handle their own --help
+  const selfHelpSubcommands = ['dev', 'graph-compile', 'graph-run', 'graph-set', 'graph-clear'];
+
+  if (args.includes('--help')) {
+    if (selfHelpSubcommands.includes(subcommand)) {
+      // Let the subcommand handle its own help
+    } else {
+      print(getSceneSyncHelp());
+      return 0;
+    }
+  }
+
+  if (rest.includes('--help') && !selfHelpSubcommands.includes(subcommand)) {
     print(getSceneSyncHelp());
     return 0;
   }
@@ -1558,6 +1971,10 @@ async function handleSceneSync(args) {
       printError(error.message || String(error));
       return 1;
     }
+  }
+
+  if (subcommand === 'dev') {
+    return await handleSceneSyncDev(rest);
   }
 
   const { room, session, endpoint, json } = await parseSceneSyncArgs(rest);
