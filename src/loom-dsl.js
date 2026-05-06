@@ -306,6 +306,11 @@ function buildGraph(stmts) { /* mostly original */
     nodes.push({ id, type: 'function.literal', params: { params: fn.params, body: fn.body, closureRefs: scopedRefs() } });
     return id;
   }
+  function buildLiteral(expr, resultId) {
+    const id = resultId || anonId();
+    nodes.push({ id, type: 'constant', params: { value: expr.value } });
+    return id;
+  }
   function buildUserCall(call, resultId) {
     const id = resultId || anonId();
     nodes.push({ id, type: 'function.call' });
@@ -327,7 +332,7 @@ function buildGraph(stmts) { /* mostly original */
     for (const a of pos) wire(a.value, inputNames[idx++]);
     for (const a of named) { if (inputNames.includes(a.name)) wire(a.value, a.name); else if (paramNames.includes(a.name)) { if (a.value.type === 'ident' || a.value.type === 'call' || a.value.type === 'fn') throw new LoomDSLError(`Parameter '${a.name}' for '${fnName}' must be a literal`, call.line, call.col, 'UNEXPECTED_TOKEN'); nodeObj.params ||= {}; nodeObj.params[a.name] = a.value.value; } else throw new LoomDSLError(`Unknown argument '${a.name}' for '${fnName}'`, call.line, call.col, 'UNKNOWN_ARGUMENT'); }
     return id; };
-  const buildExpr = (expr, resultId, pipeFrom) => expr.type === 'call' ? buildNode(expr, resultId, pipeFrom) : expr.type === 'fn' ? buildFunctionLiteral(expr, resultId) : expr.type === 'pipe' ? (() => { const lId = buildExpr(expr.left, null, null); const ln = nodes.find(n => n.id === lId); return buildNode(expr.call, resultId, `${lId}.${defaultOutputPort(ln.type)}`); })() : expr.type === 'ident' ? scope[expr.name] || (()=>{throw new LoomDSLError(`Undefined identifier: ${expr.name}`, expr.line, expr.col, 'UNDEFINED_IDENTIFIER');})() : (()=>{throw new LoomDSLError('Cannot use literal as expression', expr.line, expr.col, 'UNEXPECTED_TOKEN');})();
+  const buildExpr = (expr, resultId, pipeFrom) => expr.type === 'call' ? buildNode(expr, resultId, pipeFrom) : expr.type === 'fn' ? buildFunctionLiteral(expr, resultId) : ['number', 'string', 'bool', 'null', 'array', 'object'].includes(expr.type) ? buildLiteral(expr, resultId) : expr.type === 'pipe' ? (() => { const lId = buildExpr(expr.left, null, null); const ln = nodes.find(n => n.id === lId); return buildNode(expr.call, resultId, `${lId}.${defaultOutputPort(ln.type)}`); })() : expr.type === 'ident' ? scope[expr.name] || (()=>{throw new LoomDSLError(`Undefined identifier: ${expr.name}`, expr.line, expr.col, 'UNDEFINED_IDENTIFIER');})() : (()=>{throw new LoomDSLError('Cannot use literal as expression', expr.line, expr.col, 'UNEXPECTED_TOKEN');})();
   const buildRender = (call) => { const named = {}; for (const a of call.args) { if (!a.named) throw new LoomDSLError('render arguments must be named', call.line, call.col, 'MISSING_ARGUMENT_NAME'); named[a.name] = a.value; } const rv = (e) => e.type === 'ident' ? resolveIdent(e.name, e.line, e.col) : e.value; if (call.name === 'point') return { type: 'point', x: named.x ? rv(named.x) : undefined, y: named.y ? rv(named.y) : undefined, color: named.color ? named.color.value : '#00ff00', trail: named.trail ? named.trail.value : 0.1 }; if (call.name === 'bar') return { type: 'bar', width: named.width ? rv(named.width) : undefined, color: named.color ? named.color.value : '#00ccff', height: named.height ? named.height.value : 40, y: named.y ? rv(named.y) : undefined }; throw new LoomDSLError(`Unknown render function: ${call.name}`, call.line, call.col, 'UNKNOWN_NODE_TYPE'); };
   for (const s of stmts) {
     if (s.type === 'render') renderConfig = buildRender(s.call);
