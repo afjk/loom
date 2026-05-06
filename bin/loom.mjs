@@ -208,7 +208,8 @@ Options:
   --save               Save redeemed session locally
   --dry-run            Print payload without sending (default for run, graph-set, graph-clear)
   --send               Broadcast payload to Scene Sync
-  --object <id>        Scene object ID (for graph-compile and graph-run)
+  --object <id>        Compile/run as an object-level graph (for graph-compile and graph-run)
+  --scene              Compile/run as a scene-level graph (for graph-compile and graph-run)
   --room <room>        Scene Sync room code
   --session <id>       Scene Sync session ID
   --endpoint <url>     Scene Sync command endpoint. Default: ${DEFAULT_SCENESYNC_ENDPOINT}
@@ -218,6 +219,8 @@ Examples:
   loom scenesync run examples/scene-effects.loom
   loom scenesync run examples/scene-effects.loom --send
   loom scenesync graph-compile examples/lissajous.loom
+  loom scenesync graph-compile examples/lissajous.loom --object sample-cube
+  loom scenesync graph-compile examples/lissajous.loom --scene
   loom scenesync graph-run examples/lissajous.loom --object sample-cube
   loom scenesync graph-run examples/lissajous.loom --object sample-cube --send
   loom scenesync graph-set sample-cube examples/scene-graphs/lissajous.json
@@ -227,6 +230,8 @@ Examples:
 Graph Commands:
   By default graph-set, graph-clear, and graph-run are dry-run. Pass --send to broadcast.
   graph-compile and graph-run do not require room/session in dry-run mode.
+  Use --object for object scope or --scene for scene scope (mutually exclusive).
+  If neither is specified, scope is inferred from DSL.
 
 Environment Variables:
   LOOM_SCENESYNC_ROOM              Default room code
@@ -668,6 +673,7 @@ async function parseSceneSyncGraphClearArgs(args) {
 async function parseSceneSyncGraphCompileArgs(args) {
   let file = null;
   let objectId = null;
+  let scene = false;
   let json = false;
 
   for (let index = 0; index < args.length; index += 1) {
@@ -681,6 +687,8 @@ async function parseSceneSyncGraphCompileArgs(args) {
       }
       objectId = next;
       index += 1;
+    } else if (arg === '--scene') {
+      scene = true;
     } else if (arg === '--json') {
       json = true;
     } else {
@@ -688,16 +696,28 @@ async function parseSceneSyncGraphCompileArgs(args) {
     }
   }
 
+  if (objectId && scene) {
+    throw new Error('SCOPE_CONFLICT - Use either --object or --scene, not both.');
+  }
+
   if (!file) {
     throw new Error('graph-compile requires a file path');
   }
 
-  return { file, objectId, json };
+  let scope = null;
+  if (objectId) {
+    scope = { object: objectId };
+  } else if (scene) {
+    scope = { scene: true };
+  }
+
+  return { file, scope, json };
 }
 
 async function parseSceneSyncGraphRunArgs(args) {
   let file = null;
   let objectId = null;
+  let scene = false;
   let room = '';
   let session = '';
   let endpoint = '';
@@ -716,6 +736,8 @@ async function parseSceneSyncGraphRunArgs(args) {
       }
       objectId = next;
       index += 1;
+    } else if (arg === '--scene') {
+      scene = true;
     } else if (arg === '--room') {
       const next = args[index + 1];
       if (!next || next.startsWith('-')) {
@@ -747,8 +769,19 @@ async function parseSceneSyncGraphRunArgs(args) {
     }
   }
 
+  if (objectId && scene) {
+    throw new Error('SCOPE_CONFLICT - Use either --object or --scene, not both.');
+  }
+
   if (!file) {
     throw new Error('graph-run requires a file path');
+  }
+
+  let scope = null;
+  if (objectId) {
+    scope = { object: objectId };
+  } else if (scene) {
+    scope = { scene: true };
   }
 
   const savedSession = await loadSceneSyncSession();
@@ -778,7 +811,7 @@ async function parseSceneSyncGraphRunArgs(args) {
     }
   }
 
-  return { file, objectId, room, session, endpoint, dryRun, send, json };
+  return { file, scope, room, session, endpoint, dryRun, send, json };
 }
 
 async function handleCompile(args) {
@@ -1427,16 +1460,20 @@ async function handleSceneSync(args) {
   }
 
   if (subcommand === 'graph-compile') {
-    const { file, objectId, json: jsonOutput } = await parseSceneSyncGraphCompileArgs(rest);
+    const { file, scope, json: jsonOutput } = await parseSceneSyncGraphCompileArgs(rest);
 
     try {
       const source = await readSourceFile(file);
-      const result = compileLoomToSceneSyncGraph(source, { objectId });
+      const result = compileLoomToSceneSyncGraph(source, { scope });
+
+      if (!result.scope) {
+        throw new Error('SCOPE_REQUIRED - Pass --object <objectId>, --scene, or include an object id in scene.setPosition(...)');
+      }
 
       if (jsonOutput) {
         print(stringifyJson({
           ok: true,
-          objectId: result.objectId,
+          scope: result.scope,
           graph: result.graph
         }));
       } else {
@@ -1450,17 +1487,17 @@ async function handleSceneSync(args) {
   }
 
   if (subcommand === 'graph-run') {
-    const { file, objectId, room, session, endpoint, dryRun, send, json: jsonOutput } = await parseSceneSyncGraphRunArgs(rest);
+    const { file, scope, room, session, endpoint, dryRun, send, json: jsonOutput } = await parseSceneSyncGraphRunArgs(rest);
 
     try {
       const source = await readSourceFile(file);
-      const result = compileLoomToSceneSyncGraph(source, { objectId });
+      const result = compileLoomToSceneSyncGraph(source, { scope });
 
-      if (!result.objectId) {
-        throw new Error('OBJECT_REQUIRED - Pass --object <objectId> or include an object id in scene.setPosition(...)');
+      if (!result.scope) {
+        throw new Error('SCOPE_REQUIRED - Pass --object <objectId>, --scene, or include an object id in scene.setPosition(...)');
       }
 
-      const payload = createSceneGraphSetPayload(result.objectId, result.graph);
+      const payload = createSceneGraphSetPayload(result.scope, result.graph);
 
       if (dryRun) {
         if (jsonOutput) {
@@ -1490,21 +1527,29 @@ async function handleSceneSync(args) {
         }
 
         if (jsonOutput) {
-          print(stringifyJson({
+          const output = {
             ok: true,
             room,
-            objectId: result.objectId,
+            scope: result.scope,
             nodeCount: result.graph.nodes.length,
             edgeCount: result.graph.edges.length
-          }));
+          };
+          if (result.scope.object) {
+            output.objectId = result.scope.object;
+          }
+          print(stringifyJson(output));
         } else {
           const lines = [
             'Sent Scene Sync graph.',
-            `Room: ${room}`,
-            `Object: ${result.objectId}`,
-            `Nodes: ${result.graph.nodes.length}`,
-            `Edges: ${result.graph.edges.length}`
+            `Room: ${room}`
           ];
+          if (result.scope.object) {
+            lines.push(`Object: ${result.scope.object}`);
+          } else if (result.scope.scene) {
+            lines.push('Scope: scene');
+          }
+          lines.push(`Nodes: ${result.graph.nodes.length}`);
+          lines.push(`Edges: ${result.graph.edges.length}`);
           print(lines.join('\n'));
         }
         return 0;

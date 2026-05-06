@@ -18,7 +18,7 @@ scene.setPosition("sample-cube", x: x, y: y, z: 0)
 
   const result = compileLoomToSceneSyncGraph(source);
 
-  assert.equal(result.objectId, 'sample-cube');
+  assert.deepEqual(result.scope, { object: 'sample-cube' });
   assert.ok(result.graph.nodes.some((n) => n.type === 'serverClock'));
   assert.equal(result.graph.nodes.filter((n) => n.type === 'sine').length, 2);
   assert.ok(result.graph.nodes.some((n) => n.type === 'sceneSetPosition'));
@@ -39,8 +39,8 @@ y = math.sine(t, freq: 0.3, amplitude: 0.5, offset: 1.2)
 scene.setPosition("sample-cube", x: x, y: y, z: 0)
 `;
 
-  const result = compileLoomToSceneSyncGraph(source, { objectId: 'cube2' });
-  assert.equal(result.objectId, 'cube2');
+  const result = compileLoomToSceneSyncGraph(source, { scope: { object: 'cube2' } });
+  assert.deepEqual(result.scope, { object: 'cube2' });
 });
 
 test('rejects unsupported node with clear error', () => {
@@ -122,4 +122,38 @@ test('preserves parameter values from Loom graph to Scene Sync graph', () => {
   assert.equal(sineNode.params.freq, 2);
   assert.equal(sineNode.params.amplitude, 3);
   assert.equal(sineNode.params.offset, 4);
+});
+
+test('scope option can use object scope', () => {
+  const source = `
+import scene
+scene.setPosition("cube1", x: 0, y: 0, z: 0)
+`;
+
+  const result = compileLoomToSceneSyncGraph(source, { scope: { object: 'other-cube' } });
+  assert.deepEqual(result.scope, { object: 'other-cube' });
+});
+
+test('scope option can use scene scope', () => {
+  const loomGraph = {
+    nodes: [
+      { id: 'clock1', type: 'time.serverClock' }
+    ],
+    edges: []
+  };
+
+  const result = loomGraphToSceneSyncGraph(loomGraph, { scope: { scene: true } });
+  assert.deepEqual(result.scope, { scene: true });
+});
+
+test('objectId option normalizes to scope', () => {
+  const loomGraph = {
+    nodes: [
+      { id: 'clock1', type: 'time.serverClock' }
+    ],
+    edges: []
+  };
+
+  const result = loomGraphToSceneSyncGraph(loomGraph, { objectId: 'cube3' });
+  assert.deepEqual(result.scope, { object: 'cube3' });
 });
