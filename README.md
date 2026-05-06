@@ -161,11 +161,15 @@ Loom CLI は Loom DSL の最初のターミナルインターフェースです�
 
 現在の CLI は、Loom DSL を GraphJSON に変換し、整形し、要約を取り、単純な pure/source/transform/state グラフを 1 回実行する用途に向いています。
 
+最小の import metadata と target validation もサポートしています。
+
 ```bash
 npm run loom -- compile examples/cli-basic.loom
 npm run loom -- format examples/cli-basic.loom
 npm run loom -- inspect examples/cli-basic.loom
 npm run loom -- run examples/cli-basic.loom --get x.out --time 1
+npm run loom -- compile script.loom --target cli
+npm run loom -- inspect script.loom --target web
 ```
 
 ```bash
@@ -177,7 +181,18 @@ node bin/loom.mjs run examples/cli-basic.loom --get x.out --time 1
 
 - CLI run は pure/source/transform/state ノード中心の実行にフォーカスしています。
 - DOM / Three.js / Unity / SceneSync アダプタは CLI からは実行しません。
-- file I/O ノードと import syntax は今後の作業です。
+- file I/O ノードの実体、module loading、named/alias import は今後の作業です。
+
+例:
+
+```text
+import math
+import fs
+
+x = constant(value: 1)
+```
+
+`compile` と `inspect` の `--target` は省略時に `any` として扱われ、runtime-specific import を generic workflow 用に許可します。`run` は省略時に `cli` で検証するため、たとえば `import dom` は CLI 実行時に失敗します。
 
 ## ライブエディタと DSL
 

@@ -1,8 +1,16 @@
 # Runtime Targets
 
-Loom DSL programs will eventually target multiple runtimes instead of assuming a browser-only environment.
+Loom DSL programs can now declare minimal top-level imports and will eventually target multiple runtimes instead of assuming a browser-only environment.
 
-The new toolchain layer is shared by CLI, Web Studio, Scene Sync, and future AI/MCP integrations. Import syntax is not implemented in this PR, but future imports will declare required libraries and runtime capabilities against the compatibility table below.
+The new toolchain layer is shared by CLI, Web Studio, Scene Sync, and future AI/MCP integrations. This PR only supports simple line-based imports:
+
+```text
+import math
+import fs
+import scene
+```
+
+Imports are metadata and validation only in this phase. They do not load modules yet and do not add library-specific nodes by themselves.
 
 Some libraries are universal and should work across every host. Others are intentionally runtime-specific because they depend on DOM APIs, file I/O, rendering adapters, or protocol bridges.
 
@@ -19,3 +27,20 @@ Some libraries are universal and should work across every host. Others are inten
 | three | no | yes | partial | no | Three.js adapter |
 | unity | no | no | no | yes | Unity adapter |
 | scenesync | partial | yes | yes | partial | SceneSync protocol |
+
+## Target validation
+
+- `loom compile ... --target <target>` validates imports for a runtime target.
+- `loom inspect ... --target <target>` validates imports and reports compatible targets.
+- `loom run ...` defaults to `--target cli`.
+- `compile` and `inspect` default to `target: any`, which allows runtime-specific imports for generic parse/format/inspect workflows.
+
+Example:
+
+```text
+import fs
+x = constant(value: 1)
+```
+
+- `loom compile script.loom --target cli` succeeds
+- `loom compile script.loom --target web` fails with `UNSUPPORTED_IMPORT`
