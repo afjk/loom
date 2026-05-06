@@ -135,11 +135,17 @@ test('fs baseline nodes are CLI-only and access local files', () => {
 });
 
 
-test('function literals can be assigned and called', () => {
+test('function literals can be assigned, called, and capture outer scope', () => {
   const result = runLoomSource(`double = fn(x) => math.multiply(x, 2)
 double(21)`, { target: 'cli', get: '_effect1.out' });
   assert.equal(result.ok, true, JSON.stringify(result.errors));
   assert.equal(result.values['_effect1.out'], 42);
+
+  const captured = runLoomSource(`base = 10
+addBase = fn(x) => math.add(x, base)
+addBase(5)`, { target: 'cli', get: '_effect1.out' });
+  assert.equal(captured.ok, true, JSON.stringify(captured.errors));
+  assert.equal(captured.values['_effect1.out'], 15);
 });
 
 test('list higher-order nodes accept inline and named functions', () => {
@@ -158,6 +164,19 @@ list.filter(numbers, fn: isEven)`, { target: 'cli', get: '_effect1.out' });
 sum = list.reduce(numbers, initial: 0, fn: fn(acc, n) => math.add(acc, n))`, { target: 'cli', get: 'sum.out' });
   assert.equal(reduced.ok, true, JSON.stringify(reduced.errors));
   assert.equal(reduced.values['sum.out'], 10);
+});
+
+
+test('function body node calls enforce positional and named argument rules', () => {
+  const result = runLoomSource(`bad = fn(x) => logic.greaterThan(x, 2)
+bad(3)`, { target: 'cli', get: '_effect1.out' });
+  assert.equal(result.ok, false);
+  assert.equal(result.errors[0]?.code, 'MISSING_ARGUMENT_NAME');
+
+  const unknown = runLoomSource(`bad = fn(x) => logic.greaterThan(x, nope: 2)
+bad(3)`, { target: 'cli', get: '_effect1.out' });
+  assert.equal(unknown.ok, false);
+  assert.equal(unknown.errors[0]?.code, 'UNKNOWN_ARGUMENT');
 });
 
 test('stdlib metadata corrections', () => {

@@ -419,6 +419,14 @@ function isLoomletTruthy(value) {
   return Boolean(value);
 }
 
+// Keep existing tour/test lambda syntax working while applying stricter argument
+// validation to node calls evaluated inside function bodies.
+const FUNCTION_BODY_MULTI_POSITIONAL_COMPAT = new Set(['math.mod']);
+
+function canUseMultiplePositionalArgsInFunctionBody(nodeName, nodeType) {
+  return Boolean(nodeType.commutative || FUNCTION_BODY_MULTI_POSITIONAL_COMPAT.has(nodeName));
+}
+
 function evaluateLegacyFunctionExpr(expr, env, ctx) {
   if (!expr) return null;
   if (expr.type === 'number' || expr.type === 'string' || expr.type === 'bool' || expr.type === 'null' || expr.type === 'array' || expr.type === 'object') {
@@ -439,20 +447,44 @@ function evaluateLegacyFunctionExpr(expr, env, ctx) {
 
     const nodeType = NODE_TYPES[expr.name];
     if (!nodeType) throw new LoomError('UNKNOWN_NODE_TYPE', `Unknown node type in function body: ${expr.name}`);
+
+    const positionalArgs = expr.args.filter((arg) => !arg.named);
+    const namedArgs = expr.args.filter((arg) => arg.named);
+    if (nodeType.commutative && positionalArgs.length > 0 && namedArgs.length > 0) {
+      throw new LoomError('MISSING_ARGUMENT_NAME', `Node '${expr.name}' is commutative: arguments must be all positional or all named`);
+    }
+    if (!canUseMultiplePositionalArgsInFunctionBody(expr.name, nodeType) && positionalArgs.length > 1) {
+      throw new LoomError('MISSING_ARGUMENT_NAME', `Argument at position 2 for '${expr.name}' requires a name`);
+    }
+
     const inputs = {};
+    const params = {};
+    const inputNames = new Set((nodeType.inputs || []).map((input) => input.name));
+    const paramNames = new Set((nodeType.params || []).map((param) => param.name));
+    for (const input of nodeType.inputs || []) inputs[input.name] = input.default;
+    for (const param of nodeType.params || []) params[param.name] = param.default;
+
     let positionalIndex = 0;
-    for (const input of nodeType.inputs) inputs[input.name] = input.default;
-    for (const arg of expr.args) {
-      if (arg.named) {
-        inputs[arg.name] = evaluateLegacyFunctionExpr(arg.value, env, ctx);
+    for (const arg of positionalArgs) {
+      const input = nodeType.inputs[positionalIndex++];
+      if (!input) throw new LoomError('MISSING_ARGUMENT_NAME', `Too many positional arguments for '${expr.name}'`);
+      const value = evaluateLegacyFunctionExpr(arg.value, env, ctx);
+      inputs[input.name] = value;
+      if (paramNames.has(input.name)) params[input.name] = value;
+    }
+
+    for (const arg of namedArgs) {
+      const value = evaluateLegacyFunctionExpr(arg.value, env, ctx);
+      if (inputNames.has(arg.name)) {
+        inputs[arg.name] = value;
+        if (paramNames.has(arg.name)) params[arg.name] = value;
+      } else if (paramNames.has(arg.name)) {
+        params[arg.name] = value;
       } else {
-        const input = nodeType.inputs[positionalIndex++];
-        if (!input) throw new LoomError('MISSING_ARGUMENT_NAME', `Too many positional arguments for '${expr.name}'`);
-        inputs[input.name] = evaluateLegacyFunctionExpr(arg.value, env, ctx);
+        throw new LoomError('UNKNOWN_ARGUMENT', `Unknown argument '${arg.name}' for '${expr.name}'`);
       }
     }
-    const params = {};
-    for (const param of nodeType.params || []) params[param.name] = inputs[param.name] ?? param.default;
+
     const outputs = nodeType.evaluate(inputs, params, ctx);
     const outputDef = nodeType.outputs?.length === 1
       ? nodeType.outputs[0]
