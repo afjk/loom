@@ -1,7 +1,6 @@
 # Node Gaps
 
 ## High priority
-- function values for `list.map`, `list.filter`, `list.reduce`
 - scene.find
 - timeline.cue
 
