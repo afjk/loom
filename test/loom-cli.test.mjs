@@ -198,6 +198,23 @@ test('run --get returns finite number', () => {
   assert.equal(Number.isFinite(value), true);
 });
 
+test('run accepts --target cli', () => {
+  const result = runCli([
+    'run',
+    'examples/cli-basic.loom',
+    '--target',
+    'cli',
+    '--get',
+    'x.out',
+    '--time',
+    '0.25'
+  ]);
+
+  assert.equal(result.status, 0, result.stderr);
+  const value = Number(result.stdout.trim());
+  assert.equal(Number.isFinite(value), true);
+});
+
 test('run --json returns object', () => {
   const result = runCli(['run', 'examples/cli-basic.loom', '--get', 'x.out', '--time', '0.25', '--json']);
   assert.equal(result.status, 0, result.stderr);
@@ -210,6 +227,34 @@ test('run unknown option exits 1', () => {
   const result = runCli(['run', 'examples/cli-basic.loom', '--unknown']);
   assert.equal(result.status, 1);
   assert.match(result.stderr, /Unknown option/);
+});
+
+test('run rejects non-cli target', () => {
+  const result = runCli([
+    'run',
+    'examples/cli-basic.loom',
+    '--target',
+    'web',
+    '--get',
+    'x.out'
+  ]);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /only supports --target cli/);
+});
+
+test('run rejects target any', () => {
+  const result = runCli([
+    'run',
+    'examples/cli-basic.loom',
+    '--target',
+    'any',
+    '--get',
+    'x.out'
+  ]);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /only supports --target cli/);
 });
 
 test('run defaults to cli and rejects dom import', async () => {

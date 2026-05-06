@@ -133,7 +133,7 @@ Options:
   --time <number>   Evaluation time in seconds. Default: 0
   --dt <number>     Delta time in seconds. Default: 0
   --json            Print result values as JSON
-  --target <target> Validate imports for a runtime target. Default: cli`;
+  --target <target> Only cli is supported by loom run in this version. Default: cli`;
 }
 
 async function readSourceFile(file) {
@@ -341,6 +341,10 @@ async function handleRun(args) {
     } else {
       throw new Error(`Unknown option: ${arg}`);
     }
+  }
+
+  if (target !== 'cli') {
+    throw new Error('loom run currently only supports --target cli');
   }
 
   const source = await readSourceFile(file);
