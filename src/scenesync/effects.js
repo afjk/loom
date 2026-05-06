@@ -78,8 +78,15 @@ function sceneEffectsToBroadcastPayload(effects) {
   };
 }
 
+function sceneEffectsToBroadcastOps(effects) {
+  return effects
+    .filter(isSceneSyncEffect)
+    .map(sceneEffectToBroadcastOp);
+}
+
 export {
   isSceneSyncEffect,
   sceneEffectToBroadcastOp,
+  sceneEffectsToBroadcastOps,
   sceneEffectsToBroadcastPayload
 };

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   isSceneSyncEffect,
   sceneEffectToBroadcastOp,
+  sceneEffectsToBroadcastOps,
   sceneEffectsToBroadcastPayload
 } from '../src/scenesync/effects.js';
 
@@ -247,4 +248,34 @@ test('sceneEffectsToBroadcastPayload returns null for effects with no scenesync 
 test('sceneEffectsToBroadcastPayload handles null effects gracefully', () => {
   const result = sceneEffectsToBroadcastPayload(null);
   assert.equal(result, null);
+});
+
+test('sceneEffectsToBroadcastOps returns individual scene-delta operations', () => {
+  const ops = sceneEffectsToBroadcastOps([
+    {
+      type: 'scene.setPosition',
+      target: 'scenesync',
+      objectId: 'sample-cube',
+      position: [1, 0.5, 0]
+    },
+    {
+      type: 'scene.setScale',
+      target: 'scenesync',
+      objectId: 'sample-cube',
+      scale: [2, 2, 2]
+    }
+  ]);
+
+  assert.deepEqual(ops, [
+    {
+      kind: 'scene-delta',
+      objectId: 'sample-cube',
+      position: [1, 0.5, 0]
+    },
+    {
+      kind: 'scene-delta',
+      objectId: 'sample-cube',
+      scale: [2, 2, 2]
+    }
+  ]);
 });

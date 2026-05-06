@@ -23,6 +23,7 @@ import {
   loadSceneSyncSession,
   clearSceneSyncSession,
   maskSessionId,
+  sceneEffectsToBroadcastOps,
   sceneEffectsToBroadcastPayload
 } from '../src/scenesync/index.js';
 
@@ -385,11 +386,11 @@ function printSceneSyncObjects(objects) {
 
   print('Objects:');
   for (const [id, object] of Object.entries(objects)) {
-    const type = object?.type || '<unknown>';
+    const label = object?.name || object?.type || '<unknown>';
     const position = object?.position !== undefined
       ? `  position=${formatSceneSyncPosition(object.position)}`
       : '';
-    print(`- ${id}  ${type}${position}`);
+    print(`- ${id}  ${label}${position}`);
   }
 }
 
@@ -948,6 +949,10 @@ async function handleSceneSync(args) {
           print('Scene Sync broadcast payload:');
           print(stringifyJson(payload, true));
           print('Dry run only. Pass --send to broadcast to Scene Sync.');
+          const ops = sceneEffectsToBroadcastOps(result.effects || []);
+          if (ops.length > 0) {
+            print(`Send mode will broadcast ${ops.length} scene-delta operation${ops.length === 1 ? '' : 's'}.`);
+          }
         }
         return 0;
       }
@@ -957,26 +962,36 @@ async function handleSceneSync(args) {
         requireSceneSyncSession(session);
 
         const client = new SceneSyncClient({ endpoint });
-        const broadcastResult = await client.broadcast({ room, session, payload });
+        const ops = sceneEffectsToBroadcastOps(result.effects || []);
 
-        if (!broadcastResult.ok) {
-          printError(formatSceneSyncError(broadcastResult.error));
-          return 1;
+        if (ops.length === 0) {
+          print('No Scene Sync scene effects to broadcast.');
+          return 0;
+        }
+
+        const sentOps = [];
+        for (const op of ops) {
+          const broadcastResult = await client.broadcast({ room, session, payload: op });
+
+          if (!broadcastResult.ok) {
+            printError(formatSceneSyncError(broadcastResult.error));
+            return 1;
+          }
+          sentOps.push(op);
         }
 
         if (json) {
           print(stringifyJson({
             ok: true,
-            payload,
             room,
-            operationCount: Array.isArray(payload.ops) ? payload.ops.length : 1
+            operationCount: sentOps.length,
+            operations: sentOps
           }));
         } else {
-          const opCount = Array.isArray(payload.ops) ? payload.ops.length : 1;
           const lines = [
-            'Sent Scene Sync broadcast payload.',
+            'Sent Scene Sync broadcast operations.',
             `Room: ${room}`,
-            `Operations: ${opCount}`
+            `Operations: ${sentOps.length}`
           ];
           print(lines.join('\n'));
         }
