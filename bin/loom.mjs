@@ -22,7 +22,8 @@ import {
   saveSceneSyncSession,
   loadSceneSyncSession,
   clearSceneSyncSession,
-  maskSessionId
+  maskSessionId,
+  sceneEffectsToBroadcastPayload
 } from '../src/scenesync/index.js';
 
 function print(message = '') {
@@ -188,6 +189,7 @@ Commands:
   session            Show saved Scene Sync session
   status             Alias for session
   logout             Clear saved Scene Sync session
+  run <file>         Convert Loom scene effects to Scene Sync broadcast payload
   ping               Check Scene Sync room connection
   info               Get room information
   objects            List scene objects
@@ -195,10 +197,16 @@ Commands:
 
 Options:
   --save               Save redeemed session locally
+  --dry-run            Print payload without sending (default for run)
+  --send               Broadcast payload to Scene Sync (run only)
   --room <room>        Scene Sync room code
   --session <id>       Scene Sync session ID
   --endpoint <url>     Scene Sync command endpoint. Default: ${DEFAULT_SCENESYNC_ENDPOINT}
   --json               Print raw JSON response
+
+Examples:
+  loom scenesync run examples/scene-effects.loom
+  loom scenesync run examples/scene-effects.loom --send
 
 Environment Variables:
   LOOM_SCENESYNC_ROOM              Default room code
@@ -383,6 +391,86 @@ function printSceneSyncObjects(objects) {
       : '';
     print(`- ${id}  ${type}${position}`);
   }
+}
+
+async function parseSceneSyncRunArgs(args) {
+  let file = null;
+  let room = '';
+  let session = '';
+  let endpoint = '';
+  let dryRun = true;
+  let send = false;
+  let json = false;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (file === null && !arg.startsWith('-')) {
+      file = arg;
+    } else if (arg === '--room') {
+      const next = args[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--room requires a room code');
+      }
+      room = next;
+      index += 1;
+    } else if (arg === '--session') {
+      const next = args[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--session requires a session ID');
+      }
+      session = next;
+      index += 1;
+    } else if (arg === '--endpoint') {
+      const next = args[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--endpoint requires a URL');
+      }
+      endpoint = next;
+      index += 1;
+    } else if (arg === '--dry-run') {
+      dryRun = true;
+    } else if (arg === '--send') {
+      send = true;
+      dryRun = false;
+    } else if (arg === '--json') {
+      json = true;
+    } else {
+      throw new Error(`Unknown option: ${arg}`);
+    }
+  }
+
+  if (!file) {
+    throw new Error('scenesync run requires a file path');
+  }
+
+  const savedSession = await loadSceneSyncSession();
+  const savedData = savedSession.ok && savedSession.session ? savedSession.session : null;
+
+  if (!room) {
+    room = process.env.LOOM_SCENESYNC_ROOM || '';
+    if (!room && savedData) {
+      room = savedData.roomId || '';
+    }
+  }
+
+  if (!session) {
+    session = process.env.LOOM_SCENESYNC_SESSION || '';
+    if (!session && savedData) {
+      session = savedData.sessionId || '';
+    }
+  }
+
+  if (!endpoint) {
+    endpoint = process.env.LOOM_SCENESYNC_ENDPOINT || '';
+    if (!endpoint && savedData) {
+      endpoint = savedData.endpoint || '';
+    }
+    if (!endpoint) {
+      endpoint = DEFAULT_SCENESYNC_ENDPOINT;
+    }
+  }
+
+  return { file, room, session, endpoint, dryRun, send, json };
 }
 
 async function handleCompile(args) {
@@ -827,6 +915,77 @@ async function handleSceneSync(args) {
     ];
     print(lines.join('\n'));
     return 0;
+  }
+
+  if (subcommand === 'run') {
+    const { file, room, session, endpoint, dryRun, send, json } = await parseSceneSyncRunArgs(rest);
+
+    try {
+      const source = await readSourceFile(file);
+      const result = runLoomSource(source, { target: 'cli' });
+
+      if (!result.ok) {
+        printToolErrors(result.errors);
+        return 1;
+      }
+
+      const payload = sceneEffectsToBroadcastPayload(result.effects || []);
+
+      if (!payload) {
+        print('No Scene Sync scene effects found.');
+        return 0;
+      }
+
+      if (dryRun) {
+        if (json) {
+          print(stringifyJson({
+            ok: true,
+            dryRun: true,
+            payload,
+            effects: result.effects
+          }));
+        } else {
+          print('Scene Sync broadcast payload:');
+          print(stringifyJson(payload, true));
+          print('Dry run only. Pass --send to broadcast to Scene Sync.');
+        }
+        return 0;
+      }
+
+      if (send) {
+        requireSceneSyncRoom(room);
+        requireSceneSyncSession(session);
+
+        const client = new SceneSyncClient({ endpoint });
+        const broadcastResult = await client.broadcast({ room, session, payload });
+
+        if (!broadcastResult.ok) {
+          printError(formatSceneSyncError(broadcastResult.error));
+          return 1;
+        }
+
+        if (json) {
+          print(stringifyJson({
+            ok: true,
+            payload,
+            room,
+            operationCount: Array.isArray(payload.ops) ? payload.ops.length : 1
+          }));
+        } else {
+          const opCount = Array.isArray(payload.ops) ? payload.ops.length : 1;
+          const lines = [
+            'Sent Scene Sync broadcast payload.',
+            `Room: ${room}`,
+            `Operations: ${opCount}`
+          ];
+          print(lines.join('\n'));
+        }
+        return 0;
+      }
+    } catch (error) {
+      printError(error.message || String(error));
+      return 1;
+    }
   }
 
   const { room, session, endpoint, json } = await parseSceneSyncArgs(rest);

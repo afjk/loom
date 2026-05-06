@@ -55,7 +55,7 @@
 ## Phase 7: SceneSync follow-up
 
 - compile DSL and send graph
-- `loom scenesync run <file.loom>`
+- ✓ `loom scenesync run <file.loom>` (with dry-run payload generation)
 - `loom scenesync send-graph <file.json>`
 - target scene scope
 - target object scope
