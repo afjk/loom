@@ -1,0 +1,17 @@
+# Tour: Quicksort
+# Goal: Draft future language style for quicksort.
+# Status: draft
+# Run:
+#   loomlet run examples/tour/language/10-quicksort.loom
+# Requires:
+#   - missing nodes and language features listed below
+# TODO NODE: logic.equals(value, other:)
+# TODO NODE: logic.select(condition, whenTrue:, whenFalse:)
+# TODO LANGUAGE: function definitions
+# TODO LANGUAGE: list literals
+# TODO LANGUAGE: recursion
+import logic
+import list
+import console
+
+# Draft sketch intentionally not runnable today.

@@ -1,0 +1,17 @@
+# Tour: Factorial
+# Goal: Draft future language style for factorial.
+# Status: draft
+# Run:
+#   loomlet run examples/tour/language/09-factorial.loom
+# Requires:
+#   - missing nodes and language features listed below
+# TODO NODE: logic.equals(value, other:)
+# TODO NODE: logic.select(condition, whenTrue:, whenFalse:)
+# TODO LANGUAGE: function definitions
+# TODO LANGUAGE: list literals
+# TODO LANGUAGE: recursion
+import logic
+import list
+import console
+
+# Draft sketch intentionally not runnable today.

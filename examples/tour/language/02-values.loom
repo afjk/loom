@@ -1,0 +1,14 @@
+# Tour: Values
+# Goal: Show value creation and value routing.
+# Status: runnable
+# Run:
+#   loomlet run examples/tour/language/02-values.loom
+# Requires:
+#   - constant
+#   - add
+#   - console.log
+import console
+
+n = constant(value: 42)
+answer = add(n, 0)
+console.log(answer)

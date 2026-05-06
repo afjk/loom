@@ -1,0 +1,17 @@
+# Tour: Lissajous
+# Goal: Move one object on a Lissajous curve.
+# Status: runnable
+# Run:
+#   loomlet scenesync dev examples/tour/scenesync/02-lissajous.loom
+# Requires:
+#   - time.serverClock
+#   - math.sine
+#   - scene.setPosition
+import time
+import math
+import scene
+
+t = time.serverClock()
+x = math.sine(t, freq: 0.2, amplitude: 2, offset: 0)
+y = math.sine(t, freq: 0.3, amplitude: 1, offset: 1.2)
+scene.setPosition(objectId: "sample-cube", x: x, y: y, z: 0)

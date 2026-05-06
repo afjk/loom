@@ -1,0 +1,9 @@
+# Tour: Lfo
+# Goal: Draft signal workflow for lfo.
+# Status: draft
+# Run:
+#   loomlet run examples/tour/signals/03-lfo.loom
+# Requires:
+#   - missing nodes listed below
+# TODO NODE: signal.lfo
+import signal
