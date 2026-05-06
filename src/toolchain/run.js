@@ -5,7 +5,8 @@ import { normalizeLoomError } from './errors.js';
 const CLI_SAFE_CATEGORIES = new Set(['source', 'transform', 'state']);
 
 function isCliSafeSink(nodeTypeName) {
-  return nodeTypeName === 'console.log' || nodeTypeName === 'console.warn' || nodeTypeName === 'console.error';
+  return nodeTypeName === 'console.log' || nodeTypeName === 'console.warn' || nodeTypeName === 'console.error'
+    || nodeTypeName === 'scene.setPosition' || nodeTypeName === 'scene.setRotation' || nodeTypeName === 'scene.setScale';
 }
 
 function getRefsToRead(graph, get) {

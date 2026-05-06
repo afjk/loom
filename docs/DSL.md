@@ -433,6 +433,52 @@ const graph = {
 
 ※ `delay1` は `out = prevOut` を返し、現在の入力を次フレームに渡す state ノードです。
 
+## Scene library (scene objects control)
+
+Loom includes early Scene Sync-oriented scene effect nodes. These nodes describe operations on 3D scene objects.
+
+### scene.setPosition — オブジェクトの位置を設定
+
+```loom
+import scene
+
+scene.setPosition("sample-cube", x: 1, y: 0.5, z: 0)
+```
+
+オブジェクト ID とワールド座標 (x, y, z) を指定します。
+
+### scene.setRotation — オブジェクトの回転を設定
+
+```loom
+import scene
+
+scene.setRotation("sample-cube", x: 0, y: 0, z: 0, w: 1)
+```
+
+オブジェクト ID とクォータニオン (x, y, z, w) を指定します。w はスカラー成分（デフォルト 1）。
+
+### scene.setScale — オブジェクトのスケールを設定
+
+```loom
+import scene
+
+scene.setScale("sample-cube", x: 2, y: 2, z: 2)
+```
+
+オブジェクト ID と均一なスケール (x, y, z) を指定します。
+
+### まとめた例
+
+```loom
+import scene
+
+scene.setPosition("sample-cube", x: 1, y: 0.5, z: 0)
+scene.setRotation("sample-cube", x: 0, y: 0, z: 0, w: 1)
+scene.setScale("sample-cube", x: 2, y: 2, z: 2)
+```
+
+現在の段階では、これらのノードは local effect records を生成します。実際の Scene Sync への送信は今後の PR で実装予定です。
+
 ## Programmatic API
 
 Loom は DSL を Source AST 経由で扱う関数を公開している。AI 補助編集・DSL formatter・ビジュアルエディタの基盤として使う。

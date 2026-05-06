@@ -376,6 +376,72 @@ test('run rejects browser-only nodes with a clear error', async () => {
   assert.match(result.stderr, /UNSUPPORTED_RUNTIME_NODE/);
 });
 
+test('scene.setPosition effect statement compiles', async () => {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-scene-setpos-'));
+  const file = path.join(tmpDir, 'scene-setpos.loom');
+  await fsp.writeFile(file, 'import scene\nscene.setPosition("sample-cube", x: 1, y: 0.5, z: 0)\n', 'utf8');
+
+  const result = runCli(['compile', file]);
+  assert.equal(result.status, 0, result.stderr);
+  const graph = JSON.parse(result.stdout);
+  assert.ok(graph.nodes.some((node) => node.type === 'scene.setPosition'));
+  assert.ok(graph.nodes.some((node) => node.id === '_effect1'));
+});
+
+test('scene.setRotation effect statement compiles', async () => {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-scene-setrot-'));
+  const file = path.join(tmpDir, 'scene-setrot.loom');
+  await fsp.writeFile(file, 'import scene\nscene.setRotation("sample-cube", x: 0, y: 0, z: 0, w: 1)\n', 'utf8');
+
+  const result = runCli(['compile', file]);
+  assert.equal(result.status, 0, result.stderr);
+  const graph = JSON.parse(result.stdout);
+  assert.ok(graph.nodes.some((node) => node.type === 'scene.setRotation'));
+  assert.ok(graph.nodes.some((node) => node.id === '_effect1'));
+});
+
+test('scene.setScale effect statement compiles', async () => {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-scene-setscale-'));
+  const file = path.join(tmpDir, 'scene-setscale.loom');
+  await fsp.writeFile(file, 'import scene\nscene.setScale("sample-cube", x: 2, y: 2, z: 2)\n', 'utf8');
+
+  const result = runCli(['compile', file]);
+  assert.equal(result.status, 0, result.stderr);
+  const graph = JSON.parse(result.stdout);
+  assert.ok(graph.nodes.some((node) => node.type === 'scene.setScale'));
+  assert.ok(graph.nodes.some((node) => node.id === '_effect1'));
+});
+
+test('scene.setPosition run produces effect on stderr', async () => {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-scene-run-'));
+  const file = path.join(tmpDir, 'scene-run.loom');
+  await fsp.writeFile(file, 'import scene\nscene.setPosition("sample-cube", x: 1, y: 0.5, z: 0)\n', 'utf8');
+
+  const result = runCli(['run', file]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stderr, /\[scene\.setPosition\] sample-cube position=\(1, 0\.5, 0\)/);
+});
+
+test('scene.setRotation run produces effect on stderr', async () => {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-scene-rot-'));
+  const file = path.join(tmpDir, 'scene-rot.loom');
+  await fsp.writeFile(file, 'import scene\nscene.setRotation("sample-cube", x: 0, y: 0, z: 0, w: 1)\n', 'utf8');
+
+  const result = runCli(['run', file]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stderr, /\[scene\.setRotation\] sample-cube rotation=\(0, 0, 0, 1\)/);
+});
+
+test('scene.setScale run produces effect on stderr', async () => {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-scene-scale-'));
+  const file = path.join(tmpDir, 'scene-scale.loom');
+  await fsp.writeFile(file, 'import scene\nscene.setScale("sample-cube", x: 2, y: 2, z: 2)\n', 'utf8');
+
+  const result = runCli(['run', file]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stderr, /\[scene\.setScale\] sample-cube scale=\(2, 2, 2\)/);
+});
+
 test('evaluateOnce supports Node-safe one-shot evaluation', async () => {
   const { Loom } = await import(path.join(projectRoot, 'src', 'loom.js'));
   const graph = {

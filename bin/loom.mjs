@@ -217,7 +217,18 @@ function formatValue(value) {
 
 function printEffects(effects) {
   for (const effect of effects || []) {
-    printError(`[${effect.level}] ${formatEffectValue(effect.value)}`);
+    if (effect.type === 'scene.setPosition') {
+      const [x, y, z] = effect.position || [];
+      printError(`[scene.setPosition] ${effect.objectId} position=(${x}, ${y}, ${z})`);
+    } else if (effect.type === 'scene.setRotation') {
+      const [x, y, z, w] = effect.rotation || [];
+      printError(`[scene.setRotation] ${effect.objectId} rotation=(${x}, ${y}, ${z}, ${w})`);
+    } else if (effect.type === 'scene.setScale') {
+      const [x, y, z] = effect.scale || [];
+      printError(`[scene.setScale] ${effect.objectId} scale=(${x}, ${y}, ${z})`);
+    } else {
+      printError(`[${effect.level}] ${formatEffectValue(effect.value)}`);
+    }
   }
 }
 
