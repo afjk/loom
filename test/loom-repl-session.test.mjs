@@ -36,6 +36,35 @@ test('imports persist', () => {
   assert.match(session.getSource(), /message = text\.upper/);
 });
 
+test('late import is hoisted above existing statements', () => {
+  const session = new LoomReplSession();
+
+  assert.equal(session.evaluateSnippet('import text').ok, true);
+  assert.equal(session.evaluateSnippet('message = text.upper("hello")').ok, true);
+  assert.equal(session.evaluateSnippet('import console').ok, true);
+
+  assert.equal(
+    session.getSource(),
+    [
+      'import text',
+      'import console',
+      '',
+      'message = text.upper("hello")'
+    ].join('\n')
+  );
+});
+
+test('duplicate imports are not added twice', () => {
+  const session = new LoomReplSession();
+
+  assert.equal(session.evaluateSnippet('import text').ok, true);
+  assert.equal(session.evaluateSnippet('message = text.upper("hello")').ok, true);
+  assert.equal(session.evaluateSnippet('import text').ok, true);
+
+  const matches = session.getSource().match(/^import text$/gm) || [];
+  assert.equal(matches.length, 1);
+});
+
 test('console effect works', () => {
   const session = new LoomReplSession();
 

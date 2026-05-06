@@ -14,6 +14,47 @@ function createEmptySummary() {
   };
 }
 
+function isImportSnippet(snippet) {
+  return /^\s*import\s+[A-Za-z_][A-Za-z0-9_]*\s*$/.test(snippet);
+}
+
+function appendSnippetToSource(currentSource, snippet) {
+  if (!currentSource) {
+    return snippet;
+  }
+
+  if (!isImportSnippet(snippet)) {
+    return `${currentSource}\n${snippet}`;
+  }
+
+  const importLine = snippet.trim();
+  const lines = currentSource.split(/\r?\n/);
+
+  if (lines.some((line) => line.trim() === importLine)) {
+    return currentSource;
+  }
+
+  let insertIndex = 0;
+
+  while (
+    insertIndex < lines.length &&
+    lines[insertIndex].trim().startsWith('import ')
+  ) {
+    insertIndex += 1;
+  }
+
+  const before = lines.slice(0, insertIndex);
+  const after = lines.slice(insertIndex);
+  const nextLines = [...before, importLine];
+
+  if (after.length > 0) {
+    const afterWithoutLeadingBlank = after[0].trim() === '' ? after.slice(1) : after;
+    nextLines.push('', ...afterWithoutLeadingBlank);
+  }
+
+  return nextLines.join('\n');
+}
+
 export class LoomReplSession {
   constructor(options = {}) {
     this.target = options.target || 'cli';
@@ -41,7 +82,7 @@ export class LoomReplSession {
       };
     }
 
-    const nextSource = this.source ? `${this.source}\n${snippet}` : snippet;
+    const nextSource = appendSnippetToSource(this.source, snippet);
     const result = runLoomSource(nextSource, {
       target: this.target,
       time: this.time,

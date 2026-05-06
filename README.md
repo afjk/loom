@@ -229,6 +229,7 @@ loom> :quit
 ```
 
 The REPL currently recompiles the accumulated source after each snippet. Invalid snippets are rejected and do not modify the current session.
+Import snippets are hoisted into the import block automatically, so you can add imports later while exploring.
 
 ## ライブエディタと DSL
 
