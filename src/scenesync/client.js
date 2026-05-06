@@ -1,11 +1,4 @@
-import {
-  createSceneInfoCommand,
-  createSceneListObjectsCommand,
-  createScenePingCommand,
-  normalizeSceneSyncResponse
-} from './commands.js';
-
-const DEFAULT_ENDPOINT = 'https://afjk.jp/pipe';
+const DEFAULT_ENDPOINT = 'https://afjk.jp/presence/api/ai';
 
 function normalizeEndpoint(endpoint) {
   if (typeof endpoint !== 'string' || endpoint.trim().length === 0) {
@@ -14,17 +7,41 @@ function normalizeEndpoint(endpoint) {
   return endpoint.trim();
 }
 
-function buildCommandUrl(endpoint, room) {
-  const base = normalizeEndpoint(endpoint).replace(/\/+$/, '');
-  return `${base}/api/scenesync/command/${encodeURIComponent(room)}`;
-}
+function normalizeApiResponse(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return {
+      ok: false,
+      error: {
+        code: 'INVALID_RESPONSE',
+        message: 'Invalid response'
+      }
+    };
+  }
 
-function createRoomRequiredError() {
+  if (payload.ok === false) {
+    const error = payload.error || {};
+    return {
+      ok: false,
+      error: {
+        code: typeof error.code === 'string' ? error.code : 'API_ERROR',
+        message: typeof error.message === 'string' ? error.message : 'API request failed',
+        retryable: typeof error.retryable === 'boolean' ? error.retryable : undefined
+      }
+    };
+  }
+
+  if (payload.ok === true) {
+    return {
+      ok: true,
+      data: payload
+    };
+  }
+
   return {
     ok: false,
     error: {
-      code: 'ROOM_REQUIRED',
-      message: 'Scene Sync room is required'
+      code: 'INVALID_RESPONSE',
+      message: 'Invalid response'
     }
   };
 }
@@ -35,11 +52,7 @@ export class SceneSyncClient {
     this.fetchImpl = options.fetchImpl || globalThis.fetch;
   }
 
-  async sendCommand(command) {
-    if (!command || typeof command !== 'object' || !command.room) {
-      return createRoomRequiredError();
-    }
-
+  async #request(path, body) {
     if (typeof this.fetchImpl !== 'function') {
       return {
         ok: false,
@@ -51,26 +64,22 @@ export class SceneSyncClient {
     }
 
     try {
-      const response = await this.fetchImpl(buildCommandUrl(this.endpoint, command.room), {
+      const url = `${this.endpoint.replace(/\/+$/, '')}${path}`;
+      const response = await this.fetchImpl(url, {
         method: 'POST',
         headers: {
           'content-type': 'application/json'
         },
-        body: JSON.stringify(command)
+        body: JSON.stringify(body)
       });
 
+      const payload = await response.json();
+
       if (!response.ok) {
-        return {
-          ok: false,
-          error: {
-            code: 'HTTP_ERROR',
-            message: `HTTP ${response.status}`
-          }
-        };
+        return normalizeApiResponse(payload);
       }
 
-      const payload = await response.json();
-      return normalizeSceneSyncResponse(payload);
+      return normalizeApiResponse(payload);
     } catch (error) {
       return {
         ok: false,
@@ -82,25 +91,68 @@ export class SceneSyncClient {
     }
   }
 
-  async ping({ room } = {}) {
-    if (!room) {
-      return createRoomRequiredError();
+  async redeem({ code } = {}) {
+    if (!code) {
+      return {
+        ok: false,
+        error: {
+          code: 'CODE_REQUIRED',
+          message: 'Redeem code is required'
+        }
+      };
     }
-    return this.sendCommand(createScenePingCommand({ room }));
+
+    return this.#request('/link/redeem', { code });
   }
 
-  async info({ room } = {}) {
+  async getScene({ room, session } = {}) {
     if (!room) {
-      return createRoomRequiredError();
+      return {
+        ok: false,
+        error: {
+          code: 'ROOM_REQUIRED',
+          message: 'Scene Sync room is required'
+        }
+      };
     }
-    return this.sendCommand(createSceneInfoCommand({ room }));
+
+    if (!session) {
+      return {
+        ok: false,
+        error: {
+          code: 'SESSION_REQUIRED',
+          message: 'Scene Sync session is required'
+        }
+      };
+    }
+
+    return this.#request(`/room/${encodeURIComponent(room)}/scene`, { sessionId: session });
   }
 
-  async listObjects({ room } = {}) {
-    if (!room) {
-      return createRoomRequiredError();
+  async revoke({ session } = {}) {
+    if (!session) {
+      return {
+        ok: false,
+        error: {
+          code: 'SESSION_REQUIRED',
+          message: 'Scene Sync session is required'
+        }
+      };
     }
-    return this.sendCommand(createSceneListObjectsCommand({ room }));
+
+    return this.#request('/link/revoke', { sessionId: session });
+  }
+
+  async ping({ room, session } = {}) {
+    return this.getScene({ room, session });
+  }
+
+  async info({ room, session } = {}) {
+    return this.getScene({ room, session });
+  }
+
+  async listObjects({ room, session } = {}) {
+    return this.getScene({ room, session });
   }
 }
 
