@@ -64,14 +64,14 @@ function buildCompletions(ctx) {
 
   if (ctx.kind === 'topLevel') {
     const items = [];
-    for (const lib of ['time', 'math', 'scene']) {
+    for (const lib of ['time', 'math', 'scene', 'console']) {
       const imp = new vscode.CompletionItem(`import ${lib}`, vscode.CompletionItemKind.Keyword);
       imp.insertText = new vscode.SnippetString(`import ${lib}`);
       imp.detail = 'Import library';
       items.push(imp);
     }
 
-    for (const lib of ['time', 'math', 'scene']) {
+    for (const lib of ['time', 'math', 'scene', 'console']) {
       for (const member of libraryMembers[lib] || []) {
         const fn = new vscode.CompletionItem(member.topLevelInsertText.replace(/\$\{\d+:?/g, '').replace(/\}/g, ''), vscode.CompletionItemKind.Function);
         fn.label = member.detail;
