@@ -1,6 +1,6 @@
 import { LIBRARY_METADATA, getAllLibraries } from './library-metadata.js';
 
-class HelpError extends Error {
+export class HelpError extends Error {
   constructor(code, message) {
     super(message);
     this.name = code;
@@ -21,11 +21,13 @@ export function getLibraryHelp(name) {
 }
 
 export function getFunctionHelp(qualifiedName) {
-  const [libName, funcName] = qualifiedName.split('.');
+  const parts = qualifiedName.split('.');
 
-  if (!libName || !funcName) {
+  if (parts.length !== 2 || !parts[0] || !parts[1]) {
     throw new HelpError('INVALID_FUNCTION_NAME', `Function name must be in format "library.function", got "${qualifiedName}"`);
   }
+
+  const [libName, funcName] = parts;
 
   const lib = LIBRARY_METADATA[libName];
   if (!lib) {

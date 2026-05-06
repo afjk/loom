@@ -157,6 +157,14 @@ test('docs shows state functions', () => {
   assert.ok(result.stdout.includes('lowpass'));
   assert.ok(result.stdout.includes('delay1'));
   assert.ok(result.stdout.includes('integrate'));
+  assert.ok(result.stdout.includes('smoothLerp'));
+});
+
+test('docs state.smoothLerp shows function details', () => {
+  const result = runCli(['docs', 'state.smoothLerp']);
+  assert.equal(result.status, 0, result.stderr);
+  assert.ok(result.stdout.includes('smoothLerp'));
+  assert.ok(result.stdout.includes('rate'));
 });
 
 test('docs --help shows usage', () => {

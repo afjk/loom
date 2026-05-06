@@ -69,6 +69,20 @@ test('getFunctionHelp throws for unknown library', () => {
   );
 });
 
+test('getFunctionHelp rejects unqualified name', () => {
+  assert.throws(
+    () => getFunctionHelp('upper'),
+    (err) => err.code === 'INVALID_FUNCTION_NAME'
+  );
+});
+
+test('getFunctionHelp rejects triple-qualified name', () => {
+  assert.throws(
+    () => getFunctionHelp('text.upper.extra'),
+    (err) => err.code === 'INVALID_FUNCTION_NAME'
+  );
+});
+
 test('formatLibrariesText contains library names', () => {
   const text = formatLibrariesText();
   assert.ok(text.includes('text'));
@@ -227,11 +241,18 @@ test('math functions all documented', () => {
 });
 
 test('state functions all documented', () => {
-  const stateFuncs = ['lowpass', 'delay1', 'integrate'];
+  const stateFuncs = ['lowpass', 'delay1', 'integrate', 'smoothLerp'];
   const stateLib = getLibraryHelp('state');
   for (const func of stateFuncs) {
     assert.ok(stateLib.functions[func], `Missing state function: ${func}`);
   }
+});
+
+test('state.smoothLerp is documented', () => {
+  const func = getFunctionHelp('state.smoothLerp');
+  assert.equal(func.name, 'smoothLerp');
+  assert.ok(func.description);
+  assert.ok(func.signature);
 });
 
 test('formatLibrariesText includes all libraries', () => {
