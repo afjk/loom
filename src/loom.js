@@ -404,6 +404,133 @@ function unsupportedFunctionValueNode(name, outputType = 'array') {
   };
 }
 
+function isLoomletCallable(value) {
+  return Boolean(value && value.__loomletCallable === true && typeof value.call === 'function');
+}
+
+function assertLoomletCallable(value, nodeName) {
+  if (!isLoomletCallable(value)) {
+    throw new LoomError('INVALID_FUNCTION_VALUE', `${nodeName} expected fn to be a Loomlet function value`);
+  }
+  return value;
+}
+
+function isLoomletTruthy(value) {
+  return Boolean(value);
+}
+
+// Keep existing tour/test lambda syntax working while applying stricter argument
+// validation to node calls evaluated inside function bodies.
+const FUNCTION_BODY_MULTI_POSITIONAL_COMPAT = new Set(['math.mod']);
+
+function canUseMultiplePositionalArgsInFunctionBody(nodeName, nodeType) {
+  return Boolean(nodeType.commutative || FUNCTION_BODY_MULTI_POSITIONAL_COMPAT.has(nodeName));
+}
+
+function evaluateLegacyFunctionExpr(expr, env, ctx) {
+  if (!expr) return null;
+  if (expr.type === 'number' || expr.type === 'string' || expr.type === 'bool' || expr.type === 'null' || expr.type === 'array' || expr.type === 'object') {
+    return expr.value;
+  }
+  if (expr.type === 'ident') {
+    if (Object.prototype.hasOwnProperty.call(env, expr.name)) return env[expr.name];
+    throw new LoomError('UNDEFINED_IDENTIFIER', `Undefined identifier in function body: ${expr.name}`);
+  }
+  if (expr.type === 'call') {
+    if (Object.prototype.hasOwnProperty.call(env, expr.name) && isLoomletCallable(env[expr.name])) {
+      const args = expr.args.map((arg) => {
+        if (arg.named) throw new LoomError('MISSING_ARGUMENT_NAME', `User-defined function '${expr.name}' only accepts positional arguments`);
+        return evaluateLegacyFunctionExpr(arg.value, env, ctx);
+      });
+      return env[expr.name].call(args, ctx);
+    }
+
+    const nodeType = NODE_TYPES[expr.name];
+    if (!nodeType) throw new LoomError('UNKNOWN_NODE_TYPE', `Unknown node type in function body: ${expr.name}`);
+
+    const positionalArgs = expr.args.filter((arg) => !arg.named);
+    const namedArgs = expr.args.filter((arg) => arg.named);
+    if (nodeType.commutative && positionalArgs.length > 0 && namedArgs.length > 0) {
+      throw new LoomError('MISSING_ARGUMENT_NAME', `Node '${expr.name}' is commutative: arguments must be all positional or all named`);
+    }
+    if (!canUseMultiplePositionalArgsInFunctionBody(expr.name, nodeType) && positionalArgs.length > 1) {
+      throw new LoomError('MISSING_ARGUMENT_NAME', `Argument at position 2 for '${expr.name}' requires a name`);
+    }
+
+    const inputs = {};
+    const params = {};
+    const inputNames = new Set((nodeType.inputs || []).map((input) => input.name));
+    const paramNames = new Set((nodeType.params || []).map((param) => param.name));
+    for (const input of nodeType.inputs || []) inputs[input.name] = input.default;
+    for (const param of nodeType.params || []) params[param.name] = param.default;
+
+    let positionalIndex = 0;
+    for (const arg of positionalArgs) {
+      const input = nodeType.inputs[positionalIndex++];
+      if (!input) throw new LoomError('MISSING_ARGUMENT_NAME', `Too many positional arguments for '${expr.name}'`);
+      const value = evaluateLegacyFunctionExpr(arg.value, env, ctx);
+      inputs[input.name] = value;
+      if (paramNames.has(input.name)) params[input.name] = value;
+    }
+
+    for (const arg of namedArgs) {
+      const value = evaluateLegacyFunctionExpr(arg.value, env, ctx);
+      if (inputNames.has(arg.name)) {
+        inputs[arg.name] = value;
+        if (paramNames.has(arg.name)) params[arg.name] = value;
+      } else if (paramNames.has(arg.name)) {
+        params[arg.name] = value;
+      } else {
+        throw new LoomError('UNKNOWN_ARGUMENT', `Unknown argument '${arg.name}' for '${expr.name}'`);
+      }
+    }
+
+    const outputs = nodeType.evaluate(inputs, params, ctx);
+    const outputDef = nodeType.outputs?.length === 1
+      ? nodeType.outputs[0]
+      : nodeType.outputs?.find((output) => output.name === 'out') ?? nodeType.outputs?.[0];
+    return outputDef ? outputs[outputDef.name] : null;
+  }
+  if (expr.type === 'pipe') {
+    const value = evaluateLegacyFunctionExpr(expr.left, env, ctx);
+    return evaluateLegacyFunctionExpr({ ...expr.call, args: [{ named: false, value: { type: 'object', value } }, ...expr.call.args] }, env, ctx);
+  }
+  throw new LoomError('UNEXPECTED_TOKEN', `Unsupported expression in function body: ${expr.type}`);
+}
+
+function createLoomletFunction(params, body, closureRefs, ctx) {
+  const closure = {};
+  for (const [name, ref] of Object.entries(closureRefs || {})) {
+    closure[name] = ctx.engine?.getValue(ref);
+  }
+  return {
+    __loomletCallable: true,
+    params: [...params],
+    call(args, callCtx = ctx) {
+      const env = { ...closure };
+      params.forEach((name, index) => { env[name] = args[index]; });
+      return evaluateLegacyFunctionExpr(body, env, callCtx);
+    }
+  };
+}
+
+function mapFunctionValueNode(name, reducer) {
+  return {
+    category: 'transform',
+    inputs: [
+      { name: 'list', type: 'array', default: [], kind: 'behavior' },
+      { name: 'fn', type: 'function', default: null, kind: 'behavior' },
+      { name: 'initial', type: 'any', default: null, kind: 'behavior' }
+    ],
+    outputs: [{ name: 'out', type: name === 'list.reduce' ? 'any' : 'array', kind: 'behavior' }],
+    params: [
+      { name: 'fn', type: 'function', default: null },
+      { name: 'initial', type: 'any', default: null }
+    ],
+    evaluate: (inputs, params, ctx) => reducer(toArray(inputs.list), assertLoomletCallable(inputs.fn, name), inputs.initial, ctx)
+  };
+}
+
 function getNodeFs() {
   const getBuiltinModule = globalThis.process?.getBuiltinModule;
   if (typeof getBuiltinModule !== 'function') {
@@ -426,6 +553,30 @@ export const NODE_TYPES = {
     outputs: [{ name: 't', type: 'number', kind: 'behavior' }],
     params: [],
     evaluate: (inputs, params, ctx) => ({ t: ctx.time })
+  },
+  'function.literal': {
+    category: 'source',
+    inputs: [],
+    outputs: [{ name: 'out', type: 'function', kind: 'behavior' }],
+    params: [
+      { name: 'params', type: 'array', default: [] },
+      { name: 'body', type: 'any', default: null },
+      { name: 'closureRefs', type: 'object', default: {} }
+    ],
+    evaluate: (inputs, params, ctx) => ({ out: createLoomletFunction(params.params || [], params.body, params.closureRefs, ctx) })
+  },
+  'function.call': {
+    category: 'transform',
+    inputs: [
+      { name: 'fn', type: 'function', default: null, kind: 'behavior' },
+      ...Array.from({ length: 8 }, (_, i) => ({ name: `arg${i + 1}`, type: 'any', default: undefined, kind: 'behavior' }))
+    ],
+    outputs: [{ name: 'out', type: 'any', kind: 'behavior' }],
+    params: [],
+    evaluate: (inputs, params, ctx) => {
+      const fn = assertLoomletCallable(inputs.fn, 'function.call');
+      return { out: fn.call(collectInputs(inputs, Array.from({ length: 8 }, (_, i) => `arg${i + 1}`)), ctx) };
+    }
   },
   constant: {
     category: 'source',
@@ -1162,9 +1313,9 @@ export const NODE_TYPES = {
   'list.at': { category: 'transform', inputs: [{ name: 'list', type: 'array', default: [], kind: 'behavior' }, { name: 'index', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'any', kind: 'behavior' }], params: [{ name: 'list', type: 'array', default: [] }, { name: 'index', type: 'number', default: 0 }], evaluate: (inputs) => { const list = toArray(inputs.list); const raw = Math.trunc(inputs.index); const index = raw < 0 ? list.length + raw : raw; return { out: index >= 0 && index < list.length ? list[index] : null }; } },
   'list.first': { category: 'transform', inputs: [{ name: 'list', type: 'array', default: [], kind: 'behavior' }], outputs: [{ name: 'out', type: 'any', kind: 'behavior' }], params: [{ name: 'list', type: 'array', default: [] }], evaluate: (inputs) => ({ out: toArray(inputs.list)[0] ?? null }) },
   'list.last': { category: 'transform', inputs: [{ name: 'list', type: 'array', default: [], kind: 'behavior' }], outputs: [{ name: 'out', type: 'any', kind: 'behavior' }], params: [{ name: 'list', type: 'array', default: [] }], evaluate: (inputs) => { const list = toArray(inputs.list); return { out: list.length ? list[list.length - 1] : null }; } },
-  'list.map': unsupportedFunctionValueNode('list.map', 'array'),
-  'list.filter': unsupportedFunctionValueNode('list.filter', 'array'),
-  'list.reduce': unsupportedFunctionValueNode('list.reduce', 'any'),
+  'list.map': mapFunctionValueNode('list.map', (list, fn, initial, ctx) => ({ out: list.map((item) => fn.call([item], ctx)) })),
+  'list.filter': mapFunctionValueNode('list.filter', (list, fn, initial, ctx) => ({ out: list.filter((item) => isLoomletTruthy(fn.call([item], ctx))) })),
+  'list.reduce': mapFunctionValueNode('list.reduce', (list, fn, initial, ctx) => ({ out: list.reduce((acc, item) => fn.call([acc, item], ctx), initial) })),
   'list.join': { category: 'transform', inputs: [{ name: 'list', type: 'array', default: [], kind: 'behavior' }, { name: 'separator', type: 'any', default: ',', kind: 'behavior' }], outputs: [{ name: 'out', type: 'string', kind: 'behavior' }], params: [{ name: 'list', type: 'array', default: [] }, { name: 'separator', type: 'any', default: ',' }], evaluate: (inputs) => ({ out: toArray(inputs.list).map((value) => stringifyTextValue(value)).join(stringifyTextValue(inputs.separator)) }) },
   'list.reverse': { category: 'transform', inputs: [{ name: 'list', type: 'array', default: [], kind: 'behavior' }], outputs: [{ name: 'out', type: 'array', kind: 'behavior' }], params: [{ name: 'list', type: 'array', default: [] }], evaluate: (inputs) => ({ out: [...toArray(inputs.list)].reverse() }) },
   'list.sort': { category: 'transform', inputs: [{ name: 'list', type: 'array', default: [], kind: 'behavior' }], outputs: [{ name: 'out', type: 'array', kind: 'behavior' }], params: [{ name: 'list', type: 'array', default: [] }], evaluate: (inputs) => { const list = [...toArray(inputs.list)]; if (list.every((value) => typeof value === 'number')) list.sort((a, b) => a - b); else list.sort((a, b) => String(a).localeCompare(String(b))); return { out: list }; } },
