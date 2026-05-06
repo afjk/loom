@@ -648,11 +648,8 @@ async function handleSceneSync(args) {
     return 0;
   }
 
-  const client = new SceneSyncClient({ endpoint: process.env.LOOM_SCENESYNC_ENDPOINT || DEFAULT_SCENESYNC_ENDPOINT });
-  let result;
-
   if (subcommand === 'redeem') {
-    const { room, session, endpoint, json } = parseSceneSyncArgs(rest);
+    const { endpoint, json } = parseSceneSyncArgs(rest);
     let code = null;
 
     for (let index = 0; index < rest.length; index += 1) {
@@ -671,8 +668,8 @@ async function handleSceneSync(args) {
       throw new Error('redeem requires a code argument');
     }
 
-    const newClient = new SceneSyncClient({ endpoint });
-    result = await newClient.redeem({ code });
+    const client = new SceneSyncClient({ endpoint });
+    const result = await client.redeem({ code });
 
     if (!result.ok) {
       printError(formatSceneSyncError(result.error));
@@ -700,6 +697,9 @@ async function handleSceneSync(args) {
   if (subcommand === 'ping' || subcommand === 'info' || subcommand === 'objects' || subcommand === 'list-objects') {
     requireSceneSyncRoom(room);
     requireSceneSyncSession(session);
+
+    const client = new SceneSyncClient({ endpoint });
+    let result;
 
     if (subcommand === 'ping') {
       result = await client.ping({ room, session });
