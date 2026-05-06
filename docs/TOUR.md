@@ -53,28 +53,28 @@ Loomlet source files use the `.loom` extension.
 - Status: Draft
 - Run: `loomlet run examples/tour/language/07-fizzbuzz.loom`
 - Teaches: range generation, mapping, nested branching
-- Missing: `list.map` function-value execution, function definitions
+- Missing: block function bodies are still draft-only; single-expression `fn(...) => ...` and `list.map` are implemented
 
 ### 08 List Map Filter
 - Path: `examples/tour/language/08-list-map-filter.loom`
-- Status: Draft
+- Status: Runnable
 - Run: `loomlet run examples/tour/language/08-list-map-filter.loom`
-- Teaches: map/filter/reduce collection flow
-- Missing: `list.map`, `list.filter`, and `list.reduce` function-value execution; function definitions
+- Teaches: map/filter/reduce collection flow with single-expression function values
+- Missing: none for the current sample
 
 ### 09 Factorial
 - Path: `examples/tour/language/09-factorial.loom`
 - Status: Draft
 - Run: `loomlet run examples/tour/language/09-factorial.loom`
 - Teaches: recursive definition with base case selection
-- Missing: function definitions, recursion
+- Missing: recursion
 
 ### 10 Quicksort
 - Path: `examples/tour/language/10-quicksort.loom`
 - Status: Draft
 - Run: `loomlet run examples/tour/language/10-quicksort.loom`
 - Teaches: recursive partition/sort pattern
-- Missing: `list.filter` function-value execution, function definitions, recursion
+- Missing: recursion and additional list partition ergonomics
 
 ## Signals
 
