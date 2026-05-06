@@ -362,6 +362,61 @@ function stringifyJsonValue(value, pretty = false) {
   return JSON.stringify(value, null, pretty ? 2 : 0);
 }
 
+
+function stringifyTextValue(value) {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  const json = JSON.stringify(value);
+  return json === undefined ? '' : json;
+}
+
+function inspectValue(value) {
+  if (typeof value === 'string') return value;
+  const json = JSON.stringify(value, null, 2);
+  return json === undefined ? String(value) : json;
+}
+
+function toArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function collectInputs(inputs, names) {
+  return names.map((name) => inputs[name]).filter((value) => value !== undefined);
+}
+
+function unsupportedFunctionValueNode(name) {
+  return {
+    category: 'transform',
+    inputs: [
+      { name: 'list', type: 'array', default: [], kind: 'behavior' },
+      { name: 'fn', type: 'function', default: null, kind: 'behavior' },
+      { name: 'initial', type: 'any', default: null, kind: 'behavior' }
+    ],
+    outputs: [{ name: 'out', type: 'array', kind: 'behavior' }],
+    params: [
+      { name: 'fn', type: 'function', default: null },
+      { name: 'initial', type: 'any', default: null }
+    ],
+    evaluate: () => {
+      throw new LoomError('UNSUPPORTED_FUNCTION_VALUE', `${name} requires function values, which are not implemented yet`);
+    }
+  };
+}
+
+function getNodeFs() {
+  const getBuiltinModule = globalThis.process?.getBuiltinModule;
+  if (typeof getBuiltinModule !== 'function') {
+    throw new LoomError('UNSUPPORTED_RUNTIME_NODE', 'fs nodes are only available in the Node.js CLI runtime');
+  }
+  return getBuiltinModule('fs');
+}
+
+function getNodePath() {
+  return globalThis.process.getBuiltinModule('path');
+}
+
+
 // ノード型レジストリ
 export const NODE_TYPES = {
   // Phase 0 ノード
@@ -952,6 +1007,77 @@ export const NODE_TYPES = {
       out: String(inputs.value ?? '').replaceAll(String(inputs.search ?? ''), String(inputs.replacement ?? ''))
     })
   },
+
+  'text.concat': {
+    category: 'transform',
+    commutative: true,
+    inputs: Array.from({ length: 8 }, (_, i) => ({ name: `value${i + 1}`, type: 'any', default: undefined, kind: 'behavior' })),
+    outputs: [{ name: 'out', type: 'string', kind: 'behavior' }],
+    params: Array.from({ length: 8 }, (_, i) => ({ name: `value${i + 1}`, type: 'any', default: undefined })),
+    evaluate: (inputs) => ({ out: collectInputs(inputs, Array.from({ length: 8 }, (_, i) => `value${i + 1}`)).map((value) => stringifyTextValue(value)).join('') })
+  },
+  'text.split': {
+    category: 'transform',
+    inputs: [
+      { name: 'value', type: 'any', default: '', kind: 'behavior' },
+      { name: 'separator', type: 'any', default: ',', kind: 'behavior' }
+    ],
+    outputs: [{ name: 'out', type: 'array', kind: 'behavior' }],
+    params: [{ name: 'value', type: 'any', default: '' }, { name: 'separator', type: 'any', default: ',' }],
+    evaluate: (inputs) => ({ out: stringifyTextValue(inputs.value).split(stringifyTextValue(inputs.separator)) })
+  },
+  'text.join': {
+    category: 'transform',
+    inputs: [
+      { name: 'list', type: 'array', default: [], kind: 'behavior' },
+      { name: 'separator', type: 'any', default: ',', kind: 'behavior' }
+    ],
+    outputs: [{ name: 'out', type: 'string', kind: 'behavior' }],
+    params: [{ name: 'list', type: 'array', default: [] }, { name: 'separator', type: 'any', default: ',' }],
+    evaluate: (inputs) => ({ out: toArray(inputs.list).map((value) => stringifyTextValue(value)).join(stringifyTextValue(inputs.separator)) })
+  },
+  'text.includes': {
+    category: 'transform',
+    inputs: [{ name: 'value', type: 'any', default: '', kind: 'behavior' }, { name: 'search', type: 'any', default: '', kind: 'behavior' }],
+    outputs: [{ name: 'out', type: 'boolean', kind: 'behavior' }],
+    params: [{ name: 'value', type: 'any', default: '' }, { name: 'search', type: 'any', default: '' }],
+    evaluate: (inputs) => ({ out: stringifyTextValue(inputs.value).includes(stringifyTextValue(inputs.search)) })
+  },
+  'text.startsWith': {
+    category: 'transform',
+    inputs: [{ name: 'value', type: 'any', default: '', kind: 'behavior' }, { name: 'search', type: 'any', default: '', kind: 'behavior' }],
+    outputs: [{ name: 'out', type: 'boolean', kind: 'behavior' }],
+    params: [{ name: 'value', type: 'any', default: '' }, { name: 'search', type: 'any', default: '' }],
+    evaluate: (inputs) => ({ out: stringifyTextValue(inputs.value).startsWith(stringifyTextValue(inputs.search)) })
+  },
+  'text.endsWith': {
+    category: 'transform',
+    inputs: [{ name: 'value', type: 'any', default: '', kind: 'behavior' }, { name: 'search', type: 'any', default: '', kind: 'behavior' }],
+    outputs: [{ name: 'out', type: 'boolean', kind: 'behavior' }],
+    params: [{ name: 'value', type: 'any', default: '' }, { name: 'search', type: 'any', default: '' }],
+    evaluate: (inputs) => ({ out: stringifyTextValue(inputs.value).endsWith(stringifyTextValue(inputs.search)) })
+  },
+  'text.length': {
+    category: 'transform',
+    inputs: [{ name: 'value', type: 'any', default: '', kind: 'behavior' }],
+    outputs: [{ name: 'out', type: 'number', kind: 'behavior' }],
+    params: [{ name: 'value', type: 'any', default: '' }],
+    evaluate: (inputs) => ({ out: stringifyTextValue(inputs.value).length })
+  },
+  'text.isEmpty': {
+    category: 'transform',
+    inputs: [{ name: 'value', type: 'any', default: '', kind: 'behavior' }],
+    outputs: [{ name: 'out', type: 'boolean', kind: 'behavior' }],
+    params: [{ name: 'value', type: 'any', default: '' }],
+    evaluate: (inputs) => ({ out: stringifyTextValue(inputs.value).length === 0 })
+  },
+  'text.stringify': {
+    category: 'transform',
+    inputs: [{ name: 'value', type: 'any', default: null, kind: 'behavior' }],
+    outputs: [{ name: 'out', type: 'string', kind: 'behavior' }],
+    params: [{ name: 'value', type: 'any', default: null }],
+    evaluate: (inputs) => ({ out: stringifyTextValue(inputs.value) })
+  },
   'json.parse': {
     category: 'transform',
     inputs: [{ name: 'value', type: 'any', default: '', kind: 'behavior' }],
@@ -1005,6 +1131,81 @@ export const NODE_TYPES = {
       return {};
     }
   },
+
+
+  'console.table': {
+    category: 'sink',
+    inputs: [{ name: 'value', type: 'any', default: undefined, kind: 'behavior' }],
+    outputs: [],
+    params: [],
+    evaluate: (inputs, params, ctx) => {
+      ctx.engine?._recordEffect({ type: 'console.table', level: 'table', value: inputs.value, nodeId: ctx.currentNodeId });
+      if (typeof console.table === 'function' && ctx.emitConsole === true) console.table(inputs.value);
+      return {};
+    }
+  },
+
+  'logic.not': { category: 'transform', inputs: [{ name: 'value', type: 'any', default: false, kind: 'behavior' }], outputs: [{ name: 'out', type: 'boolean', kind: 'behavior' }], params: [{ name: 'value', type: 'any', default: false }], evaluate: (inputs) => ({ out: !inputs.value }) },
+  'logic.and': { category: 'transform', commutative: true, inputs: [{ name: 'a', type: 'any', default: false, kind: 'behavior' }, { name: 'b', type: 'any', default: false, kind: 'behavior' }], outputs: [{ name: 'out', type: 'boolean', kind: 'behavior' }], params: [{ name: 'a', type: 'any', default: false }, { name: 'b', type: 'any', default: false }], evaluate: (inputs) => ({ out: Boolean(inputs.a && inputs.b) }) },
+  'logic.or': { category: 'transform', commutative: true, inputs: [{ name: 'a', type: 'any', default: false, kind: 'behavior' }, { name: 'b', type: 'any', default: false, kind: 'behavior' }], outputs: [{ name: 'out', type: 'boolean', kind: 'behavior' }], params: [{ name: 'a', type: 'any', default: false }, { name: 'b', type: 'any', default: false }], evaluate: (inputs) => ({ out: Boolean(inputs.a || inputs.b) }) },
+  'logic.equals': { category: 'transform', inputs: [{ name: 'value', type: 'any', default: null, kind: 'behavior' }, { name: 'other', type: 'any', default: null, kind: 'behavior' }], outputs: [{ name: 'out', type: 'boolean', kind: 'behavior' }], params: [{ name: 'value', type: 'any', default: null }, { name: 'other', type: 'any', default: null }], evaluate: (inputs) => ({ out: Object.is(inputs.value, inputs.other) }) },
+  'logic.notEquals': { category: 'transform', inputs: [{ name: 'value', type: 'any', default: null, kind: 'behavior' }, { name: 'other', type: 'any', default: null, kind: 'behavior' }], outputs: [{ name: 'out', type: 'boolean', kind: 'behavior' }], params: [{ name: 'value', type: 'any', default: null }, { name: 'other', type: 'any', default: null }], evaluate: (inputs) => ({ out: !Object.is(inputs.value, inputs.other) }) },
+  'logic.greaterThan': { category: 'transform', inputs: [{ name: 'value', type: 'number', default: 0, kind: 'behavior' }, { name: 'other', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'boolean', kind: 'behavior' }], params: [{ name: 'value', type: 'number', default: 0 }, { name: 'other', type: 'number', default: 0 }], evaluate: (inputs) => ({ out: inputs.value > inputs.other }) },
+  'logic.lessThan': { category: 'transform', inputs: [{ name: 'value', type: 'number', default: 0, kind: 'behavior' }, { name: 'other', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'boolean', kind: 'behavior' }], params: [{ name: 'value', type: 'number', default: 0 }, { name: 'other', type: 'number', default: 0 }], evaluate: (inputs) => ({ out: inputs.value < inputs.other }) },
+  'logic.greaterOrEqual': { category: 'transform', inputs: [{ name: 'value', type: 'number', default: 0, kind: 'behavior' }, { name: 'other', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'boolean', kind: 'behavior' }], params: [{ name: 'value', type: 'number', default: 0 }, { name: 'other', type: 'number', default: 0 }], evaluate: (inputs) => ({ out: inputs.value >= inputs.other }) },
+  'logic.lessOrEqual': { category: 'transform', inputs: [{ name: 'value', type: 'number', default: 0, kind: 'behavior' }, { name: 'other', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'boolean', kind: 'behavior' }], params: [{ name: 'value', type: 'number', default: 0 }, { name: 'other', type: 'number', default: 0 }], evaluate: (inputs) => ({ out: inputs.value <= inputs.other }) },
+  'logic.select': { category: 'transform', inputs: [{ name: 'condition', type: 'any', default: false, kind: 'behavior' }, { name: 'whenTrue', type: 'any', default: null, kind: 'behavior' }, { name: 'whenFalse', type: 'any', default: null, kind: 'behavior' }], outputs: [{ name: 'out', type: 'any', kind: 'behavior' }], params: [{ name: 'condition', type: 'any', default: false }, { name: 'whenTrue', type: 'any', default: null }, { name: 'whenFalse', type: 'any', default: null }], evaluate: (inputs) => ({ out: inputs.condition ? inputs.whenTrue : inputs.whenFalse }) },
+  'logic.when': { category: 'transform', inputs: [{ name: 'condition', type: 'any', default: false, kind: 'behavior' }, { name: 'value', type: 'any', default: null, kind: 'behavior' }], outputs: [{ name: 'out', type: 'any', kind: 'behavior' }], params: [{ name: 'condition', type: 'any', default: false }, { name: 'value', type: 'any', default: null }], evaluate: (inputs) => ({ out: inputs.condition ? inputs.value : null }) },
+
+  'list.of': { category: 'transform', commutative: true, inputs: Array.from({ length: 8 }, (_, i) => ({ name: `value${i + 1}`, type: 'any', default: undefined, kind: 'behavior' })), outputs: [{ name: 'out', type: 'array', kind: 'behavior' }], params: Array.from({ length: 8 }, (_, i) => ({ name: `value${i + 1}`, type: 'any', default: undefined })), evaluate: (inputs) => ({ out: collectInputs(inputs, Array.from({ length: 8 }, (_, i) => `value${i + 1}`)) }) },
+  'list.range': { category: 'transform', inputs: [{ name: 'start', type: 'number', default: 0, kind: 'behavior' }, { name: 'end', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'array', kind: 'behavior' }], params: [{ name: 'start', type: 'number', default: 0 }, { name: 'end', type: 'number', default: 0 }], evaluate: (inputs) => { const start = Math.trunc(inputs.start); const end = Math.trunc(inputs.end); const step = start <= end ? 1 : -1; const out = []; for (let n = start; step > 0 ? n <= end : n >= end; n += step) out.push(n); return { out }; } },
+  'list.length': { category: 'transform', inputs: [{ name: 'list', type: 'array', default: [], kind: 'behavior' }], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [{ name: 'list', type: 'array', default: [] }], evaluate: (inputs) => ({ out: toArray(inputs.list).length }) },
+  'list.at': { category: 'transform', inputs: [{ name: 'list', type: 'array', default: [], kind: 'behavior' }, { name: 'index', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'any', kind: 'behavior' }], params: [{ name: 'list', type: 'array', default: [] }, { name: 'index', type: 'number', default: 0 }], evaluate: (inputs) => { const list = toArray(inputs.list); const raw = Math.trunc(inputs.index); const index = raw < 0 ? list.length + raw : raw; return { out: index >= 0 && index < list.length ? list[index] : null }; } },
+  'list.first': { category: 'transform', inputs: [{ name: 'list', type: 'array', default: [], kind: 'behavior' }], outputs: [{ name: 'out', type: 'any', kind: 'behavior' }], params: [{ name: 'list', type: 'array', default: [] }], evaluate: (inputs) => ({ out: toArray(inputs.list)[0] ?? null }) },
+  'list.last': { category: 'transform', inputs: [{ name: 'list', type: 'array', default: [], kind: 'behavior' }], outputs: [{ name: 'out', type: 'any', kind: 'behavior' }], params: [{ name: 'list', type: 'array', default: [] }], evaluate: (inputs) => { const list = toArray(inputs.list); return { out: list.length ? list[list.length - 1] : null }; } },
+  'list.map': unsupportedFunctionValueNode('list.map'),
+  'list.filter': unsupportedFunctionValueNode('list.filter'),
+  'list.reduce': unsupportedFunctionValueNode('list.reduce'),
+  'list.join': { category: 'transform', inputs: [{ name: 'list', type: 'array', default: [], kind: 'behavior' }, { name: 'separator', type: 'any', default: ',', kind: 'behavior' }], outputs: [{ name: 'out', type: 'string', kind: 'behavior' }], params: [{ name: 'list', type: 'array', default: [] }, { name: 'separator', type: 'any', default: ',' }], evaluate: (inputs) => ({ out: toArray(inputs.list).map((value) => stringifyTextValue(value)).join(stringifyTextValue(inputs.separator)) }) },
+  'list.reverse': { category: 'transform', inputs: [{ name: 'list', type: 'array', default: [], kind: 'behavior' }], outputs: [{ name: 'out', type: 'array', kind: 'behavior' }], params: [{ name: 'list', type: 'array', default: [] }], evaluate: (inputs) => ({ out: [...toArray(inputs.list)].reverse() }) },
+  'list.sort': { category: 'transform', inputs: [{ name: 'list', type: 'array', default: [], kind: 'behavior' }], outputs: [{ name: 'out', type: 'array', kind: 'behavior' }], params: [{ name: 'list', type: 'array', default: [] }], evaluate: (inputs) => { const list = [...toArray(inputs.list)]; if (list.every((value) => typeof value === 'number')) list.sort((a, b) => a - b); else list.sort((a, b) => String(a).localeCompare(String(b))); return { out: list }; } },
+  'list.take': { category: 'transform', inputs: [{ name: 'list', type: 'array', default: [], kind: 'behavior' }, { name: 'count', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'array', kind: 'behavior' }], params: [{ name: 'list', type: 'array', default: [] }, { name: 'count', type: 'number', default: 0 }], evaluate: (inputs) => ({ out: toArray(inputs.list).slice(0, Math.max(0, Math.trunc(inputs.count))) }) },
+  'list.drop': { category: 'transform', inputs: [{ name: 'list', type: 'array', default: [], kind: 'behavior' }, { name: 'count', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'array', kind: 'behavior' }], params: [{ name: 'list', type: 'array', default: [] }, { name: 'count', type: 'number', default: 0 }], evaluate: (inputs) => ({ out: toArray(inputs.list).slice(Math.max(0, Math.trunc(inputs.count))) }) },
+  'list.concat': { category: 'transform', commutative: true, inputs: Array.from({ length: 4 }, (_, i) => ({ name: `list${i + 1}`, type: 'array', default: undefined, kind: 'behavior' })), outputs: [{ name: 'out', type: 'array', kind: 'behavior' }], params: Array.from({ length: 4 }, (_, i) => ({ name: `list${i + 1}`, type: 'array', default: undefined })), evaluate: (inputs) => ({ out: collectInputs(inputs, Array.from({ length: 4 }, (_, i) => `list${i + 1}`)).flatMap((value) => toArray(value)) }) },
+
+  'math.add': { category: 'transform', commutative: true, inputs: [{ name: 'a', type: 'number', default: 0, kind: 'behavior' }, { name: 'b', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [{ name: 'a', type: 'number', default: 0 }, { name: 'b', type: 'number', default: 0 }], evaluate: (inputs) => ({ out: inputs.a + inputs.b }) },
+  'math.subtract': { category: 'transform', inputs: [{ name: 'a', type: 'number', default: 0, kind: 'behavior' }, { name: 'b', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [{ name: 'a', type: 'number', default: 0 }, { name: 'b', type: 'number', default: 0 }], evaluate: (inputs) => ({ out: inputs.a - inputs.b }) },
+  'math.multiply': { category: 'transform', commutative: true, inputs: [{ name: 'a', type: 'number', default: 1, kind: 'behavior' }, { name: 'b', type: 'number', default: 1, kind: 'behavior' }], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [{ name: 'a', type: 'number', default: 1 }, { name: 'b', type: 'number', default: 1 }], evaluate: (inputs) => ({ out: inputs.a * inputs.b }) },
+  'math.divide': { category: 'transform', inputs: [{ name: 'a', type: 'number', default: 0, kind: 'behavior' }, { name: 'b', type: 'number', default: 1, kind: 'behavior' }], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [{ name: 'a', type: 'number', default: 0 }, { name: 'b', type: 'number', default: 1 }], evaluate: (inputs) => ({ out: inputs.b === 0 ? 0 : inputs.a / inputs.b }) },
+  'math.mod': { category: 'transform', inputs: [{ name: 'a', type: 'number', default: 0, kind: 'behavior' }, { name: 'b', type: 'number', default: 1, kind: 'behavior' }], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [{ name: 'a', type: 'number', default: 0 }, { name: 'b', type: 'number', default: 1 }], evaluate: (inputs) => ({ out: inputs.b === 0 ? 0 : ((inputs.a % inputs.b) + inputs.b) % inputs.b }) },
+  'math.abs': { category: 'transform', inputs: [{ name: 'value', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [{ name: 'value', type: 'number', default: 0 }], evaluate: (inputs) => ({ out: Math.abs(inputs.value) }) },
+  'math.clamp': { category: 'transform', inputs: [{ name: 'value', type: 'number', default: 0, kind: 'behavior' }, { name: 'min', type: 'number', default: 0, kind: 'behavior' }, { name: 'max', type: 'number', default: 1, kind: 'behavior' }], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [{ name: 'value', type: 'number', default: 0 }, { name: 'min', type: 'number', default: 0 }, { name: 'max', type: 'number', default: 1 }], evaluate: (inputs) => ({ out: inputs.min > inputs.max ? inputs.min : Math.max(inputs.min, Math.min(inputs.max, inputs.value)) }) },
+  'math.map': { category: 'transform', inputs: [{ name: 'value', type: 'number', default: 0, kind: 'behavior' }, { name: 'inMin', type: 'number', default: 0, kind: 'behavior' }, { name: 'inMax', type: 'number', default: 1, kind: 'behavior' }, { name: 'outMin', type: 'number', default: 0, kind: 'behavior' }, { name: 'outMax', type: 'number', default: 1, kind: 'behavior' }], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [{ name: 'value', type: 'number', default: 0 }, { name: 'inMin', type: 'number', default: 0 }, { name: 'inMax', type: 'number', default: 1 }, { name: 'outMin', type: 'number', default: 0 }, { name: 'outMax', type: 'number', default: 1 }, { name: 'clamp', type: 'boolean', default: false }], evaluate: (inputs, params) => { if (inputs.inMax === inputs.inMin) return { out: inputs.outMin }; let t = (inputs.value - inputs.inMin) / (inputs.inMax - inputs.inMin); if (params.clamp === true) t = Math.max(0, Math.min(1, t)); return { out: inputs.outMin + (inputs.outMax - inputs.outMin) * t }; } },
+  'math.lerp': { category: 'transform', inputs: [{ name: 'a', type: 'number', default: 0, kind: 'behavior' }, { name: 'b', type: 'number', default: 1, kind: 'behavior' }, { name: 't', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [{ name: 'a', type: 'number', default: 0 }, { name: 'b', type: 'number', default: 1 }, { name: 't', type: 'number', default: 0 }], evaluate: (inputs) => ({ out: inputs.a + (inputs.b - inputs.a) * inputs.t }) },
+  'math.smoothstep': { category: 'transform', inputs: [{ name: 'x', type: 'number', default: 0, kind: 'behavior' }, { name: 'edge0', type: 'number', default: 0, kind: 'behavior' }, { name: 'edge1', type: 'number', default: 1, kind: 'behavior' }], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [{ name: 'x', type: 'number', default: 0 }, { name: 'edge0', type: 'number', default: 0 }, { name: 'edge1', type: 'number', default: 1 }], evaluate: (inputs) => { if (inputs.edge0 === inputs.edge1) return { out: inputs.x < inputs.edge0 ? 0 : 1 }; let t = (inputs.x - inputs.edge0) / (inputs.edge1 - inputs.edge0); t = Math.max(0, Math.min(1, t)); return { out: t * t * (3 - 2 * t) }; } },
+  'math.cosine': { category: 'transform', inputs: [{ name: 't', type: 'number', default: 0, kind: 'behavior' }, { name: 'freq', type: 'number', default: 1, kind: 'behavior' }, { name: 'amplitude', type: 'number', default: 1, kind: 'behavior' }, { name: 'phase', type: 'number', default: 0, kind: 'behavior' }, { name: 'offset', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [{ name: 'freq', type: 'number', default: 1 }, { name: 'amplitude', type: 'number', default: 1 }, { name: 'phase', type: 'number', default: 0 }, { name: 'offset', type: 'number', default: 0 }], evaluate: (inputs) => ({ out: Math.cos(inputs.t * inputs.freq * 2 * Math.PI + inputs.phase) * inputs.amplitude + inputs.offset }) },
+  'math.floor': { category: 'transform', inputs: [{ name: 'value', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [{ name: 'value', type: 'number', default: 0 }], evaluate: (inputs) => ({ out: Math.floor(inputs.value) }) },
+  'math.ceil': { category: 'transform', inputs: [{ name: 'value', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [{ name: 'value', type: 'number', default: 0 }], evaluate: (inputs) => ({ out: Math.ceil(inputs.value) }) },
+  'math.round': { category: 'transform', inputs: [{ name: 'value', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [{ name: 'value', type: 'number', default: 0 }], evaluate: (inputs) => ({ out: Math.round(inputs.value) }) },
+  'math.min': { category: 'transform', commutative: true, inputs: [{ name: 'a', type: 'number', default: 0, kind: 'behavior' }, { name: 'b', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [{ name: 'a', type: 'number', default: 0 }, { name: 'b', type: 'number', default: 0 }], evaluate: (inputs) => ({ out: Math.min(inputs.a, inputs.b) }) },
+  'math.max': { category: 'transform', commutative: true, inputs: [{ name: 'a', type: 'number', default: 0, kind: 'behavior' }, { name: 'b', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [{ name: 'a', type: 'number', default: 0 }, { name: 'b', type: 'number', default: 0 }], evaluate: (inputs) => ({ out: Math.max(inputs.a, inputs.b) }) },
+  'math.tan': { category: 'transform', inputs: [{ name: 'value', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [{ name: 'value', type: 'number', default: 0 }], evaluate: (inputs) => ({ out: Math.tan(inputs.value) }) },
+  'math.sqrt': { category: 'transform', inputs: [{ name: 'value', type: 'number', default: 0, kind: 'behavior' }], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [{ name: 'value', type: 'number', default: 0 }], evaluate: (inputs) => ({ out: Math.sqrt(inputs.value) }) },
+  'math.pow': { category: 'transform', inputs: [{ name: 'value', type: 'number', default: 0, kind: 'behavior' }, { name: 'exponent', type: 'number', default: 1, kind: 'behavior' }], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [{ name: 'value', type: 'number', default: 0 }, { name: 'exponent', type: 'number', default: 1 }], evaluate: (inputs) => ({ out: Math.pow(inputs.value, inputs.exponent) }) },
+
+  'random.value': { category: 'source', inputs: [], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [], evaluate: () => ({ out: Math.random() }) },
+  'random.range': { category: 'transform', inputs: [{ name: 'min', type: 'number', default: 0, kind: 'behavior' }, { name: 'max', type: 'number', default: 1, kind: 'behavior' }], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [{ name: 'min', type: 'number', default: 0 }, { name: 'max', type: 'number', default: 1 }], evaluate: (inputs) => ({ out: inputs.min + Math.random() * (inputs.max - inputs.min) }) },
+  'random.int': { category: 'transform', inputs: [{ name: 'min', type: 'number', default: 0, kind: 'behavior' }, { name: 'max', type: 'number', default: 1, kind: 'behavior' }], outputs: [{ name: 'out', type: 'number', kind: 'behavior' }], params: [{ name: 'min', type: 'number', default: 0 }, { name: 'max', type: 'number', default: 1 }], evaluate: (inputs) => { const min = Math.ceil(Math.min(inputs.min, inputs.max)); const max = Math.floor(Math.max(inputs.min, inputs.max)); return { out: Math.floor(Math.random() * (max - min + 1)) + min }; } },
+  'random.choice': { category: 'transform', inputs: [{ name: 'list', type: 'array', default: [], kind: 'behavior' }], outputs: [{ name: 'out', type: 'any', kind: 'behavior' }], params: [{ name: 'list', type: 'array', default: [] }], evaluate: (inputs) => { const list = toArray(inputs.list); return { out: list.length ? list[Math.floor(Math.random() * list.length)] : null }; } },
+
+  'debug.inspect': { category: 'transform', inputs: [{ name: 'value', type: 'any', default: null, kind: 'behavior' }], outputs: [{ name: 'out', type: 'string', kind: 'behavior' }], params: [{ name: 'value', type: 'any', default: null }], evaluate: (inputs) => ({ out: inspectValue(inputs.value) }) },
+  'debug.trace': { category: 'transform', inputs: [{ name: 'value', type: 'any', default: null, kind: 'behavior' }, { name: 'label', type: 'string', default: 'trace', kind: 'behavior' }], outputs: [{ name: 'out', type: 'any', kind: 'behavior' }], params: [{ name: 'value', type: 'any', default: null }, { name: 'label', type: 'string', default: 'trace' }], evaluate: (inputs, params, ctx) => { ctx.engine?._recordEffect({ type: 'debug.trace', label: inputs.label, value: inputs.value, nodeId: ctx.currentNodeId }); return { out: inputs.value }; } },
+  'debug.assert': { category: 'transform', inputs: [{ name: 'condition', type: 'any', default: false, kind: 'behavior' }, { name: 'message', type: 'string', default: 'Assertion failed', kind: 'behavior' }], outputs: [{ name: 'out', type: 'boolean', kind: 'behavior' }], params: [{ name: 'condition', type: 'any', default: false }, { name: 'message', type: 'string', default: 'Assertion failed' }], evaluate: (inputs) => { if (!inputs.condition) throw new LoomError('ASSERTION_FAILED', stringifyTextValue(inputs.message) || 'Assertion failed'); return { out: true }; } },
+
+  'fs.readText': { category: 'source', inputs: [{ name: 'path', type: 'string', default: '', kind: 'behavior' }], outputs: [{ name: 'out', type: 'string', kind: 'behavior' }], params: [{ name: 'path', type: 'string', default: '' }], evaluate: (inputs) => ({ out: getNodeFs().readFileSync(String(inputs.path), 'utf8') }) },
+  'fs.writeText': { category: 'sink', inputs: [{ name: 'path', type: 'string', default: '', kind: 'behavior' }, { name: 'value', type: 'any', default: '', kind: 'behavior' }], outputs: [], params: [{ name: 'path', type: 'string', default: '' }, { name: 'value', type: 'any', default: '' }], evaluate: (inputs) => { const fs = getNodeFs(); const path = getNodePath(); fs.mkdirSync(path.dirname(String(inputs.path)), { recursive: true }); fs.writeFileSync(String(inputs.path), stringifyTextValue(inputs.value), 'utf8'); return {}; } },
+  'fs.exists': { category: 'source', inputs: [{ name: 'path', type: 'string', default: '', kind: 'behavior' }], outputs: [{ name: 'out', type: 'boolean', kind: 'behavior' }], params: [{ name: 'path', type: 'string', default: '' }], evaluate: (inputs) => ({ out: getNodeFs().existsSync(String(inputs.path)) }) },
+  'fs.list': { category: 'source', inputs: [{ name: 'path', type: 'string', default: '.', kind: 'behavior' }], outputs: [{ name: 'out', type: 'array', kind: 'behavior' }], params: [{ name: 'path', type: 'string', default: '.' }], evaluate: (inputs) => ({ out: getNodeFs().readdirSync(String(inputs.path)) }) },
 
   // Scene Sync effect nodes
   'scene.setPosition': {

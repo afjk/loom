@@ -6,6 +6,16 @@ export const LIBRARY_COMPATIBILITY = {
     kind: 'source',
     description: 'Time-based source nodes'
   },
+  logic: {
+    targets: ['cli', 'web', 'scenesync', 'unity'],
+    kind: 'pure',
+    description: 'Boolean logic, comparison, and selection nodes'
+  },
+  list: {
+    targets: ['cli', 'web', 'scenesync', 'unity'],
+    kind: 'pure',
+    description: 'List construction and transformation nodes'
+  },
   math: {
     targets: ['cli', 'web', 'scenesync', 'unity'],
     kind: 'pure',
@@ -25,6 +35,16 @@ export const LIBRARY_COMPATIBILITY = {
     targets: ['cli', 'web', 'scenesync', 'unity'],
     kind: 'pure',
     description: 'JSON parse/stringify utilities'
+  },
+  random: {
+    targets: ['cli', 'web', 'scenesync', 'unity'],
+    kind: 'pure',
+    description: 'Random value generation nodes'
+  },
+  debug: {
+    targets: ['cli', 'web', 'unity'],
+    kind: 'effect',
+    description: 'Debug inspection, tracing, and assertion nodes'
   },
   fs: {
     targets: ['cli'],

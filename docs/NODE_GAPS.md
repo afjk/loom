@@ -1,20 +1,11 @@
 # Node Gaps
 
 ## High priority
-- logic.equals
-- logic.select
-- logic.and
-- logic.lessOrEqual
-- list.range
-- list.map
-- list.filter
-- text.stringify
+- function values for `list.map`, `list.filter`, `list.reduce`
 - scene.find
 - timeline.cue
 
 ## Medium priority
-- list.reduce
-- list.concat
 - signal.lfo
 - signal.smooth
 - signal.trigger
@@ -24,7 +15,6 @@
 - audio.level
 
 ## Low priority
-- console.table
 - random.seeded
-- debug.inspect
-- fs.list
+- random.noise
+- fs sandboxing and target policy hardening
