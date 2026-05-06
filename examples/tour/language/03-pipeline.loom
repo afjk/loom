@@ -1,0 +1,16 @@
+# Tour: Pipeline
+# Goal: Show pipe operator flow through transform nodes.
+# Status: runnable
+# Run:
+#   loomlet run examples/tour/language/03-pipeline.loom
+# Requires:
+#   - map
+#   - clamp
+#   - console.log
+import console
+
+value = constant(value: 0.25)
+out = value
+  |> map(inMin: 0, inMax: 1, outMin: -1, outMax: 1)
+  |> clamp(min: -0.5, max: 0.5)
+console.log(out)

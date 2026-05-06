@@ -1,0 +1,11 @@
+# Tour: Timeline Cues
+# Goal: Draft live performance patch for timeline cues.
+# Status: draft
+# Run:
+#   loomlet scenesync dev examples/tour/live/04-timeline-cues.loom
+# Requires:
+#   - missing live/audio/timeline nodes listed below
+# TODO NODE: timeline.cue
+# TODO NODE: audio.level
+import timeline
+import audio

@@ -1,0 +1,9 @@
+# Tour: Smooth
+# Goal: Draft signal workflow for smooth.
+# Status: draft
+# Run:
+#   loomlet run examples/tour/signals/04-smooth.loom
+# Requires:
+#   - missing nodes listed below
+# TODO NODE: signal.smooth
+import signal

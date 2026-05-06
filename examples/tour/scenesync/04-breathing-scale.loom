@@ -1,0 +1,11 @@
+# Tour: Breathing Scale
+# Goal: Draft Scene Sync choreography for breathing scale.
+# Status: draft
+# Run:
+#   loomlet scenesync dev examples/tour/scenesync/04-breathing-scale.loom
+# Requires:
+#   - missing timeline/scene nodes listed below
+# TODO NODE: timeline.sequence
+# TODO NODE: scene.find
+import timeline
+import scene

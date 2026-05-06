@@ -1,0 +1,13 @@
+# Tour: Hello
+# Goal: Show imports, text transforms, and console output.
+# Status: runnable
+# Run:
+#   loomlet run examples/tour/language/01-hello.loom
+# Requires:
+#   - text.upper
+#   - console.log
+import text
+import console
+
+message = text.upper("hello loomlet tour")
+console.log(message)
