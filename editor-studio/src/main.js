@@ -27,6 +27,12 @@ import {
   createPositionForNewNode,
   getNodeTypeEntries
 } from './node-palette-model.js';
+import {
+  extractEditorMetadataFromDsl,
+  appendEditorMetadataToDsl,
+  createEditorLayoutMetadata,
+  applyLayoutMetadataToEditorModel
+} from './editor-metadata.js';
 
 const SAMPLE_DSL = `t = clock()
 wave = sine(t, freq: 0.35)
@@ -584,26 +590,29 @@ function downloadTextFile(text, filename) {
 }
 
 function getCurrentSavePayload() {
-  if (hasUnsyncedDslText) {
-    return {
-      text: getDslText(),
-      source: 'dsl'
-    };
-  }
-
   const state = store.getState();
+  let text = '';
+  let source = '';
 
-  if (state.editorModel) {
+  if (hasUnsyncedDslText) {
+    text = getDslText();
+    source = 'dsl';
+  } else if (state.editorModel) {
     const graph = editorModelToGraph(state.editorModel, state.graph);
-    return {
-      text: graphToCanonicalDSL(graph),
-      source: 'graph'
-    };
+    text = graphToCanonicalDSL(graph);
+    source = 'graph';
+  } else {
+    text = getDslText();
+    source = 'dsl';
   }
+
+  const { textWithoutMetadata } = extractEditorMetadataFromDsl(text);
+  const metadata = createEditorLayoutMetadata(state.editorModel);
+  const textWithMetadata = appendEditorMetadataToDsl(textWithoutMetadata, metadata);
 
   return {
-    text: getDslText(),
-    source: 'dsl'
+    text: textWithMetadata,
+    source
   };
 }
 
@@ -743,7 +752,9 @@ async function openLoomFile() {
 }
 
 async function applyDslTextToGraph(sourceText, { markDirty = true, preserveGraphOnError = false, shouldCommit = null } = {}) {
-  const { ast, errors: parseErrors } = parseDSLToAST(sourceText);
+  const { textWithoutMetadata, metadata } = extractEditorMetadataFromDsl(sourceText);
+
+  const { ast, errors: parseErrors } = parseDSLToAST(textWithoutMetadata);
 
   if (parseErrors.length) {
     store.setState({ errors: parseErrors });
@@ -782,10 +793,14 @@ async function applyDslTextToGraph(sourceText, { markDirty = true, preserveGraph
   }
 
   const previousEditorModel = store.getState().editorModel;
-  const editorModel = preserveEditorModelLayout(
+  let editorModel = preserveEditorModelLayout(
     graphToEditorModel(graph),
     previousEditorModel
   );
+
+  if (metadata) {
+    editorModel = applyLayoutMetadataToEditorModel(editorModel, metadata);
+  }
 
   if (shouldCommit && !shouldCommit()) {
     return { ok: false, stale: true, errors: [] };
@@ -858,7 +873,13 @@ function generateCanonicalDslFromState() {
 function syncGraphToDslEditor({ markDirty = true, force = false } = {}) {
   if (!force && !autoSyncGraphToDslEnabled) return null;
 
-  const dsl = generateCanonicalDslFromState();
+  let dsl = generateCanonicalDslFromState();
+  const state = store.getState();
+
+  if (state.editorModel) {
+    const metadata = createEditorLayoutMetadata(state.editorModel);
+    dsl = appendEditorMetadataToDsl(dsl, metadata);
+  }
 
   setDslText(dsl);
 
