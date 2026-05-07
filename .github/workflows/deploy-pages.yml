@@ -1,0 +1,78 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build node editor
+        run: |
+          cd editor-studio
+          npm ci
+          VITE_BASE_PATH=/loomlet/node-editor/ npm run build
+
+      - name: Prepare Pages artifact
+        run: |
+          mkdir -p dist-pages/node-editor
+          cp -R editor-studio/dist/* dist-pages/node-editor/
+          mkdir -p dist-pages/editor
+          cp -R editor/* dist-pages/editor/
+
+      - name: Add index page
+        run: |
+          cat > dist-pages/index.html <<'HTML'
+          <!doctype html>
+          <html>
+            <head>
+              <meta charset="utf-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1" />
+              <title>Loomlet</title>
+            </head>
+            <body>
+              <h1>Loomlet</h1>
+              <ul>
+                <li><a href="./editor/">Simple Editor</a></li>
+                <li><a href="./node-editor/">Node Editor</a></li>
+              </ul>
+            </body>
+          </html>
+          HTML
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist-pages
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

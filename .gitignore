@@ -65,3 +65,6 @@ node_modules/
 ### CI / Testing
 playwright-report/
 test-results/
+
+### Pages build output
+dist-pages/

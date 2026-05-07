@@ -59,7 +59,9 @@
     "generate:vscode-metadata": "node scripts/generate-vscode-metadata.mjs",
     "pack:dry-run": "npm pack --dry-run",
     "pack:cli": "npm pack",
-    "pack:vscode": "cd extensions/vscode-loomlet && npx @vscode/vsce package"
+    "pack:vscode": "cd extensions/vscode-loomlet && npx @vscode/vsce package",
+    "build:node-editor": "cd editor-studio && npm install && VITE_BASE_PATH=/loomlet/node-editor/ npm run build",
+    "pages:build": "rm -rf dist-pages && mkdir -p dist-pages/node-editor dist-pages/editor && cd editor-studio && npm install && VITE_BASE_PATH=/loomlet/node-editor/ npm run build && cp -R dist/* ../dist-pages/node-editor/ && cd .. && cp -R editor/* dist-pages/editor/ && printf '<!doctype html>\\n<html>\\n<head><meta charset=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"/><title>Loomlet</title></head>\\n<body><h1>Loomlet</h1><ul><li><a href=\"./editor/\">Simple Editor</a></li><li><a href=\"./node-editor/\">Node Editor</a></li></ul></body>\\n</html>\\n' > dist-pages/index.html"
   },
   "devDependencies": {
     "http-server": "^14.1.1",
