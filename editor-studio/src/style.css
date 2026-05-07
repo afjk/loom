@@ -321,3 +321,70 @@ body.panels-hidden .editor-panels {
 .cm-selectionBackground {
   background: rgba(74, 144, 226, 0.3) !important;
 }
+
+/* Inspector Panel */
+.inspector-panel {
+  padding: 12px;
+  overflow: auto;
+  flex: 1;
+  font-size: 13px;
+}
+
+.inspector-empty {
+  color: var(--text-dim);
+  padding: 8px;
+}
+
+.inspector-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.inspector-section {
+  margin-bottom: 12px;
+}
+
+.inspector-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.inspector-label {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.inspector-value {
+  color: var(--text-color);
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.inspector-panel input[type="text"],
+.inspector-panel input[type="number"],
+.inspector-panel textarea {
+  width: 100%;
+  background: #111;
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 12px;
+}
+
+.inspector-panel input[type="checkbox"] {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+}
+
+.inspector-panel textarea {
+  min-height: 72px;
+  resize: vertical;
+}
