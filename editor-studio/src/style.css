@@ -439,12 +439,17 @@ body.resizing-editor-split * {
   background: rgba(255, 255, 255, 0.06) !important;
 }
 
-.cm-cursor {
-  border-left-color: var(--text-color) !important;
+.dsl-editor-host .cm-cursor {
+  border-left-color: #ffffff !important;
 }
 
-.cm-selectionBackground {
-  background: rgba(74, 144, 226, 0.3) !important;
+.dsl-editor-host .cm-dropCursor {
+  border-left-color: #ffffff !important;
+}
+
+.dsl-editor-host .cm-selectionBackground,
+.dsl-editor-host .cm-focused .cm-selectionBackground {
+  background: rgba(120, 170, 255, 0.35) !important;
 }
 
 /* Inspector Panel */
