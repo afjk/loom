@@ -219,7 +219,9 @@
 
     async function runAll() {
       const container = document.getElementById('results');
-      let passed = 0, failed = 0;
+      let passed = 0;
+      let failed = 0;
+      const failures = [];
 
       for (const { name, fn } of results) {
         const el = document.createElement('div');
@@ -232,6 +234,7 @@
           el.textContent = `✗ ${name}: ${e.message}`;
           el.style.color = 'red';
           failed++;
+          failures.push({ name, message: e.message, error: e.message });
         }
         container.appendChild(el);
       }
@@ -240,6 +243,8 @@
       summary.textContent = `${passed} passed, ${failed} failed`;
       summary.style.fontWeight = 'bold';
       container.appendChild(summary);
+
+      window.__loomTestResults = { pass: passed, fail: failed, failures };
     }
 
     runAll();
