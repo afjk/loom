@@ -18,7 +18,7 @@
 
   <script type="module">
     // Import test helpers
-    import { createNodeCompletionOptions, getParamCompletionOptionsForNode } from '../src/loomlet-codemirror.js';
+    import { createNodeCompletionOptions, getParamCompletionOptionsForNode, findNearestCallNameBefore } from '../src/loomlet-codemirror.js';
 
     // Mock NODE_TYPES for testing
     const MOCK_NODE_TYPES = {
@@ -124,6 +124,24 @@
     test('createNodeCompletionOptions handles undefined nodeTypes', () => {
       const options = createNodeCompletionOptions(undefined);
       assert(Array.isArray(options), 'should return array');
+    });
+
+    test('findNearestCallNameBefore finds function call', () => {
+      const docText = 'wave = sine(t, fr';
+      const result = findNearestCallNameBefore(docText, docText.length);
+      assert(result === 'sine', `expected 'sine' but got '${result}'`);
+    });
+
+    test('findNearestCallNameBefore returns null when no call', () => {
+      const docText = 'wave = sine';
+      const result = findNearestCallNameBefore(docText, docText.length);
+      assert(result === null, 'should return null when no open paren');
+    });
+
+    test('findNearestCallNameBefore finds last call in nested context', () => {
+      const docText = 'width = map(wave, inMin: -1, inMax: sin(';
+      const result = findNearestCallNameBefore(docText, docText.length);
+      assert(result === 'sin', `expected 'sin' but got '${result}'`);
     });
 
     // Render results

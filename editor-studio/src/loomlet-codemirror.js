@@ -1,7 +1,7 @@
 import { StreamLanguage, syntaxHighlighting, HighlightStyle } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
 import { EditorView } from '@codemirror/view';
-import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
+import { autocompletion } from '@codemirror/autocomplete';
 
 // Create a set of valid node/function names from metadata
 function createNodeTypeNameSet(nodeTypes = {}) {
@@ -145,6 +145,14 @@ const loomletEditorTheme = EditorView.theme({
   }
 });
 
+// Find the nearest function call name before the cursor
+function findNearestCallNameBefore(docText, cursorPos) {
+  const beforeCursor = docText.slice(0, cursorPos);
+  const matches = [...beforeCursor.matchAll(/([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/g)];
+  if (!matches.length) return null;
+  return matches[matches.length - 1][1];
+}
+
 // Completion source for node/function names and parameters
 function loomletCompletionSource(context, nodeTypes = {}) {
   const nodeNames = createNodeTypeNameSet(nodeTypes);
@@ -157,6 +165,28 @@ function loomletCompletionSource(context, nodeTypes = {}) {
 
   const word = before.text.toLowerCase();
   const start = before.from;
+
+  // Check if we're inside a function call
+  const docText = context.state.doc.toString();
+  const line = context.state.doc.lineAt(context.pos);
+  const textBeforeOnLine = line.text.slice(0, context.pos - line.from);
+  const hasOpenParenOnLine = textBeforeOnLine.includes('(');
+
+  // Try parameter completion if we're inside a function call
+  if (hasOpenParenOnLine) {
+    const callName = findNearestCallNameBefore(docText, context.pos);
+    if (callName) {
+      const paramOptions = getParamCompletionOptionsForNode(nodeTypes, callName)
+        .filter((option) => option.label.toLowerCase().startsWith(word));
+
+      if (paramOptions.length > 0) {
+        return {
+          from: start,
+          options: paramOptions
+        };
+      }
+    }
+  }
 
   const completions = [];
 
@@ -226,6 +256,8 @@ export function getParamCompletionOptionsForNode(nodeTypes = {}, nodeName) {
     apply: `${name}: `
   }));
 }
+
+export { findNearestCallNameBefore };
 
 // Main export: return array of CodeMirror extensions
 export function loomletDslExtensions({ nodeTypes } = {}) {
