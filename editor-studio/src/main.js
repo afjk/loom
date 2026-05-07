@@ -395,6 +395,29 @@ function getSelectedEditorNode() {
   return state.editorModel.nodesById[selectedNodeId] || null;
 }
 
+function getSelectedNodeConnections() {
+  const state = store.getState();
+  const node = getSelectedEditorNode();
+
+  if (!node || !state.editorModel?.edgesById) {
+    return {
+      incoming: [],
+      outgoing: []
+    };
+  }
+
+  const edges = Object.values(state.editorModel.edgesById);
+
+  return {
+    incoming: edges.filter((edge) => edge.toNodeId === node.id),
+    outgoing: edges.filter((edge) => edge.fromNodeId === node.id)
+  };
+}
+
+function formatEdgeEndpoint(nodeId, port) {
+  return `${nodeId}.${port}`;
+}
+
 function setSelectedNodeId(nodeId) {
   const state = store.getState();
   if (nodeId && !state.editorModel?.nodesById[nodeId]) {
@@ -410,6 +433,60 @@ function setEditorError(message) {
     errors: [{ code: 'EDITOR_ERROR', message }]
   });
   renderErrors();
+}
+
+function renderConnectionItem(edge) {
+  const from = formatEdgeEndpoint(edge.fromNodeId, edge.fromPort);
+  const to = formatEdgeEndpoint(edge.toNodeId, edge.toPort);
+
+  return `
+    <div class="connection-item">
+      <div class="connection-label">
+        <span class="connection-endpoint">${escapeHtml(from)}</span>
+        <span class="connection-arrow">→</span>
+        <span class="connection-endpoint">${escapeHtml(to)}</span>
+      </div>
+      <button
+        class="btn connection-remove-btn"
+        data-remove-edge-id="${escapeHtml(edge.id)}"
+        title="Remove connection"
+      >
+        Remove
+      </button>
+    </div>
+  `;
+}
+
+function renderConnectionGroup(title, edges) {
+  if (!edges.length) {
+    return `
+      <div class="connection-group">
+        <div class="connection-group-title">${escapeHtml(title)}</div>
+        <div class="connection-empty">No ${escapeHtml(title.toLowerCase())} connections.</div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="connection-group">
+      <div class="connection-group-title">${escapeHtml(title)}</div>
+      <div class="connection-list">
+        ${edges.map(renderConnectionItem).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderConnectionsSection() {
+  const { incoming, outgoing } = getSelectedNodeConnections();
+
+  return `
+    <div class="inspector-section">
+      <div class="inspector-section-title">Connections</div>
+      ${renderConnectionGroup('Incoming', incoming)}
+      ${renderConnectionGroup('Outgoing', outgoing)}
+    </div>
+  `;
 }
 
 function renderInspector() {
@@ -468,6 +545,8 @@ function renderInspector() {
 
   html += `
       </div>
+
+      ${renderConnectionsSection()}
 
       <div class="inspector-section inspector-danger-section">
         <div class="inspector-label" style="margin-bottom: 8px;">Danger Zone:</div>
@@ -578,6 +657,15 @@ function attachInspectorActionListeners() {
     event.preventDefault();
     renameSelectedNode();
   });
+
+  elements.inspectorPanel
+    .querySelectorAll('[data-remove-edge-id]')
+    .forEach((button) => {
+      button.addEventListener('click', () => {
+        const edgeId = button.getAttribute('data-remove-edge-id');
+        removeConnection(edgeId);
+      });
+    });
 }
 
 async function deleteSelectedNode() {
@@ -596,6 +684,21 @@ async function deleteSelectedNode() {
     selectedNodeId = null;
     renderInspector();
   }
+}
+
+async function removeConnection(edgeId) {
+  if (!edgeId) return;
+
+  const state = store.getState();
+  if (!state.editorModel?.edgesById?.[edgeId]) {
+    setEditorError(`Connection '${edgeId}' does not exist`);
+    return;
+  }
+
+  await handleOperation({
+    type: 'removeEdge',
+    edgeId
+  });
 }
 
 function applyParamEdit(key, value) {
