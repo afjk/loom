@@ -529,7 +529,13 @@ cd editor-studio
 npm install
 npm run dev        # http://localhost:5173/
 npm run build      # Production build
-npm run test:unit  # Unit tests
+```
+
+テスト実行（repository root から）:
+
+```bash
+npm run test:unit      # Unit tests
+npm run test:browser   # Browser tests
 ```
 
 **UI 構成**
@@ -562,9 +568,9 @@ npm run test:unit  # Unit tests
 
 - **EditorModel が single source of truth**: Rete.js ノードエディタはビュー層
 - **Incremental rendering**: DSL apply 時、変更があったノード・接続のみ更新
-- レイアウト（パネルサイズ、ズーム、パン）をローカル保存して復元
+- レイアウト（下部パネル高さ、DSL/Node ペイン幅）をローカル保存して復元
 
-詳細は `editor-studio/src/` の実装と `test/loom-editor-studio.test.html` のテストを参照してください。
+詳細は `editor-studio/src/` の実装と `test/*.test.html` のブラウザテスト、および `npm run test:browser` を参照してください。
 
 ## デモの確認方法
 
