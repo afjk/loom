@@ -22,6 +22,60 @@ DSL → Source AST → GraphJSON → EditorModel → (将来) Rete 描画
       (将来) Rete 操作 → EditorModel → GraphJSON → Preview 実行
 ```
 
+## 表現レイヤーと役割
+
+Loomlet は、`.loom` のテキスト、ノードエディタ、ランタイム実行、ホスト連携を同じものとして無理に扱わず、用途ごとに複数の表現へ分けます。
+
+これは冗長に見えますが、それぞれに必要な情報が違うためです。
+
+```text
+DSL Source
+  ↓ parse
+Source AST
+  ↓ lower / normalize
+Graph AST
+  ↓ compile
+Runtime Graph
+  ↓ adapt
+Target Graph
+```
+
+Node Editor は `Graph AST` を表示・編集し、レイアウトや選択状態などの UI 情報は `Node Editor ViewModel` として別に持ちます。
+
+| 表現 | 主な役割 | 人間 | AI | ランタイム | ノードエディタ |
+|---|---|---:|---:|---:|---:|
+| DSL Source | `.loom` テキスト。人間・AI・Git が扱う正本 | ◎ | ◎ | × | △ |
+| Source AST | DSL の構文情報。コメント、raw literal、source range を保持 | × | △ | × | △ |
+| Graph AST | ノード、ポート、エッジ、params、source map を持つ編集向け中間表現 | ○ | ◎ | △ | ◎ |
+| Runtime Graph | 実行に必要な最小グラフ。評価器が読む形式 | △ | ○ | ◎ | △ |
+| Target Graph | Scene Sync / Unity / Web など各ホスト向けに変換された形式 | △ | ○ | host側 | △ |
+| Node Editor ViewModel | ノード位置、選択、zoom、pan など UI 状態 | △ | × | × | ◎ |
+
+### なぜ複数の表現が必要か
+
+`DSL Source` は人間と AI が読み書きしやすく、Git diff でも扱いやすい正本です。一方で、ランタイムがそのまま実行するには構文情報やコメントが多すぎます。
+
+`Source AST` は、DSL を安全に編集するための構文表現です。コメント、元の数値表記、名前付き引数、source range などを保持します。ノードエディタや AI が DSL を壊さずに書き換えるために使います。
+
+`Graph AST` は、ノードエディタと AI が構造を理解するための中間表現です。ノード、ポート、エッジ、params、source map を持ち、たとえば `math.sine` の `freq` だけを安全に変更する、といった編集を可能にします。
+
+`Runtime Graph` は、実行に必要な情報だけを持つ最小表現です。Loomlet runtime は基本的にこれを評価します。コメントやエディタ用情報は含めません。
+
+`Target Graph` は、Scene Sync、Unity、Web runtime など、実行先の世界に合わせた形式です。たとえば Scene Sync では Loomlet の Runtime Graph を Scene Sync behavior graph に変換して送信します。
+
+`Node Editor ViewModel` は、表示上の状態です。ノードの座標、選択状態、zoom、pan などはプログラムの意味とは別なので、DSL や Runtime Graph とは分離します。
+
+### AI とノードエディタの扱い
+
+AI が主に扱うのは `DSL Source` と `Graph AST` です。
+
+- 実際に編集する正本は `DSL Source`
+- 構造理解や編集計画には `Graph AST`
+- 実行確認には `Runtime Graph` / `Target Graph`
+- UI 状態である `Node Editor ViewModel` は基本的に AI には扱わせない
+
+この分離により、人間、AI、ノードエディタ、ランタイムが同じ Loomlet プログラムを扱いながら、それぞれに適した形式を使えます。
+
 ## Node categories
 
 | Category | 説明 | 例 |
