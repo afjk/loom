@@ -175,14 +175,99 @@ t |> sine(freq: 0.3) |> map(inMin: -1, inMax: 1, outMin: 100, outMax: 700)
 
 ### render 文
 
-トップレベルに1つだけ書ける特殊な文です。エディタのキャンバス描画を設定します。
+`render` は通常のノードではなく、Editor Studio / Node Editor の Canvas Preview に何を描くかを指定するための特殊な文です。
+Scene Sync 上の object を操作する命令ではありません。
 
-```
-render point(x: mapX, y: mapY, color: "#00ff00", trail: 0.05)
-render bar(width: widthMap, color: "#00ccff", height: 40)
+compile 後は `graph.render` のような Preview 用設定に変換され、Canvas の描画ループで参照されます。
+
+`render` は 1 ファイルにつき 1 つだけ書く想定です。
+複数書いた場合の挙動には依存しないでください。
+
+#### 対応している render type
+
+現在対応している render type は以下です。
+
+- `point`
+- `bar`
+
+`circle`, `rect`, `text`, `image`, `model` などはまだ未対応です。
+
+#### 引数は名前付きで書く
+
+`render` のすべての引数は名前付きで指定する必要があります。
+
+```loom
+render point(x: x, y: y)
 ```
 
-`point` と `bar` は Loom ノードではなく、エディタの描画設定に変換されます。
+以下はエラーになります。
+
+```loom
+render point(x, y)
+```
+
+#### `render point(...)`
+
+Canvas 上に点を描画します。
+
+```loom
+render point(x: x, y: y, color: "#00ff00", trail: 0.05)
+```
+
+| 引数 | 必須 | 型 | 説明 |
+|---|---|---|---|
+| `x` | yes | number / node reference | 点の X 座標 |
+| `y` | yes | number / node reference | 点の Y 座標 |
+| `color` | no | string | 点の色。省略時は `#00ff00` |
+| `trail` | no | number | 残像の強さ。省略時は `0.1` |
+
+`trail` は前フレームをどの程度消すかを表します。
+`0` に近いほど軌跡が長く残り、`1` に近いほどすぐ消えます。
+実装上は `rgba(0, 0, 0, trail)` で画面全体を塗ることで残像効果を出しています。
+`trail: 0` を指定すると毎フレームCanvas全体をクリアします。
+
+#### `render bar(...)`
+
+Canvas 左端から横方向に伸びるバーを描画します。
+
+```loom
+render bar(width: width, color: "#00ccff", height: 40, y: 240)
+```
+
+| 引数 | 必須 | 型 | 説明 |
+|---|---|---|---|
+| `width` | yes | number / node reference | バーの幅 |
+| `color` | no | string | バーの色。省略時は `#00ccff` |
+| `height` | no | number | バーの高さ。省略時は `40` |
+| `y` | no | number / node reference | バーの Y 座標。省略時は Canvas 中央 |
+
+- `bar` は現在 X=0 から右方向に描画されます
+- `bar` の `trail` は現在 DSL から指定できません（常に `0.1` 相当で描画されます）
+
+#### 例: point
+
+```loom
+t = clock()
+
+x = sine(t, freq: 0.2)
+  |> map(inMin: -1, inMax: 1, outMin: 100, outMax: 700)
+
+y = cosine(t, freq: 0.3)
+  |> map(inMin: -1, inMax: 1, outMin: 100, outMax: 500)
+
+render point(x: x, y: y, color: "#00ffcc", trail: 0.03)
+```
+
+#### 例: bar
+
+```loom
+t = clock()
+
+wave = sine(t, freq: 0.5)
+width = map(wave, inMin: -1, inMax: 1, outMin: 40, outMax: 700, clamp: true)
+
+render bar(width: width, color: "#80ed99", height: 60)
+```
 
 ### 改行と継続
 
