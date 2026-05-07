@@ -47,6 +47,66 @@ function createReteNode(editorNode, onControl) {
   return node;
 }
 
+// --- Snapshot / diff helpers ---
+
+function cloneEditorModelSnapshot(editorModel) {
+  return JSON.parse(JSON.stringify(editorModel));
+}
+
+function canPatchEditorModel(previous, next) {
+  if (!previous || !next) return false;
+  return true;
+}
+
+function getAddedNodeIds(previous, next) {
+  return next.order.filter((id) => !previous.nodesById[id]);
+}
+
+function getRemovedNodeIds(previous, next) {
+  return previous.order.filter((id) => !next.nodesById[id]);
+}
+
+function getCommonNodeIds(previous, next) {
+  return next.order.filter((id) => previous.nodesById[id] && next.nodesById[id]);
+}
+
+function getAddedEdgeIds(previous, next) {
+  return Object.keys(next.edgesById || {}).filter((id) => !previous.edgesById?.[id]);
+}
+
+function getRemovedEdgeIds(previous, next) {
+  return Object.keys(previous.edgesById || {}).filter((id) => !next.edgesById?.[id]);
+}
+
+function shouldRecreateNode(previousNode, nextNode) {
+  if (previousNode.type !== nextNode.type) return true;
+  if (previousNode.category !== nextNode.category) return true;
+
+  const prevParamKeys = Object.keys(previousNode.params || {}).sort();
+  const nextParamKeys = Object.keys(nextNode.params || {}).sort();
+
+  if (prevParamKeys.join('\0') !== nextParamKeys.join('\0')) return true;
+
+  return false;
+}
+
+function sameParams(a, b) {
+  return JSON.stringify(a || {}) === JSON.stringify(b || {});
+}
+
+function samePosition(a, b) {
+  return a?.x === b?.x && a?.y === b?.y;
+}
+
+function findReteConnectionIdByEdgeId(connectionMap, edgeId) {
+  for (const [connectionId, mappedEdgeId] of connectionMap.entries()) {
+    if (mappedEdgeId === edgeId) return connectionId;
+  }
+  return null;
+}
+
+// --- NodeEditorView ---
+
 export class NodeEditorView {
   constructor(container, { onOperation, onError, onSelectNode } = {}) {
     this.container = container;
@@ -56,6 +116,7 @@ export class NodeEditorView {
     this.isRendering = false;
     this.connectionMap = new Map();
     this._renderLock = null;
+    this.currentEditorModel = null;
 
     this.editor = new NodeEditor();
     this.area = new AreaPlugin(this.container);
@@ -122,7 +183,68 @@ export class NodeEditorView {
     this.onOperation(translateToMoveNodeOp(data));
   }
 
-  async renderModel(editorModel) {
+  async _addReteNode(editorNode) {
+    const reteNode = createReteNode(editorNode, (op) => {
+      if (!this.isRendering) {
+        this.onOperation(op);
+      }
+    });
+
+    await this.editor.addNode(reteNode);
+
+    const pos = editorNode.position ?? { x: 0, y: 0 };
+    await this.area.translate(reteNode.id, { x: pos.x, y: pos.y });
+
+    return reteNode;
+  }
+
+  async _addReteConnection(edge) {
+    const sourceNode = this.editor.getNode(edge.fromNodeId);
+    const targetNode = this.editor.getNode(edge.toNodeId);
+
+    if (!sourceNode || !targetNode) return false;
+
+    try {
+      const conn = new ClassicPreset.Connection(
+        sourceNode,
+        edge.fromPort,
+        targetNode,
+        edge.toPort
+      );
+
+      await this.editor.addConnection(conn);
+      this.connectionMap.set(conn.id, edge.id);
+      return true;
+    } catch (e) {
+      console.warn('renderModel: skipping connection', edge.id, e.message);
+      return false;
+    }
+  }
+
+  async _removeReteConnectionByEdgeId(edgeId) {
+    const connectionId = findReteConnectionIdByEdgeId(this.connectionMap, edgeId);
+    if (!connectionId) return false;
+
+    const connection = this.editor.getConnection(connectionId);
+    if (!connection) {
+      this.connectionMap.delete(connectionId);
+      return false;
+    }
+
+    await this.editor.removeConnection(connection.id);
+    this.connectionMap.delete(connectionId);
+    return true;
+  }
+
+  async _removeReteNode(nodeId) {
+    const node = this.editor.getNode(nodeId);
+    if (!node) return false;
+
+    await this.editor.removeNode(nodeId);
+    return true;
+  }
+
+  async _renderModelFull(editorModel) {
     if (this._renderLock) {
       await this._renderLock;
     }
@@ -138,29 +260,97 @@ export class NodeEditorView {
       for (const nodeId of editorModel.order) {
         const node = editorModel.nodesById[nodeId];
         if (!node) continue;
-        const reteNode = createReteNode(node, (op) => {
-          if (!this.isRendering) {
-            this.onOperation(op);
-          }
-        });
-        await this.editor.addNode(reteNode);
-        const pos = node.position ?? { x: 0, y: 0 };
-        await this.area.translate(reteNode.id, { x: pos.x, y: pos.y });
+        await this._addReteNode(node);
       }
 
       for (const edge of Object.values(editorModel.edgesById)) {
-        const sourceNode = this.editor.getNode(edge.fromNodeId);
-        const targetNode = this.editor.getNode(edge.toNodeId);
-        if (!sourceNode || !targetNode) continue;
-        try {
-          const conn = new ClassicPreset.Connection(
-            sourceNode, edge.fromPort,
-            targetNode, edge.toPort
-          );
-          await this.editor.addConnection(conn);
-          this.connectionMap.set(conn.id, edge.id);
-        } catch (e) {
-          console.warn('renderModel: skipping connection', edge.id, e.message);
+        await this._addReteConnection(edge);
+      }
+    } finally {
+      this.isRendering = false;
+      resolve();
+      this._renderLock = null;
+    }
+  }
+
+  async _patchModel(previous, next) {
+    if (this._renderLock) {
+      await this._renderLock;
+    }
+
+    let resolve;
+    this._renderLock = new Promise(r => { resolve = r; });
+    this.isRendering = true;
+
+    try {
+      const removedNodeIds = getRemovedNodeIds(previous, next);
+      const addedNodeIds = getAddedNodeIds(previous, next);
+      const commonNodeIds = getCommonNodeIds(previous, next);
+
+      const recreateNodeIds = new Set();
+
+      for (const nodeId of commonNodeIds) {
+        const prevNode = previous.nodesById[nodeId];
+        const nextNode = next.nodesById[nodeId];
+
+        if (
+          shouldRecreateNode(prevNode, nextNode) ||
+          !sameParams(prevNode.params, nextNode.params)
+        ) {
+          recreateNodeIds.add(nodeId);
+        }
+      }
+
+      const removedEdgeIds = new Set(getRemovedEdgeIds(previous, next));
+      const addedEdgeIds = new Set(getAddedEdgeIds(previous, next));
+
+      for (const edge of Object.values(previous.edgesById || {})) {
+        if (
+          removedNodeIds.includes(edge.fromNodeId) ||
+          removedNodeIds.includes(edge.toNodeId) ||
+          recreateNodeIds.has(edge.fromNodeId) ||
+          recreateNodeIds.has(edge.toNodeId)
+        ) {
+          removedEdgeIds.add(edge.id);
+        }
+      }
+
+      for (const edgeId of removedEdgeIds) {
+        await this._removeReteConnectionByEdgeId(edgeId);
+      }
+
+      for (const nodeId of removedNodeIds) {
+        await this._removeReteNode(nodeId);
+      }
+
+      for (const nodeId of recreateNodeIds) {
+        await this._removeReteNode(nodeId);
+        await this._addReteNode(next.nodesById[nodeId]);
+      }
+
+      for (const nodeId of addedNodeIds) {
+        await this._addReteNode(next.nodesById[nodeId]);
+      }
+
+      for (const nodeId of commonNodeIds) {
+        if (recreateNodeIds.has(nodeId)) continue;
+
+        const prevNode = previous.nodesById[nodeId];
+        const nextNode = next.nodesById[nodeId];
+
+        if (!samePosition(prevNode.position, nextNode.position)) {
+          const pos = nextNode.position ?? { x: 0, y: 0 };
+          await this.area.translate(nodeId, { x: pos.x, y: pos.y });
+        }
+      }
+
+      for (const edge of Object.values(next.edgesById || {})) {
+        if (
+          addedEdgeIds.has(edge.id) ||
+          recreateNodeIds.has(edge.fromNodeId) ||
+          recreateNodeIds.has(edge.toNodeId)
+        ) {
+          await this._addReteConnection(edge);
         }
       }
     } finally {
@@ -170,8 +360,33 @@ export class NodeEditorView {
     }
   }
 
+  async renderModel(editorModel, { force = false } = {}) {
+    if (force || !this.currentEditorModel) {
+      await this._renderModelFull(editorModel);
+      this.currentEditorModel = cloneEditorModelSnapshot(editorModel);
+      return;
+    }
+
+    const canPatch = canPatchEditorModel(this.currentEditorModel, editorModel);
+    if (!canPatch) {
+      await this._renderModelFull(editorModel);
+      this.currentEditorModel = cloneEditorModelSnapshot(editorModel);
+      return;
+    }
+
+    try {
+      await this._patchModel(this.currentEditorModel, editorModel);
+    } catch (error) {
+      console.warn('incremental render failed; falling back to full render', error);
+      await this._renderModelFull(editorModel);
+    }
+
+    this.currentEditorModel = cloneEditorModelSnapshot(editorModel);
+  }
+
   destroy() {
     this.area.destroy();
     this.container.innerHTML = '';
+    this.currentEditorModel = null;
   }
 }
