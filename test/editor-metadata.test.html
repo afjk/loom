@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Editor Metadata Tests</title>
+</head>
+<body>
+  <h1>Editor Metadata Tests</h1>
+  <div id="results"></div>
+  <script type="module">
+    import {
+      extractEditorMetadataFromDsl,
+      appendEditorMetadataToDsl,
+      createEditorLayoutMetadata,
+      applyLayoutMetadataToEditorModel
+    } from "../editor-studio/src/editor-metadata.js";
+
+    const results = [];
+    function test(name, fn) { results.push({ name, fn }); }
+    function assert(cond, msg) { if (!cond) throw new Error(msg || 'assertion failed'); }
+    function assertEqual(a, b, msg) {
+      const av = JSON.stringify(a);
+      const bv = JSON.stringify(b);
+      if (av !== bv) throw new Error(msg || `expected ${bv}, got ${av}`);
+    }
+
+    // extractEditorMetadataFromDsl tests
+    test('extractEditorMetadataFromDsl: extracts metadata from DSL', () => {
+      const dsl = `t = clock()
+wave = sine(t, freq: 0.35)
+render bar(width: wave)
+
+# @loomlet.editor {"version":1,"layout":{"nodes":{"wave":{"x":120,"y":80}}}}`;
+
+      const { textWithoutMetadata, metadata } = extractEditorMetadataFromDsl(dsl);
+
+      assert(textWithoutMetadata.includes('t = clock()'), 'text should contain original code');
+      assert(!textWithoutMetadata.includes('@loomlet.editor'), 'text should not contain metadata');
+      assertEqual(metadata.version, 1, 'metadata version');
+      assertEqual(metadata.layout.nodes.wave, { x: 120, y: 80 }, 'node positions');
+    });
+
+    test('extractEditorMetadataFromDsl: returns null metadata if not present', () => {
+      const dsl = `t = clock()
+wave = sine(t, freq: 0.35)
+render bar(width: wave)`;
+
+      const { textWithoutMetadata, metadata } = extractEditorMetadataFromDsl(dsl);
+
+      assert(metadata === null, 'metadata should be null');
+      assertEqual(textWithoutMetadata, dsl, 'text should be unchanged');
+    });
+
+    test('extractEditorMetadataFromDsl: handles invalid metadata gracefully', () => {
+      const dsl = `t = clock()
+# @loomlet.editor {invalid json}`;
+
+      const { textWithoutMetadata, metadata } = extractEditorMetadataFromDsl(dsl);
+
+      assert(metadata === null, 'metadata should be null for invalid JSON');
+      assertEqual(textWithoutMetadata, dsl, 'text should be unchanged');
+    });
+
+    test('extractEditorMetadataFromDsl: only extracts from end of file', () => {
+      const dsl = `t = clock()
+# @loomlet.editor {"version":1}
+wave = sine(t, freq: 0.35)`;
+
+      const { metadata } = extractEditorMetadataFromDsl(dsl);
+
+      assert(metadata === null, 'metadata in middle should not be extracted');
+    });
+
+    // appendEditorMetadataToDsl tests
+    test('appendEditorMetadataToDsl: appends metadata to DSL', () => {
+      const dsl = `t = clock()
+wave = sine(t, freq: 0.35)
+render bar(width: wave)`;
+      const metadata = { version: 1, layout: { nodes: { wave: { x: 120, y: 80 } } } };
+
+      const result = appendEditorMetadataToDsl(dsl, metadata);
+
+      assert(result.includes('# @loomlet.editor'), 'should contain metadata marker');
+      assert(result.includes('"version":1'), 'should contain version');
+      assert(result.includes('"x":120'), 'should contain x position');
+      assert(result.includes('"y":80'), 'should contain y position');
+    });
+
+    test('appendEditorMetadataToDsl: replaces existing metadata', () => {
+      const dsl = `t = clock()
+# @loomlet.editor {"version":1,"layout":{"nodes":{"wave":{"x":50,"y":50}}}}`;
+      const newMetadata = { version: 1, layout: { nodes: { wave: { x: 120, y: 80 } } } };
+
+      const result = appendEditorMetadataToDsl(dsl, newMetadata);
+
+      assert(result.includes('"x":120'), 'should have new x value');
+      assert(!result.includes('"x":50'), 'should not have old x value');
+    });
+
+    test('appendEditorMetadataToDsl: does not duplicate metadata', () => {
+      const dsl = `t = clock()
+# @loomlet.editor {"version":1}`;
+      const metadata = { version: 1, layout: { nodes: {} } };
+
+      const result = appendEditorMetadataToDsl(dsl, metadata);
+      const metadataCount = (result.match(/# @loomlet.editor/g) || []).length;
+
+      assert(metadataCount === 1, 'metadata should appear exactly once');
+    });
+
+    // createEditorLayoutMetadata tests
+    test('createEditorLayoutMetadata: creates metadata from editor model', () => {
+      const editorModel = {
+        nodesById: {
+          wave: { id: 'wave', type: 'sine', category: 'transform', position: { x: 120, y: 80 } },
+          t: { id: 't', type: 'clock', category: 'input', position: { x: 0, y: 0 } }
+        },
+        edgesById: {},
+        order: ['t', 'wave']
+      };
+
+      const metadata = createEditorLayoutMetadata(editorModel);
+
+      assertEqual(metadata.version, 1, 'version should be 1');
+      assertEqual(metadata.layout.nodes.wave, { x: 120, y: 80 }, 'wave position');
+      assertEqual(metadata.layout.nodes.t, { x: 0, y: 0 }, 't position');
+    });
+
+    test('createEditorLayoutMetadata: ignores nodes without valid positions', () => {
+      const editorModel = {
+        nodesById: {
+          wave: { id: 'wave', type: 'sine', category: 'transform', position: { x: 120, y: 80 } },
+          t: { id: 't', type: 'clock', category: 'input', position: null }
+        },
+        edgesById: {},
+        order: ['t', 'wave']
+      };
+
+      const metadata = createEditorLayoutMetadata(editorModel);
+
+      assertEqual(metadata.layout.nodes.wave, { x: 120, y: 80 }, 'wave should be included');
+      assert(!('t' in metadata.layout.nodes), 't should not be in metadata');
+    });
+
+    test('createEditorLayoutMetadata: handles empty editor model', () => {
+      const metadata = createEditorLayoutMetadata({});
+
+      assertEqual(metadata, { version: 1, layout: { nodes: {} } }, 'empty model');
+    });
+
+    // applyLayoutMetadataToEditorModel tests
+    test('applyLayoutMetadataToEditorModel: applies positions from metadata', () => {
+      const editorModel = {
+        nodesById: {
+          wave: { id: 'wave', type: 'sine', category: 'transform', position: { x: 0, y: 0 } },
+          t: { id: 't', type: 'clock', category: 'input', position: { x: 0, y: 0 } }
+        },
+        edgesById: {},
+        order: ['t', 'wave']
+      };
+      const metadata = {
+        version: 1,
+        layout: {
+          nodes: {
+            wave: { x: 120, y: 80 },
+            t: { x: 10, y: 20 }
+          }
+        }
+      };
+
+      const result = applyLayoutMetadataToEditorModel(editorModel, metadata);
+
+      assertEqual(result.nodesById.wave.position, { x: 120, y: 80 }, 'wave position');
+      assertEqual(result.nodesById.t.position, { x: 10, y: 20 }, 't position');
+    });
+
+    test('applyLayoutMetadataToEditorModel: preserves positions for non-matching ids', () => {
+      const editorModel = {
+        nodesById: {
+          wave: { id: 'wave', type: 'sine', category: 'transform', position: { x: 50, y: 50 } },
+          t: { id: 't', type: 'clock', category: 'input', position: { x: 0, y: 0 } }
+        },
+        edgesById: {},
+        order: ['t', 'wave']
+      };
+      const metadata = {
+        version: 1,
+        layout: {
+          nodes: {
+            wave: { x: 120, y: 80 }
+          }
+        }
+      };
+
+      const result = applyLayoutMetadataToEditorModel(editorModel, metadata);
+
+      assertEqual(result.nodesById.wave.position, { x: 120, y: 80 }, 'wave position from metadata');
+      assertEqual(result.nodesById.t.position, { x: 0, y: 0 }, 't position preserved');
+    });
+
+    test('applyLayoutMetadataToEditorModel: ignores metadata for deleted nodes', () => {
+      const editorModel = {
+        nodesById: {
+          wave: { id: 'wave', type: 'sine', category: 'transform', position: { x: 0, y: 0 } }
+        },
+        edgesById: {},
+        order: ['wave']
+      };
+      const metadata = {
+        version: 1,
+        layout: {
+          nodes: {
+            wave: { x: 120, y: 80 },
+            deleted: { x: 200, y: 200 }
+          }
+        }
+      };
+
+      const result = applyLayoutMetadataToEditorModel(editorModel, metadata);
+
+      assertEqual(result.nodesById.wave.position, { x: 120, y: 80 }, 'wave position');
+      assert(!('deleted' in result.nodesById), 'deleted should not be in result');
+    });
+
+    async function run() {
+      let pass = 0; let fail = 0; const failures = [];
+      for (const t of results) {
+        try { await t.fn(); pass++; }
+        catch (e) { fail++; failures.push({ name: t.name, error: e.message }); }
+      }
+      window.__loomTestResults = { pass, fail, failures };
+      const html = `<strong>${pass} passed, ${fail} failed</strong>`;
+      if (failures.length > 0) {
+        const failureHtml = failures.map(f => `<div style="color:red;"><strong>${f.name}</strong>: ${f.error}</div>`).join('');
+        document.getElementById('results').innerHTML = html + failureHtml;
+      } else {
+        document.getElementById('results').innerHTML = html;
+      }
+    }
+    run();
+  </script>
+</body>
+</html>
