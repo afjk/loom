@@ -8,7 +8,6 @@ import { parseDSLToAST, compileToGraph } from '../../src/loom-dsl.js';
 import {
   graphToEditorModel,
   editorModelToGraph,
-  applyEditorOperation,
   applyNodeEditorOperationState
 } from '../../src/node-editor-core.js';
 import { graphToCanonicalDSL } from './canonical-dsl.js';
@@ -29,6 +28,7 @@ let nodeEditor = null;
 let engine = null;
 let animationFrameId = null;
 let panelsVisible = true;
+let selectedNodeId = null;
 
 const elements = {
   dslEditorHost: document.getElementById('dsl-editor-host'),
@@ -36,6 +36,7 @@ const elements = {
   previewCanvas: document.getElementById('preview-canvas'),
   graphJson: document.getElementById('graph-json'),
   errorsList: document.getElementById('errors-list'),
+  inspectorPanel: document.getElementById('inspector-panel'),
   applyDslBtn: document.getElementById('applyDslBtn'),
   generateDslBtn: document.getElementById('generateDslBtn'),
   runPreviewBtn: document.getElementById('runPreviewBtn'),
@@ -103,14 +104,18 @@ async function applyDsl() {
 
   if (parseErrors.length) {
     store.setState({ errors: parseErrors });
+    selectedNodeId = null;
     renderErrors();
+    renderInspector();
     return;
   }
 
   const { graph, errors: compileErrors } = compileToGraph(ast);
   if (compileErrors.length) {
     store.setState({ errors: compileErrors });
+    selectedNodeId = null;
     renderErrors();
+    renderInspector();
     return;
   }
 
@@ -124,9 +129,11 @@ async function applyDsl() {
     errors: []
   });
 
+  selectedNodeId = null;
   await nodeEditor?.renderModel(editorModel);
   renderGraphJSON(graph);
   renderErrors();
+  renderInspector();
   runPreview(graph);
 }
 
@@ -146,6 +153,7 @@ function generateDsl() {
 
   renderGraphJSON(graph);
   renderErrors();
+  renderInspector();
   runPreview(graph);
 }
 
@@ -162,6 +170,164 @@ function renderErrors() {
     return `<div class="error-item"><strong>${err.code || 'ERROR'}${line}${col}</strong>: ${err.message}</div>`;
   }).join('');
   elements.errorsList.innerHTML = html || '<div class="error-item">No errors</div>';
+}
+
+function getSelectedEditorNode() {
+  const state = store.getState();
+  if (!selectedNodeId || !state.editorModel) return null;
+  return state.editorModel.nodesById[selectedNodeId] || null;
+}
+
+function setSelectedNodeId(nodeId) {
+  const state = store.getState();
+  if (nodeId && !state.editorModel?.nodesById[nodeId]) {
+    selectedNodeId = null;
+  } else {
+    selectedNodeId = nodeId || null;
+  }
+  renderInspector();
+}
+
+function setEditorError(message) {
+  store.setState({
+    errors: [{ code: 'EDITOR_ERROR', message }]
+  });
+  renderErrors();
+}
+
+function renderInspector() {
+  const panel = elements.inspectorPanel;
+  const node = getSelectedEditorNode();
+
+  if (!panel) return;
+
+  if (!node) {
+    panel.innerHTML = `
+      <div class="inspector-empty">
+        Select a node to edit its literal params.
+      </div>
+    `;
+    return;
+  }
+
+  let html = `
+    <div class="inspector-content">
+      <div class="inspector-section">
+        <div class="inspector-row">
+          <div class="inspector-label">ID:</div>
+          <div class="inspector-value">${escapeHtml(node.id)}</div>
+        </div>
+        <div class="inspector-row">
+          <div class="inspector-label">Type:</div>
+          <div class="inspector-value">${escapeHtml(node.type)}</div>
+        </div>
+        <div class="inspector-row">
+          <div class="inspector-label">Category:</div>
+          <div class="inspector-value">${escapeHtml(node.category)}</div>
+        </div>
+      </div>
+
+      <div class="inspector-section">
+        <div class="inspector-label" style="margin-bottom: 8px;">Params:</div>
+  `;
+
+  const params = node.params || {};
+  if (Object.keys(params).length === 0) {
+    html += '<div class="inspector-empty" style="padding: 0;">No params</div>';
+  } else {
+    for (const [key, value] of Object.entries(params)) {
+      html += renderParamInput(key, value);
+    }
+  }
+
+  html += `
+      </div>
+    </div>
+  `;
+
+  panel.innerHTML = html;
+  attachParamListeners();
+}
+
+function renderParamInput(key, value) {
+  const valueType = typeof value;
+  let input = '';
+
+  if (valueType === 'number') {
+    input = `<input type="number" class="inspector-param-input" data-param-key="${escapeHtml(key)}" value="${value}">`;
+  } else if (valueType === 'boolean') {
+    const checked = value ? 'checked' : '';
+    input = `<input type="checkbox" class="inspector-param-input" data-param-key="${escapeHtml(key)}" ${checked}>`;
+  } else if (valueType === 'string') {
+    input = `<input type="text" class="inspector-param-input" data-param-key="${escapeHtml(key)}" value="${escapeHtml(value)}">`;
+  } else {
+    const jsonStr = JSON.stringify(value, null, 2);
+    input = `<textarea class="inspector-param-input" data-param-key="${escapeHtml(key)}">${escapeHtml(jsonStr)}</textarea>`;
+  }
+
+  return `
+    <div class="inspector-row">
+      <label class="inspector-label" for="param-${escapeHtml(key)}">${escapeHtml(key)}:</label>
+      <div style="flex: 1;">${input}</div>
+    </div>
+  `;
+}
+
+function attachParamListeners() {
+  const inputs = elements.inspectorPanel.querySelectorAll('.inspector-param-input');
+  inputs.forEach(input => {
+    const key = input.getAttribute('data-param-key');
+
+    if (input.type === 'checkbox') {
+      input.addEventListener('change', () => {
+        applyParamEdit(key, input.checked);
+      });
+    } else if (input.type === 'number') {
+      input.addEventListener('change', () => {
+        const value = Number(input.value);
+        if (!Number.isFinite(value)) {
+          setEditorError(`Invalid number for param '${key}'`);
+          return;
+        }
+        applyParamEdit(key, value);
+      });
+    } else if (input.tagName === 'TEXTAREA') {
+      input.addEventListener('change', () => {
+        try {
+          const value = JSON.parse(input.value);
+          applyParamEdit(key, value);
+        } catch (err) {
+          setEditorError(`Invalid JSON for param '${key}': ${err.message}`);
+        }
+      });
+    } else {
+      input.addEventListener('change', () => {
+        applyParamEdit(key, input.value);
+      });
+    }
+  });
+}
+
+function applyParamEdit(key, value) {
+  if (!selectedNodeId) return;
+
+  handleOperation({
+    type: 'updateParam',
+    id: selectedNodeId,
+    key,
+    value
+  });
+}
+
+function escapeHtml(str) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return String(str).replace(/[&<>"']/g, char => map[char]);
 }
 
 function runPreview(graph) {
@@ -305,6 +471,7 @@ async function handleOperation(operation) {
 
     renderGraphJSON(result.state.graph);
     renderErrors();
+    renderInspector();
     runPreview(result.state.graph);
     return;
   }
@@ -327,7 +494,8 @@ function init() {
     onError: (error) => {
       store.setState({ errors: [{ message: `Editor error: ${error.message}`, code: 'EDITOR_ERROR' }] });
       renderErrors();
-    }
+    },
+    onSelectNode: setSelectedNodeId
   });
 
   setupEventListeners();
