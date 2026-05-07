@@ -13,10 +13,45 @@ export function createNodeEditorState(graph) {
   };
 }
 
+function rewriteReferenceValue(value, oldId, newId) {
+  if (typeof value === 'string') {
+    if (value === oldId) return newId;
+    if (value.startsWith(`${oldId}.`)) {
+      return `${newId}${value.slice(oldId.length)}`;
+    }
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => rewriteReferenceValue(item, oldId, newId));
+  }
+
+  if (value && typeof value === 'object') {
+    const next = {};
+    for (const [key, child] of Object.entries(value)) {
+      next[key] = rewriteReferenceValue(child, oldId, newId);
+    }
+    return next;
+  }
+
+  return value;
+}
+
+function rewriteGraphReferencesForRename(graph, oldId, newId) {
+  return {
+    ...graph,
+    render: rewriteReferenceValue(graph.render, oldId, newId)
+  };
+}
+
 export function applyNodeEditorOperationState(state, operation) {
   try {
     const editorModel = applyEditorOperation(state.editorModel, operation);
-    const graph = editorModelToGraph(editorModel, state.graph);
+    let graph = editorModelToGraph(editorModel, state.graph);
+
+    if (operation.type === 'renameNode') {
+      graph = rewriteGraphReferencesForRename(graph, operation.id, operation.newId);
+    }
 
     return {
       state: {
