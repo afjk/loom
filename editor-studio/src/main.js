@@ -459,11 +459,19 @@ function renderInspector() {
 
   html += `
       </div>
+
+      <div class="inspector-section inspector-danger-section">
+        <div class="inspector-label" style="margin-bottom: 8px;">Danger Zone:</div>
+        <button id="delete-selected-node-btn" class="btn btn-danger">
+          Delete Node
+        </button>
+      </div>
     </div>
   `;
 
   panel.innerHTML = html;
   attachParamListeners();
+  attachInspectorActionListeners();
 }
 
 function renderParamInput(key, value) {
@@ -523,6 +531,29 @@ function attachParamListeners() {
       });
     }
   });
+}
+
+function attachInspectorActionListeners() {
+  const deleteButton = elements.inspectorPanel.querySelector('#delete-selected-node-btn');
+  deleteButton?.addEventListener('click', deleteSelectedNode);
+}
+
+async function deleteSelectedNode() {
+  const node = getSelectedEditorNode();
+  if (!node) return;
+
+  const message = `Delete node '${node.id}'? Connected edges will also be removed.`;
+  if (!window.confirm(message)) return;
+
+  const result = await handleOperation({
+    type: 'removeNode',
+    id: node.id
+  });
+
+  if (result && !result.error) {
+    selectedNodeId = null;
+    renderInspector();
+  }
 }
 
 function applyParamEdit(key, value) {
@@ -735,6 +766,30 @@ async function addNodeFromPalette(typeName) {
   setSelectedNodeId(id);
 }
 
+function isTextEditingTarget(target) {
+  if (!target) return false;
+
+  const tagName = target.tagName;
+  if (tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT') {
+    return true;
+  }
+
+  if (target.isContentEditable) return true;
+
+  if (target.closest?.('.cm-editor')) return true;
+
+  return false;
+}
+
+function handleGlobalKeyDown(event) {
+  if (event.key !== 'Delete' && event.key !== 'Backspace') return;
+  if (!selectedNodeId) return;
+  if (isTextEditingTarget(event.target)) return;
+
+  event.preventDefault();
+  deleteSelectedNode();
+}
+
 function setupEventListeners() {
   elements.applyDslBtn.addEventListener('click', applyDsl);
   elements.generateDslBtn.addEventListener('click', generateDsl);
@@ -765,11 +820,12 @@ function setupEventListeners() {
   elements.nodePaletteCategory?.addEventListener('change', renderNodePalette);
 
   window.addEventListener('resize', resizePreviewCanvas);
+  window.addEventListener('keydown', handleGlobalKeyDown);
 }
 
 async function handleOperation(operation) {
   const state = store.getState();
-  if (!state.editorModel) return;
+  if (!state.editorModel) return null;
 
   const result = applyNodeEditorOperationState(
     {
@@ -787,13 +843,17 @@ async function handleOperation(operation) {
       await nodeEditor?.renderModel(result.state.editorModel);
     }
 
+    if (selectedNodeId && !result.state.editorModel.nodesById[selectedNodeId]) {
+      selectedNodeId = null;
+    }
+
     renderGraphJSON(result.state.graph);
     renderErrors();
     renderInspector();
     runPreview(result.state.graph);
     hasUnsyncedDslText = false;
     setDirty(true);
-    return;
+    return result;
   }
 
   const currentModel = state.editorModel;
@@ -802,6 +862,7 @@ async function handleOperation(operation) {
   }
 
   renderErrors();
+  return result;
 }
 
 async function init() {
