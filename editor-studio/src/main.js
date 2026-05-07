@@ -1489,13 +1489,17 @@ function renderNodeListItem(node) {
   `;
 }
 
+function findNodeListItemById(nodeId) {
+  if (!elements.nodeList || !nodeId) return null;
+
+  return Array.from(elements.nodeList.querySelectorAll('[data-node-id]'))
+    .find((item) => item.getAttribute('data-node-id') === nodeId) || null;
+}
+
 function scrollSelectedNodeListItemIntoView() {
-  if (!elements.nodeList || !selectedNodeId) return;
+  if (!selectedNodeId) return;
 
-  const item = elements.nodeList.querySelector(
-    `[data-node-id="${CSS.escape(selectedNodeId)}"]`
-  );
-
+  const item = findNodeListItemById(selectedNodeId);
   item?.scrollIntoView({
     block: 'nearest',
     inline: 'nearest'
@@ -1550,7 +1554,7 @@ function renderNodeList() {
       if (nodeEditor?.focusNode) {
         try {
           await nodeEditor.focusNode(nodeId);
-          const item = list.querySelector(`[data-node-id="${CSS.escape(nodeId)}"]`);
+          const item = findNodeListItemById(nodeId);
           if (item) {
             item.classList.add('is-focused-pulse');
             setTimeout(() => {
