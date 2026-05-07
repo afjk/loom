@@ -34,7 +34,8 @@
     "loom": "node bin/loom.mjs",
     "test:cli": "node test/loom-cli.test.mjs",
     "test:repl": "node test/loom-repl-session.test.mjs && node test/loom-repl-cli.test.mjs",
-    "test:browser": "node ci/run-tests.mjs"
+    "test:browser": "node ci/run-tests.mjs",
+    "generate:vscode-metadata": "node scripts/generate-vscode-metadata.mjs"
   },
   "devDependencies": {
     "http-server": "^14.1.1",
