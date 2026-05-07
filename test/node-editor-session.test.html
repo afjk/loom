@@ -135,6 +135,29 @@
       assert(resultModelStr === originalModelStr, 'editorModel should not be mutated');
     });
 
+    test('Test 5: removeNode removes the node and connected edges', () => {
+      const graph = sampleGraph();
+      const state = createNodeEditorState(graph);
+
+      const result = applyNodeEditorOperationState(state, {
+        type: 'removeNode',
+        id: 'wave'
+      });
+
+      if (result.error) throw result.error;
+      if (result.state.editorModel.nodesById.wave) {
+        throw new Error('wave node should be removed');
+      }
+
+      const remainingEdges = Object.values(result.state.editorModel.edgesById);
+      if (remainingEdges.length !== 0) {
+        throw new Error(`Expected connected edges to be removed, got ${remainingEdges.length}`);
+      }
+
+      assert(result.state.editorModel.nodesById.t, 't node should still exist');
+      assert(result.state.editorModel.nodesById.out, 'out node should still exist');
+    });
+
     async function run() {
       let pass = 0; let fail = 0; const failures = [];
       for (const t of results) {
