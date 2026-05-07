@@ -485,6 +485,13 @@ function syncGraphToDslEditor({ markDirty = true, force = false } = {}) {
 
   setDslText(dsl);
 
+  store.setState({
+    sourceText: dsl,
+    errors: []
+  });
+
+  renderErrors();
+
   hasUnsyncedDslText = false;
   latestSuccessfulDslText = dsl;
 
