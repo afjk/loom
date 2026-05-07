@@ -1,6 +1,6 @@
 # Tour: FizzBuzz
-# Goal: Draft map + branching workflow over a generated integer range.
-# Status: draft
+# Goal: Use functions, ranges, map, conditionals, and text conversion.
+# Status: runnable
 # Run:
 #   loomlet run examples/tour/language/07-fizzbuzz.loom
 # Requires:
@@ -9,14 +9,10 @@
 #   - logic.equals
 #   - logic.and
 #   - logic.select
+#   - math.mod
 #   - text.stringify
-# TODO NODE: list.range(start, end:)
-# TODO NODE: list.map(list, fn:)
-# TODO NODE: logic.equals(value, other:)
-# TODO NODE: logic.and(a, b)
-# TODO NODE: logic.select(condition, whenTrue:, whenFalse:)
-# TODO NODE: text.stringify(value)
-# TODO LANGUAGE: function definitions
+#   - text.join
+#   - console.log
 
 import list
 import logic
@@ -24,23 +20,11 @@ import math
 import text
 import console
 
+isMultipleOf = fn(n, divisor) => logic.equals(math.mod(n, divisor), other: 0)
+
+fizzbuzz = fn(n) => logic.select(logic.and(isMultipleOf(n, 3), isMultipleOf(n, 5)), whenTrue: "FizzBuzz", whenFalse: logic.select(isMultipleOf(n, 3), whenTrue: "Fizz", whenFalse: logic.select(isMultipleOf(n, 5), whenTrue: "Buzz", whenFalse: text.stringify(n))))
+
 numbers = list.range(1, end: 100)
-
-fizzbuzz = fn(n) =>
-  isFizz = logic.equals(math.mod(n, 3), other: 0)
-  isBuzz = logic.equals(math.mod(n, 5), other: 0)
-  isFizzBuzz = logic.and(isFizz, isBuzz)
-
-  logic.select(isFizzBuzz,
-    whenTrue: "FizzBuzz",
-    whenFalse: logic.select(isFizz,
-      whenTrue: "Fizz",
-      whenFalse: logic.select(isBuzz,
-        whenTrue: "Buzz",
-        whenFalse: text.stringify(n)
-      )
-    )
-  )
-
 results = list.map(numbers, fn: fizzbuzz)
-console.log(results)
+
+console.log(text.join(results, separator: "\n"))

@@ -419,12 +419,12 @@ function isLoomletTruthy(value) {
   return Boolean(value);
 }
 
-// Keep existing tour/test lambda syntax working while applying stricter argument
-// validation to node calls evaluated inside function bodies.
-const FUNCTION_BODY_MULTI_POSITIONAL_COMPAT = new Set(['math.mod']);
+// Positional binary nodes are common enough to support with two positional
+// arguments in function bodies, even when they are not commutative.
+const POSITIONAL_BINARY_NODE_TYPES = new Set(['math.mod', 'math.add', 'math.subtract', 'math.multiply', 'math.divide', 'math.min', 'math.max', 'logic.and', 'logic.or']);
 
-function canUseMultiplePositionalArgsInFunctionBody(nodeName, nodeType) {
-  return Boolean(nodeType.commutative || FUNCTION_BODY_MULTI_POSITIONAL_COMPAT.has(nodeName));
+function canUsePositionalBinaryArgsInFunctionBody(nodeName, nodeType) {
+  return Boolean(nodeType.commutative || POSITIONAL_BINARY_NODE_TYPES.has(nodeName));
 }
 
 function evaluateLegacyFunctionExpr(expr, env, ctx) {
@@ -453,7 +453,7 @@ function evaluateLegacyFunctionExpr(expr, env, ctx) {
     if (nodeType.commutative && positionalArgs.length > 0 && namedArgs.length > 0) {
       throw new LoomError('MISSING_ARGUMENT_NAME', `Node '${expr.name}' is commutative: arguments must be all positional or all named`);
     }
-    if (!canUseMultiplePositionalArgsInFunctionBody(expr.name, nodeType) && positionalArgs.length > 1) {
+    if (!canUsePositionalBinaryArgsInFunctionBody(expr.name, nodeType) && positionalArgs.length > 1) {
       throw new LoomError('MISSING_ARGUMENT_NAME', `Argument at position 2 for '${expr.name}' requires a name`);
     }
 
