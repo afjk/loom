@@ -37,6 +37,7 @@ render bar(width: width, color: "#80ed99", height: 48)
 const BOTTOM_PANEL_HEIGHT_KEY = 'loomlet.editorStudio.bottomPanelHeight';
 const BOTTOM_PANEL_COLLAPSED_KEY = 'loomlet.editorStudio.bottomPanelCollapsed';
 const EDITOR_SPLIT_WIDTH_KEY = 'loomlet.editorStudio.editorSplitWidth';
+const ACTIVE_BOTTOM_TAB_KEY = 'loomlet.editorStudio.activeBottomTab';
 
 const MAX_HISTORY_ENTRIES = 100;
 const MOVE_HISTORY_COALESCE_MS = 250;
@@ -115,7 +116,10 @@ const elements = {
   editorPanels: document.querySelector('.editor-panels'),
   editorSplitResizeHandle: document.getElementById('editor-split-resize-handle'),
   undoBtn: document.getElementById('undo-btn'),
-  redoBtn: document.getElementById('redo-btn')
+  redoBtn: document.getElementById('redo-btn'),
+  dirtyStatus: document.getElementById('dirty-status'),
+  autoApplyStatusPill: document.getElementById('auto-apply-status-pill'),
+  autoSyncStatusPill: document.getElementById('auto-sync-status-pill')
 };
 
 function setPanelsVisible(visible) {
@@ -278,6 +282,35 @@ function saveEditorSplitLayout() {
   localStorage.setItem(EDITOR_SPLIT_WIDTH_KEY, String(dslPaneWidth));
 }
 
+function selectBottomTab(tabName) {
+  elements.tabBtns.forEach(b => b.classList.remove('active'));
+  elements.tabPanes.forEach(p => p.classList.remove('active'));
+
+  const button = document.querySelector(`[data-tab="${tabName}"]`);
+  const pane = document.getElementById(`${tabName}-tab`);
+
+  if (button) {
+    button.classList.add('active');
+  }
+  if (pane) {
+    pane.classList.add('active');
+  }
+
+  localStorage.setItem(ACTIVE_BOTTOM_TAB_KEY, tabName);
+}
+
+function loadActiveBottomTab() {
+  const savedTab = localStorage.getItem(ACTIVE_BOTTOM_TAB_KEY);
+  if (!savedTab) return;
+
+  const button = document.querySelector(`[data-tab="${savedTab}"]`);
+  const pane = document.getElementById(`${savedTab}-tab`);
+
+  if (!button || !pane) return;
+
+  selectBottomTab(savedTab);
+}
+
 function startEditorSplitResize(event) {
   isResizingEditorSplit = true;
   document.body.classList.add('resizing-editor-split');
@@ -376,6 +409,7 @@ function setDslText(text) {
 function setDirty(dirty) {
   isDirty = dirty;
   renderFileStatus();
+  renderDirtyStatus();
 }
 
 function renderFileStatus() {
@@ -413,6 +447,32 @@ function renderAutoApplyStatus(status = null) {
 
   elements.autoApplyStatus.textContent = 'Auto: on';
   elements.autoApplyStatus.className = 'auto-apply-status';
+}
+
+function renderDirtyStatus() {
+  if (!elements.dirtyStatus) return;
+
+  elements.dirtyStatus.textContent = isDirty ? 'Dirty' : 'Saved';
+  elements.dirtyStatus.classList.toggle('is-dirty', isDirty);
+  elements.dirtyStatus.classList.toggle('is-saved', !isDirty);
+}
+
+function renderAutoApplyStatusPill() {
+  if (!elements.autoApplyStatusPill) return;
+
+  elements.autoApplyStatusPill.textContent =
+    autoApplyDslEnabled ? 'Auto Apply ON' : 'Auto Apply OFF';
+
+  elements.autoApplyStatusPill.classList.toggle('is-on', autoApplyDslEnabled);
+}
+
+function renderAutoSyncStatusPill() {
+  if (!elements.autoSyncStatusPill) return;
+
+  elements.autoSyncStatusPill.textContent =
+    autoSyncGraphToDslEnabled ? 'Auto Sync ON' : 'Auto Sync OFF';
+
+  elements.autoSyncStatusPill.classList.toggle('is-on', autoSyncGraphToDslEnabled);
 }
 
 function scheduleAutoApplyDsl() {
@@ -796,7 +856,7 @@ function renderErrors() {
     const col = columnNumber ? `:${columnNumber}` : '';
     return `<div class="error-item"><strong>${err.code || 'ERROR'}${line}${col}</strong>: ${err.message}</div>`;
   }).join('');
-  elements.errorsList.innerHTML = html || '<div class="error-item">No errors</div>';
+  elements.errorsList.innerHTML = html || '<div class="empty-state">No errors</div>';
 
   if (dslEditor) {
     forceLinting(dslEditor);
@@ -911,8 +971,8 @@ function renderInspector() {
 
   if (!node) {
     panel.innerHTML = `
-      <div class="inspector-empty">
-        Select a node to edit its literal params.
+      <div class="empty-state">
+        Select a node to edit its parameters.
       </div>
     `;
     return;
@@ -1254,7 +1314,7 @@ function renderNodeList() {
 
   const state = store.getState();
   if (!state.editorModel) {
-    list.innerHTML = '<div class="node-list-empty">No nodes</div>';
+    list.innerHTML = '<div class="empty-state">No nodes in this graph.</div>';
     return;
   }
 
@@ -1275,7 +1335,7 @@ function renderNodeList() {
   });
 
   if (filtered.length === 0) {
-    list.innerHTML = '<div class="node-list-empty">No nodes matching filter</div>';
+    list.innerHTML = '<div class="empty-state">No matching nodes.</div>';
     return;
   }
 
@@ -1675,10 +1735,12 @@ function setupEventListeners() {
         autoApplyTimer = null;
       }
       renderAutoApplyStatus();
+      renderAutoApplyStatusPill();
       return;
     }
 
     renderAutoApplyStatus();
+    renderAutoApplyStatusPill();
 
     if (hasUnsyncedDslText) {
       scheduleAutoApplyDsl();
@@ -1687,6 +1749,7 @@ function setupEventListeners() {
 
   elements.autoSyncGraphToDslToggle?.addEventListener('change', () => {
     autoSyncGraphToDslEnabled = Boolean(elements.autoSyncGraphToDslToggle.checked);
+    renderAutoSyncStatusPill();
 
     if (autoSyncGraphToDslEnabled && !hasUnsyncedDslText) {
       syncGraphToDslEditor({ markDirty: false });
@@ -1696,10 +1759,7 @@ function setupEventListeners() {
   elements.tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       const tabName = btn.getAttribute('data-tab');
-      elements.tabBtns.forEach(b => b.classList.remove('active'));
-      elements.tabPanes.forEach(p => p.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById(`${tabName}-tab`)?.classList.add('active');
+      selectBottomTab(tabName);
     });
   });
 
@@ -1809,8 +1869,12 @@ async function init() {
   setupEventListeners();
   loadBottomPanelLayout();
   loadEditorSplitLayout();
+  loadActiveBottomTab();
   renderFileStatus();
+  renderDirtyStatus();
   renderAutoApplyStatus();
+  renderAutoApplyStatusPill();
+  renderAutoSyncStatusPill();
   renderUndoRedoState();
   renderNodePaletteCategories();
   renderNodePalette();
