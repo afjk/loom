@@ -133,4 +133,67 @@ await ensureModulesLoaded();
   assert.ok(diagnostics[0].type || diagnostics[0].code, 'Should have error type or code');
 }
 
+// Test range clamping for multi-line ranges
+{
+  const createMockDocument = (lines) => ({
+    lineCount: lines.length,
+    lineAt: (index) => ({ text: lines[index] || '' })
+  });
+
+  const { clampCoordinates } = require('../src/range-utils.js');
+
+  // Test: Multi-line range with short end line
+  {
+    const doc = createMockDocument(['very long start line', 'short', 'end']);
+    // Range from column 0 on line 0 to column 100 on line 1 (end line is only 5 chars)
+    const clamped = clampCoordinates(0, 0, 1, 100, doc);
+    assert.equal(clamped.startLine, 0, 'Start line should be 0');
+    assert.equal(clamped.startColumn, 0, 'Start column should be 0');
+    assert.equal(clamped.endLine, 1, 'End line should be 1');
+    assert.equal(clamped.endColumn, 5, 'End column should be clamped to end line length (5)');
+  }
+
+  // Test: Single-line range ensures minimum width
+  {
+    const doc = createMockDocument(['hello world']);
+    // Range from column 2 to column 2 (zero-width)
+    const clamped = clampCoordinates(0, 2, 0, 2, doc);
+    assert.equal(clamped.startLine, 0, 'Start line should be 0');
+    assert.equal(clamped.startColumn, 2, 'Start column should be 2');
+    assert.equal(clamped.endLine, 0, 'End line should be 0 (same line)');
+    assert.equal(clamped.endColumn, 3, 'End column should be at least start + 1');
+  }
+
+  // Test: Single-line range at end of document
+  {
+    const doc = createMockDocument(['line']);
+    // Range from column 0 to column 100 on same line (document only has 4 chars)
+    const clamped = clampCoordinates(0, 0, 0, 100, doc);
+    assert.equal(clamped.startLine, 0, 'Start line should be 0');
+    assert.equal(clamped.startColumn, 0, 'Start column should be 0');
+    assert.equal(clamped.endLine, 0, 'End line should be 0');
+    assert.equal(clamped.endColumn, 4, 'End column should be clamped to line length (4)');
+  }
+
+  // Test: Multi-line range within document bounds
+  {
+    const doc = createMockDocument(['first', 'middle', 'last']);
+    // Normal range from column 0 on line 0 to column 2 on line 2
+    const clamped = clampCoordinates(0, 0, 2, 2, doc);
+    assert.equal(clamped.startLine, 0, 'Start line should be 0');
+    assert.equal(clamped.startColumn, 0, 'Start column should be 0');
+    assert.equal(clamped.endLine, 2, 'End line should be 2');
+    assert.equal(clamped.endColumn, 2, 'End column should be preserved');
+  }
+
+  // Test: Range exceeds document bounds
+  {
+    const doc = createMockDocument(['short']);
+    // Range from column 0 on line 0 to column 10 on line 100
+    const clamped = clampCoordinates(0, 0, 100, 10, doc);
+    assert.equal(clamped.startLine, 0, 'Start line should be 0');
+    assert.equal(clamped.endLine, 0, 'End line should be clamped to last line (0)');
+  }
+}
+
 console.log('All diagnostics tests passed!');

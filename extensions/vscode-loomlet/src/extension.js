@@ -4,6 +4,7 @@ const vscode = require('vscode');
 const { getCompletionContext } = require('./completion-context');
 const { buildCompletions: buildRawCompletions, getIncludePlanned } = require('./completion-engine');
 const { isLoomletDocument, normalizeLoomletErrorLocation, collectLoomletDiagnosticItems, ensureModulesLoaded } = require('./diagnostics.js');
+const { clampCoordinates } = require('./range-utils.js');
 
 let nodePreviewPanel = null;
 let currentPreviewDocument = null;
@@ -336,12 +337,19 @@ function validateLoomletDocument(document, diagnosticCollection) {
 
 function diagnosticFromLoomletError(error, document) {
   const normalized = normalizeLoomletErrorLocation(error);
-  const range = clampRangeToDocument(
+  const clamped = clampCoordinates(
     normalized.startLine,
     normalized.startColumn,
     normalized.endLine,
     normalized.endColumn,
     document
+  );
+
+  const range = new vscode.Range(
+    clamped.startLine,
+    clamped.startColumn,
+    clamped.endLine,
+    clamped.endColumn
   );
 
   const diagnostic = new vscode.Diagnostic(
@@ -357,27 +365,6 @@ function diagnosticFromLoomletError(error, document) {
   }
 
   return diagnostic;
-}
-
-function clampRangeToDocument(startLine, startColumn, endLine, endColumn, document) {
-  const lineCount = document.lineCount;
-
-  // Clamp start position
-  const clampedStartLine = Math.max(0, Math.min(startLine, lineCount - 1));
-  const lineLength = document.lineAt(clampedStartLine).text.length;
-  const clampedStartColumn = Math.max(0, Math.min(startColumn, lineLength));
-
-  // Clamp end position
-  const clampedEndLine = Math.max(clampedStartLine, Math.min(endLine, lineCount - 1));
-  const endLineLength = document.lineAt(clampedEndLine).text.length;
-  const clampedEndColumn = Math.max(clampedStartColumn, Math.min(endColumn, endLineLength));
-
-  return new vscode.Range(
-    clampedStartLine,
-    clampedStartColumn,
-    clampedEndLine,
-    clampedEndColumn
-  );
 }
 
 module.exports = {
