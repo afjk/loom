@@ -162,6 +162,33 @@ export function editorModelToGraph(em, originalGraph = null) {
   return graph;
 }
 
+export function preserveEditorModelLayout(nextEditorModel, previousEditorModel) {
+  if (!previousEditorModel) return nextEditorModel;
+
+  const nodesById = {};
+  for (const [id, node] of Object.entries(nextEditorModel.nodesById || {})) {
+    const previousNode = previousEditorModel.nodesById?.[id];
+
+    if (
+      previousNode?.position &&
+      Number.isFinite(previousNode.position.x) &&
+      Number.isFinite(previousNode.position.y)
+    ) {
+      nodesById[id] = {
+        ...node,
+        position: { ...previousNode.position }
+      };
+    } else {
+      nodesById[id] = node;
+    }
+  }
+
+  return {
+    ...nextEditorModel,
+    nodesById
+  };
+}
+
 export function applyEditorOperation(em, op) {
   const next = {
     nodesById: { ...em.nodesById },
