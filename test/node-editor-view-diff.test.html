@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>NodeEditorView diff helpers テスト</title>
+</head>
+<body>
+  <h1>NodeEditorView diff helpers テスト</h1>
+  <div id="results"></div>
+  <script type="module">
+    // Pure helper functions mirrored from node-editor-view.js for isolated testing.
+
+    function getAddedNodeIds(previous, next) {
+      return next.order.filter((id) => !previous.nodesById[id]);
+    }
+
+    function getRemovedNodeIds(previous, next) {
+      return previous.order.filter((id) => !next.nodesById[id]);
+    }
+
+    function getCommonNodeIds(previous, next) {
+      return next.order.filter((id) => previous.nodesById[id] && next.nodesById[id]);
+    }
+
+    function getAddedEdgeIds(previous, next) {
+      return Object.keys(next.edgesById || {}).filter((id) => !previous.edgesById?.[id]);
+    }
+
+    function getRemovedEdgeIds(previous, next) {
+      return Object.keys(previous.edgesById || {}).filter((id) => !next.edgesById?.[id]);
+    }
+
+    function shouldRecreateNode(previousNode, nextNode) {
+      if (previousNode.type !== nextNode.type) return true;
+      if (previousNode.category !== nextNode.category) return true;
+
+      const prevParamKeys = Object.keys(previousNode.params || {}).sort();
+      const nextParamKeys = Object.keys(nextNode.params || {}).sort();
+
+      if (prevParamKeys.join('\0') !== nextParamKeys.join('\0')) return true;
+
+      return false;
+    }
+
+    function sameParams(a, b) {
+      return JSON.stringify(a || {}) === JSON.stringify(b || {});
+    }
+
+    // --- Test harness ---
+
+    const results = [];
+    function test(name, fn) { results.push({ name, fn }); }
+    function assert(cond, msg) { if (!cond) throw new Error(msg || 'assertion failed'); }
+    function assertEqual(a, b, msg) {
+      const av = JSON.stringify(a);
+      const bv = JSON.stringify(b);
+      if (av !== bv) throw new Error(msg || `expected ${bv}, got ${av}`);
+    }
+
+    // --- Fixtures ---
+
+    function makeModel(nodeIds, edgeIds = []) {
+      const nodesById = {};
+      for (const id of nodeIds) {
+        nodesById[id] = { id, type: 'clock', category: 'input', params: {} };
+      }
+      const edgesById = {};
+      for (const id of edgeIds) {
+        edgesById[id] = { id, fromNodeId: 'a', fromPort: 'out', toNodeId: 'b', toPort: 'in' };
+      }
+      return { order: [...nodeIds], nodesById, edgesById };
+    }
+
+    function makeNode(overrides = {}) {
+      return { id: 'x', type: 'clock', category: 'input', params: {}, ...overrides };
+    }
+
+    // --- getAddedNodeIds ---
+
+    test('getAddedNodeIds: returns new ids not in previous', () => {
+      const prev = makeModel(['a', 'b']);
+      const next = makeModel(['a', 'b', 'c']);
+      assertEqual(getAddedNodeIds(prev, next), ['c']);
+    });
+
+    test('getAddedNodeIds: empty when no nodes added', () => {
+      const prev = makeModel(['a', 'b']);
+      const next = makeModel(['a', 'b']);
+      assertEqual(getAddedNodeIds(prev, next), []);
+    });
+
+    test('getAddedNodeIds: all nodes added when previous is empty', () => {
+      const prev = makeModel([]);
+      const next = makeModel(['a', 'b']);
+      assertEqual(getAddedNodeIds(prev, next), ['a', 'b']);
+    });
+
+    // --- getRemovedNodeIds ---
+
+    test('getRemovedNodeIds: returns ids in previous but not next', () => {
+      const prev = makeModel(['a', 'b', 'c']);
+      const next = makeModel(['a', 'b']);
+      assertEqual(getRemovedNodeIds(prev, next), ['c']);
+    });
+
+    test('getRemovedNodeIds: empty when nothing removed', () => {
+      const prev = makeModel(['a', 'b']);
+      const next = makeModel(['a', 'b']);
+      assertEqual(getRemovedNodeIds(prev, next), []);
+    });
+
+    test('getRemovedNodeIds: all removed when next is empty', () => {
+      const prev = makeModel(['a', 'b']);
+      const next = makeModel([]);
+      assertEqual(getRemovedNodeIds(prev, next), ['a', 'b']);
+    });
+
+    // --- getCommonNodeIds ---
+
+    test('getCommonNodeIds: returns ids in both', () => {
+      const prev = makeModel(['a', 'b', 'c']);
+      const next = makeModel(['b', 'c', 'd']);
+      assertEqual(getCommonNodeIds(prev, next), ['b', 'c']);
+    });
+
+    test('getCommonNodeIds: empty when no overlap', () => {
+      const prev = makeModel(['a']);
+      const next = makeModel(['b']);
+      assertEqual(getCommonNodeIds(prev, next), []);
+    });
+
+    // --- getAddedEdgeIds ---
+
+    test('getAddedEdgeIds: returns new edge ids', () => {
+      const prev = makeModel(['a'], ['e1']);
+      const next = makeModel(['a'], ['e1', 'e2']);
+      assertEqual(getAddedEdgeIds(prev, next), ['e2']);
+    });
+
+    test('getAddedEdgeIds: empty when no edges added', () => {
+      const prev = makeModel(['a'], ['e1']);
+      const next = makeModel(['a'], ['e1']);
+      assertEqual(getAddedEdgeIds(prev, next), []);
+    });
+
+    test('getAddedEdgeIds: handles missing edgesById on previous', () => {
+      const prev = { order: [], nodesById: {}, edgesById: undefined };
+      const next = makeModel(['a'], ['e1']);
+      assertEqual(getAddedEdgeIds(prev, next), ['e1']);
+    });
+
+    // --- getRemovedEdgeIds ---
+
+    test('getRemovedEdgeIds: returns ids removed from previous', () => {
+      const prev = makeModel(['a'], ['e1', 'e2']);
+      const next = makeModel(['a'], ['e1']);
+      assertEqual(getRemovedEdgeIds(prev, next), ['e2']);
+    });
+
+    test('getRemovedEdgeIds: empty when nothing removed', () => {
+      const prev = makeModel(['a'], ['e1']);
+      const next = makeModel(['a'], ['e1']);
+      assertEqual(getRemovedEdgeIds(prev, next), []);
+    });
+
+    // --- shouldRecreateNode ---
+
+    test('shouldRecreateNode: false when type/category/params identical', () => {
+      const a = makeNode({ type: 'sine', params: { freq: 1 } });
+      const b = makeNode({ type: 'sine', params: { freq: 2 } });
+      assert(!shouldRecreateNode(a, b), 'same param keys, different values -> no recreate');
+    });
+
+    test('shouldRecreateNode: true when type changes', () => {
+      const a = makeNode({ type: 'clock' });
+      const b = makeNode({ type: 'sine' });
+      assert(shouldRecreateNode(a, b));
+    });
+
+    test('shouldRecreateNode: true when category changes', () => {
+      const a = makeNode({ category: 'input' });
+      const b = makeNode({ category: 'transform' });
+      assert(shouldRecreateNode(a, b));
+    });
+
+    test('shouldRecreateNode: true when param keys change', () => {
+      const a = makeNode({ params: { freq: 1 } });
+      const b = makeNode({ params: { freq: 1, phase: 0 } });
+      assert(shouldRecreateNode(a, b));
+    });
+
+    test('shouldRecreateNode: false when param keys same, values differ', () => {
+      const a = makeNode({ params: { freq: 1, phase: 0 } });
+      const b = makeNode({ params: { freq: 2, phase: 1 } });
+      assert(!shouldRecreateNode(a, b));
+    });
+
+    // --- sameParams ---
+
+    test('sameParams: true for identical objects', () => {
+      assert(sameParams({ freq: 1, rate: 5 }, { freq: 1, rate: 5 }));
+    });
+
+    test('sameParams: false when values differ', () => {
+      assert(!sameParams({ freq: 1 }, { freq: 2 }));
+    });
+
+    test('sameParams: false when keys differ', () => {
+      assert(!sameParams({ freq: 1 }, { freq: 1, rate: 5 }));
+    });
+
+    test('sameParams: true for both undefined/empty', () => {
+      assert(sameParams(undefined, undefined));
+      assert(sameParams({}, {}));
+      assert(sameParams(undefined, {}));
+    });
+
+    // --- Run ---
+
+    async function runAll() {
+      const container = document.getElementById('results');
+      let passed = 0, failed = 0;
+
+      for (const { name, fn } of results) {
+        const el = document.createElement('div');
+        try {
+          await fn();
+          el.textContent = `✓ ${name}`;
+          el.style.color = 'green';
+          passed++;
+        } catch (e) {
+          el.textContent = `✗ ${name}: ${e.message}`;
+          el.style.color = 'red';
+          failed++;
+        }
+        container.appendChild(el);
+      }
+
+      const summary = document.createElement('p');
+      summary.textContent = `${passed} passed, ${failed} failed`;
+      summary.style.fontWeight = 'bold';
+      container.appendChild(summary);
+    }
+
+    runAll();
+  </script>
+</body>
+</html>
