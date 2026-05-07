@@ -424,10 +424,6 @@ async function applyDslTextToGraph(sourceText, { markDirty = true, preserveGraph
     return { ok: false, stale: true, errors: [] };
   }
 
-  if (shouldCommit && !shouldCommit()) {
-    return { ok: false, stale: true, errors: [] };
-  }
-
   store.setState({
     sourceText,
     sourceAst: ast,
@@ -438,10 +434,6 @@ async function applyDslTextToGraph(sourceText, { markDirty = true, preserveGraph
 
   selectedNodeId = null;
   await nodeEditor?.renderModel(editorModel);
-
-  if (shouldCommit && !shouldCommit()) {
-    return { ok: false, stale: true, errors: [] };
-  }
 
   renderGraphJSON(graph);
   renderErrors();
