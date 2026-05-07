@@ -3,13 +3,25 @@ import { compileLoomSource } from '../toolchain/compile.js';
 const SUPPORTED_NODES = new Set([
   'time.serverClock',
   'math.sine',
-  'scene.setPosition'
+  'math.cosine',
+  'math.add',
+  'scene.setPosition',
+  'scene.setRotation',
+  'scene.setScale',
+  'scene.setColor',
+  'scene.setVisible'
 ]);
 
 const NODE_TYPE_MAPPING = {
   'time.serverClock': 'serverClock',
   'math.sine': 'sine',
-  'scene.setPosition': 'sceneSetPosition'
+  'math.cosine': 'cosine',
+  'math.add': 'add',
+  'scene.setPosition': 'sceneSetPosition',
+  'scene.setRotation': 'sceneSetRotation',
+  'scene.setScale': 'sceneSetScale',
+  'scene.setColor': 'sceneSetColor',
+  'scene.setVisible': 'sceneSetVisible'
 };
 
 const OUTPUT_PORT_MAPPING = {
@@ -17,129 +29,107 @@ const OUTPUT_PORT_MAPPING = {
   'serverClock': 't',
   'math.sine': 'out',
   'sine': 'out',
+  'math.cosine': 'out',
+  'cosine': 'out',
+  'math.add': 'out',
+  'add': 'out',
   'scene.setPosition': undefined,
-  'sceneSetPosition': undefined
+  'sceneSetPosition': undefined,
+  'scene.setRotation': undefined,
+  'sceneSetRotation': undefined,
+  'scene.setScale': undefined,
+  'sceneSetScale': undefined,
+  'scene.setColor': undefined,
+  'sceneSetColor': undefined,
+  'scene.setVisible': undefined,
+  'sceneSetVisible': undefined
 };
-
-function getDefaultOutputPort(nodeType) {
-  const mapped = NODE_TYPE_MAPPING[nodeType] || nodeType;
-  return OUTPUT_PORT_MAPPING[mapped];
-}
 
 function generateStableNodeId(originalId, nodeType) {
   const mapped = NODE_TYPE_MAPPING[nodeType] || nodeType;
   if (mapped === 'serverClock') return 'clock';
   if (originalId && !originalId.startsWith('_')) return originalId;
-  if (mapped === 'sine') {
-    const match = originalId?.match(/sine[_x_y]?(.*)$/);
-    if (match && match[1]) return `sine_${match[1]}`;
-    return 'sine';
-  }
+  if (mapped === 'sine' || mapped === 'cosine') return mapped;
   if (mapped === 'sceneSetPosition') return 'pos';
+  if (mapped === 'sceneSetRotation') return 'rot';
+  if (mapped === 'sceneSetScale') return 'scale';
+  if (mapped === 'sceneSetColor') return 'color';
+  if (mapped === 'sceneSetVisible') return 'visible';
   return originalId;
 }
 
 function normalizeScope(options = {}) {
-  if (options.scope) {
-    return options.scope;
-  }
-  if (options.objectId) {
-    return { object: options.objectId };
-  }
+  if (options.scope) return options.scope;
+  if (options.objectId) return { object: options.objectId };
   return null;
+}
+
+function pickParams(nodeType, params = {}) {
+  if (nodeType === 'scene.setPosition' || nodeType === 'scene.setScale') {
+    return { ...(params.x !== undefined ? { x: params.x } : {}), ...(params.y !== undefined ? { y: params.y } : {}), ...(params.z !== undefined ? { z: params.z } : {}) };
+  }
+  if (nodeType === 'scene.setRotation') {
+    return {
+      ...(params.x !== undefined ? { x: params.x } : {}),
+      ...(params.y !== undefined ? { y: params.y } : {}),
+      ...(params.z !== undefined ? { z: params.z } : {}),
+      ...(params.w !== undefined ? { w: params.w } : {})
+    };
+  }
+  if (nodeType === 'scene.setColor') {
+    return { ...(params.r !== undefined ? { r: params.r } : {}), ...(params.g !== undefined ? { g: params.g } : {}), ...(params.b !== undefined ? { b: params.b } : {}) };
+  }
+  if (nodeType === 'scene.setVisible') {
+    return { ...(params.visible !== undefined ? { visible: params.visible } : {}) };
+  }
+  if (nodeType === 'math.sine' || nodeType === 'math.cosine') {
+    return {
+      ...(params.freq !== undefined ? { freq: params.freq } : {}),
+      ...(params.amplitude !== undefined ? { amplitude: params.amplitude } : {}),
+      ...(params.offset !== undefined ? { offset: params.offset } : {})
+    };
+  }
+  return {};
 }
 
 export function compileLoomToSceneSyncGraph(source, options = {}) {
   const result = compileLoomSource(source, { target: 'scenesync' });
-
-  if (!result.ok) {
-    throw new Error(`Compilation failed: ${result.errors.map(e => e.message).join(', ')}`);
-  }
-
+  if (!result.ok) throw new Error(`Compilation failed: ${result.errors.map((e) => e.message).join(', ')}`);
   return loomGraphToSceneSyncGraph(result.graph, options);
 }
 
 export function loomGraphToSceneSyncGraph(loomGraph, options = {}) {
-  if (!loomGraph || !loomGraph.nodes || !loomGraph.edges) {
-    throw new Error('loomGraph must have nodes and edges arrays');
-  }
-
+  if (!loomGraph || !loomGraph.nodes || !loomGraph.edges) throw new Error('loomGraph must have nodes and edges arrays');
   const nodes = [];
   const edges = [];
   const nodeIdMap = new Map();
 
   for (const node of loomGraph.nodes) {
-    if (!SUPPORTED_NODES.has(node.type)) {
-      throw new Error(`Unsupported Scene Sync graph node: ${node.type}`);
-    }
-
+    if (!SUPPORTED_NODES.has(node.type)) throw new Error(`Unsupported Scene Sync graph node: ${node.type}`);
     const sceneSyncType = NODE_TYPE_MAPPING[node.type];
     const newId = generateStableNodeId(node.id, node.type);
     nodeIdMap.set(node.id, newId);
-
-    const sceneSyncNode = {
-      id: newId,
-      type: sceneSyncType
-    };
-
-    if (node.type === 'scene.setPosition') {
-      sceneSyncNode.params = {};
-      if (node.params?.z !== undefined) {
-        sceneSyncNode.params.z = node.params.z;
-      }
-      if (node.params?.x !== undefined) {
-        sceneSyncNode.params.x = node.params.x;
-      }
-      if (node.params?.y !== undefined) {
-        sceneSyncNode.params.y = node.params.y;
-      }
-    } else if (node.type === 'math.sine') {
-      sceneSyncNode.params = {};
-      if (node.params?.freq !== undefined) {
-        sceneSyncNode.params.freq = node.params.freq;
-      }
-      if (node.params?.amplitude !== undefined) {
-        sceneSyncNode.params.amplitude = node.params.amplitude;
-      }
-      if (node.params?.offset !== undefined) {
-        sceneSyncNode.params.offset = node.params.offset;
-      }
-    }
-
-    nodes.push(sceneSyncNode);
+    const params = pickParams(node.type, node.params);
+    nodes.push({ id: newId, type: sceneSyncType, ...(Object.keys(params).length > 0 ? { params } : {}) });
   }
 
   for (const edge of loomGraph.edges) {
     const [fromNodeId, fromPort] = edge.from.split('.');
     const [toNodeId, toPort] = edge.to.split('.');
-
     const newFromId = nodeIdMap.get(fromNodeId);
     const newToId = nodeIdMap.get(toNodeId);
-
-    if (newFromId && newToId) {
-      edges.push({
-        from: `${newFromId}.${fromPort}`,
-        to: `${newToId}.${toPort}`
-      });
-    }
+    if (newFromId && newToId) edges.push({ from: `${newFromId}.${fromPort}`, to: `${newToId}.${toPort}` });
   }
 
   let scope = normalizeScope(options);
-
   if (!scope) {
     for (const node of loomGraph.nodes) {
-      if (node.type === 'scene.setPosition' && node.params?.objectId) {
+      if (node.type.startsWith('scene.set') && node.params?.objectId) {
         scope = { object: node.params.objectId };
         break;
       }
     }
   }
 
-  return {
-    graph: {
-      nodes,
-      edges
-    },
-    scope
-  };
+  return { graph: { nodes, edges }, scope };
 }
