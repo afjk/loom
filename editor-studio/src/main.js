@@ -53,6 +53,7 @@ const EDITOR_MAXIMIZE_MODE_KEY = 'loomlet.editorStudio.editorMaximizeMode';
 
 const MAX_HISTORY_ENTRIES = 100;
 const MOVE_HISTORY_COALESCE_MS = 250;
+const PARAM_HISTORY_COALESCE_MS = 750;
 
 let outputEntries = [];
 const MAX_OUTPUT_ENTRIES = 500;
@@ -97,6 +98,8 @@ let redoStack = [];
 let isApplyingHistory = false;
 let activeMoveHistoryNodeId = null;
 let moveHistoryCoalesceTimer = null;
+let activeParamHistoryKey = null;
+let paramHistoryCoalesceTimer = null;
 let editorMaximizeMode = 'split';
 
 const elements = {
@@ -936,6 +939,7 @@ function syncGraphToDslEditor({ markDirty = true, force = false } = {}) {
 
 function generateDsl() {
   finishMoveHistoryGroup();
+  finishParamHistoryGroup();
   cancelPendingAutoApplyDsl();
   const dsl = syncGraphToDslEditor({ markDirty: true, force: true });
   if (!dsl) return;
@@ -1766,6 +1770,31 @@ function scheduleMoveHistoryGroupFinish() {
   }, MOVE_HISTORY_COALESCE_MS);
 }
 
+function clearParamHistoryCoalesceTimer() {
+  if (paramHistoryCoalesceTimer) {
+    clearTimeout(paramHistoryCoalesceTimer);
+    paramHistoryCoalesceTimer = null;
+  }
+}
+
+function finishParamHistoryGroup() {
+  clearParamHistoryCoalesceTimer();
+  activeParamHistoryKey = null;
+}
+
+function scheduleParamHistoryGroupFinish() {
+  clearParamHistoryCoalesceTimer();
+
+  paramHistoryCoalesceTimer = window.setTimeout(() => {
+    finishParamHistoryGroup();
+  }, PARAM_HISTORY_COALESCE_MS);
+}
+
+function createParamHistoryKey(operation) {
+  if (operation?.type !== 'updateParam') return null;
+  return `${operation.id}\0${operation.key}`;
+}
+
 function isNoopMoveOperation(operation) {
   if (operation?.type !== 'moveNode') return false;
 
@@ -1779,13 +1808,50 @@ function isNoopMoveOperation(operation) {
   );
 }
 
+function isNoopParamOperation(operation) {
+  if (operation?.type !== 'updateParam') return false;
+
+  const state = store.getState();
+  const node = state.editorModel?.nodesById?.[operation.id];
+  if (!node) return false;
+
+  return Object.is(node.params?.[operation.key], operation.value);
+}
+
 function shouldPushHistoryForOperation(operation) {
   if (isApplyingHistory) return false;
 
-  if (operation?.type !== 'moveNode') {
+  if (operation?.type === 'updateParam') {
     finishMoveHistoryGroup();
+
+    const key = createParamHistoryKey(operation);
+    if (!key) {
+      finishParamHistoryGroup();
+      return true;
+    }
+
+    if (isNoopParamOperation(operation)) {
+      return false;
+    }
+
+    if (activeParamHistoryKey === key) {
+      scheduleParamHistoryGroupFinish();
+      return false;
+    }
+
+    finishParamHistoryGroup();
+    activeParamHistoryKey = key;
+    scheduleParamHistoryGroupFinish();
     return true;
   }
+
+  if (operation?.type !== 'moveNode') {
+    finishMoveHistoryGroup();
+    finishParamHistoryGroup();
+    return true;
+  }
+
+  finishParamHistoryGroup();
 
   const nodeId = operation.id;
 
@@ -1852,6 +1918,7 @@ async function restoreEditorHistorySnapshot(snapshot, { pushRedo = false, pushUn
   if (!snapshot) return;
 
   finishMoveHistoryGroup();
+  finishParamHistoryGroup();
 
   const currentSnapshot = createEditorHistorySnapshot();
 
@@ -1898,6 +1965,7 @@ async function undoGraphEdit() {
   if (!undoStack.length) return;
 
   finishMoveHistoryGroup();
+  finishParamHistoryGroup();
   cancelPendingAutoApplyDsl();
 
   isApplyingHistory = true;
@@ -1914,6 +1982,7 @@ async function redoGraphEdit() {
   if (!redoStack.length) return;
 
   finishMoveHistoryGroup();
+  finishParamHistoryGroup();
   cancelPendingAutoApplyDsl();
 
   isApplyingHistory = true;
@@ -1946,6 +2015,7 @@ function handleUndoRedoKeyDown(event) {
 
 function clearEditorHistory() {
   finishMoveHistoryGroup();
+  finishParamHistoryGroup();
   undoStack = [];
   redoStack = [];
   renderUndoRedoState();
