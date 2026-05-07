@@ -1,8 +1,12 @@
 # Tour: Lissajous
-# Goal: Move one object on a Lissajous curve.
+# Goal: Animate one object with time-driven X/Y motion.
 # Status: runnable
 # Run:
 #   loomlet scenesync dev examples/tour/scenesync/02-lissajous.loom
+# Setup:
+#   - Open a Scene Sync room.
+#   - Link Loomlet with `loomlet scenesync redeem <code> --save`.
+#   - Ensure an object named `sample-cube` exists in the scene.
 # Requires:
 #   - time.serverClock
 #   - math.sine
@@ -13,5 +17,5 @@ import scene
 
 t = time.serverClock()
 x = math.sine(t, freq: 0.2, amplitude: 2, offset: 0)
-y = math.sine(t, freq: 0.3, amplitude: 1, offset: 1.2)
+y = math.sine(t, freq: 0.3, amplitude: 0.5, offset: 1.2)
 scene.setPosition(objectId: "sample-cube", x: x, y: y, z: 0)

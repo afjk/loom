@@ -2,6 +2,14 @@ import assert from 'node:assert';
 import { test } from 'node:test';
 import { compileLoomToSceneSyncGraph, loomGraphToSceneSyncGraph } from '../src/scenesync/graph-adapter.js';
 
+function assertEdgesReferToExistingNodes(graph) {
+  const ids = new Set(graph.nodes.map((n) => n.id));
+  for (const edge of graph.edges) {
+    assert.ok(ids.has(edge.from.split('.')[0]));
+    assert.ok(ids.has(edge.to.split('.')[0]));
+  }
+}
+
 test('compiles lissajous example to Scene Sync graph', () => {
   const source = `
 import time
@@ -156,4 +164,49 @@ test('objectId option normalizes to scope', () => {
 
   const result = loomGraphToSceneSyncGraph(loomGraph, { objectId: 'cube3' });
   assert.deepEqual(result.scope, { object: 'cube3' });
+});
+
+test('supports rotation/scale scene sinks', () => {
+  const source = `
+import scene
+scene.setRotation("sample-cube", x: 0, y: 0, z: 0, w: 1)
+scene.setScale("sample-cube", x: 1.2, y: 1.2, z: 1.2)
+`;
+
+  const result = compileLoomToSceneSyncGraph(source);
+  assert.ok(result.graph.nodes.some((n) => n.type === 'sceneSetRotation'));
+  assert.ok(result.graph.nodes.some((n) => n.type === 'sceneSetScale'));
+  assert.deepEqual(result.scope, { object: 'sample-cube' });
+});
+
+
+test('multiple sine nodes receive unique IDs and valid edges', () => {
+  const source = `
+import time
+import math
+import scene
+
+t = time.serverClock()
+x = math.sine(t, freq: 0.2, amplitude: 2, offset: 0)
+y = math.sine(t, freq: 0.3, amplitude: 0.5, offset: 1.2)
+scene.setPosition("sample-cube", x: x, y: y, z: 0)
+`;
+  const result = compileLoomToSceneSyncGraph(source);
+  const sineNodes = result.graph.nodes.filter((n) => n.type === 'sine');
+  assert.equal(sineNodes.length, 2);
+  assert.notEqual(sineNodes[0].id, sineNodes[1].id);
+  assertEdgesReferToExistingNodes(result.graph);
+});
+
+test('multiple scene.setPosition nodes receive unique IDs and valid edges', () => {
+  const source = `
+import scene
+scene.setPosition("sample-cube", x: 0, y: 0, z: 0)
+scene.setPosition("sample-cube", x: 1, y: 1, z: 1)
+`;
+  const result = compileLoomToSceneSyncGraph(source);
+  const posNodes = result.graph.nodes.filter((n) => n.type === 'sceneSetPosition');
+  assert.equal(posNodes.length, 2);
+  assert.notEqual(posNodes[0].id, posNodes[1].id);
+  assertEdgesReferToExistingNodes(result.graph);
 });

@@ -102,48 +102,89 @@ Loomlet source files use the `.loom` extension.
 ### 01 Move Cube
 - Path: `examples/tour/scenesync/01-move-cube.loom`
 - Status: Runnable
+- Required object IDs: `sample-cube`
 - Run: `loomlet scenesync dev examples/tour/scenesync/01-move-cube.loom`
-- Teaches: `time.serverClock` + `math.sine` + `scene.setPosition`
+- Teaches: direct `scene.setPosition` command for an existing object
 - Missing: none
 
 ### 02 Lissajous
 - Path: `examples/tour/scenesync/02-lissajous.loom`
 - Status: Runnable
+- Required object IDs: `sample-cube`
 - Run: `loomlet scenesync dev examples/tour/scenesync/02-lissajous.loom`
-- Teaches: multi-axis sine choreography
+- Teaches: time-driven X/Y choreography with `math.sine`
 - Missing: none
 
 ### 03 Orbit
 - Path: `examples/tour/scenesync/03-orbit.loom`
-- Status: Draft
+- Status: Runnable
+- Required object IDs: `sample-cube`
 - Run: `loomlet scenesync dev examples/tour/scenesync/03-orbit.loom`
-- Missing: `timeline.sequence`, `scene.find`
+- Teaches: circular motion with `math.cosine` + `math.sine`
+- Missing: none
 
 ### 04 Breathing Scale
 - Path: `examples/tour/scenesync/04-breathing-scale.loom`
-- Status: Draft
+- Status: Runnable
+- Required object IDs: `sample-cube`
 - Run: `loomlet scenesync dev examples/tour/scenesync/04-breathing-scale.loom`
-- Missing: `timeline.sequence`, `scene.find`
+- Teaches: pulse scaling with `scene.setScale`
+- Missing: none
 
 ### 05 Wave Objects
 - Path: `examples/tour/scenesync/05-wave-objects.loom`
 - Status: Draft
+- Required object IDs: `wave-1`, `wave-2`, `wave-3`, `wave-4`, `wave-5`
 - Run: `loomlet scenesync dev examples/tour/scenesync/05-wave-objects.loom`
-- Missing: `timeline.sequence`, `scene.find`
+- Teaches: multi-object phase offsets without dynamic object creation
+- Missing: requires multi-object Scene Sync graph support or per-sink objectId support; current adapter targets single-object scope
 
 ### 06 Model Choreography
 - Path: `examples/tour/scenesync/06-model-choreography.loom`
-- Status: Draft
+- Status: Runnable
+- Required object IDs: `dancer`
 - Run: `loomlet scenesync dev examples/tour/scenesync/06-model-choreography.loom`
-- Missing: `timeline.sequence`, `scene.find`
+- Teaches: GLB choreography through position/scale/rotation on existing model object
+- Missing: none
 
 ## Live
 
-All live samples are Draft and use:
-`loomlet scenesync dev examples/tour/live/<file>.loom`
+### 01 Pulse
+- Path: `examples/tour/live/01-pulse.loom`
+- Status: Runnable
+- Required object IDs: `pulse-target`
+- Run: `loomlet scenesync dev examples/tour/live/01-pulse.loom`
+- Teaches: high-frequency pulse scale behavior
+- Missing: none
 
-- 01 Pulse: missing `timeline.cue`, `audio.level`
-- 02 Color Cycle: missing `timeline.cue`, `audio.level`
-- 03 Grid Wave: missing `timeline.cue`, `audio.level`
-- 04 Timeline Cues: missing `timeline.cue`, `audio.level`
-- 05 Audio Reactive Placeholder: missing `timeline.cue`, `audio.level`
+### 02 Color Cycle
+- Path: `examples/tour/live/02-color-cycle.loom`
+- Status: Draft
+- Required object IDs: `color-target`
+- Run: `loomlet scenesync dev examples/tour/live/02-color-cycle.loom`
+- Teaches: RGB color cycling via phase-shifted sine signals
+- Missing: `scene.setColor` is not yet available end-to-end for Scene Sync graph target
+
+### 03 Grid Wave
+- Path: `examples/tour/live/03-grid-wave.loom`
+- Status: Draft
+- Required object IDs: `grid-1` ... `grid-9`
+- Run: `loomlet scenesync dev examples/tour/live/03-grid-wave.loom`
+- Teaches: explicit multi-object wave choreography for a 3x3 layout
+- Missing: requires multi-object Scene Sync graph support or per-sink objectId support; current adapter targets single-object scope
+
+### 04 Timeline Cues
+- Path: `examples/tour/live/04-timeline-cues.loom`
+- Status: Draft
+- Required object IDs: `intro`, `main`, `outro`
+- Run: `loomlet scenesync dev examples/tour/live/04-timeline-cues.loom`
+- Teaches: intended show-control structure using timeline windows + visibility
+- Missing: `timeline.progress`, `timeline.between`
+
+### 05 Audio Reactive Placeholder
+- Path: `examples/tour/live/05-audio-reactive-placeholder.loom`
+- Status: Draft
+- Required object IDs: `audio-target`
+- Run: `loomlet scenesync dev examples/tour/live/05-audio-reactive-placeholder.loom`
+- Teaches: intended mapping from audio level to scale
+- Missing: `audio.level`
