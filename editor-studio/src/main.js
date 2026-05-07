@@ -41,6 +41,8 @@ const DEFAULT_DSL_PANE_WIDTH = 520;
 const MIN_DSL_PANE_WIDTH = 280;
 const MIN_NODE_PANE_WIDTH = 320;
 const EDITOR_SPLIT_HANDLE_WIDTH = 8;
+const EDITOR_SPLIT_GRID_GAP = 12;
+const EDITOR_SPLIT_GRID_GAP_COUNT = 2;
 
 const store = createStore();
 let dslEditor = null;
@@ -218,10 +220,15 @@ function getMaxDslPaneWidth() {
   if (!panels) return DEFAULT_DSL_PANE_WIDTH;
 
   const rect = panels.getBoundingClientRect();
-  return Math.max(
-    MIN_DSL_PANE_WIDTH,
-    Math.floor(rect.width - MIN_NODE_PANE_WIDTH - EDITOR_SPLIT_HANDLE_WIDTH)
-  );
+  // editor-panels has three columns with two horizontal grid gaps:
+  // DSL pane | gap | splitter | gap | Node pane
+  const maxWidth =
+    rect.width
+    - MIN_NODE_PANE_WIDTH
+    - EDITOR_SPLIT_HANDLE_WIDTH
+    - EDITOR_SPLIT_GRID_GAP * EDITOR_SPLIT_GRID_GAP_COUNT;
+
+  return Math.max(MIN_DSL_PANE_WIDTH, Math.floor(maxWidth));
 }
 
 function clampDslPaneWidth(width) {
