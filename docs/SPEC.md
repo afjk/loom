@@ -2392,6 +2392,19 @@ Loom は次の 3 つの truth を分離して扱う。
 
 Loomlet supports single-expression function literals: `fn(x) => math.multiply(x, 2)`.
 
+Most Loomlet calls allow only the first argument to be positional. Later arguments must be named.
+
+Common binary operator nodes are an exception and may use two positional arguments:
+`math.add(1, 2)`
+`math.subtract(10, 3)`
+`math.multiply(x, 2)`
+`math.divide(x, 2)`
+`math.mod(x, 3)`
+
+More descriptive or multi-argument calls still require named arguments:
+`logic.greaterThan(x, other: 2)`
+`math.map(x, inMin: 0, inMax: 1, outMin: 0, outMax: 100)`
+
 Functions can be assigned to variables: `double = fn(x) => math.multiply(x, 2)`.
 
 Functions can capture values from outer scope: `base = 10` and `addBase = fn(x) => math.add(x, base)`.

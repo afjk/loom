@@ -419,11 +419,19 @@ function isLoomletTruthy(value) {
   return Boolean(value);
 }
 
-// Positional binary nodes are common enough to support with two positional
-// arguments in function bodies, even when they are not commutative.
-const POSITIONAL_BINARY_NODE_TYPES = new Set(['math.mod', 'math.add', 'math.subtract', 'math.multiply', 'math.divide', 'math.min', 'math.max', 'logic.and', 'logic.or']);
+export const POSITIONAL_BINARY_NODE_TYPES = new Set([
+  'math.add',
+  'math.subtract',
+  'math.multiply',
+  'math.divide',
+  'math.mod',
+  'math.min',
+  'math.max',
+  'logic.and',
+  'logic.or'
+]);
 
-function canUsePositionalBinaryArgsInFunctionBody(nodeName, nodeType) {
+export function canUseTwoPositionalArgs(nodeName, nodeType) {
   return Boolean(nodeType.commutative || POSITIONAL_BINARY_NODE_TYPES.has(nodeName));
 }
 
@@ -450,17 +458,18 @@ function evaluateLegacyFunctionExpr(expr, env, ctx) {
 
     const positionalArgs = expr.args.filter((arg) => !arg.named);
     const namedArgs = expr.args.filter((arg) => arg.named);
-    if (nodeType.commutative && positionalArgs.length > 0 && namedArgs.length > 0) {
+    const inputNames = new Set((nodeType.inputs || []).map((input) => input.name));
+    const paramNames = new Set((nodeType.params || []).map((param) => param.name));
+    const hasUnknownNamed = namedArgs.some((arg) => !inputNames.has(arg.name) && !paramNames.has(arg.name));
+    if (nodeType.commutative && positionalArgs.length > 0 && namedArgs.length > 0 && !hasUnknownNamed) {
       throw new LoomError('MISSING_ARGUMENT_NAME', `Node '${expr.name}' is commutative: arguments must be all positional or all named`);
     }
-    if (!canUsePositionalBinaryArgsInFunctionBody(expr.name, nodeType) && positionalArgs.length > 1) {
+    if (!canUseTwoPositionalArgs(expr.name, nodeType) && positionalArgs.length > 1) {
       throw new LoomError('MISSING_ARGUMENT_NAME', `Argument at position 2 for '${expr.name}' requires a name`);
     }
 
     const inputs = {};
     const params = {};
-    const inputNames = new Set((nodeType.inputs || []).map((input) => input.name));
-    const paramNames = new Set((nodeType.params || []).map((param) => param.name));
     for (const input of nodeType.inputs || []) inputs[input.name] = input.default;
     for (const param of nodeType.params || []) params[param.name] = param.default;
 
