@@ -65,6 +65,7 @@ html, body {
   bottom: 12px;
   display: grid;
   grid-template-columns: minmax(360px, 1fr) minmax(420px, 1fr);
+  grid-template-rows: 1fr auto auto;
   gap: 12px;
   z-index: 15;
   pointer-events: auto;
@@ -73,6 +74,26 @@ html, body {
 /* Hide editor panels */
 body.panels-hidden .editor-panels {
   display: none;
+}
+
+.dsl-pane {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.node-pane {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.bottom-panel-resize-handle {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+
+.graph-errors-panel {
+  grid-column: 1 / -1;
+  grid-row: 3;
 }
 
 /* Panel styling */
@@ -170,14 +191,59 @@ body.panels-hidden .editor-panels {
 /* Graph/Errors panel */
 .graph-errors-panel {
   grid-column: 1 / -1;
+  flex: 0 0 auto;
+  height: 260px;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.graph-errors-panel.collapsed {
+  height: 0 !important;
+  border-top: none;
+  overflow: hidden;
+}
+
+.bottom-panel-resize-handle {
+  flex: 0 0 6px;
+  height: 6px;
+  cursor: row-resize;
+  background: transparent;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.bottom-panel-resize-handle:hover,
+body.resizing-bottom-panel .bottom-panel-resize-handle {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.bottom-panel-resize-handle.collapsed {
+  border-bottom: none;
 }
 
 /* Tabs */
 .tabs {
+  display: none;
+}
+
+.tab-header {
+  flex: 0 0 auto;
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(0, 0, 0, 0.3);
-  flex-shrink: 0;
+}
+
+.tab-buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow-x: auto;
 }
 
 .tab-btn {
@@ -202,10 +268,18 @@ body.panels-hidden .editor-panels {
   border-bottom-color: var(--primary-color);
 }
 
+.bottom-panel-collapse-btn {
+  flex: 0 0 auto;
+  font-size: 12px;
+  padding: 3px 8px;
+  margin-right: 4px;
+}
+
 .tab-content {
   flex: 1;
   overflow: hidden;
   display: flex;
+  min-height: 0;
 }
 
 .tab-pane {
@@ -213,6 +287,7 @@ body.panels-hidden .editor-panels {
   overflow: auto;
   display: none;
   flex-direction: column;
+  min-height: 0;
 }
 
 .tab-pane.active {
