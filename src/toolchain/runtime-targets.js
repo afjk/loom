@@ -56,6 +56,11 @@ export const LIBRARY_COMPATIBILITY = {
     kind: 'effect',
     description: 'Logging to the host environment'
   },
+  output: {
+    targets: ['web', 'scenesync', 'unity'],
+    kind: 'effect',
+    description: 'Editor Output panel logging'
+  },
   dom: {
     targets: ['web'],
     kind: 'effect',

@@ -991,6 +991,7 @@ button:disabled:hover,
   background: rgba(128, 237, 153, 0.08);
 }
 
+/* Output panel */
 .output-panel {
   height: 100%;
   display: flex;

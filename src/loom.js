@@ -372,7 +372,6 @@ function stringifyTextValue(value) {
 }
 
 function inspectValue(value) {
-  if (typeof value === 'string') return value;
   const json = JSON.stringify(value, null, 2);
   return json === undefined ? String(value) : json;
 }
@@ -1566,21 +1565,6 @@ export const NODE_TYPES = {
     }
   },
 
-  log: {
-    category: 'sink',
-    inputs: [
-      { name: 'value', type: 'any', default: undefined, kind: 'behavior' }
-    ],
-    outputs: [],
-    params: [
-      { name: 'label', type: 'string', default: '' }
-    ],
-    evaluate: (inputs, params, ctx) => {
-      console.log(params.label || 'log', inputs.value);
-      return {};
-    }
-  },
-
   'time.serverClock': {
     category: 'source',
     inputs: [],
@@ -1609,6 +1593,25 @@ export const NODE_TYPES = {
       const amplitude = inputs.amplitude;
       const offset = inputs.offset;
       return { out: Math.sin(t * freq * 2 * Math.PI) * amplitude + offset };
+    }
+  },
+
+  log: {
+    category: 'output',
+    inputs: [
+      { name: 'value', type: 'any', default: undefined, kind: 'behavior' }
+    ],
+    outputs: [
+      { name: 'value', type: 'any', kind: 'behavior' }
+    ],
+    params: [
+      { name: 'label', type: 'string', default: '' }
+    ],
+    evaluate: (inputs, params, ctx) => {
+      const label = params.label ?? '';
+      const message = label ? `${label}: ${inspectValue(inputs.value)}` : inspectValue(inputs.value);
+      ctx.engine?._recordEffect({ type: 'log', message, nodeId: ctx.currentNodeId });
+      return { value: inputs.value };
     }
   }
 };
