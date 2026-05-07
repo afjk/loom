@@ -46,9 +46,19 @@
         "command": "loomlet.sceneSyncDevCurrentFile",
         "title": "Loomlet: Scene Sync Dev Current File"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Loomlet",
+      "properties": {
+        "loomlet.completion.includePlanned": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include planned Loomlet libraries/functions in completion suggestions."
+        }
+      }
+    }
   },
   "scripts": {
-    "test": "node test/completion-context.test.mjs"
+    "test": "node test/completion-context.test.mjs && node test/completion-engine.test.mjs"
   }
 }
