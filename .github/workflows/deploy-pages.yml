@@ -35,9 +35,12 @@ jobs:
       - name: Prepare Pages artifact
         run: |
           mkdir -p dist-pages/node-editor
-          cp -R editor-studio/dist/* dist-pages/node-editor/
           mkdir -p dist-pages/editor
+          # The simple editor imports ../src/*.js directly, so src/ must be included in the Pages artifact.
+          mkdir -p dist-pages/src
+          cp -R editor-studio/dist/* dist-pages/node-editor/
           cp -R editor/* dist-pages/editor/
+          cp -R src/* dist-pages/src/
 
       - name: Add index page
         run: |
