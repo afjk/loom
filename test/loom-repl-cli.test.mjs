@@ -58,3 +58,37 @@ test('repl does not print previous console effect again after later snippet', ()
   assert.equal(matches.length, 1);
   assert.match(result.stdout, /x\.out = 1/);
 });
+
+test('repl supports libs, help, vars, history, load, run, and reset', () => {
+  const result = spawnSync(
+    process.execPath,
+    [cliPath, 'repl'],
+    {
+      cwd: projectRoot,
+      input: [
+        ':libs',
+        ':help logic',
+        ':help logic.select',
+        'base = constant(value: 10)',
+        ':vars',
+        ':history',
+        ':load test/fixtures/repl-load.loom',
+        'double(base)',
+        ':run test/fixtures/repl-load.loom',
+        ':reset',
+        'math.add(base, 5)',
+        ':quit'
+      ].join('\n'),
+      encoding: 'utf8'
+    }
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /math/);
+  assert.match(result.stdout, /logic\.select/);
+  assert.match(result.stdout, /truthy/i);
+  assert.match(result.stdout, /base = 10/);
+  assert.match(result.stdout, /1: base = constant\(value: 10\)/);
+  assert.match(result.stdout, /session reset/);
+  assert.match(result.stderr, /UNKNOWN_IDENTIFIER|Unknown|MISSING/i);
+});
