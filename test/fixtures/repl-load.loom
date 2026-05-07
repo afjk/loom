@@ -1,0 +1,3 @@
+import math
+base = constant(value: 10)
+double = fn(x) => math.multiply(x, 2)

@@ -188,6 +188,11 @@ Commands:
   :libs              List all available libraries
   :help <library>    Show functions in a library
   :help <lib.func>   Show function documentation
+  :load <file>       Load and evaluate a Loom file in this session
+  :run <file>        Run a Loom file without mutating this session
+  :vars              Show current variables
+  :history           Show current session input history
+  :clear             Clear the terminal (or print blank lines)
   :source            Show accumulated source
   :inspect           Show current graph summary
   :graph             Show current GraphJSON
@@ -195,6 +200,24 @@ Commands:
   :quit              Exit the REPL
   :q                 Exit the REPL
   :exit              Exit the REPL`;
+}
+
+function formatReplVarValue(value) {
+  if (typeof value === 'function') {
+    return '<function>';
+  }
+  if (typeof value === 'string') {
+    return JSON.stringify(value);
+  }
+  try {
+    const text = JSON.stringify(value);
+    if (!text) {
+      return String(value);
+    }
+    return text.length > 120 ? `${text.slice(0, 117)}...` : text;
+  } catch {
+    return String(value);
+  }
 }
 
 function getSceneSyncHelp() {
@@ -1539,7 +1562,7 @@ async function handleRepl(args) {
   return await new Promise((resolve) => {
     rl.prompt();
 
-    rl.on('line', (line) => {
+    rl.on('line', async (line) => {
       const trimmed = line.trim();
       if (trimmed === ':quit' || trimmed === ':q' || trimmed === ':exit') {
         rl.close();
@@ -1552,6 +1575,40 @@ async function handleRepl(args) {
       }
       if (trimmed === ':libs') {
         print(formatLibrariesText());
+        rl.prompt();
+        return;
+      }
+      if (trimmed === ':vars') {
+        const variables = session.getVariables();
+        if (variables.length === 0) {
+          print('Variables:\n\n<none>');
+        } else {
+          print('Variables:\n');
+          for (const variable of variables) {
+            print(`${variable.name} = ${formatReplVarValue(variable.value)}`);
+          }
+        }
+        rl.prompt();
+        return;
+      }
+      if (trimmed === ':history') {
+        const history = session.getHistory();
+        if (history.length === 0) {
+          print('<empty history>');
+        } else {
+          history.forEach((entry, index) => {
+            print(`${index + 1}: ${entry}`);
+          });
+        }
+        rl.prompt();
+        return;
+      }
+      if (trimmed === ':clear') {
+        if (process.stdout.isTTY) {
+          process.stdout.write('\x1Bc');
+        } else {
+          print('\n'.repeat(20));
+        }
         rl.prompt();
         return;
       }
@@ -1571,6 +1628,38 @@ async function handleRepl(args) {
           } else {
             printError(error.message || String(error));
           }
+        }
+        rl.prompt();
+        return;
+      }
+      if (trimmed.startsWith(':load ')) {
+        const filePath = trimmed.slice(6).trim();
+        try {
+          const source = await readFile(path.resolve(process.cwd(), filePath), 'utf8');
+          const result = session.loadSource(source);
+          if (!result.ok) {
+            printToolErrors(result.errors);
+          } else {
+            printSnippetResult(source, result);
+          }
+        } catch (error) {
+          printError(error.message || String(error));
+        }
+        rl.prompt();
+        return;
+      }
+      if (trimmed.startsWith(':run ')) {
+        const filePath = trimmed.slice(5).trim();
+        try {
+          const source = await readFile(path.resolve(process.cwd(), filePath), 'utf8');
+          const result = session.runSource(source);
+          if (!result.ok) {
+            printToolErrors(result.errors);
+          } else {
+            printSnippetResult(source, result);
+          }
+        } catch (error) {
+          printError(error.message || String(error));
         }
         rl.prompt();
         return;
