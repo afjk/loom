@@ -6,11 +6,11 @@ A small dataflow language for weaving values, signals, and scene behavior. Build
 
 ## Editor
 
-- `editor/`: simple editor (plain HTML/JS, no build step)
-- `editor-studio/`: source for the full Node Editor (Vite + React + Rete.js)
+- `editor/`: シンプル版エディタ。plain HTML/JS で、ビルドなしで動作します。
+- `editor-studio/`: フル版 Node Editor のソースです。Vite + React + Rete.js で構成されています。
 - GitHub Pages:
-  - [`/editor/`](https://afjk.github.io/loomlet/editor/): simple editor
-  - [`/node-editor/`](https://afjk.github.io/loomlet/node-editor/): full Node Editor
+  - [`/editor/`](https://afjk.github.io/loomlet/editor/): シンプル版エディタ
+  - [`/node-editor/`](https://afjk.github.io/loomlet/node-editor/): フル版 Node Editor
 
 ---
 
