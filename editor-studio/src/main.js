@@ -2236,7 +2236,11 @@ async function handleOperation(operation) {
   store.setState(result.state);
 
   if (!result.error) {
-    if (result.change.shouldRerenderView) {
+    const isNodeEditorControlParamEdit =
+      operation?.type === 'updateParam' &&
+      operation?.source === 'nodeEditorControl';
+
+    if (result.change.shouldRerenderView && !isNodeEditorControlParamEdit) {
       await nodeEditor?.renderModel(result.state.editorModel);
     }
 
@@ -2262,7 +2266,7 @@ async function handleOperation(operation) {
 
     renderErrors();
 
-    if (!isMetadataOnlyOperation) {
+    if (!isMetadataOnlyOperation && !isNodeEditorControlParamEdit) {
       renderInspector();
     }
 

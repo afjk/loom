@@ -52,7 +52,10 @@ function createReteNode(editorNode, onControl) {
     const ctrl = new ClassicPreset.InputControl(controlType, {
       initial: value,
       change(v) {
-        onControl(controlValueToUpdateParamOp(editorNode.id, key, v, controlType));
+        onControl({
+          ...controlValueToUpdateParamOp(editorNode.id, key, v, controlType),
+          source: 'nodeEditorControl'
+        });
       }
     });
     node.addControl(key, ctrl);
