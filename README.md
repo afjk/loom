@@ -516,40 +516,100 @@ x = timer |> sine(freq: 0.3) |> map(inMin: -1, inMax: 1, outMin: 100, outMax: 70
 
 詳細な仕様は **[docs/DSL.md](docs/DSL.md)** をご覧ください。
 
-### Editor Studio
+### Editor Studio (experimental)
 
 `editor-studio` は DSL と Rete.js v2 ノードエディタを左右に並べた協調編集スタジオです。
 
-- GitHub Pages: https://afjk.github.io/loomlet/editor-studio/dist/
+**GitHub Pages**: https://afjk.github.io/loomlet/editor-studio/dist/
 
-ローカル開発:
+#### ローカル開発
 
 ```bash
 cd editor-studio
 npm install
-npm run dev
+npm run dev        # http://localhost:5173/
+npm run build      # Production build
+npm run test:unit  # Unit tests
+npm run test:browser  # Browser tests
 ```
 
-**機能：**
-- DSL エディタ（CodeMirror）と **Rete.js v2 ノードエディタ** を左右2ペインで表示
-- `Apply DSL → Node`: DSL をパースしてノードエディタに反映
-- `Generate DSL ← Node`: ノードエディタから正規形 DSL を生成
-- ノード操作：
-  - ドラッグで移動
-  - エッジの接続・削除
-  - params の表示・編集
-- Canvas preview：`render bar` / `render point` に対応（全画面表示）
-- GraphJSON 表示 pane
-- Errors pane
-- Editor panels can be shown or hidden with the `Show/Hide Editors` button
+#### UI 概要
 
-**設計方針：**
-- 手動同期: DSL ↔ Node は明示ボタン式（リアルタイム自動同期ではない）
-- Node → DSL は正規形（元のコメント・書式は保持しない）
-- EditorModel が single source of truth、Rete.js ノードエディタは view として扱う
-- The node editor uses **Rete.js v2** as the visual editing layer
+**左ペイン: DSL Editor**
+- CodeMirror 6 ベース
+- 構文ハイライト
+- 補完（ノード型・パラメータ名）
+- **inline lint**: エラーは DSL エディタに直接表示（赤波線 + ガター）
 
-詳細は `editor-studio/src/` の実装と `test/loom-editor-studio.test.html` のテストを参照してください。
+**右ペイン: Node Editor**
+- Rete.js v2 による視覚的ノード編集
+- ドラッグで移動
+- エッジの接続・削除
+- パラメータの表示・編集
+
+**下部パネル（タブ式）**
+| タブ | 役割 |
+|---|---|
+| GraphJSON | 現在のグラフをJSON表示 |
+| Errors | パースエラー・コンパイルエラー一覧 |
+| Inspector | 選択ノードの詳細・接続情報 |
+| Nodes | ノードリスト（検索・フィルタ対応） |
+| Palette | ノード型一覧から新規ノード追加 |
+
+#### 主な機能
+
+**編集ワークフロー**
+- `Apply DSL → Node`: DSL をパースしてノードエディタに反映（手動）
+- `Generate DSL ← Node`: ノードエディタから正規形 DSL を生成（手動）
+- Auto Apply DSL: DSL 入力後、自動で apply（オプション）
+- Auto Sync DSL: ノード操作後、自動で DSL に同期（オプション）
+
+**レイアウト保存**
+- パネルサイズ（DSL/Node 分割、下部パネル高さ）を保存
+- 再度開くと前回のレイアウトを復元
+
+**Undo/Redo**
+- グラフ操作のみ対応（DSL テキスト編集は CodeMirror に従う）
+- ドラッグ移動は複数移動を1ステップに統合
+
+**キーボードショートカット**
+- Delete / Backspace: 選択ノードを削除
+- Ctrl/Cmd+Z: Undo
+- Ctrl/Cmd+Shift+Z: Redo
+
+#### Source of Truth モデル
+
+**DSL テキスト → 正規形グラフ → UI 表示**
+
+1. **DSL は text source**: ユーザーが編集した状態を保持
+2. **Apply**: DSL を parse → compile → EditorModel に変換
+   - Invalid DSL はエラー表示、前のグラフ保持
+   - Valid DSL のみ EditorModel 更新
+3. **Node operations**: EditorModel を直接編集
+   - 自動同期が有効なら、EditorModel から DSL を再生成
+4. **Save**: 現在の source-of-truth を .loom ファイルに保存
+   - DSL テキストが未適用なら text を save
+   - ノード操作後なら EditorModel から正規形 DSL を生成して save
+
+#### 設計方針
+
+- **EditorModel が single source of truth**: Rete.js ノードはビュー層
+- **手動同期**: DSL ↔ Node は明示ボタン式（リアルタイム自動ではない）
+- **正規形 DSL**: Node → DSL 生成時、元のコメント・書式は保持しない
+- **Incremental rendering**: DSL apply 時、変更のあったノード・接続のみ更新
+- **Separate text undo**: CodeMirror 内の text undo と、グラフ undo は独立
+
+#### CLI コマンド
+
+```bash
+cd editor-studio
+npm run dev          # 開発サーバ起動
+npm run build        # Vite ビルド
+npm run test:unit    # ユニットテスト実行
+npm run test:browser # ブラウザテスト実行
+```
+
+詳細は `editor-studio/src/` の実装と `editor-studio/test/` のテストを参照してください。
 
 ## デモの確認方法
 
