@@ -483,17 +483,11 @@ loomlet scenesync graph-clear sample-cube --send
 | エディタ | URL | 特徴 |
 |---|---|---|
 | シンプル版 (`editor/`) | [editor/](https://afjk.github.io/loomlet/editor/) | 依存ゼロ・軽量・textarea ベース |
-| **Pro 版** (`editor-pro/`) | [editor-pro/dist/](https://afjk.github.io/loomlet/editor-pro/dist/) | **補完・構文ハイライト・lint 付き、オーバーレイ UI** |
-| **Studio MVP** (`editor-studio/`) | [editor-studio/dist/](https://afjk.github.io/loomlet/editor-studio/dist/) | **DSL + ノードエディタ並行編集 MVP** |
+| フル版 Node Editor (`editor-studio/`) | [node-editor/](https://afjk.github.io/loomlet/node-editor/) | CodeMirror DSL editor + Rete.js Node Editor による並行編集 |
 
 **シンプル版** はライブラリ依存ゼロで手軽に使えるテキストエリアベースのエディタです。
 
-**Pro 版** は CodeMirror 6 ベースの高機能エディタで、以下の機能を備えています:
-- 構文ハイライト（コメント・文字列・数値・キーワード・ノード名・識別子）
-- 文脈依存の補完（ノード型、パラメータ名、定義済み識別子）
-- パースエラー時の赤い波線 lint 表示
-- デモを全画面背景に表示した半透明オーバーレイ UI
-- ドラッグ・リサイズ対応、デスクトップ・タブレット・スマホで動作
+**フル版 Node Editor** は CodeMirror 6 ベースの DSL editor と Rete.js v2 ベースの Node Editor を組み合わせた実験的なエディタです。DSL とノードグラフの並行編集、Inspector、Node Palette、Undo/Redo、hidden editor metadata に対応しています。`editor-studio/` はソースディレクトリで、GitHub Pages では `/node-editor/` として公開しています。
 
 ライブエディタ（`editor/index.html`）では **JSON** モードと **DSL** モードを切り替えてグラフを編集できます。
 
@@ -523,7 +517,7 @@ x = timer |> sine(freq: 0.3) |> map(inMin: -1, inMax: 1, outMin: 100, outMax: 70
 
 `editor-studio` は DSL と Rete.js v2 ノードエディタを左右に並べた協調編集スタジオです。
 
-- GitHub Pages: https://afjk.github.io/loomlet/editor-studio/dist/
+- GitHub Pages: https://afjk.github.io/loomlet/node-editor/
 
 ローカル開発:
 
@@ -598,8 +592,7 @@ GitHub Pages で公開されているデモを、ブラウザから直接確認�
 * lowpass 平滑化デモ：https://afjk.github.io/loomlet/examples/17-jitter-free-trail.html
 * integrate チャージゲージ：https://afjk.github.io/loomlet/examples/18-charge-gauge.html
 * **ライブエディタ（シンプル版）**：https://afjk.github.io/loomlet/editor/
-* **ライブエディタ（Pro 版）**：https://afjk.github.io/loomlet/editor-pro/dist/
-* **Studio MVP**：https://afjk.github.io/loomlet/editor-studio/dist/
+* **フル版 Node Editor**：https://afjk.github.io/loomlet/node-editor/
 * テスト結果：https://afjk.github.io/loomlet/test/loom.test.html
 
 ローカルで確認する場合は、ESM を使うため、ローカルファイル直接 (`file://`) ではなく HTTP サーバから配信する必要があります。
@@ -646,8 +639,7 @@ GitHub Pages で公開されているデモを、ブラウザから直接確認�
 * integrate チャージゲージ：`http://localhost:8000/examples/18-charge-gauge.html`
 
 * **ライブエディタ（シンプル版）**：`http://localhost:8000/editor/`
-* **ライブエディタ（Pro 版）**：`http://localhost:8000/editor-pro/dist/`
-* **Studio MVP**：`http://localhost:8000/editor-studio/dist/`
+* **フル版 Node Editor**（ローカル開発）：`cd editor-studio && npm run dev`（`http://localhost:5173/`）
 
 * テスト：`http://localhost:8000/test/loom.test.html`
 
