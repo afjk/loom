@@ -1,5 +1,5 @@
 import { NodeEditor, ClassicPreset } from 'rete';
-import { AreaPlugin } from 'rete-area-plugin';
+import { AreaPlugin, AreaExtensions } from 'rete-area-plugin';
 import { ConnectionPlugin, Presets as ConnectionPresets } from 'rete-connection-plugin';
 import { ReactPlugin, Presets } from 'rete-react-plugin';
 import { NODE_TYPES } from '../../src/loom.js';
@@ -355,23 +355,10 @@ export class NodeEditorView {
       const node = this.editor.getNode(nodeId);
       if (!node) return false;
 
-      const nodeView = this.area.nodeViews?.get?.(nodeId);
-      if (!nodeView || !nodeView.position) return false;
-
-      const { x: nodeX, y: nodeY } = nodeView.position;
-      const containerRect = this.container.getBoundingClientRect();
-      const viewCenterX = containerRect.width / 2;
-      const viewCenterY = containerRect.height / 2;
-
-      const svg = this.container.querySelector('[class*="area"]') || this.container.querySelector('svg');
-      if (svg && svg.style) {
-        const offsetX = viewCenterX - nodeX;
-        const offsetY = viewCenterY - nodeY;
-        svg.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(1)`;
-      }
-
+      await AreaExtensions.zoomAt(this.area, [node]);
       return true;
     } catch (e) {
+      console.warn('focusNode failed:', e.message);
       return false;
     }
   }

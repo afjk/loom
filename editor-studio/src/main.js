@@ -70,7 +70,7 @@ let currentFileName = '';
 let isDirty = false;
 let isApplyingProgrammaticDslChange = false;
 let hasUnsyncedDslText = false;
-let autoApplyDslEnabled = true;
+let autoApplyDslEnabled = false;
 let autoSyncGraphToDslEnabled = true;
 let autoApplyTimer = null;
 let autoApplyDelayMs = 500;
@@ -80,7 +80,6 @@ let bottomPanelHeight = DEFAULT_BOTTOM_PANEL_HEIGHT;
 let isBottomPanelCollapsed = false;
 let isResizingBottomPanel = false;
 let dslPaneWidth = DEFAULT_DSL_PANE_WIDTH;
-let savedDslPaneWidthBeforeMaximize = DEFAULT_DSL_PANE_WIDTH;
 let isResizingEditorSplit = false;
 
 let undoStack = [];
@@ -311,10 +310,8 @@ function setEditorMaximizeMode(mode) {
     editorMaximizeMode = 'split';
     applyEditorSplitLayout();
   } else if (mode === 'dsl') {
-    savedDslPaneWidthBeforeMaximize = dslPaneWidth;
     editorMaximizeMode = 'dsl';
   } else if (mode === 'node') {
-    savedDslPaneWidthBeforeMaximize = dslPaneWidth;
     editorMaximizeMode = 'node';
   }
 
@@ -326,13 +323,17 @@ function updateEditorMaximizeButtons() {
   const panels = elements.editorPanels;
   if (!panels) return;
 
-  const dslBtn = panels.querySelector('[data-action="maximize-dsl"]');
-  const nodeBtn = panels.querySelector('[data-action="maximize-node"]');
-  const restoreBtn = panels.querySelector('[data-action="restore-split"]');
+  panels.querySelectorAll('[data-action="maximize-dsl"]').forEach((btn) => {
+    btn.style.display = editorMaximizeMode === 'split' ? 'block' : 'none';
+  });
 
-  if (dslBtn) dslBtn.style.display = editorMaximizeMode === 'split' ? 'block' : 'none';
-  if (nodeBtn) nodeBtn.style.display = editorMaximizeMode === 'split' ? 'block' : 'none';
-  if (restoreBtn) restoreBtn.style.display = editorMaximizeMode !== 'split' ? 'block' : 'none';
+  panels.querySelectorAll('[data-action="maximize-node"]').forEach((btn) => {
+    btn.style.display = editorMaximizeMode === 'split' ? 'block' : 'none';
+  });
+
+  panels.querySelectorAll('[data-action="restore-split"]').forEach((btn) => {
+    btn.style.display = editorMaximizeMode !== 'split' ? 'block' : 'none';
+  });
 }
 
 function selectBottomTab(tabName) {
