@@ -158,6 +158,95 @@
       assert(result.state.editorModel.nodesById.out, 'out node should still exist');
     });
 
+    test('Test 6: renameNode updates node ID and order', () => {
+      const graph = sampleGraph();
+      const state = createNodeEditorState(graph);
+
+      const result = applyNodeEditorOperationState(state, {
+        type: 'renameNode',
+        id: 'wave',
+        newId: 'wave2'
+      });
+
+      assert(!result.error, 'renameNode should not error');
+      assert(!result.state.editorModel.nodesById.wave, 'wave node should not exist');
+      assert(result.state.editorModel.nodesById.wave2, 'wave2 node should exist');
+      assert(result.state.editorModel.order.includes('wave2'), 'order should contain wave2');
+      assert(!result.state.editorModel.order.includes('wave'), 'order should not contain wave');
+      assert(result.state.editorModel.nodesById.wave2.id === 'wave2', 'node id should be wave2');
+    });
+
+    test('Test 7: renameNode updates connected edges', () => {
+      const graph = sampleGraph();
+      const state = createNodeEditorState(graph);
+
+      const result = applyNodeEditorOperationState(state, {
+        type: 'renameNode',
+        id: 'wave',
+        newId: 'wave2'
+      });
+
+      assert(!result.error, 'renameNode should not error');
+
+      const edges = Object.values(result.state.editorModel.edgesById);
+      let foundFromEdge = false;
+      let foundToEdge = false;
+
+      for (const edge of edges) {
+        if (edge.fromNodeId === 'wave2' && edge.toNodeId === 'out') {
+          foundFromEdge = true;
+          assert(edge.id === 'wave2.out->out.value', 'edge id should be recalculated with new node id');
+        }
+        if (edge.fromNodeId === 't' && edge.toNodeId === 'wave2') {
+          foundToEdge = true;
+          assert(edge.id === 't.t->wave2.t', 'edge id should be recalculated with new node id');
+        }
+      }
+
+      assert(foundFromEdge, 'should have from edge with wave2');
+      assert(foundToEdge, 'should have to edge with wave2');
+
+      for (const edge of edges) {
+        if (edge.fromNodeId === 'wave' || edge.toNodeId === 'wave') {
+          throw new Error('edges should not reference old node id');
+        }
+      }
+    });
+
+    test('Test 8: renameNode rejects duplicate ID', () => {
+      const graph = sampleGraph();
+      const state = createNodeEditorState(graph);
+
+      const result = applyNodeEditorOperationState(state, {
+        type: 'renameNode',
+        id: 'wave',
+        newId: 'out'
+      });
+
+      assert(result.error, 'renameNode should error on duplicate id');
+      assert(result.state.errors.length > 0, 'errors should contain error message');
+
+      const originalModelStr = JSON.stringify(sampleGraph());
+      const resultModelStr = JSON.stringify(result.state.graph);
+      assert(resultModelStr === originalModelStr, 'graph should not be mutated on error');
+    });
+
+    test('Test 9: renameNode rejects invalid ID', () => {
+      const graph = sampleGraph();
+      const state = createNodeEditorState(graph);
+
+      const result = applyNodeEditorOperationState(state, {
+        type: 'renameNode',
+        id: 'wave',
+        newId: '123bad'
+      });
+
+      assert(result.error, 'renameNode should error on invalid id');
+      assert(result.state.errors.length > 0, 'errors should contain error message');
+      assert(result.state.editorModel.nodesById.wave, 'original node should still exist');
+      assert(!result.state.editorModel.nodesById['123bad'], 'invalid node should not exist');
+    });
+
     async function run() {
       let pass = 0; let fail = 0; const failures = [];
       for (const t of results) {

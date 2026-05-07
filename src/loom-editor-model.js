@@ -33,11 +33,32 @@ import { NODE_TYPES } from './loom.js';
  *   | { type: 'moveNode',    id: string, position: { x: number, y: number } }
  *   | { type: 'addEdge',     edge: EditorEdge }
  *   | { type: 'removeEdge',  edgeId: string }
+ *   | { type: 'renameNode',  id: string, newId: string }
  * } EditorOperation
  */
 
 function edgeId(fromNodeId, fromPort, toNodeId, toPort) {
   return `${fromNodeId}.${fromPort}->${toNodeId}.${toPort}`;
+}
+
+function validateNodeId(id) {
+  if (typeof id !== 'string') {
+    throw new Error('Node id must be a string');
+  }
+
+  const trimmed = id.trim();
+
+  if (!trimmed) {
+    throw new Error('Node id cannot be empty');
+  }
+
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(trimmed)) {
+    throw new Error(
+      `Invalid node id '${id}'. Use letters, numbers, and underscores, and do not start with a number.`
+    );
+  }
+
+  return trimmed;
 }
 
 export function layoutFallback(nodes) {
@@ -201,6 +222,43 @@ export function applyEditorOperation(em, op) {
   if (op.type === 'removeEdge') {
     if (!next.edgesById[op.edgeId]) return next;
     delete next.edgesById[op.edgeId];
+    return next;
+  }
+
+  if (op.type === 'renameNode') {
+    if (!next.nodesById[op.id]) throw new Error(`Node '${op.id}' does not exist`);
+    const newId = validateNodeId(op.newId);
+    if (newId === op.id) return next;
+    if (next.nodesById[newId]) throw new Error(`Node '${newId}' already exists`);
+
+    const node = next.nodesById[op.id];
+    delete next.nodesById[op.id];
+    next.nodesById[newId] = { ...node, id: newId };
+
+    next.order = next.order.map((id) => (id === op.id ? newId : id));
+
+    const renamedEdgesById = {};
+    for (const edge of Object.values(next.edgesById)) {
+      const renamedEdge = {
+        ...edge,
+        fromNodeId: edge.fromNodeId === op.id ? newId : edge.fromNodeId,
+        toNodeId: edge.toNodeId === op.id ? newId : edge.toNodeId
+      };
+
+      const renamedEdgeId = edgeId(
+        renamedEdge.fromNodeId,
+        renamedEdge.fromPort,
+        renamedEdge.toNodeId,
+        renamedEdge.toPort
+      );
+
+      renamedEdgesById[renamedEdgeId] = {
+        ...renamedEdge,
+        id: renamedEdgeId
+      };
+    }
+    next.edgesById = renamedEdgesById;
+
     return next;
   }
 
