@@ -2,7 +2,7 @@ import { Loom, LoomError, NODE_TYPES } from '../loom.js';
 import { compileLoomSource } from './compile.js';
 import { normalizeLoomError } from './errors.js';
 
-const CLI_SAFE_CATEGORIES = new Set(['source', 'transform', 'state']);
+const CLI_SAFE_CATEGORIES = new Set(['source', 'transform', 'state', 'output']);
 
 function isCliSafeSink(nodeTypeName) {
   return nodeTypeName === 'console.log' || nodeTypeName === 'console.warn' || nodeTypeName === 'console.error' || nodeTypeName === 'console.table' || nodeTypeName === 'fs.writeText'

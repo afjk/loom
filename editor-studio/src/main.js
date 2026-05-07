@@ -92,9 +92,6 @@ let dslPaneWidth = DEFAULT_DSL_PANE_WIDTH;
 let isResizingEditorSplit = false;
 
 let undoStack = [];
-let outputEntries = [];
-let lastLogByNodeId = new Map();
-const MAX_OUTPUT_ENTRIES = 500;
 let redoStack = [];
 let isApplyingHistory = false;
 let activeMoveHistoryNodeId = null;
@@ -1884,7 +1881,7 @@ function setupEventListeners() {
     runPreview(state.graph);
   });
   elements.resetSampleBtn.addEventListener('click', resetSample);
-  elements.outputClearBtn?.addEventListener('click', clearOutput);
+  elements.clearOutputBtn?.addEventListener('click', clearOutput);
   elements.togglePanelsBtn.addEventListener('click', () => {
     setPanelsVisible(!panelsVisible);
   });
