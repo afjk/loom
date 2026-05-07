@@ -41,3 +41,5 @@ This MVP does not include:
 - formatter
 - hover documentation from compiler metadata
 - graph preview
+
+VS Code completions are generated from Loomlet library metadata. Run `npm run generate:vscode-metadata` after changing library metadata.
