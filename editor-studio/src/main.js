@@ -31,10 +31,16 @@ render bar(width: width, color: "#80ed99", height: 48)
 
 const BOTTOM_PANEL_HEIGHT_KEY = 'loomlet.editorStudio.bottomPanelHeight';
 const BOTTOM_PANEL_COLLAPSED_KEY = 'loomlet.editorStudio.bottomPanelCollapsed';
+const EDITOR_SPLIT_WIDTH_KEY = 'loomlet.editorStudio.editorSplitWidth';
 
 const DEFAULT_BOTTOM_PANEL_HEIGHT = 260;
 const MIN_BOTTOM_PANEL_HEIGHT = 120;
 const MAX_BOTTOM_PANEL_RATIO = 0.6;
+
+const DEFAULT_DSL_PANE_WIDTH = 520;
+const MIN_DSL_PANE_WIDTH = 280;
+const MIN_NODE_PANE_WIDTH = 320;
+const EDITOR_SPLIT_HANDLE_WIDTH = 8;
 
 const store = createStore();
 let dslEditor = null;
@@ -57,6 +63,8 @@ let latestSuccessfulDslText = '';
 let bottomPanelHeight = DEFAULT_BOTTOM_PANEL_HEIGHT;
 let isBottomPanelCollapsed = false;
 let isResizingBottomPanel = false;
+let dslPaneWidth = DEFAULT_DSL_PANE_WIDTH;
+let isResizingEditorSplit = false;
 
 const elements = {
   dslEditorHost: document.getElementById('dsl-editor-host'),
@@ -84,7 +92,9 @@ const elements = {
   autoSyncGraphToDslToggle: document.getElementById('autoSyncGraphToDslToggle'),
   bottomPanel: document.getElementById('bottom-panel'),
   bottomPanelResizeHandle: document.getElementById('bottom-panel-resize-handle'),
-  bottomPanelCollapseBtn: document.getElementById('bottom-panel-collapse-btn')
+  bottomPanelCollapseBtn: document.getElementById('bottom-panel-collapse-btn'),
+  editorPanels: document.querySelector('.editor-panels'),
+  editorSplitResizeHandle: document.getElementById('editor-split-resize-handle')
 };
 
 function setPanelsVisible(visible) {
@@ -189,13 +199,84 @@ function stopBottomPanelResize() {
 function handleWindowResizeForBottomPanel() {
   bottomPanelHeight = clampBottomPanelHeight(bottomPanelHeight);
   applyBottomPanelLayout();
+
+  dslPaneWidth = clampDslPaneWidth(dslPaneWidth);
+  applyEditorSplitLayout();
+
   saveBottomPanelLayout();
+  saveEditorSplitLayout();
 }
 
 function toggleBottomPanelCollapsed() {
   isBottomPanelCollapsed = !isBottomPanelCollapsed;
   applyBottomPanelLayout();
   saveBottomPanelLayout();
+}
+
+function getMaxDslPaneWidth() {
+  const panels = elements.editorPanels;
+  if (!panels) return DEFAULT_DSL_PANE_WIDTH;
+
+  const rect = panels.getBoundingClientRect();
+  return Math.max(
+    MIN_DSL_PANE_WIDTH,
+    Math.floor(rect.width - MIN_NODE_PANE_WIDTH - EDITOR_SPLIT_HANDLE_WIDTH)
+  );
+}
+
+function clampDslPaneWidth(width) {
+  return Math.min(
+    Math.max(width, MIN_DSL_PANE_WIDTH),
+    getMaxDslPaneWidth()
+  );
+}
+
+function applyEditorSplitLayout() {
+  const panels = elements.editorPanels;
+  if (!panels) return;
+
+  dslPaneWidth = clampDslPaneWidth(dslPaneWidth);
+  panels.style.setProperty('--dsl-pane-width-px', `${dslPaneWidth}px`);
+}
+
+function loadEditorSplitLayout() {
+  const savedWidth = Number(localStorage.getItem(EDITOR_SPLIT_WIDTH_KEY));
+  if (Number.isFinite(savedWidth)) {
+    dslPaneWidth = savedWidth;
+  }
+
+  applyEditorSplitLayout();
+}
+
+function saveEditorSplitLayout() {
+  localStorage.setItem(EDITOR_SPLIT_WIDTH_KEY, String(dslPaneWidth));
+}
+
+function startEditorSplitResize(event) {
+  isResizingEditorSplit = true;
+  document.body.classList.add('resizing-editor-split');
+  event.preventDefault();
+}
+
+function resizeEditorSplit(event) {
+  if (!isResizingEditorSplit) return;
+
+  const panels = elements.editorPanels;
+  if (!panels) return;
+
+  const rect = panels.getBoundingClientRect();
+  const nextWidth = event.clientX - rect.left;
+
+  dslPaneWidth = clampDslPaneWidth(nextWidth);
+  applyEditorSplitLayout();
+}
+
+function stopEditorSplitResize() {
+  if (!isResizingEditorSplit) return;
+
+  isResizingEditorSplit = false;
+  document.body.classList.remove('resizing-editor-split');
+  saveEditorSplitLayout();
 }
 
 function resizePreviewCanvas() {
@@ -1273,6 +1354,10 @@ function setupEventListeners() {
   window.addEventListener('resize', handleWindowResizeForBottomPanel);
   elements.bottomPanelCollapseBtn?.addEventListener('click', toggleBottomPanelCollapsed);
 
+  elements.editorSplitResizeHandle?.addEventListener('pointerdown', startEditorSplitResize);
+  window.addEventListener('pointermove', resizeEditorSplit);
+  window.addEventListener('pointerup', stopEditorSplitResize);
+
   window.addEventListener('resize', resizePreviewCanvas);
   window.addEventListener('keydown', handleGlobalKeyDown);
 }
@@ -1340,6 +1425,7 @@ async function init() {
 
   setupEventListeners();
   loadBottomPanelLayout();
+  loadEditorSplitLayout();
   renderFileStatus();
   renderAutoApplyStatus();
   renderNodePaletteCategories();
