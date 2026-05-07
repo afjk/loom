@@ -1,24 +1,24 @@
-# Loom の設計思想
+# Loomlet の設計思想
 
-Loom は、結果ではなく関係を記述する。
+Loomlet は、結果ではなく関係を記述する。
 
-Loom graph は、環境から出力を導くためのシリアライズ可能な定義である。  
+Loomlet graph は、環境から出力を導くためのシリアライズ可能な定義である。  
 graph 自体は、決定論的な関係として扱う。つまり、同じ環境と同じ評価規則が与えられれば、同じ出力を生成するべきである。
 
 言い換えると、次の原則が成り立つ。
 
 同じ graph + 同じ environment + 同じ評価規則 = 同じ出力
 
-この原則が Loom の設計判断の土台である。
+この原則が Loomlet の設計判断の土台である。
 
-ただし、Loom はすべての host behavior を完全に決定論的にすることを目的としない。  
+ただし、Loomlet はすべての host behavior を完全に決定論的にすることを目的としない。  
 物理、デバイス入力、描画、AI サービス、乱数、外部 API など、host 固有または非決定的な処理は、environment input または同期済み result として扱う。
 
-Loom の役割は、同期済み environment から、決定論的に記述できる振る舞いを各 runtime が再現できるようにすることである。
+Loomlet の役割は、同期済み environment から、決定論的に記述できる振る舞いを各 runtime が再現できるようにすることである。
 
 ## 3 層モデル
 
-Loom は振る舞いを次の 3 つの層に分離する。
+Loomlet は振る舞いを次の 3 つの層に分離する。
 
 1. Graph
 2. Environment
@@ -47,8 +47,8 @@ Environment には次のものが含まれる。
 
 Environment は graph から分離される。
 
-この分離が重要である。Loom は、計算済みのすべての結果を同期する必要はない。  
-代わりに、Loom は environment を同期する。すべてのクライアントが同じ graph を同じ environment で評価すれば、各クライアントは同じ結果を独立に計算できる。
+この分離が重要である。Loomlet は、計算済みのすべての結果を同期する必要はない。  
+代わりに、Loomlet は environment を同期する。すべてのクライアントが同じ graph を同じ environment で評価すれば、各クライアントは同じ結果を独立に計算できる。
 
 ### Runtime
 
@@ -66,7 +66,7 @@ Web、Unity、Godot など複数の runtime が存在し得るが、それらは
 
 ## Scene-level graph と Object-level graph
 
-Loom graph は、scene 全体に対して持つことも、個別の scene object に attach することもできる。
+Loomlet graph は、scene 全体に対して持つことも、個別の scene object に attach することもできる。
 
 ### Scene-level graph
 
@@ -106,14 +106,14 @@ Object-level graph は、基本的に自分自身の振る舞いを記述する�
 
 たとえば、100 個の bullet object が存在する場合でも、それぞれに同じ bullet motion graph を attach し、spawnTime、initialPosition、direction、speed などの environment だけを変えて評価できる。
 
-このモデルにより、Loom core が動的に N 個の object を graph 内で直接管理する必要を減らせる。  
+このモデルにより、Loomlet core が動的に N 個の object を graph 内で直接管理する必要を減らせる。  
 Object の生成、削除、識別子、graph attachment は SceneSync または host 側が管理する。
 
 ## 同期モデル
 
-Loom は、連続的な結果ではなく原因を同期する。
+Loomlet は、連続的な結果ではなく原因を同期する。
 
-オブジェクトの位置、回転、アニメーション値、その他の計算済み出力を毎フレーム broadcast する代わりに、Loom は environment を同期することを優先する。
+オブジェクトの位置、回転、アニメーション値、その他の計算済み出力を毎フレーム broadcast する代わりに、Loomlet は environment を同期することを優先する。
 
 - 入力イベントは、発生したときに environment event として同期する
 - 入力値は、変化したときに environment value として同期する
@@ -132,7 +132,7 @@ Loom は、連続的な結果ではなく原因を同期する。
 
 ## Local input と Committed environment event
 
-Loom が読むべき入力は、生の local input ではなく、同期対象として確定した environment event である。
+Loomlet が読むべき入力は、生の local input ではなく、同期対象として確定した environment event である。
 
 たとえば、マルチプレイで一人のプレイヤーがボタンを押した場合、local device はまず local input を検出する。  
 しかし、door を開く、ride を開始する、score を加算するなど、scene の共有状態に影響する処理は、同期済み environment event に基づいて行うべきである。
@@ -164,12 +164,12 @@ Environment event には、少なくとも次の情報を含めるべきであ�
 
 ## 評価モデル
 
-Loom runtime は、object-level graph 間で評価順に依存する振る舞いを避けるべきである。
+Loomlet runtime は、object-level graph 間で評価順に依存する振る舞いを避けるべきである。
 
 各 evaluation tick において、runtime は次の順序で処理する。
 
 1. environment snapshot を取得する
-2. すべての対象 Loom graph を、その snapshot に対して評価する
+2. すべての対象 Loomlet graph を、その snapshot に対して評価する
 3. host scene を即座に変更せず、output command を収集する
 4. 決定論的なルールで output の競合を解決する
 5. 収集した output を host scene に適用する
@@ -194,7 +194,7 @@ snapshot → evaluate → collect outputs → resolve conflicts → apply
 
 このような競合は避けるべきである。
 
-基本方針として、Loom runtime は single writer rule を採用することが望ましい。
+基本方針として、Loomlet runtime は single writer rule を採用することが望ましい。
 
 つまり、1 つの property に対して書き込める graph は原則として 1 つにする。
 
@@ -222,39 +222,39 @@ Object の生成や削除は、graph 評価中に即座に反映しない方が�
 Projectile など、生成された瞬間から進行しているように見せたい object では、spawnTime を environment に含める。  
 Object-level graph は serverTime - spawnTime を使って現在位置を計算できる。
 
-## Loom tick と host frame
+## Loomlet tick と host frame
 
-Loom runtime は、host frame ごとに 1 回だけ graph を評価する必要はない。
+Loomlet runtime は、host frame ごとに 1 回だけ graph を評価する必要はない。
 
-Host の frame loop と Loom の evaluation tick は、異なる周期で動作してよい。  
-決定論的な振る舞いのために、Loom は同期された時刻に基づく固定 timestep で評価されるべきである。
+Host の frame loop と Loomlet の evaluation tick は、異なる周期で動作してよい。  
+決定論的な振る舞いのために、Loomlet は同期された時刻に基づく固定 timestep で評価されるべきである。
 
-Runtime は、現在の同期時刻に追いつくために、1 つの host frame 内で Loom を複数回評価してよい。
+Runtime は、現在の同期時刻に追いつくために、1 つの host frame 内で Loomlet を複数回評価してよい。
 
-Unity の場合、Unity Update と Loom tick は次のように分離できる。
+Unity の場合、Unity Update と Loomlet tick は次のように分離できる。
 
 - Unity Update は、入力収集、output 適用、描画反映を担当する
-- Loom tick は、決定論的な graph 評価を担当する
+- Loomlet tick は、決定論的な graph 評価を担当する
 
 推奨される評価モデルは次の通りである。
 
 1. 入力値と入力イベントを timestamp 付きで収集する
-2. 固定 timestep で Loom を進める
+2. 固定 timestep で Loomlet を進める
 3. immutable な environment snapshot に対して graph を評価する
 4. output command を収集する
 5. host main thread 上で、最新または補間された output を host scene に適用する
 
-Loom の graph 評価中に host object を直接変更してはならない。  
+Loomlet の graph 評価中に host object を直接変更してはならない。  
 Host の変更は、収集された output command を適用する段階でのみ行うべきである。
 
 Unity の Transform、GameObject、Renderer などの Unity API は、原則として Unity main thread 上で扱う。  
-Loom の評価を worker thread 化する場合でも、worker thread は純粋な graph 評価と output command 生成に限定し、Unity API への反映は main thread で行う。
+Loomlet の評価を worker thread 化する場合でも、worker thread は純粋な graph 評価と output command 生成に限定し、Unity API への反映は main thread で行う。
 
 ## 決定論の要件
 
-Environment 同期モデルが成立するためには、Loom の評価が決定論的である必要がある。
+Environment 同期モデルが成立するためには、Loomlet の評価が決定論的である必要がある。
 
-そのため、Loom は次のルールに従うべきである。
+そのため、Loomlet は次のルールに従うべきである。
 
 - 純粋な計算ノードは、隠れた副作用を持たない
 - state を持つ振る舞いは、明示的な state ノードとして表現する
@@ -272,14 +272,14 @@ Environment 同期モデルが成立するためには、Loom の評価が決定
 
 ## State と副作用
 
-Loom の多くのノードは、純粋な関係ノードであるべきである。
+Loomlet の多くのノードは、純粋な関係ノードであるべきである。
 
 state を持つ振る舞いは許可するが、それらは明示的でなければならない。  
 例として、delay、previous-value、accumulator、low-pass filter、state-machine ノードなどがある。
 
 副作用は output 境界に隔離するべきである。
 
-つまり Loom は、次のものを区別するべきである。
+つまり Loomlet は、次のものを区別するべきである。
 
 - 値を計算すること
 - output command を生成すること
@@ -290,18 +290,18 @@ Runtime は、それを host 環境にどう適用するかを決定する。
 
 ## 結果同期を fallback として扱う
 
-すべてを Loom の決定論的モデルに押し込むべきではない。
+すべてを Loomlet の決定論的モデルに押し込むべきではない。
 
 一部の振る舞いは、host 固有のシステム、物理エンジン、外部サービス、AI 生成、乱数、デバイス固有データ、その他の非決定的な処理に依存する場合がある。
 
 そのような場合、SceneSync または別の host 同期レイヤーが、結果を直接同期してよい。
 
-実用上、Loom と SceneSync は次の 2 種類の同期戦略を併用できる。
+実用上、Loomlet と SceneSync は次の 2 種類の同期戦略を併用できる。
 
-1. 決定論的な Loom の振る舞いには environment 同期を使う
+1. 決定論的な Loomlet の振る舞いには environment 同期を使う
 2. host 固有または非決定的な振る舞いには result 同期を使う
 
-Loom は、決定論的な関係として記述できる振る舞いに使う。  
+Loomlet は、決定論的な関係として記述できる振る舞いに使う。  
 SceneSync は、外部結果として同期する必要がある振る舞いを扱う。
 
 例:
@@ -313,24 +313,41 @@ SceneSync は、外部結果として同期する必要がある振る舞いを�
 - device 固有の入力や tracking 結果
 - 完全な決定論を保証できない random source
 
-これらは Loom graph 内に隠すのではなく、environment input または同期済み result として扱う。
+これらは Loomlet graph 内に隠すのではなく、environment input または同期済み result として扱う。
 
 ## まとめ
 
-Loom は、Arrowized FRP に着想を得た、シリアライズ可能な振る舞い graph システムである。
+Loomlet は、Arrowized FRP に着想を得た、シリアライズ可能な振る舞い graph システムである。
 
-Loom は関係を JSON として記述し、environment を分離し、その environment をクライアント間で同期し、各 runtime が結果を独立に計算する。
+Loomlet は関係を JSON として記述し、environment を分離し、その environment をクライアント間で同期し、各 runtime が結果を独立に計算する。
 
 Scene-level graph は object 間の関係を記述する。  
 Object-level graph は個別 object の振る舞いを記述する。  
 Runtime は immutable な environment snapshot に対して graph を評価し、output command を収集し、host scene に適用する。
 
-Loom の役割は、同期可能な振る舞いを記述することである。  
+Loomlet の役割は、同期可能な振る舞いを記述することである。  
 SceneSync の役割は、environment を同期し、object の生成・削除・識別子・graph attachment を管理し、必要に応じて外部結果を同期することである。
 
 Arrowized FRP や Yampa などの背景概念については、Appendix: Influences を参照する。
 
-# Loom 仕様書
+# Loomlet 仕様書
+
+## 現在の実装状態
+
+Loomlet はまだ experimental だが、以下のワークフローは実装済みである。
+
+- `.loom` DSL の parser/compiler
+- JavaScript runtime
+- CLI による compile / format / inspect / run / REPL
+- Scene Sync graph compile / run / dev workflow（redeem / saved session / objects probe / graph-compile / graph-run / dev-watch）
+- Editor Studio による CodeMirror DSL editor と Rete.js Node Editor の並行編集
+- EditorModel / node-editor-core によるノード編集モデル
+- hidden editor metadata によるノード位置・label・comment の保存
+- Editor Studio の Undo/Redo、Node search/focus、Save/Open
+- VS Code拡張による syntax highlighting / metadata-driven completion / parse・compile diagnostics
+- `@afjk/loomlet` としての npm package boundary
+
+ただし、API とデータ形式はまだ変更される可能性がある。
 
 ## アーキテクチャ
 
@@ -363,6 +380,19 @@ Core はホストに依存しない言語処理系である。
 - ファイルシステムへの直接依存
 
 Core は、外部世界への副作用を直接実行しない。
+
+Core は `@afjk/loomlet` package として共有できるように public exports を整理中である。
+
+現在の主な export 対象:
+
+- runtime
+- DSL parser/compiler
+- node editor core
+- editor metadata helpers
+- canonical DSL helpers
+- generated library metadata
+
+ただし、npm 公開と package 安定化はまだ進行中である。
 
 #### Layer 2: 拡張パック
 
@@ -413,7 +443,7 @@ Runtime Graph
 Target Graph
 ```
 
-Node Editor は `Graph AST` を表示・編集し、座標や選択状態などの UI 情報は `Node Editor ViewModel` として別に持つ。
+Node Editor は `Graph AST` を表示・編集し、座標や選択状態などの UI 情報は `EditorModel / Node Editor ViewModel` として別に持つ。
 
 | 表現 | 主な役割 | 人間 | AI | ランタイム | ノードエディタ |
 |---|---|---:|---:|---:|---:|
@@ -422,7 +452,7 @@ Node Editor は `Graph AST` を表示・編集し、座標や選択状態など�
 | Graph AST | ノード、ポート、エッジ、params、source map を持つ編集向け中間表現 | ○ | ◎ | △ | ◎ |
 | Runtime Graph | 実行に必要な最小グラフ。評価器が読む形式 | △ | ○ | ◎ | △ |
 | Target Graph | Scene Sync / Unity / Web など各ホスト向けに変換された形式 | △ | ○ | host 側 | △ |
-| Node Editor ViewModel | ノード位置、選択、zoom、pan など UI 状態 | △ | × | × | ◎ |
+| EditorModel / Node Editor ViewModel | ノード位置、選択、zoom、pan など UI 状態 | △ | × | × | ◎ |
 
 #### 各表現の役割
 
@@ -436,7 +466,11 @@ Node Editor は `Graph AST` を表示・編集し、座標や選択状態など�
 
 `Target Graph` は、Scene Sync、Unity、Web runtime など、実行先の世界に合わせた形式である。
 
-`Node Editor ViewModel` は、表示上の状態である。ノード座標、選択状態、zoom、pan などはプログラムの意味とは別なので分離する。
+`EditorModel / Node Editor ViewModel` は、表示上の状態である。ノード座標、選択状態、zoom、pan などはプログラムの意味とは別なので分離する。
+
+現在の実装では、ノードエディタ向けの共有表現として `EditorModel` を使用する。  
+`EditorModel` は `Runtime Graph` とは異なり、ノードの編集に必要な情報を含む。  
+ただし、ノード位置・label・comment などの実行に不要な情報は `hidden editor metadata` として保存し、Runtime Graph の意味には含めない。
 
 ### ホストI/Oモデル
 
@@ -542,7 +576,12 @@ Level 6: edge 再接続
 Level 7: 任意の Graph AST から DSL を再生成
 ```
 
-初期段階では、Level 1〜2 を優先する。
+当初は Level 1〜2 から始める方針だったが、現在の Editor Studio では、param 編集、node 追加/削除/rename、connection 編集、canonical DSL 再生成、Graph → DSL auto sync まで実験的に実装している。
+
+ただし、任意の DSL 構文を完全に保持したまま双方向編集することは、まだ保証しない。  
+Graph 側の編集は、必要に応じて canonical DSL として再生成される。
+
+source map を使った最小差分 patch（Level 1〜6 相当）は設計思想として残すが、現在の実装では canonical regeneration を主経路としている。
 
 例:
 
@@ -550,17 +589,35 @@ Level 7: 任意の Graph AST から DSL を再生成
 x = math.sine(t, freq: 0.2, amplitude: 2, offset: 0)
 ```
 
-`freq` をノードエディタで `0.5` に変更する場合、Graph AST の source map を使って `0.2` の範囲だけを置換する。
+`freq` をノードエディタで `0.5` に変更した場合、現在の実装では canonical DSL を再生成する（source map patch ではなく）。
 
 ```loom
 x = math.sine(t, freq: 0.5, amplitude: 2, offset: 0)
 ```
 
+また、DSL 変更時には layout preservation により、可能な範囲でノード位置を保持する。
+
 この方針により、DSL の可読性、Git diff、AI 編集、ノードエディタの操作性を両立する。
+
+### Hidden editor metadata
+
+Editor Studio は、ノード位置・label・comment など、実行意味に影響しない編集情報を hidden editor metadata として `.loom` ファイル内に保存する。
+
+この metadata は Runtime Graph の意味には含めない。
+
+現在の方針:
+
+- visible DSL には metadata を表示しない
+- Save 時に metadata を末尾へ付与する
+- Open 時に metadata を読み取り、EditorModel へ反映する
+- 重複 metadata は作らない
+- metadata が壊れていても、可能な限り DSL 本体は読み込む
+
+metadata の詳細形式は今後変更される可能性があるため、固定しすぎない。
 
 ## 1. 概要
 
-Loom は、ブラウザで動く**ステートレスなデータフロー実行エンジン**です。JSON でグラフを定義し、毎フレーム値を計算・更新します。
+Loomlet は、ブラウザで動く**ステートレスなデータフロー実行エンジン**です。JSON でグラフを定義し、毎フレーム値を計算・更新します。
 
 **英語での一行説明：**
 > A stateless dataflow engine for the browser. Build reactive visual, audio, and 3D content by composing pure functions.
@@ -569,7 +626,7 @@ Loom は、ブラウザで動く**ステートレスなデータフロー実行�
 
 ブラウザで動くステートレスなデータフロー実行エンジン。純粋な関数の合成により、リアクティブな視覚・音響・3D コンテンツを構築します。
 
-Loom の核は、以下の仕組みです：
+Loomlet の核は、以下の仕組みです：
 
 1. グラフ状に配置された複数の「ノード」を定義（JSON で記述）
 2. ノードどうしを「エッジ」で接続（値の流れを表現）
@@ -609,7 +666,7 @@ Loom の核は、以下の仕組みです：
 
 内部はテキストの専用記法（DSL）で持ち、UI はそれを視覚化します。両方向に変換可能で、人間も AI も自由に行き来できます。
 
-**注意：** 第ゼロ段階では DSL とビジュアル UI は実装せず、JSON 直書きから始めます。
+**注意：** 当初（第ゼロ段階）は DSL とビジュアル UI を実装せず JSON 直書きから始めたが、現在は DSL parser/compiler と Editor Studio が実装済みである。
 
 **意図：**
 - テキスト形式により、バージョン管理・AI 処理が容易
@@ -631,7 +688,7 @@ Loom の核は、以下の仕組みです：
 - 温度センサーの現在値
 - マウスのポインタ位置
 
-第ゼロ段階では、連続値のみを扱います。
+当初（第ゼロ段階）は連続値のみを扱っていたが、現在はイベント型も実装済みである。
 
 **イベント（Event）**
 
@@ -642,7 +699,7 @@ Loom の核は、以下の仕組みです：
 - メッセージ受信
 - 閾値超え（値が特定の値を越えたとき）
 
-イベントは第一段階で導入します。
+イベントは第一段階（実装済み）で導入された。
 
 ### 3.2 ノード（部品）の 5 カテゴリ
 
@@ -672,17 +729,17 @@ Loom の核は、以下の仕組みです：
 
 内部に状態を持つ唯一のカテゴリ。過去の値を記憶し、それに基づいて出力を決定します。
 
-**例：** `accum`（積分）、`smooth`（なめらか化）、`delay`（遅延）
+**例：** `smoothLerp`（easing follow）、`lowpass`（平滑化）、`delay1`（1フレーム遅延）、`integrate`（積分）
 
-第ゼロ段階では実装されません。
+状態部品は実装済みである（`smoothLerp`、`lowpass`、`delay1`、`integrate`）。
 
 #### シンク部品
 
 外部への副作用を持つノード。値を受け取り、画面・音響・ネットワークなどに影響を与えます。
 
-**例：** `setPosition`（位置変更）、`playSound`（音声再生）、`broadcastEvent`（イベント送信）
+**例：** `setPosition`（位置変更）、`setText`（テキスト変更）、`setStyle`（スタイル変更）
 
-第ゼロ段階では実装されません。
+DOM シンク部品および SceneSync / Three.js アダプタ経由のシンク部品は実装済みである。
 
 ### 3.3 イベントの伝播モデル
 
@@ -1833,7 +1890,7 @@ Three.js Object3D の表示・非表示を切り替えます。`visible = !!inpu
 }
 ```
 
-- `loom`（オプション、文字列）：グラフが対象とする Loom 仕様のバージョン。後方互換性チェックなどに使用
+- `loom`（オプション、文字列）：グラフが対象とする Loomlet 仕様のバージョン。後方互換性チェックなどに使用
 - `meta`（オプション、オブジェクト）：人間や AI 向けの自由なメタデータ。エンジンの評価には影響しない
 - `nodes`（必須、配列）：ノード定義の配列
 - `edges`（必須、配列）：エッジ定義の配列
@@ -1957,7 +2014,7 @@ Three.js Object3D の表示・非表示を切り替えます。`visible = !!inpu
 
 ## 7. 公開 API
 
-Loom の評価モデルは「指定された時刻のグラフ状態を計算する」ことを中核とします。エンジン本体は時刻を内部で進めるのではなく、外部から `evaluateAt(time)` を呼ぶことで、その時刻におけるすべてのノード出力を確定させます。`start()` / `stop()` は `requestAnimationFrame` を使って `evaluateAt` を毎フレーム呼ぶ便利ラッパーであり、テストや決定論的再生では `evaluateAt` を直接呼ぶ運用が想定されています。
+Loomlet の評価モデルは「指定された時刻のグラフ状態を計算する」ことを中核とします。エンジン本体は時刻を内部で進めるのではなく、外部から `evaluateAt(time)` を呼ぶことで、その時刻におけるすべてのノード出力を確定させます。`start()` / `stop()` は `requestAnimationFrame` を使って `evaluateAt` を毎フレーム呼ぶ便利ラッパーであり、テストや決定論的再生では `evaluateAt` を直接呼ぶ運用が想定されています。
 
 ### Loom クラス
 
@@ -1995,7 +2052,7 @@ engine.evaluateAt(time);
 
 指定された時刻におけるグラフ全体を一度評価し、すべてのノードの出力値を内部に保存します。呼び出し後、`getValue()` でその時刻における任意のノード出力を取得できます。
 
-`evaluateAt` は Loom の中核 API であり、`start()` / `stop()` はこれを `requestAnimationFrame` で繰り返し呼ぶ便利ラッパーです。テストや、外部の時刻ソース（サーバ時刻、録画再生など）に同期したい場合は、`evaluateAt` を直接呼ぶ運用が想定されています。
+`evaluateAt` は Loomlet の中核 API であり、`start()` / `stop()` はこれを `requestAnimationFrame` で繰り返し呼ぶ便利ラッパーです。テストや、外部の時刻ソース（サーバ時刻、録画再生など）に同期したい場合は、`evaluateAt` を直接呼ぶ運用が想定されています。
 
 呼び出し時、保留中のグラフ（`load()` で渡されたもの）があれば、評価開始前に切り替えが行われます。
 
@@ -2262,7 +2319,7 @@ ES Module（ESM）形式の単一 JavaScript ファイルとして配布され�
 
 ## 10. エラー仕様
 
-Loom がスローするエラーは、以下の構造を持つ `Error` オブジェクトです。
+Loomlet がスローするエラーは、以下の構造を持つ `Error` オブジェクトです。
 
 ```javascript
 {
@@ -2297,7 +2354,7 @@ Loom がスローするエラーは、以下の構造を持つ `Error` オブジ
 
 ## 12. クロスプラットフォーム評価セマンティクス
 
-Loom は単一の JSON グラフ表現を真の単一ソースとし、複数の評価環境（JavaScript / C# / その他）で**同一の入力に対し同一の出力**を返すことを保証する。
+Loomlet は単一の JSON グラフ表現を真の単一ソースとし、複数の評価環境（JavaScript / C# / その他）で**同一の入力に対し同一の出力**を返すことを保証する。
 
 ### 12.1 評価決定論性
 
@@ -2329,7 +2386,7 @@ Loom は単一の JSON グラフ表現を真の単一ソースとし、複数の
 
 ### 12.5 SceneSync 連携時の時刻同期
 
-複数クライアントで結果を揃えるには、共有された時刻ソースが必要となる。これは将来の `serverClock` ノード（SceneSync アダプタで提供予定）で実現する。`evaluateAt(time)` の `time` を全クライアントで揃えれば、ステートレスグラフの結果は揃う。
+複数クライアントで結果を揃えるには、共有された時刻ソースが必要となる。これは `serverClock` ノード（SceneSync アダプタの `src/loom-scenesync.js` で実装済み）で実現する。`evaluateAt(time)` の `time` を全クライアントで揃えれば、ステートレスグラフの結果は揃う。
 
 ## 13. ロードマップ
 
@@ -2362,49 +2419,59 @@ Loom は単一の JSON グラフ表現を真の単一ソースとし、複数の
 - スナップショット取得とタイムトラベルデバッグ
 - グラフ可視化補助機能
 
-### 第四段階：DSL とパッチ形式
+### 第四段階：DSL とパッチ形式（実装済み）
 
-- 専用テキスト記法（DSL）の設計とパーサ
-- DSL ↔ JSON の相互変換
-- 部分更新用のパッチ形式（AI による差分編集を想定）
+- ✅ 専用テキスト記法（DSL）の設計とパーサ
+- ✅ DSL ↔ JSON の相互変換
+- ✅ canonical DSL 再生成
+- 部分更新用の source map patch（AI による差分編集を想定）は設計思想として残すが、現在は canonical regeneration を主経路とする
 
-### 第五段階：ビジュアルエディタとプリセット
+### 第五段階：ビジュアルエディタとプリセット（実装済み）
 
-- ブラウザベースのビジュアルノードエディタ
-- ノード追加・削除、エッジ接続、リアルタイムプレビュー
-- 再利用可能なサブグラフ／プリセット機構
+- ✅ Editor Studio による CodeMirror DSL editor と Rete.js Node Editor の並行編集
+- ✅ ノード追加・削除・rename、エッジ接続、パラメータ編集、リアルタイム DSL 同期
+- ✅ Undo/Redo、Node search/focus、Save/Open
+- ✅ layout preservation（DSL 変更時のノード位置保持）
+- 再利用可能なサブグラフ／プリセット機構はまだ未実装
 
 ### 第六段階：マルチクライアント同期と各種アダプタ
 
 - 複数クライアントでのグラフ・状態同期
 - イベント配信ノードによる broadcast
-- ✅（一部完了）3D エンジン連携アダプタ：Three.js Object3D 向けの `src/loom-three.js`（`setPosition`、`setRotation`、`setScale`、`setColor`、`setVisible` シンクノード）
+- ✅（実装済み）3D エンジン連携アダプタ：Three.js Object3D 向けの `src/loom-three.js`（`setPosition`、`setRotation`、`setScale`、`setColor`、`setVisible` シンクノード）
+- ✅（実装済み）VS Code 拡張：syntax highlighting、metadata-driven completion、parse/compile diagnostics、current file 実行、Scene Sync dev workflow 起動
 - AI 連携用のツール定義
 
-### Phase 1.5：SceneSync アダプタ（Web）
+### Phase 1.5：SceneSync アダプタ（実装済み）
 
-- `src/loom-scenesync.js` の追加（Loom リポジトリ側のアダプタ層）。
-- `serverClock` ノード追加（クロスクライアント時刻同期）。
-- Sink ノード 5 種追加：`setPosition`、`setRotation`、`setScale`、`setColor`、`setVisible`。
-- メッセージプロトコル：`scene-graph-set` / `scene-graph-clear` / `scene-graph-patch` / `scene-graph-input`。
-- グラフのライフサイクル：シーン全体グラフ 1 個 + オブジェクト単位グラフ N 個を並行保持。
-- 配信ポリシー：ステートレスなグラフ定義のみ broadcast、入力は各クライアントローカル評価。
+現在の Loomlet CLI では、Scene Sync link code の redeem、session 保存、room/object の確認、`.loom` から Scene Sync behavior graph へのcompile/run/dev workflow を実験的に実装している。
+
+- ✅ `src/loom-scenesync.js` の追加（Loomlet リポジトリ側のアダプタ層）
+- ✅ `serverClock` ノード追加（クロスクライアント時刻同期）
+- ✅ Sink ノード 5 種：`sceneSetPosition`、`sceneSetRotation`、`sceneSetScale`、`sceneSetColor`、`sceneSetVisible`
+- ✅ CLI: `redeem` / `objects` / `probe` / `graph-compile` / `graph-run` / `dev` watch
+- ✅ `sample-cube` に対する behavior graph 適用
+
+Loomlet の主方向は、Scene Sync 上のオブジェクトに時間変化する振る舞いを与える behavior layer である。
+
+- メッセージプロトコル詳細・グラフライフサイクル管理・配信ポリシーは進行中。
 
 ### Phase 1.6：Unity 対応（C# 再実装）
 
-- C# で Loom エンジンを再実装（評価コア、ノードレジストリ、`engine.load()` によるランタイム差し替え対応）。
+- C# で Loomlet エンジンを再実装（評価コア、ノードレジストリ、`engine.load()` によるランタイム差し替え対応）。
 - JSON スキーマと評価セマンティクス（12 章）を JS 版と完全一致させる。
 - 制限式 DSL のインタプリタを C# でも実装。
 - ノードの C# 実装は JS 版とノード型ごとに対応（仕様変更時は両側更新）。
 - DSL（テキスト記法）は JS 版のみで扱い、Unity 側は JSON 中間表現のみ受信。
 - SceneSync sink は Unity の `Transform` / `Renderer` に直接書き込む。
 
-### Phase 2 以降：DSL とビジュアルエディタ
+### Phase 2 以降：拡張と安定化
 
-- グラフ DSL パーサ（テキスト → JSON 変換）。Phase 0 から JSON は中間表現の位置づけだったことを明文化。
-- ノードグラフ視覚エディタ。
-- DSL ↔ JSON ↔ ビジュアル の三者相互変換。
-- ステートノード（`accum`、`smooth` 等）と Sink ノードの一般化。
+- DSL ↔ JSON ↔ ビジュアル の三者双方向変換の安定化（基本機能は実装済み）
+- ステートノード（`accum`、`smooth` 等）と Sink ノードの一般化
+- npm 公開と package 安定化
+- Marketplace 公開（VS Code 拡張）
+- real Node Preview（VS Code 拡張）
 
 ---
 
@@ -2416,7 +2483,7 @@ Loom は単一の JSON グラフ表現を真の単一ソースとし、複数の
 
 ### 概要
 
-JavaScript 版 Loom と同じ JSON グラフ形式を、Unity C# ランタイムでも評価できる。
+JavaScript 版 Loomlet と同じ JSON グラフ形式を、Unity C# ランタイムでも評価できる。
 
 実装は `unity/com.afjk.loom/` に配置された Unity Package として提供される。
 
@@ -2451,9 +2518,9 @@ JavaScript 版 Loom と同じ JSON グラフ形式を、Unity C# ランタイム
 
 ### 動機
 
-Loom の通常ノードはステートレスな純粋関数であり、`evaluate(inputs, params)` の結果は入力のみで決まる。これは graph を「時刻 t の関数 f(t)」として扱える純度の高い性質を生むが、一方で smoothing / delay / integrate / easing follow のような「前フレーム値を必要とする挙動」は表現できない。
+Loomlet の通常ノードはステートレスな純粋関数であり、`evaluate(inputs, params)` の結果は入力のみで決まる。これは graph を「時刻 t の関数 f(t)」として扱える純度の高い性質を生むが、一方で smoothing / delay / integrate / easing follow のような「前フレーム値を必要とする挙動」は表現できない。
 
-これらを graph 外の JS に逃がすと、Loom グラフから挙動が見えなくなり、Loom の「graph に挙動を閉じ込める」という思想からむしろ外れてしまう。そこで Loom は state を禁止するのでも無制限に許すのでもなく、明示的に隔離されたカテゴリとして導入する。
+これらを graph 外の JS に逃がすと、Loomlet graph から挙動が見えなくなり、Loomlet の「graph に挙動を閉じ込める」という思想からむしろ外れてしまう。そこで Loomlet は state を禁止するのでも無制限に許すのでもなく、明示的に隔離されたカテゴリとして導入する。
 
 ### 設計原則
 
@@ -2483,7 +2550,7 @@ Loom の通常ノードはステートレスな純粋関数であり、`evaluate
 
 ### 同期(SceneSync 等)に関する注意
 
-Loom の標準的な同期モデルは「全クライアントが同じ graph JSON を受け取り、それぞれ独自に評価する」というものである。state ノードはこのモデル上、各クライアントで独立に進行する。
+Loomlet の標準的な同期モデルは「全クライアントが同じ graph JSON を受け取り、それぞれ独自に評価する」というものである。state ノードはこのモデル上、各クライアントで独立に進行する。
 
 - 同じ `params.initial` と同じ入力履歴(クロック、pointerClick イベントなど)が両端で揃っていれば、state ノードの値は収束する。
 - ジョイン時のキャッチアップ(途中参加クライアントが過去の入力を再生する仕組み)は保証されない。
@@ -2504,7 +2571,7 @@ Loom の標準的な同期モデルは「全クライアントが同じ graph JS
 
 ### 動機
 
-DSL を「書ける言語」から「編集・生成・変換できる言語」へ拡張するため、Loom は Source AST を中間表現として公開する。
+DSL を「書ける言語」から「編集・生成・変換できる言語」へ拡張するため、Loomlet は Source AST を中間表現として公開する。
 
 - AI 補助編集: LLM に DSL の構造的な部分編集を依頼できる。
 - DSL formatter: 保存時の自動整形が可能。
@@ -2576,10 +2643,10 @@ interface Span { start: { line: number; column: number; offset: number }; end: {
 
 ## Editor Model
 
-Loom は次の 3 つの truth を分離して扱う。
+Loomlet は次の 3 つの truth を分離して扱う。
 
 - **Source AST** は DSL の表層構文(配列ベース、順序・コメント保持)。
-- **GraphJSON** は Loom 実行用の正規形。
+- **GraphJSON** は Loomlet 実行用の正規形。
 - **Editor Model** はノードエディタ用の視覚モデル(id をキーとする Map 構造、CRDT 互換)。
 
 これらを橋渡しする関数として `parseDSLToAST` / `compileToGraph` / `graphToEditorModel` / `editorModelToGraph` / `applyEditorOperation` を提供する。Source AST と Editor Model は構造が異なる(配列ベース vs Map ベース)ため、相互変換は GraphJSON を中継して行うのが基本。
@@ -2608,9 +2675,10 @@ Loom は次の 3 つの truth を分離して扱う。
 - 同カテゴリ内は入力順に y=0,120,240... を割り当てる。
 - 既存 `position` を持つノードは再配置しない。
 
-### v1 制約
+### 現在の実装状態
 
-- v1 では DSL への書き戻し(EditorModel → Source AST → DSL)はサポートしない。
+- Editor Studio では EditorModel → canonical DSL 再生成（graph → DSL auto sync）を実験的に実装している。
+- DSL 変更時には layout preservation により可能な範囲でノード位置を保持する。
 - 将来の Yjs 統合では `nodesById` / `edgesById` を CRDT マップとしてそのまま扱う方針。
 
 
