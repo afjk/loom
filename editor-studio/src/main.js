@@ -2248,6 +2248,7 @@ async function handleOperation(operation) {
     }
 
     const affectsDsl = result.change.affectsDsl !== false;
+    const isMetadataOnlyOperation = result.change.operation.type === 'updateNodeMetadata';
 
     if (affectsDsl) {
       renderGraphJSON(result.state.graph);
@@ -2260,7 +2261,11 @@ async function handleOperation(operation) {
     }
 
     renderErrors();
-    renderInspector();
+
+    if (!isMetadataOnlyOperation) {
+      renderInspector();
+    }
+
     updateNodeListCategories();
     renderNodeList();
     setDirty(true);
