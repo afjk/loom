@@ -2,6 +2,7 @@ import { StreamLanguage, syntaxHighlighting, HighlightStyle } from '@codemirror/
 import { tags } from '@lezer/highlight';
 import { EditorView } from '@codemirror/view';
 import { autocompletion } from '@codemirror/autocomplete';
+import { linter, lintGutter } from '@codemirror/lint';
 
 // Create a set of valid node/function names from metadata
 function createNodeTypeNameSet(nodeTypes = {}) {
@@ -269,10 +270,59 @@ export function getParamCompletionOptionsForNode(nodeTypes = {}, nodeName) {
   }));
 }
 
+function resolveErrorPosition(doc, error) {
+  if (!error) return 0;
+
+  const line = error.line !== undefined ? error.line : null;
+  const column = error.column !== undefined ? error.column : 0;
+
+  if (line === null || line < 1) {
+    return 0;
+  }
+
+  try {
+    const lineObject = doc.line(line);
+    if (!lineObject) return 0;
+    const colOffset = Math.max(0, Math.min(column || 0, lineObject.length));
+    return lineObject.from + colOffset;
+  } catch {
+    return 0;
+  }
+}
+
+export function createLoomletDslLinter({ getErrors } = {}) {
+  return linter((view) => {
+    const errors = getErrors?.() || [];
+
+    return errors.map((error) => {
+      const from = resolveErrorPosition(view.state.doc, error);
+      let to = from + 1;
+
+      if (error.line !== undefined) {
+        try {
+          const lineObject = view.state.doc.line(error.line);
+          if (lineObject) {
+            to = lineObject.to;
+          }
+        } catch {
+          to = from + 1;
+        }
+      }
+
+      return {
+        from,
+        to,
+        severity: 'error',
+        message: error.message || String(error)
+      };
+    });
+  });
+}
+
 export { findNearestCallNameBefore };
 
 // Main export: return array of CodeMirror extensions
-export function loomletDslExtensions({ nodeTypes } = {}) {
+export function loomletDslExtensions({ nodeTypes, getErrors } = {}) {
   const extensions = [
     createLoomletStreamLanguage(nodeTypes),
     syntaxHighlighting(loomletHighlightStyle),
@@ -284,6 +334,11 @@ export function loomletDslExtensions({ nodeTypes } = {}) {
       activateOnTyping: true
     })
   ];
+
+  if (getErrors) {
+    extensions.push(createLoomletDslLinter({ getErrors }));
+    extensions.push(lintGutter());
+  }
 
   return extensions;
 }

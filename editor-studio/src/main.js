@@ -332,7 +332,10 @@ function initDslEditor() {
         ...searchKeymap,
         ...completionKeymap
       ]),
-      ...loomletDslExtensions({ nodeTypes: NODE_TYPES }),
+      ...loomletDslExtensions({
+        nodeTypes: NODE_TYPES,
+        getErrors: () => store.getState().errors || []
+      }),
       EditorView.updateListener.of((update) => {
         if (!update.docChanged) return;
         if (isApplyingProgrammaticDslChange) return;
@@ -791,6 +794,10 @@ function renderErrors() {
     return `<div class="error-item"><strong>${err.code || 'ERROR'}${line}${col}</strong>: ${err.message}</div>`;
   }).join('');
   elements.errorsList.innerHTML = html || '<div class="error-item">No errors</div>';
+
+  if (dslEditor) {
+    dslEditor.dispatch({});
+  }
 }
 
 function getSelectedEditorNode() {
