@@ -1234,7 +1234,7 @@ Examples:
         } else {
           print('Stopped Scene Sync dev mode.');
           if (!dryRun) {
-            print('Graph remains active. Use `loom scenesync graph-clear ... --send` to clear it.');
+            print('Graph remains active. Use `loomlet scenesync graph-clear ... --send` to clear it.');
           }
         }
         resolve(0);
@@ -1459,7 +1459,7 @@ async function handleRun(args) {
   }
 
   if (target !== 'cli') {
-    throw new Error('loom run currently only supports --target cli');
+    throw new Error('loomlet run currently only supports --target cli');
   }
 
   const source = await readSourceFile(file);
@@ -1563,7 +1563,7 @@ async function handleRepl(args) {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
-    prompt: 'loom> '
+    prompt: 'loomlet> '
   });
 
   return await new Promise((resolve) => {
@@ -1750,7 +1750,7 @@ async function handleSceneSync(args) {
 
     if (!result.session) {
       print('No saved Scene Sync session.');
-      print('Use: loom scenesync redeem <code> --save');
+      print('Use: loomlet scenesync redeem <code> --save');
       return 0;
     }
 
