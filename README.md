@@ -516,7 +516,7 @@ x = timer |> sine(freq: 0.3) |> map(inMin: -1, inMax: 1, outMin: 100, outMax: 70
 
 詳細な仕様は **[docs/DSL.md](docs/DSL.md)** をご覧ください。
 
-### Editor Studio
+### Editor Studio (experimental)
 
 `editor-studio` は DSL と Rete.js v2 ノードエディタを左右に並べた協調編集スタジオです。
 
@@ -527,29 +527,50 @@ x = timer |> sine(freq: 0.3) |> map(inMin: -1, inMax: 1, outMin: 100, outMax: 70
 ```bash
 cd editor-studio
 npm install
-npm run dev
+npm run dev        # http://localhost:5173/
+npm run build      # Production build
 ```
 
-**機能：**
-- DSL エディタ（CodeMirror）と **Rete.js v2 ノードエディタ** を左右2ペインで表示
-- `Apply DSL → Node`: DSL をパースしてノードエディタに反映
-- `Generate DSL ← Node`: ノードエディタから正規形 DSL を生成
-- ノード操作：
-  - ドラッグで移動
-  - エッジの接続・削除
-  - params の表示・編集
-- Canvas preview：`render bar` / `render point` に対応（全画面表示）
-- GraphJSON 表示 pane
-- Errors pane
-- Editor panels can be shown or hidden with the `Show/Hide Editors` button
+テスト実行（repository root から）:
 
-**設計方針：**
-- 手動同期: DSL ↔ Node は明示ボタン式（リアルタイム自動同期ではない）
-- Node → DSL は正規形（元のコメント・書式は保持しない）
-- EditorModel が single source of truth、Rete.js ノードエディタは view として扱う
-- The node editor uses **Rete.js v2** as the visual editing layer
+```bash
+npm run test:unit      # Unit tests
+npm run test:browser   # Browser tests
+```
 
-詳細は `editor-studio/src/` の実装と `test/loom-editor-studio.test.html` のテストを参照してください。
+**UI 構成**
+
+| パーツ | 役割 |
+|---|---|
+| 左ペイン | CodeMirror 6 ベースの DSL エディタ、構文ハイライト、補完、inline lint |
+| 右ペイン | Rete.js v2 による視覚的ノード編集、ドラッグ移動、エッジ接続・削除、パラメータ編集 |
+| 下部パネル | GraphJSON、Errors、Inspector、Nodes（検索・フィルタ対応）、Palette の各タブ |
+
+**DSL ↔ Node Graph の同期**
+
+エディタは手動・自動両方の同期をサポートしています：
+
+- **DSL → Node Graph**: Apply DSL ボタンで手動、または Auto Apply DSL オプションで自動
+- **Node Graph → DSL**: Generate DSL ボタンで手動、または Auto Sync DSL オプションで自動
+- Node Graph → DSL 生成時、正規形 DSL を出力（元のコメント・書式は保持しない）
+- Invalid DSL は前回成功時のグラフ状態を保持
+
+**Undo/Redo**
+
+グラフ Undo/Redo は CodeMirror テキスト undo と独立しています：
+
+- DSL エディタ内での Ctrl/Cmd+Z: CodeMirror テキスト undo
+- エディタ外での Ctrl/Cmd+Z: グラフ undo
+- DSL apply/auto-apply 時、グラフ状態はリセットされ、グラフ undo 履歴はクリア
+- ノードドラッグ移動は複数移動を1ステップに統合
+
+**設計方針**
+
+- **EditorModel が single source of truth**: Rete.js ノードエディタはビュー層
+- **Incremental rendering**: DSL apply 時、変更があったノード・接続のみ更新
+- レイアウト（下部パネル高さ、DSL/Node ペイン幅）をローカル保存して復元
+
+詳細は `editor-studio/src/` の実装と `test/*.test.html` のブラウザテスト、および `npm run test:browser` を参照してください。
 
 ## デモの確認方法
 
