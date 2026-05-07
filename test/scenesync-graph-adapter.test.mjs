@@ -157,3 +157,16 @@ test('objectId option normalizes to scope', () => {
   const result = loomGraphToSceneSyncGraph(loomGraph, { objectId: 'cube3' });
   assert.deepEqual(result.scope, { object: 'cube3' });
 });
+
+test('supports rotation/scale scene sinks', () => {
+  const source = `
+import scene
+scene.setRotation("sample-cube", x: 0, y: 0, z: 0, w: 1)
+scene.setScale("sample-cube", x: 1.2, y: 1.2, z: 1.2)
+`;
+
+  const result = compileLoomToSceneSyncGraph(source);
+  assert.ok(result.graph.nodes.some((n) => n.type === 'sceneSetRotation'));
+  assert.ok(result.graph.nodes.some((n) => n.type === 'sceneSetScale'));
+  assert.deepEqual(result.scope, { object: 'sample-cube' });
+});

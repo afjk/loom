@@ -1,11 +1,37 @@
 # Tour: Grid Wave
-# Goal: Draft live performance patch for grid wave.
-# Status: draft
+# Goal: Move a 3x3 object grid in phase-shifted Y waves.
+# Status: runnable
 # Run:
 #   loomlet scenesync dev examples/tour/live/03-grid-wave.loom
+# Setup:
+#   - Open a Scene Sync room.
+#   - Link Loomlet with `loomlet scenesync redeem <code> --save`.
+#   - Ensure objects `grid-1` through `grid-9` exist in the scene.
 # Requires:
-#   - missing live/audio/timeline nodes listed below
-# TODO NODE: timeline.cue
-# TODO NODE: audio.level
-import timeline
-import audio
+#   - time.serverClock
+#   - math.sine
+#   - math.add
+#   - scene.setPosition
+import time
+import math
+import scene
+
+t = time.serverClock()
+y1 = math.sine(math.add(t, 0.0), freq: 0.25, amplitude: 0.5, offset: 1.0)
+y2 = math.sine(math.add(t, 0.3), freq: 0.25, amplitude: 0.5, offset: 1.0)
+y3 = math.sine(math.add(t, 0.6), freq: 0.25, amplitude: 0.5, offset: 1.0)
+y4 = math.sine(math.add(t, 0.9), freq: 0.25, amplitude: 0.5, offset: 1.0)
+y5 = math.sine(math.add(t, 1.2), freq: 0.25, amplitude: 0.5, offset: 1.0)
+y6 = math.sine(math.add(t, 1.5), freq: 0.25, amplitude: 0.5, offset: 1.0)
+y7 = math.sine(math.add(t, 1.8), freq: 0.25, amplitude: 0.5, offset: 1.0)
+y8 = math.sine(math.add(t, 2.1), freq: 0.25, amplitude: 0.5, offset: 1.0)
+y9 = math.sine(math.add(t, 2.4), freq: 0.25, amplitude: 0.5, offset: 1.0)
+scene.setPosition(objectId: "grid-1", x: -1, y: y1, z: -1)
+scene.setPosition(objectId: "grid-2", x: 0, y: y2, z: -1)
+scene.setPosition(objectId: "grid-3", x: 1, y: y3, z: -1)
+scene.setPosition(objectId: "grid-4", x: -1, y: y4, z: 0)
+scene.setPosition(objectId: "grid-5", x: 0, y: y5, z: 0)
+scene.setPosition(objectId: "grid-6", x: 1, y: y6, z: 0)
+scene.setPosition(objectId: "grid-7", x: -1, y: y7, z: 1)
+scene.setPosition(objectId: "grid-8", x: 0, y: y8, z: 1)
+scene.setPosition(objectId: "grid-9", x: 1, y: y9, z: 1)

@@ -1,11 +1,21 @@
 # Tour: Audio Reactive Placeholder
-# Goal: Draft live performance patch for audio reactive placeholder.
+# Goal: Show desired future audio-reactive scaling flow.
 # Status: draft
 # Run:
 #   loomlet scenesync dev examples/tour/live/05-audio-reactive-placeholder.loom
+# Setup:
+#   - Open a Scene Sync room.
+#   - Link Loomlet with `loomlet scenesync redeem <code> --save`.
+#   - Ensure an object named `audio-target` exists in the scene.
 # Requires:
-#   - missing live/audio/timeline nodes listed below
-# TODO NODE: timeline.cue
-# TODO NODE: audio.level
-import timeline
+#   - audio.level (planned)
+#   - math.map
+#   - scene.setScale
+# TODO NODE: audio.level()
 import audio
+import math
+import scene
+
+level = audio.level()
+s = math.map(level, inMin: 0, inMax: 1, outMin: 1, outMax: 2)
+scene.setScale(objectId: "audio-target", x: s, y: s, z: s)

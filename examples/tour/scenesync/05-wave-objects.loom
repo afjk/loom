@@ -1,11 +1,29 @@
 # Tour: Wave Objects
-# Goal: Draft Scene Sync choreography for wave objects.
-# Status: draft
+# Goal: Move multiple objects with phase-shifted Y waves.
+# Status: runnable
 # Run:
 #   loomlet scenesync dev examples/tour/scenesync/05-wave-objects.loom
+# Setup:
+#   - Open a Scene Sync room.
+#   - Link Loomlet with `loomlet scenesync redeem <code> --save`.
+#   - Ensure objects `wave-1` through `wave-5` exist in the scene.
 # Requires:
-#   - missing timeline/scene nodes listed below
-# TODO NODE: timeline.sequence
-# TODO NODE: scene.find
-import timeline
+#   - time.serverClock
+#   - math.sine
+#   - math.add
+#   - scene.setPosition
+import time
+import math
 import scene
+
+t = time.serverClock()
+y1 = math.sine(t, freq: 0.25, amplitude: 0.5, offset: 1.0)
+y2 = math.sine(math.add(t, 0.5), freq: 0.25, amplitude: 0.5, offset: 1.0)
+y3 = math.sine(math.add(t, 1.0), freq: 0.25, amplitude: 0.5, offset: 1.0)
+y4 = math.sine(math.add(t, 1.5), freq: 0.25, amplitude: 0.5, offset: 1.0)
+y5 = math.sine(math.add(t, 2.0), freq: 0.25, amplitude: 0.5, offset: 1.0)
+scene.setPosition(objectId: "wave-1", x: -2, y: y1, z: 0)
+scene.setPosition(objectId: "wave-2", x: -1, y: y2, z: 0)
+scene.setPosition(objectId: "wave-3", x: 0, y: y3, z: 0)
+scene.setPosition(objectId: "wave-4", x: 1, y: y4, z: 0)
+scene.setPosition(objectId: "wave-5", x: 2, y: y5, z: 0)
