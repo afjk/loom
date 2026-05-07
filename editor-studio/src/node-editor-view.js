@@ -347,22 +347,31 @@ export class NodeEditorView {
   }
 
   async focusNode(nodeId) {
+    if (!nodeId || !this.editor || !this.area) {
+      return false;
+    }
+
     try {
       const node = this.editor.getNode(nodeId);
       if (!node) return false;
 
-      const pos = this.area.nodeViews.get(nodeId)?.position ?? { x: 0, y: 0 };
+      const nodeView = this.area.nodeViews?.get?.(nodeId);
+      if (!nodeView || !nodeView.position) return false;
+
+      const { x: nodeX, y: nodeY } = nodeView.position;
       const containerRect = this.container.getBoundingClientRect();
-      const centerX = containerRect.width / 2;
-      const centerY = containerRect.height / 2;
+      const viewCenterX = containerRect.width / 2;
+      const viewCenterY = containerRect.height / 2;
 
-      const translateX = centerX - pos.x;
-      const translateY = centerY - pos.y;
+      const svg = this.container.querySelector('[class*="area"]') || this.container.querySelector('svg');
+      if (svg && svg.style) {
+        const offsetX = viewCenterX - nodeX;
+        const offsetY = viewCenterY - nodeY;
+        svg.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(1)`;
+      }
 
-      await this.area.translate(this.area, { x: translateX, y: translateY });
       return true;
     } catch (e) {
-      console.warn('focusNode failed:', e.message);
       return false;
     }
   }
