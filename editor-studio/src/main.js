@@ -102,6 +102,9 @@ const elements = {
   nodePaletteSearch: document.getElementById('node-palette-search'),
   nodePaletteCategory: document.getElementById('node-palette-category'),
   nodePaletteList: document.getElementById('node-palette-list'),
+  nodeListSearch: document.getElementById('node-list-search'),
+  nodeListCategory: document.getElementById('node-list-category'),
+  nodeList: document.getElementById('node-list'),
   autoApplyDslToggle: document.getElementById('autoApplyDslToggle'),
   autoApplyStatus: document.getElementById('auto-apply-status'),
   autoSyncGraphToDslToggle: document.getElementById('autoSyncGraphToDslToggle'),
@@ -674,6 +677,8 @@ async function applyDslTextToGraph(sourceText, { markDirty = true, preserveGraph
   renderGraphJSON(graph);
   renderErrors();
   renderInspector();
+  updateNodeListCategories();
+  renderNodeList();
   runPreview(graph);
 
   hasUnsyncedDslText = false;
@@ -1220,6 +1225,86 @@ async function resetSample() {
   clearEditorHistory();
 }
 
+function renderNodeListItem(node) {
+  const isSelected = selectedNodeId === node.id;
+  const selectedClass = isSelected ? ' selected' : '';
+
+  return `
+    <div class="node-list-item${selectedClass}" data-node-id="${escapeHtml(node.id)}">
+      <div class="node-list-item-id">${escapeHtml(node.id)}</div>
+      <div class="node-list-item-type">${escapeHtml(node.type)}</div>
+      <div class="node-list-item-category">${escapeHtml(node.category)}</div>
+    </div>
+  `;
+}
+
+function renderNodeList() {
+  const list = elements.nodeList;
+  if (!list) return;
+
+  const state = store.getState();
+  if (!state.editorModel) {
+    list.innerHTML = '<div class="node-list-empty">No nodes</div>';
+    return;
+  }
+
+  const query = (elements.nodeListSearch?.value || '').trim().toLowerCase();
+  const selectedCategory = elements.nodeListCategory?.value || '';
+
+  const nodes = state.editorModel.order.map((nodeId) => state.editorModel.nodesById[nodeId]).filter(Boolean);
+
+  const filtered = nodes.filter((node) => {
+    if (selectedCategory && node.category !== selectedCategory) return false;
+    if (!query) return true;
+
+    return (
+      node.id.toLowerCase().includes(query) ||
+      node.type.toLowerCase().includes(query) ||
+      node.category.toLowerCase().includes(query)
+    );
+  });
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="node-list-empty">No nodes matching filter</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(renderNodeListItem).join('');
+
+  list.querySelectorAll('[data-node-id]').forEach((item) => {
+    item.addEventListener('click', () => {
+      const nodeId = item.getAttribute('data-node-id');
+      setSelectedNodeId(nodeId);
+      renderNodeList();
+    });
+  });
+}
+
+function updateNodeListCategories() {
+  const select = elements.nodeListCategory;
+  if (!select) return;
+
+  const state = store.getState();
+  if (!state.editorModel) {
+    select.innerHTML = '<option value="">All categories</option>';
+    return;
+  }
+
+  const categories = Array.from(
+    new Set(
+      state.editorModel.order
+        .map((nodeId) => state.editorModel.nodesById[nodeId])
+        .filter(Boolean)
+        .map((node) => node.category)
+    )
+  ).sort();
+
+  select.innerHTML = [
+    '<option value="">All categories</option>',
+    ...categories.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
+  ].join('');
+}
+
 function renderNodePaletteItem(entry) {
   const inputs = entry.inputs.map((input) => input.name).join(', ') || 'none';
   const outputs = entry.outputs.map((output) => output.name).join(', ') || 'none';
@@ -1475,6 +1560,8 @@ async function restoreEditorHistorySnapshot(snapshot, { pushRedo = false, pushUn
   renderGraphJSON(snapshot.graph);
   renderErrors();
   renderInspector();
+  updateNodeListCategories();
+  renderNodeList();
   runPreview(snapshot.graph);
 
   setDirty(true);
@@ -1598,6 +1685,9 @@ function setupEventListeners() {
   elements.nodePaletteSearch?.addEventListener('input', renderNodePalette);
   elements.nodePaletteCategory?.addEventListener('change', renderNodePalette);
 
+  elements.nodeListSearch?.addEventListener('input', renderNodeList);
+  elements.nodeListCategory?.addEventListener('change', renderNodeList);
+
   elements.bottomPanelResizeHandle?.addEventListener('pointerdown', startBottomPanelResize);
   window.addEventListener('pointermove', resizeBottomPanel);
   window.addEventListener('pointerup', stopBottomPanelResize);
@@ -1649,6 +1739,8 @@ async function handleOperation(operation) {
     renderGraphJSON(result.state.graph);
     renderErrors();
     renderInspector();
+    updateNodeListCategories();
+    renderNodeList();
     runPreview(result.state.graph);
     hasUnsyncedDslText = false;
     cancelPendingAutoApplyDsl();
@@ -1701,6 +1793,8 @@ async function init() {
   renderUndoRedoState();
   renderNodePaletteCategories();
   renderNodePalette();
+  updateNodeListCategories();
+  renderNodeList();
   await applyDsl({ markDirty: false });
   setDirty(false);
 }
