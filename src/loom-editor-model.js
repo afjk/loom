@@ -1,12 +1,12 @@
 import { NODE_TYPES } from './loom.js';
 
-const DEFAULT_NODE_WIDTH = 220;
-const DEFAULT_NODE_HEIGHT = 120;
-const NODE_LAYOUT_GAP = 32;
-const NODE_LAYOUT_STEP_X = 260;
-const NODE_LAYOUT_STEP_Y = 160;
-const NODE_LAYOUT_MAX_ROWS = 50;
-const NODE_LAYOUT_MAX_COLS = 50;
+export const DEFAULT_NODE_WIDTH = 220;
+export const DEFAULT_NODE_HEIGHT = 120;
+export const NODE_LAYOUT_GAP = 32;
+export const NODE_LAYOUT_STEP_X = 260;
+export const NODE_LAYOUT_STEP_Y = 160;
+export const NODE_LAYOUT_MAX_ROWS = 50;
+export const NODE_LAYOUT_MAX_COLS = 50;
 
 /**
  * @typedef {Object} EditorNode
@@ -134,7 +134,7 @@ export function layoutFallback(nodes) {
     const idx = counts[category] || 0;
     counts[category] = idx + 1;
 
-    const desiredPosition = { x, y: idx * 120 };
+    const desiredPosition = { x, y: idx * NODE_LAYOUT_STEP_Y };
     const finalPosition = findNonOverlappingPosition(desiredPosition, occupiedPositions);
     occupiedPositions.push(finalPosition);
 

@@ -35,7 +35,7 @@ export function createNodeIdFromType(typeName, existingNodeIds) {
   return `${base}_${index}`;
 }
 
-export function createPositionForNewNode(category, nodes, findNonOverlappingPosition) {
+export function createPositionForNewNode(category, nodes, findNonOverlappingPosition, NODE_LAYOUT_STEP_Y) {
   const categoryX = {
     input: 0,
     transform: 300,
@@ -46,7 +46,7 @@ export function createPositionForNewNode(category, nodes, findNonOverlappingPosi
   const sameCategoryCount = (nodes || []).filter((node) => node.category === category).length;
   const desiredPosition = {
     x: categoryX[category] ?? 1200,
-    y: sameCategoryCount * 120
+    y: sameCategoryCount * (NODE_LAYOUT_STEP_Y || 120)
   };
 
   if (!findNonOverlappingPosition) {
