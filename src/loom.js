@@ -372,7 +372,6 @@ function stringifyTextValue(value) {
 }
 
 function inspectValue(value) {
-  if (typeof value === 'string') return value;
   const json = JSON.stringify(value, null, 2);
   return json === undefined ? String(value) : json;
 }
