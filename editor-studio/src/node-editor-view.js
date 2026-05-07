@@ -346,6 +346,27 @@ export class NodeEditorView {
     this.currentEditorModel = cloneEditorModelSnapshot(editorModel);
   }
 
+  async focusNode(nodeId) {
+    try {
+      const node = this.editor.getNode(nodeId);
+      if (!node) return false;
+
+      const pos = this.area.nodeViews.get(nodeId)?.position ?? { x: 0, y: 0 };
+      const containerRect = this.container.getBoundingClientRect();
+      const centerX = containerRect.width / 2;
+      const centerY = containerRect.height / 2;
+
+      const translateX = centerX - pos.x;
+      const translateY = centerY - pos.y;
+
+      await this.area.translate(this.area, { x: translateX, y: translateY });
+      return true;
+    } catch (e) {
+      console.warn('focusNode failed:', e.message);
+      return false;
+    }
+  }
+
   destroy() {
     this.area.destroy();
     this.container.innerHTML = '';
