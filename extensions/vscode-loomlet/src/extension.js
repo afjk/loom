@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vscode = require('vscode');
 const { getCompletionContext } = require('./completion-context');
-const { libraries, libraryMembers, topLevelSnippets } = require('./completion-data');
+const { buildCompletions: buildRawCompletions, getIncludePlanned } = require('./completion-engine');
 
 function activate(context) {
   const provider = {
@@ -27,74 +27,23 @@ function activate(context) {
 function deactivate() {}
 
 function buildCompletions(ctx) {
-  if (ctx.kind === 'import') {
-    return libraries.map((lib) => {
-      const item = new vscode.CompletionItem(lib.name, vscode.CompletionItemKind.Module);
-      item.insertText = lib.name;
-      item.detail = `${lib.name} library`;
-      item.documentation = lib.description;
-      return item;
-    });
-  }
-
-  if (ctx.kind === 'member' && ctx.library && libraryMembers[ctx.library]) {
-    return libraryMembers[ctx.library].map((member) => {
-      const item = new vscode.CompletionItem(member.label, vscode.CompletionItemKind.Function);
-      item.insertText = new vscode.SnippetString(member.insertText);
-      item.detail = member.detail;
-      item.documentation = member.documentation;
-      return item;
-    });
-  }
-
-  if (ctx.kind === 'callArgs' && ctx.library && ctx.functionName) {
-    const member = (libraryMembers[ctx.library] || []).find((entry) => entry.label.startsWith(ctx.functionName));
-    if (!member) return [];
-    const used = new Set(ctx.alreadyUsedArgNames || []);
-    return (member.namedArgs || [])
-      .filter((arg) => !used.has(arg))
-      .map((arg) => {
-        const item = new vscode.CompletionItem(`${arg}:`, vscode.CompletionItemKind.Property);
-        item.insertText = new vscode.SnippetString(`${arg}: $0`);
-        item.detail = `${ctx.library}.${ctx.functionName} named argument`;
-        item.documentation = `Named argument for ${ctx.library}.${ctx.functionName}.`;
-        return item;
-      });
-  }
-
-  if (ctx.kind === 'topLevel') {
-    const items = [];
-    for (const lib of ['time', 'math', 'scene', 'console']) {
-      const imp = new vscode.CompletionItem(`import ${lib}`, vscode.CompletionItemKind.Keyword);
-      imp.insertText = new vscode.SnippetString(`import ${lib}`);
-      imp.detail = 'Import library';
-      items.push(imp);
-    }
-
-    for (const lib of ['time', 'math', 'scene', 'console']) {
-      for (const member of libraryMembers[lib] || []) {
-        const fn = new vscode.CompletionItem(member.topLevelInsertText.replace(/\$\{\d+:?/g, '').replace(/\}/g, ''), vscode.CompletionItemKind.Function);
-        fn.label = member.detail;
-        fn.insertText = new vscode.SnippetString(member.topLevelInsertText);
-        fn.detail = member.detail;
-        fn.documentation = member.documentation;
-        items.push(fn);
-      }
-    }
-
-    for (const snippet of topLevelSnippets) {
-      const item = new vscode.CompletionItem(snippet.label, vscode.CompletionItemKind.Snippet);
-      item.insertText = new vscode.SnippetString(snippet.insertText);
-      item.detail = snippet.detail;
-      item.documentation = snippet.documentation;
-      items.push(item);
-    }
-
-    return items;
-  }
-
-  return [];
+  const includePlanned = getIncludePlanned((key) => vscode.workspace.getConfiguration().get(key));
+  const rawItems = buildRawCompletions(ctx, includePlanned);
+  return rawItems.map((entry) => {
+    let kind = vscode.CompletionItemKind.Text;
+    if (entry.type === "module") kind = vscode.CompletionItemKind.Module;
+    else if (entry.type === "function") kind = vscode.CompletionItemKind.Function;
+    else if (entry.type === "property") kind = vscode.CompletionItemKind.Property;
+    const item = new vscode.CompletionItem(entry.label, kind);
+    item.insertText = entry.type === "function" || entry.type === "property"
+      ? new vscode.SnippetString(entry.insertText)
+      : entry.insertText;
+    item.detail = entry.detail;
+    item.documentation = entry.documentation;
+    return item;
+  });
 }
+
 
 async function runCurrentFile(command) {
   const editor = vscode.window.activeTextEditor;
@@ -179,5 +128,6 @@ function searchUpForCli(startDir) {
 module.exports = {
   activate,
   deactivate,
-  findLoomletCli
+  findLoomletCli,
+  buildCompletions
 };
