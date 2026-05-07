@@ -17,9 +17,9 @@ Loomlet は原則としてステートレスなデータフローを基本とし
 加えて、Editor Model API（`graphToEditorModel` / `editorModelToGraph` / `applyEditorOperation`）を公開し、Source AST と GraphJSON の上にノードエディタ向けの正規化層を追加しました。三層分離の詳細は [SPEC.md の Editor Model 章](docs/SPEC.md#editor-model) を参照してください。
 
 ```text
-DSL → Source AST → GraphJSON → EditorModel → (将来) Rete 描画
+DSL → Source AST → GraphJSON → EditorModel → Rete 描画
                               ↑
-      (将来) Rete 操作 → EditorModel → GraphJSON → Preview 実行
+      Rete 操作 → EditorModel → GraphJSON → Preview 実行
 ```
 
 ## 表現レイヤーと役割
@@ -166,7 +166,7 @@ state ノードとして、以下を同梱しています。
 
 A minimal VS Code extension is available under `extensions/vscode-loomlet`.
 
-It is named **Loomlet** and provides `.loom` file association, syntax highlighting, basic completions, and commands for running the current Loomlet file or starting `loomlet scenesync dev`.
+It is named **Loomlet** and provides `.loom` file association, syntax highlighting, metadata-driven completions, parse/compile diagnostics, and commands for running the current Loomlet file, starting `loomlet scenesync dev`, and an experimental Node Preview. Marketplace publishing and packaging are not yet complete.
 
 ## Unity 対応
 
@@ -232,11 +232,6 @@ loomlet run examples/cli-basic.loom --get x.out --time 1
 loomlet compile script.loom --target cli
 loomlet inspect script.loom --target web
 loomlet run examples/cli-text.loom --get message.out
-```
-
-```bash
-loomlet compile examples/cli-basic.loom
-loomlet run examples/cli-basic.loom --get x.out --time 1
 ```
 
 現時点の制約:
@@ -673,19 +668,13 @@ Browser tests are available as a manual GitHub Actions workflow and should be ru
 
 ## npm package
 
-Loomlet core is prepared for npm publishing as `@afjk/loomlet`.
-
-```bash
-npm install @afjk/loomlet
-```
+`@afjk/loomlet` としてnpm package boundaryを準備しています。npm公開前はrepository内のコードとして利用してください。
 
 ```js
 import { parseDSLToAST, compileToGraph, Loom } from '@afjk/loomlet';
 import { graphToEditorModel } from '@afjk/loomlet/node-editor-core';
 import { graphToCanonicalDSL } from '@afjk/loomlet/canonical-dsl';
 ```
-
-Publishing to npm is not done yet in this version.
 
 ## ライセンス
 
