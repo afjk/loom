@@ -6,6 +6,7 @@ A minimal VS Code extension for writing `.loom` scene behavior scripts used with
 
 - `.loom` language association
 - basic syntax highlighting
+- diagnostics for parse and compile errors
 - import completion
 - `time.`, `math.`, and `scene.` completions
 - named argument completion
@@ -37,9 +38,8 @@ This uses the existing Loomlet CLI Scene Sync session configuration.
 This MVP does not include:
 
 - full Language Server Protocol
-- diagnostics
 - formatter
 - hover documentation from compiler metadata
-- graph preview
+- graph preview (experimental / not fully implemented)
 
 VS Code completions are generated from Loomlet library metadata. Run `npm run generate:vscode-metadata` after changing library metadata.

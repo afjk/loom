@@ -3,11 +3,24 @@ const path = require('node:path');
 const vscode = require('vscode');
 const { getCompletionContext } = require('./completion-context');
 const { buildCompletions: buildRawCompletions, getIncludePlanned } = require('./completion-engine');
+const { isLoomletDocument, normalizeLoomletErrorLocation, collectLoomletDiagnosticItems, ensureModulesLoaded } = require('./diagnostics.js');
+const { clampCoordinates } = require('./range-utils.js');
 
 let nodePreviewPanel = null;
 let currentPreviewDocument = null;
+const pendingValidationTimers = new Map();
 
-function activate(context) {
+async function activate(context) {
+  try {
+    await ensureModulesLoaded();
+  } catch (err) {
+    vscode.window.showErrorMessage('Failed to load Loomlet diagnostics module. Diagnostics will be unavailable.');
+    console.error('Failed to load Loomlet modules:', err);
+  }
+
+  const diagnosticCollection = vscode.languages.createDiagnosticCollection('loomlet');
+  context.subscriptions.push(diagnosticCollection);
+
   const provider = {
     provideCompletionItems(document, position) {
       const text = document.getText();
@@ -26,6 +39,7 @@ function activate(context) {
     vscode.commands.registerCommand('loomlet.sceneSyncDevCurrentFile', () => runCurrentFile('scenesync dev')),
     vscode.commands.registerCommand('loomlet.openNodePreviewToSide', () => openNodePreviewToSide(context)),
     vscode.workspace.onDidChangeTextDocument((event) => {
+      scheduleValidation(event.document, diagnosticCollection);
       if (nodePreviewPanel && currentPreviewDocument && event.document.uri.toString() === currentPreviewDocument.uri.toString()) {
         sendDocumentToPreview(event.document);
       }
@@ -35,8 +49,33 @@ function activate(context) {
         currentPreviewDocument = editor.document;
         sendDocumentToPreview(editor.document);
       }
+    }),
+    vscode.workspace.onDidOpenTextDocument((document) => {
+      validateLoomletDocument(document, diagnosticCollection);
+    }),
+    vscode.workspace.onDidSaveTextDocument((document) => {
+      validateLoomletDocument(document, diagnosticCollection);
+    }),
+    vscode.workspace.onDidCloseTextDocument((document) => {
+      if (isLoomletDocument(document)) {
+        diagnosticCollection.delete(document.uri);
+      }
     })
   );
+
+  context.subscriptions.push({
+    dispose() {
+      for (const timer of pendingValidationTimers.values()) {
+        clearTimeout(timer);
+      }
+      pendingValidationTimers.clear();
+    }
+  });
+
+  // Validate already-open documents on activation
+  for (const document of vscode.workspace.textDocuments) {
+    validateLoomletDocument(document, diagnosticCollection);
+  }
 }
 
 function deactivate() {
@@ -253,6 +292,79 @@ function searchUpForCli(startDir) {
     }
     current = parent;
   }
+}
+
+function scheduleValidation(document, diagnosticCollection) {
+  if (!isLoomletDocument(document)) return;
+
+  const key = document.uri.toString();
+  const existing = pendingValidationTimers.get(key);
+  if (existing) {
+    clearTimeout(existing);
+  }
+
+  const timer = setTimeout(() => {
+    pendingValidationTimers.delete(key);
+    validateLoomletDocument(document, diagnosticCollection);
+  }, 250);
+
+  pendingValidationTimers.set(key, timer);
+}
+
+function validateLoomletDocument(document, diagnosticCollection) {
+  if (!isLoomletDocument(document)) return;
+
+  try {
+    const sourceText = document.getText();
+    const errorItems = collectLoomletDiagnosticItems(sourceText);
+
+    if (errorItems.length === 0) {
+      diagnosticCollection.set(document.uri, []);
+      return;
+    }
+
+    const diagnostics = errorItems
+      .map((error) => diagnosticFromLoomletError(error, document))
+      .filter((d) => d !== null);
+
+    diagnosticCollection.set(document.uri, diagnostics);
+  } catch (err) {
+    // Silently ignore any unexpected errors in validation
+    // to prevent breaking the extension
+    console.error('Error validating Loomlet document:', err);
+  }
+}
+
+function diagnosticFromLoomletError(error, document) {
+  const normalized = normalizeLoomletErrorLocation(error);
+  const clamped = clampCoordinates(
+    normalized.startLine,
+    normalized.startColumn,
+    normalized.endLine,
+    normalized.endColumn,
+    document
+  );
+
+  const range = new vscode.Range(
+    clamped.startLine,
+    clamped.startColumn,
+    clamped.endLine,
+    clamped.endColumn
+  );
+
+  const diagnostic = new vscode.Diagnostic(
+    range,
+    normalized.message,
+    vscode.DiagnosticSeverity.Error
+  );
+
+  diagnostic.source = 'loomlet';
+
+  if (normalized.code) {
+    diagnostic.code = normalized.code;
+  }
+
+  return diagnostic;
 }
 
 module.exports = {
