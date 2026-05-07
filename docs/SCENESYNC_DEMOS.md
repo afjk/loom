@@ -50,3 +50,9 @@ Loomlet demo graphs in this PR intentionally control transforms, color, and visi
 
 Loomlet graph samples control existing objects.
 They do not create objects during live graph evaluation.
+
+
+## Runtime support notes
+
+- Multi-object graph sketches (for example `05-wave-objects` and `03-grid-wave`) are marked draft because the current Scene Sync graph adapter targets a single object scope.
+- `scene.setColor` and `scene.setVisible` may compile through the Loomlet graph adapter, but samples remain draft until Scene Sync receiver/runtime support is confirmed.

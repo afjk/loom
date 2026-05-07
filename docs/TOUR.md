@@ -133,11 +133,11 @@ Loomlet source files use the `.loom` extension.
 
 ### 05 Wave Objects
 - Path: `examples/tour/scenesync/05-wave-objects.loom`
-- Status: Runnable
+- Status: Draft
 - Required object IDs: `wave-1`, `wave-2`, `wave-3`, `wave-4`, `wave-5`
 - Run: `loomlet scenesync dev examples/tour/scenesync/05-wave-objects.loom`
 - Teaches: multi-object phase offsets without dynamic object creation
-- Missing: none
+- Missing: requires multi-object Scene Sync graph support or per-sink objectId support; current adapter targets single-object scope
 
 ### 06 Model Choreography
 - Path: `examples/tour/scenesync/06-model-choreography.loom`
@@ -167,11 +167,11 @@ Loomlet source files use the `.loom` extension.
 
 ### 03 Grid Wave
 - Path: `examples/tour/live/03-grid-wave.loom`
-- Status: Runnable
+- Status: Draft
 - Required object IDs: `grid-1` ... `grid-9`
 - Run: `loomlet scenesync dev examples/tour/live/03-grid-wave.loom`
 - Teaches: explicit multi-object wave choreography for a 3x3 layout
-- Missing: none
+- Missing: requires multi-object Scene Sync graph support or per-sink objectId support; current adapter targets single-object scope
 
 ### 04 Timeline Cues
 - Path: `examples/tour/live/04-timeline-cues.loom`

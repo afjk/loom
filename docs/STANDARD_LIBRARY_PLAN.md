@@ -146,7 +146,7 @@ Current:
 - `scene.setPosition`, `scene.setRotation`, `scene.setScale`
 Used by tour samples:
 - runnable: `scene.setPosition`, `scene.setRotation`, `scene.setScale`
-- draft (pending end-to-end target support): `scene.setColor`, `scene.setVisible`
+- draft (pending end-to-end target/runtime confirmation): `scene.setColor`, `scene.setVisible`
 Recommended baseline:
 - extend runnable sinks with `scene.setColor`, `scene.setVisible`
 - plus `scene.find`, `scene.getPosition`, `scene.emit`, `scene.setMaterial`, `scene.setAsset`
