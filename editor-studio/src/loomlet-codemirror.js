@@ -8,13 +8,24 @@ function createNodeTypeNameSet(nodeTypes = {}) {
   return new Set(Object.keys(nodeTypes || {}));
 }
 
-// Extract parameter names for a specific node type
+// Extract parameter and input names for a specific node type
 function getParamNamesForNode(nodeTypes = {}, nodeName) {
   const nodeType = nodeTypes[nodeName];
-  if (!nodeType || !nodeType.params) {
-    return [];
+  if (!nodeType) return [];
+
+  const names = new Set();
+
+  // Collect input names
+  for (const input of nodeType.inputs || []) {
+    if (input?.name) names.add(input.name);
   }
-  return nodeType.params.map(p => p.name);
+
+  // Collect param names
+  for (const param of nodeType.params || []) {
+    if (param?.name) names.add(param.name);
+  }
+
+  return [...names];
 }
 
 // Simple stream language parser for Loomlet DSL
@@ -50,7 +61,7 @@ function createLoomletStreamLanguage(nodeTypes = {}) {
 
       // Named parameters: identifier followed by ':'
       if (stream.match(/[a-zA-Z_][a-zA-Z0-9_]*(?=:)/)) {
-        return 'propertyName';
+        return 'property';
       }
 
       // Word tokens (identifiers, keywords, node names)
@@ -62,7 +73,7 @@ function createLoomletStreamLanguage(nodeTypes = {}) {
         }
 
         if (nodeNames.has(text)) {
-          return 'function';
+          return 'variable-2';
         }
 
         // Check if this is a variable definition (word followed by =)
@@ -72,7 +83,7 @@ function createLoomletStreamLanguage(nodeTypes = {}) {
         stream.pos = savedPos;
 
         if (nextChar === '=') {
-          return 'definition';
+          return 'def';
         }
 
         return 'variable';
@@ -88,9 +99,10 @@ function createLoomletStreamLanguage(nodeTypes = {}) {
 // Highlight style for Loomlet DSL
 const loomletHighlightStyle = HighlightStyle.define([
   { tag: tags.keyword, color: '#ffcb6b' },
-  { tag: tags.function(tags.variableName), color: '#82aaff' },
+  { tag: tags.special(tags.variableName), color: '#82aaff' },
   { tag: tags.definition(tags.variableName), color: '#c3e88d' },
   { tag: tags.propertyName, color: '#f78c6c' },
+  { tag: tags.variableName, color: '#f5f5f5' },
   { tag: tags.number, color: '#f78c6c' },
   { tag: tags.string, color: '#c3e88d' },
   { tag: tags.comment, color: '#676e95', fontStyle: 'italic' },
