@@ -41,6 +41,20 @@ or:
 
 `loomlet scenesync dev examples/tour/live/01-pulse.loom`
 
+## Demo helper commands
+
+List demos:
+
+`loomlet scenesync demo list`
+
+Check setup:
+
+`loomlet scenesync demo setup lissajous`
+
+Run demo:
+
+`loomlet scenesync demo run lissajous`
+
 ## Skybox / image / video notes
 
 Scene/environment asset import (skyboxes, images, videos, GLBs) should be done through Scene Sync UI/commands before running Loomlet graphs.

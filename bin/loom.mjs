@@ -35,6 +35,7 @@ import {
   compileLoomToSceneSyncGraph,
   loomGraphToSceneSyncGraph
 } from '../src/scenesync/index.js';
+import { SCENESYNC_DEMOS, getSceneSyncDemoByName } from '../src/scenesync/demo-registry.js';
 
 function print(message = '') {
   process.stdout.write(`${message}\n`);
@@ -235,6 +236,9 @@ Commands:
   graph-set <obj> <g>      Set a Loomlet graph behavior on a Scene Sync object
   graph-clear <obj>        Clear Loomlet graph behavior from a Scene Sync object
   dev <file>               Watch Loomlet DSL and live-send Scene Sync graph updates
+  demo list                List built-in Scene Sync demo samples
+  demo setup <name>        Check whether required demo objects exist
+  demo run <name>          Run a built-in demo through scenesync dev
   ping                     Check Scene Sync room connection
   info                     Get room information
   objects                  List scene objects
@@ -262,6 +266,9 @@ Examples:
   loomlet scenesync graph-set sample-cube examples/scene-graphs/lissajous.json
   loomlet scenesync graph-set sample-cube examples/scene-graphs/lissajous.json --send
   loomlet scenesync graph-clear sample-cube --send
+  loomlet scenesync demo list
+  loomlet scenesync demo setup lissajous
+  loomlet scenesync demo run lissajous
 
 Graph Commands:
   By default graph-set, graph-clear, and graph-run are dry-run. Pass --send to broadcast.
@@ -2164,6 +2171,95 @@ async function handleSceneSync(args) {
 
   if (subcommand === 'dev') {
     return await handleSceneSyncDev(rest);
+  }
+
+  if (subcommand === 'demo') {
+    const action = rest[0];
+    const name = rest[1];
+
+    if (!action || action === '--help') {
+      print(`Usage:
+  loomlet scenesync demo list
+  loomlet scenesync demo setup <name>
+  loomlet scenesync demo run <name>`);
+      return 0;
+    }
+
+    if (action === 'list') {
+      print('Scene Sync demos:\n');
+      for (const demo of SCENESYNC_DEMOS) {
+        print(`- ${demo.name}`);
+        print(`  file: ${demo.file}`);
+        if (demo.requiredObjects?.length) {
+          print(`  object: ${demo.requiredObjects.join(', ')}`);
+        }
+        print(`  status: ${demo.status}`);
+        print('');
+      }
+      return 0;
+    }
+
+    if (action === 'setup') {
+      if (!name) {
+        throw new Error('demo setup requires <name>');
+      }
+      const demo = getSceneSyncDemoByName(name);
+      if (!demo) {
+        throw new Error(`Unknown Scene Sync demo: ${name}`);
+      }
+      const { room, session, endpoint, json } = await parseSceneSyncArgs(rest.slice(2));
+      if (!room || !session) {
+        print('No saved Scene Sync session.');
+        print('Run:');
+        print('  loomlet scenesync redeem <code> --save');
+        return 0;
+      }
+
+      const client = new SceneSyncClient({ endpoint });
+      const result = await client.listObjects({ room, session });
+      if (!result.ok) {
+        printError(formatSceneSyncError(result.error));
+        return 1;
+      }
+
+      const objects = result.data?.objects || {};
+      const missing = (demo.requiredObjects || []).filter((objectId) => !Object.hasOwn(objects, objectId));
+      if (json) {
+        print(stringifyJson({ ok: true, demo: demo.name, missingRequiredObjects: missing }));
+        return 0;
+      }
+      if (missing.length === 0) {
+        print(`Demo setup OK: ${demo.name}`);
+        print(`Required objects found: ${(demo.requiredObjects || []).join(', ') || '(none)'}`);
+        return 0;
+      }
+      print(`Demo requires objectId: ${missing[0]}`);
+      print('');
+      print(`Create or rename an object in Scene Sync with objectId \`${missing[0]}\`.`);
+      print('Then run:');
+      print(`  loomlet scenesync demo run ${demo.name}`);
+      return 0;
+    }
+
+    if (action === 'run') {
+      if (!name) {
+        throw new Error('demo run requires <name>');
+      }
+      const demo = getSceneSyncDemoByName(name);
+      if (!demo) {
+        throw new Error(`Unknown Scene Sync demo: ${name}`);
+      }
+      const savedSession = await loadSceneSyncSession();
+      if (!(savedSession.ok && savedSession.session)) {
+        print('No saved Scene Sync session.');
+        print('Run:');
+        print('  loomlet scenesync redeem <code> --save');
+        return 0;
+      }
+      return await handleSceneSyncDev([demo.file, ...rest.slice(2)]);
+    }
+
+    throw new Error(`Unknown scenesync demo command: ${action}`);
   }
 
   const { room, session, endpoint, json } = await parseSceneSyncArgs(rest);
