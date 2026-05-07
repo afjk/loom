@@ -48,10 +48,11 @@ function createReteNode(editorNode, onControl) {
 }
 
 export class NodeEditorView {
-  constructor(container, { onOperation, onError } = {}) {
+  constructor(container, { onOperation, onError, onSelectNode } = {}) {
     this.container = container;
     this.onOperation = onOperation || (() => {});
     this.onError = onError || ((e) => console.error('NodeEditorView:', e));
+    this.onSelectNode = onSelectNode || (() => {});
     this.isRendering = false;
     this.connectionMap = new Map();
     this._renderLock = null;
@@ -87,6 +88,14 @@ export class NodeEditorView {
       if (!this.isRendering && context.type === 'nodetranslated') {
         this._onNodeTranslated(context.data);
       }
+
+      if (!this.isRendering && context.type === 'nodepicked') {
+        const nodeId = context.data?.id;
+        if (nodeId && this.editor.getNode(nodeId)) {
+          this.onSelectNode(nodeId);
+        }
+      }
+
       return context;
     });
   }
