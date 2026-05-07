@@ -1,4 +1,4 @@
-import { NODE_TYPES } from '../../src/loom.js';
+import { NODE_TYPES } from './loom.js';
 
 export function graphToCanonicalDSL(graph) {
   const lines = [];

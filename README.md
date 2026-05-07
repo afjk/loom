@@ -671,6 +671,22 @@ Browser tests are available as a manual GitHub Actions workflow and should be ru
 
 `src/loom.js` は依存ライブラリゼロの単一ファイル配布であり、`package.json` は開発用ツール（Playwright、http-server）と CLI / toolchain 用テストを含みます。
 
+## npm package
+
+Loomlet core is prepared for npm publishing as `@afjk/loomlet`.
+
+```bash
+npm install @afjk/loomlet
+```
+
+```js
+import { parseDSLToAST, compileToGraph, Loom } from '@afjk/loomlet';
+import { graphToEditorModel } from '@afjk/loomlet/node-editor-core';
+import { graphToCanonicalDSL } from '@afjk/loomlet/canonical-dsl';
+```
+
+Publishing to npm is not done yet in this version.
+
 ## ライセンス
 
 MIT License
