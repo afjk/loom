@@ -14,7 +14,8 @@
   "activationEvents": [
     "onLanguage:loomlet",
     "onCommand:loomlet.runCurrentFile",
-    "onCommand:loomlet.sceneSyncDevCurrentFile"
+    "onCommand:loomlet.sceneSyncDevCurrentFile",
+    "onCommand:loomlet.openNodePreviewToSide"
   ],
   "contributes": {
     "languages": [
@@ -45,6 +46,10 @@
       {
         "command": "loomlet.sceneSyncDevCurrentFile",
         "title": "Loomlet: Scene Sync Dev Current File"
+      },
+      {
+        "command": "loomlet.openNodePreviewToSide",
+        "title": "Loomlet: Open Node Preview to the Side"
       }
     ],
     "configuration": {
