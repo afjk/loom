@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Node Palette Helpers Tests</title>
+  <script src="./test-runner.js"></script>
+</head>
+<body>
+  <h1>Node Palette Helpers Tests</h1>
+  <div id="test-results"></div>
+
+  <script type="module">
+    import {
+      normalizeEditorCategory,
+      cloneDefaultValue,
+      createDefaultParamsForNodeType,
+      createNodeIdFromType,
+      createPositionForNewNode,
+      getNodeTypeEntries
+    } from '../editor-studio/src/node-palette-model.js';
+
+    const test = window.test || function() {};
+    const assert = window.assert || (() => {});
+
+    // Mock NODE_TYPES for testing
+    const mockNodeTypes = {
+      sine: {
+        category: 'transform',
+        inputs: [{ name: 't', type: 'number' }],
+        outputs: [{ name: 'out', type: 'number' }],
+        params: [
+          { name: 'freq', type: 'number', default: 1 },
+          { name: 'amplitude', type: 'number', default: 1 }
+        ]
+      },
+      clock: {
+        category: 'source',
+        inputs: [],
+        outputs: [{ name: 't', type: 'number' }],
+        params: []
+      },
+      add: {
+        category: 'transform',
+        inputs: [{ name: 'a', type: 'number' }, { name: 'b', type: 'number' }],
+        outputs: [{ name: 'out', type: 'number' }],
+        params: [
+          { name: 'a', type: 'number', default: 0 },
+          { name: 'b', type: 'number', default: 0 }
+        ]
+      }
+    };
+
+    // Test normalizeEditorCategory
+    test('normalizeEditorCategory("source") should return "input"', () => {
+      const result = normalizeEditorCategory('source');
+      if (result !== 'input') throw new Error(`Expected 'input', got '${result}'`);
+    });
+
+    test('normalizeEditorCategory("transform") should return "transform"', () => {
+      const result = normalizeEditorCategory('transform');
+      if (result !== 'transform') throw new Error(`Expected 'transform', got '${result}'`);
+    });
+
+    test('normalizeEditorCategory(undefined) should return "transform"', () => {
+      const result = normalizeEditorCategory(undefined);
+      if (result !== 'transform') throw new Error(`Expected 'transform', got '${result}'`);
+    });
+
+    // Test cloneDefaultValue
+    test('cloneDefaultValue(123) should return 123', () => {
+      const result = cloneDefaultValue(123);
+      if (result !== 123) throw new Error(`Expected 123, got ${result}`);
+    });
+
+    test('cloneDefaultValue([1, 2, 3]) should return deep clone', () => {
+      const original = [1, 2, 3];
+      const result = cloneDefaultValue(original);
+      if (JSON.stringify(result) !== JSON.stringify(original)) {
+        throw new Error(`Arrays do not match`);
+      }
+      if (result === original) throw new Error(`Should be a new array, not reference`);
+    });
+
+    test('cloneDefaultValue({a: 1}) should return deep clone', () => {
+      const original = { a: 1, b: { c: 2 } };
+      const result = cloneDefaultValue(original);
+      if (JSON.stringify(result) !== JSON.stringify(original)) {
+        throw new Error(`Objects do not match`);
+      }
+      if (result === original) throw new Error(`Should be a new object, not reference`);
+    });
+
+    // Test createDefaultParamsForNodeType
+    test('createDefaultParamsForNodeType("sine") should return params with defaults', () => {
+      const result = createDefaultParamsForNodeType('sine', mockNodeTypes);
+      if (result.freq !== 1 || result.amplitude !== 1) {
+        throw new Error(`Expected freq: 1, amplitude: 1, got ${JSON.stringify(result)}`);
+      }
+    });
+
+    test('createDefaultParamsForNodeType("clock") should return empty params', () => {
+      const result = createDefaultParamsForNodeType('clock', mockNodeTypes);
+      if (Object.keys(result).length !== 0) {
+        throw new Error(`Expected empty params, got ${JSON.stringify(result)}`);
+      }
+    });
+
+    // Test createNodeIdFromType
+    test('createNodeIdFromType("sine") with no existing nodes should return "sine"', () => {
+      const result = createNodeIdFromType('sine', {});
+      if (result !== 'sine') throw new Error(`Expected 'sine', got '${result}'`);
+    });
+
+    test('createNodeIdFromType("sine") with existing "sine" should return "sine_2"', () => {
+      const existing = { sine: { id: 'sine' } };
+      const result = createNodeIdFromType('sine', existing);
+      if (result !== 'sine_2') throw new Error(`Expected 'sine_2', got '${result}'`);
+    });
+
+    test('createNodeIdFromType("math.add") should normalize to "math_add"', () => {
+      const result = createNodeIdFromType('math.add', {});
+      if (result !== 'math_add') throw new Error(`Expected 'math_add', got '${result}'`);
+    });
+
+    test('createNodeIdFromType("sine") with existing "sine" and "sine_2" should return "sine_3"', () => {
+      const existing = { sine: {}, sine_2: {} };
+      const result = createNodeIdFromType('sine', existing);
+      if (result !== 'sine_3') throw new Error(`Expected 'sine_3', got '${result}'`);
+    });
+
+    // Test createPositionForNewNode
+    test('createPositionForNewNode("input") should place at x=0', () => {
+      const result = createPositionForNewNode('input', []);
+      if (result.x !== 0) throw new Error(`Expected x: 0, got x: ${result.x}`);
+    });
+
+    test('createPositionForNewNode("transform") should place at x=300', () => {
+      const result = createPositionForNewNode('transform', []);
+      if (result.x !== 300) throw new Error(`Expected x: 300, got x: ${result.x}`);
+    });
+
+    test('createPositionForNewNode("transform") with 2 existing transform nodes should increment y', () => {
+      const nodes = [
+        { id: 'add', category: 'transform', position: { x: 300, y: 0 } },
+        { id: 'mult', category: 'transform', position: { x: 300, y: 120 } }
+      ];
+      const result = createPositionForNewNode('transform', nodes);
+      if (result.y !== 240) throw new Error(`Expected y: 240, got y: ${result.y}`);
+    });
+
+    // Test getNodeTypeEntries
+    test('getNodeTypeEntries should return sorted entries', () => {
+      const result = getNodeTypeEntries(mockNodeTypes);
+      if (result.length !== 3) throw new Error(`Expected 3 entries, got ${result.length}`);
+      // Should be sorted by category first, then by typeName
+      if (result[0].category !== 'input') throw new Error(`First entry should be 'input' category`);
+      if (result[1].category !== 'transform' || result[1].typeName !== 'add') {
+        throw new Error(`Second entry should be 'add' (transform, sorted)`);
+      }
+    });
+
+    test('getNodeTypeEntries should normalize source to input', () => {
+      const result = getNodeTypeEntries(mockNodeTypes);
+      const clockEntry = result.find(e => e.typeName === 'clock');
+      if (clockEntry.category !== 'input') {
+        throw new Error(`clock should have category 'input', got '${clockEntry.category}'`);
+      }
+    });
+
+    console.log('All node palette helper tests completed');
+  </script>
+</body>
+</html>

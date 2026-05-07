@@ -3,7 +3,7 @@ import { EditorView, keymap, lineNumbers } from '@codemirror/view';
 import { defaultKeymap } from '@codemirror/commands';
 import { json } from '@codemirror/lang-json';
 
-import { Loom } from '../../src/loom.js';
+import { Loom, NODE_TYPES } from '../../src/loom.js';
 import { parseDSLToAST, compileToGraph } from '../../src/loom-dsl.js';
 import {
   graphToEditorModel,
@@ -13,6 +13,13 @@ import {
 import { graphToCanonicalDSL } from './canonical-dsl.js';
 import { createStore } from './studio-store.js';
 import { NodeEditorView } from './node-editor-view.js';
+import {
+  normalizeEditorCategory,
+  createDefaultParamsForNodeType,
+  createNodeIdFromType,
+  createPositionForNewNode,
+  getNodeTypeEntries
+} from './node-palette-model.js';
 
 const SAMPLE_DSL = `t = clock()
 wave = sine(t, freq: 0.35)
@@ -52,7 +59,10 @@ const elements = {
   fileStatus: document.getElementById('file-status'),
   openFileBtn: document.getElementById('openFileBtn'),
   saveFileBtn: document.getElementById('saveFileBtn'),
-  saveAsFileBtn: document.getElementById('saveAsFileBtn')
+  saveAsFileBtn: document.getElementById('saveAsFileBtn'),
+  nodePaletteSearch: document.getElementById('node-palette-search'),
+  nodePaletteCategory: document.getElementById('node-palette-category'),
+  nodePaletteList: document.getElementById('node-palette-list')
 };
 
 function setPanelsVisible(visible) {
@@ -634,6 +644,97 @@ async function resetSample() {
   setDirty(false);
 }
 
+function renderNodePaletteItem(entry) {
+  const inputs = entry.inputs.map((input) => input.name).join(', ') || 'none';
+  const outputs = entry.outputs.map((output) => output.name).join(', ') || 'none';
+  const params = entry.params.map((param) => param.name).join(', ') || 'none';
+
+  return `
+    <div class="node-palette-item">
+      <div class="node-palette-main">
+        <div class="node-palette-title">${escapeHtml(entry.typeName)}</div>
+        <div class="node-palette-category-label">${escapeHtml(entry.category)}</div>
+      </div>
+      <div class="node-palette-meta">
+        <div><strong>in</strong>: ${escapeHtml(inputs)}</div>
+        <div><strong>out</strong>: ${escapeHtml(outputs)}</div>
+        <div><strong>params</strong>: ${escapeHtml(params)}</div>
+      </div>
+      <button class="btn node-palette-add" data-add-node-type="${escapeHtml(entry.typeName)}">Add</button>
+    </div>
+  `;
+}
+
+function renderNodePalette() {
+  const list = elements.nodePaletteList;
+  if (!list) return;
+
+  const query = (elements.nodePaletteSearch?.value || '').trim().toLowerCase();
+  const selectedCategory = elements.nodePaletteCategory?.value || '';
+
+  const entries = getNodeTypeEntries(NODE_TYPES).filter((entry) => {
+    if (selectedCategory && entry.category !== selectedCategory) return false;
+    if (!query) return true;
+
+    return (
+      entry.typeName.toLowerCase().includes(query) ||
+      entry.category.toLowerCase().includes(query)
+    );
+  });
+
+  list.innerHTML = entries.map(renderNodePaletteItem).join('');
+
+  list.querySelectorAll('[data-add-node-type]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const typeName = button.getAttribute('data-add-node-type');
+      addNodeFromPalette(typeName);
+    });
+  });
+}
+
+function renderNodePaletteCategories() {
+  const select = elements.nodePaletteCategory;
+  if (!select) return;
+
+  const categories = Array.from(
+    new Set(getNodeTypeEntries(NODE_TYPES).map((entry) => entry.category))
+  ).sort();
+
+  select.innerHTML = [
+    '<option value="">All categories</option>',
+    ...categories.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
+  ].join('');
+}
+
+async function addNodeFromPalette(typeName) {
+  const def = NODE_TYPES[typeName];
+  if (!def) {
+    setEditorError(`Unknown node type: ${typeName}`);
+    return;
+  }
+
+  const category = normalizeEditorCategory(def.category);
+  const state = store.getState();
+  const existingNodeIds = state.editorModel?.nodesById || {};
+  const id = createNodeIdFromType(typeName, existingNodeIds);
+  const nodes = Object.values(existingNodeIds || {});
+
+  const node = {
+    id,
+    type: typeName,
+    category,
+    params: createDefaultParamsForNodeType(typeName, NODE_TYPES),
+    position: createPositionForNewNode(category, nodes)
+  };
+
+  await handleOperation({
+    type: 'addNode',
+    node
+  });
+
+  setSelectedNodeId(id);
+}
+
 function setupEventListeners() {
   elements.applyDslBtn.addEventListener('click', applyDsl);
   elements.generateDslBtn.addEventListener('click', generateDsl);
@@ -659,6 +760,9 @@ function setupEventListeners() {
       document.getElementById(`${tabName}-tab`)?.classList.add('active');
     });
   });
+
+  elements.nodePaletteSearch?.addEventListener('input', renderNodePalette);
+  elements.nodePaletteCategory?.addEventListener('change', renderNodePalette);
 
   window.addEventListener('resize', resizePreviewCanvas);
 }
@@ -716,6 +820,8 @@ async function init() {
 
   setupEventListeners();
   renderFileStatus();
+  renderNodePaletteCategories();
+  renderNodePalette();
   await applyDsl({ markDirty: false });
   setDirty(false);
 }
