@@ -318,6 +318,15 @@ function applyEditorMaximizeMode() {
   updateEditorMaximizeButtons();
 }
 
+function notifyNodeEditorLayoutChanged() {
+  window.requestAnimationFrame(() => {
+    window.dispatchEvent(new Event('resize'));
+    if (nodeEditor?.resize) {
+      nodeEditor.resize();
+    }
+  });
+}
+
 function setEditorMaximizeMode(mode) {
   if (!['split', 'dsl', 'node'].includes(mode)) return;
 
@@ -331,6 +340,7 @@ function setEditorMaximizeMode(mode) {
   }
 
   applyEditorMaximizeMode();
+  notifyNodeEditorLayoutChanged();
   saveEditorMaximizeMode();
 }
 

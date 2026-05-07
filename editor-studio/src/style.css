@@ -90,6 +90,11 @@ body.panels-hidden .editor-panels {
   grid-template-columns: 1fr;
 }
 
+.editor-panels.is-maximized-dsl .dsl-pane {
+  grid-column: 1;
+  grid-row: 1;
+}
+
 .editor-panels.is-maximized-dsl .node-pane,
 .editor-panels.is-maximized-dsl .editor-split-resize-handle {
   display: none;
@@ -97,6 +102,11 @@ body.panels-hidden .editor-panels {
 
 .editor-panels.is-maximized-node {
   grid-template-columns: 1fr;
+}
+
+.editor-panels.is-maximized-node .node-pane {
+  grid-column: 1;
+  grid-row: 1;
 }
 
 .editor-panels.is-maximized-node .dsl-pane,
