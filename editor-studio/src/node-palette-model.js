@@ -13,7 +13,8 @@ export function createDefaultParamsForNodeType(typeName, NODE_TYPES) {
   const params = {};
 
   for (const param of def?.params || []) {
-    params[param.name] = cloneDefaultValue(param.default);
+    const hasDefault = Object.prototype.hasOwnProperty.call(param, 'default');
+    params[param.name] = hasDefault ? cloneDefaultValue(param.default) : null;
   }
 
   return params;
