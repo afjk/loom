@@ -12,7 +12,7 @@ import { isLibraryAvailableInTarget } from '../src/toolchain/runtime-targets.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
-const cliPath = path.join(projectRoot, 'bin', 'loom.mjs');
+const cliPath = path.join(projectRoot, 'bin', 'loomlet.mjs');
 
 function evalNode(type, params = {}, id = 'n') {
   const engine = new Loom({ nodes: [{ id, type, params }], edges: [] });
