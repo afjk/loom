@@ -2,7 +2,7 @@ import { StreamLanguage, syntaxHighlighting, HighlightStyle } from '@codemirror/
 import { tags } from '@lezer/highlight';
 import { EditorView } from '@codemirror/view';
 import { autocompletion } from '@codemirror/autocomplete';
-import { linter, lintGutter } from '@codemirror/lint';
+import { linter, lintGutter, forceLinting } from '@codemirror/lint';
 
 // Create a set of valid node/function names from metadata
 function createNodeTypeNameSet(nodeTypes = {}) {
@@ -270,20 +270,41 @@ export function getParamCompletionOptionsForNode(nodeTypes = {}, nodeName) {
   }));
 }
 
-function resolveErrorPosition(doc, error) {
+function getErrorStartLine(error) {
+  return error?.line ?? error?.span?.start?.line ?? null;
+}
+
+function getErrorStartColumn(error) {
+  return error?.column ?? error?.span?.start?.column ?? 1;
+}
+
+function getErrorEndLine(error) {
+  return error?.span?.end?.line ?? getErrorStartLine(error);
+}
+
+function getErrorEndColumn(error) {
+  return error?.span?.end?.column ?? getErrorStartColumn(error);
+}
+
+function resolveErrorPosition(doc, error, endpoint = 'start') {
   if (!error) return 0;
 
-  const line = error.line !== undefined ? error.line : null;
-  const column = error.column !== undefined ? error.column : 0;
+  const line = endpoint === 'end'
+    ? getErrorEndLine(error)
+    : getErrorStartLine(error);
 
-  if (line === null || line < 1) {
-    return 0;
-  }
+  const column = endpoint === 'end'
+    ? getErrorEndColumn(error)
+    : getErrorStartColumn(error);
+
+  if (!line || line < 1) return 0;
 
   try {
     const lineObject = doc.line(line);
-    if (!lineObject) return 0;
-    const colOffset = Math.max(0, Math.min(column || 0, lineObject.length));
+    const colOffset = Math.max(
+      0,
+      Math.min((column || 1) - 1, lineObject.length)
+    );
     return lineObject.from + colOffset;
   } catch {
     return 0;
@@ -295,19 +316,9 @@ export function createLoomletDslLinter({ getErrors } = {}) {
     const errors = getErrors?.() || [];
 
     return errors.map((error) => {
-      const from = resolveErrorPosition(view.state.doc, error);
-      let to = from + 1;
-
-      if (error.line !== undefined) {
-        try {
-          const lineObject = view.state.doc.line(error.line);
-          if (lineObject) {
-            to = lineObject.to;
-          }
-        } catch {
-          to = from + 1;
-        }
-      }
+      const from = resolveErrorPosition(view.state.doc, error, 'start');
+      const explicitTo = resolveErrorPosition(view.state.doc, error, 'end');
+      const to = Math.max(from + 1, explicitTo);
 
       return {
         from,

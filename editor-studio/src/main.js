@@ -4,6 +4,7 @@ import { history, defaultKeymap, historyKeymap } from '@codemirror/commands';
 import { bracketMatching, foldGutter, indentOnInput } from '@codemirror/language';
 import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
 import { closeBrackets, closeBracketsKeymap, completionKeymap } from '@codemirror/autocomplete';
+import { forceLinting } from '@codemirror/lint';
 
 import { Loom, NODE_TYPES } from '../../src/loom.js';
 import { loomletDslExtensions } from './loomlet-codemirror.js';
@@ -789,14 +790,16 @@ function renderGraphJSON(graph) {
 function renderErrors() {
   const state = store.getState();
   const html = state.errors.map(err => {
-    const line = err.line ? `:${err.line}` : '';
-    const col = err.column ? `:${err.column}` : '';
+    const lineNumber = err.line ?? err.span?.start?.line;
+    const columnNumber = err.column ?? err.span?.start?.column;
+    const line = lineNumber ? `:${lineNumber}` : '';
+    const col = columnNumber ? `:${columnNumber}` : '';
     return `<div class="error-item"><strong>${err.code || 'ERROR'}${line}${col}</strong>: ${err.message}</div>`;
   }).join('');
   elements.errorsList.innerHTML = html || '<div class="error-item">No errors</div>';
 
   if (dslEditor) {
-    dslEditor.dispatch({});
+    forceLinting(dslEditor);
   }
 }
 
