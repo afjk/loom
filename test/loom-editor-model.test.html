@@ -8,7 +8,7 @@
   <h1>Loom Editor Model テスト</h1>
   <div id="results"></div>
   <script type="module">
-    import { graphToEditorModel, editorModelToGraph, applyEditorOperation, layoutFallback, preserveEditorModelLayout } from "../src/loom-editor-model.js";
+    import { graphToEditorModel, editorModelToGraph, applyEditorOperation, layoutFallback, preserveEditorModelLayout, doRectsOverlap, makeNodeLayoutRect, findNonOverlappingPosition } from "../src/loom-editor-model.js";
 
     const results = [];
     function test(name, fn) { results.push({ name, fn }); }
@@ -259,6 +259,84 @@
       const merged = preserveEditorModelLayout(next, previous);
 
       assert(!merged.nodesById.old, 'removed node should not be restored');
+    });
+
+    test('18. doRectsOverlap detects overlapping rectangles', () => {
+      const rect1 = { x: 0, y: 0, width: 100, height: 100 };
+      const rect2 = { x: 50, y: 50, width: 100, height: 100 };
+      const rect3 = { x: 200, y: 200, width: 100, height: 100 };
+
+      assert(doRectsOverlap(rect1, rect2), 'overlapping rects should overlap');
+      assert(!doRectsOverlap(rect1, rect3), 'non-overlapping rects should not overlap');
+    });
+
+    test('19. makeNodeLayoutRect creates rect with gap', () => {
+      const pos = { x: 10, y: 20 };
+      const rect = makeNodeLayoutRect(pos);
+
+      assertEqual(rect.x, 10);
+      assertEqual(rect.y, 20);
+      assert(rect.width > 0, 'width should be positive');
+      assert(rect.height > 0, 'height should be positive');
+    });
+
+    test('20. findNonOverlappingPosition avoids occupied positions', () => {
+      const occupied = [{ x: 0, y: 0 }];
+      const result = findNonOverlappingPosition({ x: 0, y: 0 }, occupied);
+
+      assert(result.x !== 0 || result.y !== 0, 'should move away from occupied position');
+    });
+
+    test('21. findNonOverlappingPosition returns desired when no overlap', () => {
+      const occupied = [{ x: 100, y: 100 }];
+      const desired = { x: 0, y: 0 };
+      const result = findNonOverlappingPosition(desired, occupied);
+
+      assertEqual(result, desired);
+    });
+
+    test('22. layoutFallback avoids overlaps for multiple unpositioned nodes', () => {
+      const nodes = [
+        { id: 'a', category: 'input', position: { x: 0, y: 0 } },
+        { id: 'b', category: 'input', position: null },
+        { id: 'c', category: 'input', position: null },
+        { id: 'd', category: 'input', position: null }
+      ];
+
+      const laid = layoutFallback(nodes);
+
+      const positions = laid.map(n => n.position);
+      for (let i = 0; i < positions.length; i++) {
+        for (let j = i + 1; j < positions.length; j++) {
+          const rect1 = makeNodeLayoutRect(positions[i]);
+          const rect2 = makeNodeLayoutRect(positions[j]);
+          assert(!doRectsOverlap(rect1, rect2), `nodes at ${i} and ${j} should not overlap`);
+        }
+      }
+    });
+
+    test('23. layoutFallback preserves explicitly positioned nodes', () => {
+      const nodes = [
+        { id: 'a', category: 'input', position: { x: 42, y: 99 } },
+        { id: 'b', category: 'input', position: null }
+      ];
+
+      const laid = layoutFallback(nodes);
+
+      assertEqual(laid[0].position, { x: 42, y: 99 });
+    });
+
+    test('24. layoutFallback maintains deterministic output', () => {
+      const nodes = [
+        { id: 'a', category: 'input', position: null },
+        { id: 'b', category: 'transform', position: null },
+        { id: 'c', category: 'state', position: null }
+      ];
+
+      const laid1 = layoutFallback(nodes);
+      const laid2 = layoutFallback(nodes);
+
+      assertEqual(JSON.stringify(laid1), JSON.stringify(laid2));
     });
 
     async function run() {

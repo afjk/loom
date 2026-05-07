@@ -3,7 +3,10 @@ export {
   graphToEditorModel,
   editorModelToGraph,
   applyEditorOperation,
-  preserveEditorModelLayout
+  preserveEditorModelLayout,
+  findNonOverlappingPosition,
+  doRectsOverlap,
+  makeNodeLayoutRect
 } from './loom-editor-model.js';
 
 export {
