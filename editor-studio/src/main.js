@@ -2022,16 +2022,15 @@ async function init() {
   renderNodePalette();
   updateNodeListCategories();
   renderNodeList();
-<<<<<<< HEAD
   renderOutput();
-  await applyDsl({ markDirty: false, logOutput: false });
-=======
 
-  elements.autoApplyDslToggle.checked = autoApplyDslEnabled;
+  if (elements.autoApplyDslToggle) {
+    elements.autoApplyDslToggle.checked = autoApplyDslEnabled;
+  }
+
   applyEditorMaximizeMode();
 
-  await applyDsl({ markDirty: false });
->>>>>>> 5bd5a67 (Improve editor interaction polish)
+  await applyDsl({ markDirty: false, logOutput: false });
   setDirty(false);
 }
 
