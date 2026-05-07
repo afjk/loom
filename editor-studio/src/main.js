@@ -8,7 +8,8 @@ import { parseDSLToAST, compileToGraph } from '../../src/loom-dsl.js';
 import {
   graphToEditorModel,
   editorModelToGraph,
-  applyNodeEditorOperationState
+  applyNodeEditorOperationState,
+  preserveEditorModelLayout
 } from '../../src/node-editor-core.js';
 import { graphToCanonicalDSL } from './canonical-dsl.js';
 import { createStore } from './studio-store.js';
@@ -622,7 +623,11 @@ async function applyDslTextToGraph(sourceText, { markDirty = true, preserveGraph
     };
   }
 
-  const editorModel = graphToEditorModel(graph);
+  const previousEditorModel = store.getState().editorModel;
+  const editorModel = preserveEditorModelLayout(
+    graphToEditorModel(graph),
+    previousEditorModel
+  );
 
   if (shouldCommit && !shouldCommit()) {
     return { ok: false, stale: true, errors: [] };
@@ -636,7 +641,9 @@ async function applyDslTextToGraph(sourceText, { markDirty = true, preserveGraph
     errors: []
   });
 
-  selectedNodeId = null;
+  if (selectedNodeId && !editorModel.nodesById[selectedNodeId]) {
+    selectedNodeId = null;
+  }
   await nodeEditor?.renderModel(editorModel);
 
   renderGraphJSON(graph);
