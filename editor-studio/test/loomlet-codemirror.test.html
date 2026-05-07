@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Loomlet CodeMirror Tests</title>
+  <style>
+    body { font-family: monospace; margin: 20px; }
+    .test { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+    .pass { background: #90EE90; }
+    .fail { background: #FFB6C6; }
+    summary { cursor: pointer; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Loomlet CodeMirror Tests</h1>
+  <div id="test-results"></div>
+
+  <script type="module">
+    // Import test helpers
+    import { createNodeCompletionOptions, getParamCompletionOptionsForNode } from '../src/loomlet-codemirror.js';
+
+    // Mock NODE_TYPES for testing
+    const MOCK_NODE_TYPES = {
+      clock: {
+        category: 'source',
+        inputs: [],
+        outputs: [{ name: 't', type: 'number' }],
+        params: []
+      },
+      sine: {
+        category: 'transform',
+        inputs: [{ name: 't', type: 'number' }],
+        outputs: [{ name: 'out', type: 'number' }],
+        params: [
+          { name: 'freq', type: 'number', default: 1 },
+          { name: 'amplitude', type: 'number', default: 1 },
+          { name: 'phase', type: 'number', default: 0 }
+        ]
+      },
+      map: {
+        category: 'transform',
+        inputs: [],
+        outputs: [{ name: 'out', type: 'number' }],
+        params: [
+          { name: 'inMin', type: 'number', default: -1 },
+          { name: 'inMax', type: 'number', default: 1 },
+          { name: 'outMin', type: 'number', default: 0 },
+          { name: 'outMax', type: 'number', default: 1 }
+        ]
+      }
+    };
+
+    const results = [];
+    const failures = [];
+
+    function test(name, fn) {
+      try {
+        fn();
+        results.push({ name, pass: true });
+      } catch (e) {
+        results.push({ name, pass: false, error: e.message });
+        failures.push({ name, error: e.message });
+      }
+    }
+
+    function assert(condition, message) {
+      if (!condition) throw new Error(message || 'Assertion failed');
+    }
+
+    // Tests
+    test('createNodeCompletionOptions includes known node types', () => {
+      const options = createNodeCompletionOptions(MOCK_NODE_TYPES);
+      const labels = options.map(o => o.label);
+      assert(labels.includes('sine'), 'sine not found');
+      assert(labels.includes('map'), 'map not found');
+      assert(labels.includes('clock'), 'clock not found');
+    });
+
+    test('createNodeCompletionOptions sets correct type', () => {
+      const options = createNodeCompletionOptions(MOCK_NODE_TYPES);
+      const sineOption = options.find(o => o.label === 'sine');
+      assert(sineOption.type === 'function', 'type should be function');
+    });
+
+    test('createNodeCompletionOptions sets category as detail', () => {
+      const options = createNodeCompletionOptions(MOCK_NODE_TYPES);
+      const sineOption = options.find(o => o.label === 'sine');
+      assert(sineOption.detail === 'transform', 'detail should be category');
+    });
+
+    test('getParamCompletionOptionsForNode returns params for sine', () => {
+      const options = getParamCompletionOptionsForNode(MOCK_NODE_TYPES, 'sine');
+      const labels = options.map(o => o.label);
+      assert(labels.includes('freq'), 'freq not found');
+      assert(labels.includes('amplitude'), 'amplitude not found');
+      assert(labels.includes('phase'), 'phase not found');
+    });
+
+    test('getParamCompletionOptionsForNode sets correct apply format', () => {
+      const options = getParamCompletionOptionsForNode(MOCK_NODE_TYPES, 'sine');
+      const freqOption = options.find(o => o.label === 'freq');
+      assert(freqOption.apply === 'freq: ', 'apply should be param_name: ');
+    });
+
+    test('getParamCompletionOptionsForNode handles missing metadata gracefully', () => {
+      const options = getParamCompletionOptionsForNode(MOCK_NODE_TYPES, 'nonexistent');
+      assert(Array.isArray(options), 'should return array');
+      assert(options.length === 0, 'should return empty array for unknown node');
+    });
+
+    test('getParamCompletionOptionsForNode handles empty nodeTypes', () => {
+      const options = getParamCompletionOptionsForNode({}, 'sine');
+      assert(Array.isArray(options), 'should return array');
+      assert(options.length === 0, 'should return empty array');
+    });
+
+    test('createNodeCompletionOptions handles empty nodeTypes', () => {
+      const options = createNodeCompletionOptions({});
+      assert(Array.isArray(options), 'should return array');
+      assert(options.length === 0, 'should return empty array');
+    });
+
+    test('createNodeCompletionOptions handles undefined nodeTypes', () => {
+      const options = createNodeCompletionOptions(undefined);
+      assert(Array.isArray(options), 'should return array');
+    });
+
+    // Render results
+    const resultsDiv = document.getElementById('test-results');
+    const passCount = results.filter(r => r.pass).length;
+    const failCount = results.filter(r => !r.pass).length;
+
+    const summary = document.createElement('details');
+    summary.innerHTML = `
+      <summary>${passCount} passed, ${failCount} failed</summary>
+      ${results.map(r => `
+        <div class="test ${r.pass ? 'pass' : 'fail'}">
+          ${r.pass ? '✓' : '✗'} ${r.name}
+          ${r.error ? `<br><code>${r.error}</code>` : ''}
+        </div>
+      `).join('')}
+    `;
+    resultsDiv.appendChild(summary);
+
+    // Set test results for CI
+    window.__loomTestResults = {
+      pass: passCount,
+      fail: failCount,
+      failures
+    };
+  </script>
+</body>
+</html>
