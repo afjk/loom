@@ -1284,6 +1284,8 @@ function updateNodeListCategories() {
   const select = elements.nodeListCategory;
   if (!select) return;
 
+  const currentValue = select.value || '';
+
   const state = store.getState();
   if (!state.editorModel) {
     select.innerHTML = '<option value="">All categories</option>';
@@ -1303,6 +1305,15 @@ function updateNodeListCategories() {
     '<option value="">All categories</option>',
     ...categories.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
   ].join('');
+
+  const availableValues = new Set(categories);
+  if (currentValue && availableValues.has(currentValue)) {
+    select.value = currentValue;
+  } else {
+    select.value = '';
+  }
+
+  renderNodeList();
 }
 
 function renderNodePaletteItem(entry) {
