@@ -247,6 +247,23 @@
       assert(!result.state.editorModel.nodesById['123bad'], 'invalid node should not exist');
     });
 
+    test('Test 10: renameNode updates render references', () => {
+      const graph = sampleGraph();
+      const state = createNodeEditorState(graph);
+
+      const result = applyNodeEditorOperationState(state, {
+        type: 'renameNode',
+        id: 'wave',
+        newId: 'wave2'
+      });
+
+      if (result.error) throw result.error;
+
+      assert(result.state.graph.render.x === 'wave2.out', 'render.x should reference wave2.out');
+      assert(result.state.graph.render.y === 'wave2.out', 'render.y should reference wave2.out');
+      assert(graph.render.x === 'wave.out', 'original graph render.x should not be mutated');
+    });
+
     async function run() {
       let pass = 0; let fail = 0; const failures = [];
       for (const t of results) {

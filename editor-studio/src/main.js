@@ -886,7 +886,8 @@ async function handleOperation(operation) {
     }
 
     if (result.change.operation.type === 'renameNode' && selectedNodeId === result.change.operation.id) {
-      selectedNodeId = result.change.operation.newId;
+      const renamedId = result.change.operation.newId.trim();
+      selectedNodeId = result.state.editorModel.nodesById[renamedId] ? renamedId : null;
     } else if (selectedNodeId && !result.state.editorModel.nodesById[selectedNodeId]) {
       selectedNodeId = null;
     }
