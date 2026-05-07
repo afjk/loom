@@ -67,7 +67,7 @@ function createLoomletStreamLanguage(nodeTypes = {}) {
 
         // Check if this is a variable definition (word followed by =)
         const savedPos = stream.pos;
-        stream.skipSpace();
+        stream.eatSpace();
         const nextChar = stream.peek();
         stream.pos = savedPos;
 
