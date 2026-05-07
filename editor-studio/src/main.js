@@ -767,18 +767,22 @@ async function applyDslTextToGraph(sourceText, { markDirty = true, preserveGraph
   };
 }
 
-async function applyDsl({ markDirty = true } = {}) {
+async function applyDsl({ markDirty = true, logOutput = true } = {}) {
   const result = await applyDslTextToGraph(getDslText(), {
     markDirty,
     preserveGraphOnError: false
   });
 
   if (result.ok) {
-    appendOutput({ level: 'info', message: 'DSL applied successfully.' });
+    if (logOutput) {
+      appendOutput({ level: 'info', message: 'DSL applied successfully.' });
+    }
     cancelPendingAutoApplyDsl();
     clearEditorHistory();
   } else {
-    appendOutput({ level: 'error', message: 'DSL apply failed.' });
+    if (logOutput) {
+      appendOutput({ level: 'error', message: 'DSL apply failed.' });
+    }
   }
 
   return result;
@@ -848,7 +852,6 @@ async function autoApplyDslFromEditor(requestId) {
   if (requestId !== autoApplyRequestId) return;
 
   if (result.ok) {
-    appendOutput({ level: 'info', message: 'Auto Apply DSL success.' });
     renderAutoApplyStatus('ok');
     clearEditorHistory();
   } else {
@@ -876,6 +879,10 @@ function clearOutput() {
   renderOutput();
 }
 
+function formatOutputTime(isoString) {
+  return isoString.slice(11, 19);
+}
+
 function renderOutput() {
   if (!elements.outputLog) return;
 
@@ -887,7 +894,10 @@ function renderOutput() {
 
   elements.outputLog.classList.remove('is-empty');
   elements.outputLog.textContent = outputEntries
-    .map((entry) => `[${entry.level}] ${entry.message}`)
+    .map((entry) => {
+      const time = formatOutputTime(entry.time);
+      return `${time} [${entry.level}] ${entry.message}`;
+    })
     .join('\n');
 }
 
@@ -1932,7 +1942,7 @@ async function init() {
   updateNodeListCategories();
   renderNodeList();
   renderOutput();
-  await applyDsl({ markDirty: false });
+  await applyDsl({ markDirty: false, logOutput: false });
   setDirty(false);
 }
 
