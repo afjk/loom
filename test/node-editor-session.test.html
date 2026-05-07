@@ -264,6 +264,35 @@
       assert(graph.render.x === 'wave.out', 'original graph render.x should not be mutated');
     });
 
+    test('Test 11: removeEdge removes a connection without removing nodes', () => {
+      const graph = sampleGraph();
+      const state = createNodeEditorState(graph);
+
+      const edgeId = Object.keys(state.editorModel.edgesById).find((id) => {
+        const edge = state.editorModel.edgesById[id];
+        return edge.fromNodeId === 'wave' && edge.toNodeId === 'out';
+      });
+
+      assert(edgeId, 'expected edge from wave to out to exist');
+
+      const result = applyNodeEditorOperationState(state, {
+        type: 'removeEdge',
+        edgeId
+      });
+
+      if (result.error) throw result.error;
+
+      assert(!result.state.editorModel.edgesById[edgeId], 'edge should be removed');
+      assert(result.state.editorModel.nodesById.wave, 'wave node should remain');
+      assert(result.state.editorModel.nodesById.out, 'out node should remain');
+
+      const graphHasRemovedEdge = result.state.graph.edges.some((edge) => {
+        return edge.from === 'wave.out' && edge.to === 'out.value';
+      });
+
+      assert(!graphHasRemovedEdge, 'graph should not contain removed edge');
+    });
+
     async function run() {
       let pass = 0; let fail = 0; const failures = [];
       for (const t of results) {
