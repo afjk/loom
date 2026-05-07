@@ -9,13 +9,16 @@
   <div id="results"></div>
   <script type="module">
     import {
+      cloneEditorModelSnapshot,
+      canPatchEditorModel,
       getAddedNodeIds,
       getRemovedNodeIds,
       getCommonNodeIds,
       getAddedEdgeIds,
       getRemovedEdgeIds,
       shouldRecreateNode,
-      sameParams
+      sameParams,
+      samePosition
     } from '../editor-studio/src/node-editor-view-diff.js';
 
     // --- Test harness ---
@@ -185,6 +188,73 @@
       assert(sameParams(undefined, undefined));
       assert(sameParams({}, {}));
       assert(sameParams(undefined, {}));
+    });
+
+    // --- samePosition ---
+
+    test('samePosition: compares x and y', () => {
+      assert(samePosition({ x: 1, y: 2 }, { x: 1, y: 2 }));
+    });
+
+    test('samePosition: false when x differs', () => {
+      assert(!samePosition({ x: 1, y: 2 }, { x: 2, y: 2 }));
+    });
+
+    test('samePosition: false when y differs', () => {
+      assert(!samePosition({ x: 1, y: 2 }, { x: 1, y: 3 }));
+    });
+
+    test('samePosition: handles undefined/null', () => {
+      assert(samePosition(undefined, undefined));
+      assert(samePosition(null, null));
+      assert(!samePosition({ x: 0, y: 0 }, undefined));
+    });
+
+    // --- cloneEditorModelSnapshot ---
+
+    test('cloneEditorModelSnapshot: deep clones model', () => {
+      const model = makeModel(['a']);
+      const cloned = cloneEditorModelSnapshot(model);
+      cloned.nodesById.a.type = 'modified';
+      assert(model.nodesById.a.type === 'clock', 'Original should not be modified');
+    });
+
+    test('cloneEditorModelSnapshot: clones edgesById too', () => {
+      const model = makeModel(['a'], ['e1']);
+      const cloned = cloneEditorModelSnapshot(model);
+      cloned.edgesById.e1.fromPort = 'modified';
+      assert(model.edgesById.e1.fromPort === 'out', 'Original edges should not be modified');
+    });
+
+    // --- canPatchEditorModel ---
+
+    test('canPatchEditorModel: true for valid editor models', () => {
+      const prev = makeModel(['a']);
+      const next = makeModel(['a', 'b']);
+      assert(canPatchEditorModel(prev, next), 'Should allow patching between valid models');
+    });
+
+    test('canPatchEditorModel: false when previous is null', () => {
+      assert(!canPatchEditorModel(null, makeModel(['a'])));
+    });
+
+    test('canPatchEditorModel: false when next is null', () => {
+      assert(!canPatchEditorModel(makeModel(['a']), null));
+    });
+
+    test('canPatchEditorModel: false when nodesById missing', () => {
+      const prev = { order: [], edgesById: {} };
+      assert(!canPatchEditorModel(prev, makeModel(['a'])));
+    });
+
+    test('canPatchEditorModel: false when edgesById missing', () => {
+      const prev = { order: [], nodesById: {} };
+      assert(!canPatchEditorModel(prev, makeModel(['a'])));
+    });
+
+    test('canPatchEditorModel: false when order is not array', () => {
+      const prev = { order: null, nodesById: {}, edgesById: {} };
+      assert(!canPatchEditorModel(prev, makeModel(['a'])));
     });
 
     // --- Run ---
