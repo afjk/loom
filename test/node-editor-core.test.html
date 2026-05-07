@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Node Editor Core API テスト</title>
+</head>
+<body>
+  <h1>Node Editor Core API テスト</h1>
+  <div id="results"></div>
+  <script type="module">
+    import { graphToEditorModel, editorModelToGraph, applyEditorOperation, layoutFallback } from "../src/node-editor-core.js";
+
+    const results = [];
+    function test(name, fn) { results.push({ name, fn }); }
+    function assert(cond, msg) { if (!cond) throw new Error(msg || 'assertion failed'); }
+    function assertEqual(a, b, msg) {
+      const av = JSON.stringify(a);
+      const bv = JSON.stringify(b);
+      if (av !== bv) throw new Error(msg || `expected ${bv}, got ${av}`);
+    }
+
+    function sampleGraph() {
+      return {
+        nodes: [
+          { id: 't', type: 'clock' },
+          { id: 'wave', type: 'sine', params: { freq: 0.3 } },
+          { id: 'out', type: 'setVar', params: { key: 'v' } }
+        ],
+        edges: [
+          { from: 't.t', to: 'wave.t' },
+          { from: 'wave.out', to: 'out.value' }
+        ],
+        render: { type: 'point', x: 'wave.out', y: 'wave.out' }
+      };
+    }
+
+    test('API: graphToEditorModel exists', () => {
+      assert(typeof graphToEditorModel === 'function', 'graphToEditorModel should be a function');
+    });
+
+    test('API: editorModelToGraph exists', () => {
+      assert(typeof editorModelToGraph === 'function', 'editorModelToGraph should be a function');
+    });
+
+    test('API: applyEditorOperation exists', () => {
+      assert(typeof applyEditorOperation === 'function', 'applyEditorOperation should be a function');
+    });
+
+    test('API: layoutFallback exists', () => {
+      assert(typeof layoutFallback === 'function', 'layoutFallback should be a function');
+    });
+
+    test('API: minimal roundtrip', () => {
+      const g = sampleGraph();
+      const em = graphToEditorModel(g);
+      const out = editorModelToGraph(em, g);
+      assertEqual(out.nodes.map(n => n.id), g.nodes.map(n => n.id));
+      assertEqual(out.nodes.map(n => n.type), g.nodes.map(n => n.type));
+      assertEqual(out.edges, g.edges);
+    });
+
+    async function run() {
+      let pass = 0; let fail = 0; const failures = [];
+      for (const t of results) {
+        try { await t.fn(); pass++; }
+        catch (e) { fail++; failures.push({ name: t.name, error: e.message }); }
+      }
+      window.__loomTestResults = { pass, fail, failures };
+      document.getElementById('results').textContent = `${pass} passed, ${fail} failed`;
+    }
+    run();
+  </script>
+</body>
+</html>
