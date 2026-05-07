@@ -29,6 +29,11 @@ let engine = null;
 let animationFrameId = null;
 let panelsVisible = true;
 let selectedNodeId = null;
+let currentFileHandle = null;
+let currentFileName = '';
+let isDirty = false;
+let isApplyingProgrammaticDslChange = false;
+let hasUnsyncedDslText = false;
 
 const elements = {
   dslEditorHost: document.getElementById('dsl-editor-host'),
@@ -43,7 +48,11 @@ const elements = {
   resetSampleBtn: document.getElementById('resetSampleBtn'),
   togglePanelsBtn: document.getElementById('toggle-panels'),
   tabBtns: document.querySelectorAll('.tab-btn'),
-  tabPanes: document.querySelectorAll('.tab-pane')
+  tabPanes: document.querySelectorAll('.tab-pane'),
+  fileStatus: document.getElementById('file-status'),
+  openFileBtn: document.getElementById('openFileBtn'),
+  saveFileBtn: document.getElementById('saveFileBtn'),
+  saveAsFileBtn: document.getElementById('saveAsFileBtn')
 };
 
 function setPanelsVisible(visible) {
@@ -75,6 +84,13 @@ function initDslEditor() {
       EditorView.theme({
         '&': { height: '100%' },
         '.cm-scroller': { overflow: 'auto' }
+      }),
+      EditorView.updateListener.of((update) => {
+        if (!update.docChanged) return;
+        if (isApplyingProgrammaticDslChange) return;
+
+        hasUnsyncedDslText = true;
+        setDirty(true);
       })
     ]
   });
@@ -90,15 +106,200 @@ function getDslText() {
 }
 
 function setDslText(text) {
-  if (dslEditor) {
-    const changes = dslEditor.state.doc.length > 0
-      ? { from: 0, to: dslEditor.state.doc.length, insert: text }
-      : { from: 0, insert: text };
+  if (!dslEditor) return;
+
+  const changes = dslEditor.state.doc.length > 0
+    ? { from: 0, to: dslEditor.state.doc.length, insert: text }
+    : { from: 0, insert: text };
+
+  isApplyingProgrammaticDslChange = true;
+  try {
     dslEditor.dispatch({ changes });
+  } finally {
+    isApplyingProgrammaticDslChange = false;
   }
 }
 
-async function applyDsl() {
+function setDirty(dirty) {
+  isDirty = dirty;
+  renderFileStatus();
+}
+
+function renderFileStatus() {
+  const label = currentFileName || 'No file';
+  const dirtyMark = isDirty ? ' *' : '';
+  elements.fileStatus.textContent = `${label}${dirtyMark}`;
+}
+
+function isAbortError(error) {
+  return error && (error.name === 'AbortError' || error.code === 20);
+}
+
+function downloadTextFile(text, filename) {
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function getCurrentSavePayload() {
+  if (hasUnsyncedDslText) {
+    return {
+      text: getDslText(),
+      source: 'dsl'
+    };
+  }
+
+  const state = store.getState();
+
+  if (state.editorModel) {
+    const graph = editorModelToGraph(state.editorModel, state.graph);
+    return {
+      text: graphToCanonicalDSL(graph),
+      source: 'graph'
+    };
+  }
+
+  return {
+    text: getDslText(),
+    source: 'dsl'
+  };
+}
+
+async function saveDslAsFile() {
+  try {
+    const payload = getCurrentSavePayload();
+    const text = payload.text;
+
+    if ('showSaveFilePicker' in window) {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: currentFileName || 'loomlet-scene.loom',
+        types: [
+          {
+            description: 'Loomlet source',
+            accept: {
+              'text/plain': ['.loom', '.txt']
+            }
+          }
+        ]
+      });
+
+      const writable = await handle.createWritable();
+      await writable.write(text);
+      await writable.close();
+
+      currentFileHandle = handle;
+      currentFileName = handle.name || 'loomlet-scene.loom';
+      setDslText(text);
+
+      if (payload.source === 'graph') {
+        hasUnsyncedDslText = false;
+      }
+
+      setDirty(false);
+      return;
+    }
+
+    downloadTextFile(text, currentFileName || 'loomlet-scene.loom');
+
+    if (payload.source === 'graph') {
+      hasUnsyncedDslText = false;
+    }
+
+    setDirty(false);
+  } catch (error) {
+    if (isAbortError(error)) return;
+    setEditorError(`Save failed: ${error.message}`);
+  }
+}
+
+async function saveDslFile() {
+  try {
+    if (!currentFileHandle) {
+      await saveDslAsFile();
+      return;
+    }
+
+    const payload = getCurrentSavePayload();
+    const text = payload.text;
+    const writable = await currentFileHandle.createWritable();
+    await writable.write(text);
+    await writable.close();
+
+    setDslText(text);
+
+    if (payload.source === 'graph') {
+      hasUnsyncedDslText = false;
+    }
+
+    setDirty(false);
+  } catch (error) {
+    if (isAbortError(error)) return;
+    setEditorError(`Save failed: ${error.message}`);
+  }
+}
+
+async function openLoomFile() {
+  try {
+    if (isDirty) {
+      if (!window.confirm('You have unsaved changes. Open another file anyway?')) {
+        return;
+      }
+    }
+
+    if ('showOpenFilePicker' in window) {
+      const handles = await window.showOpenFilePicker({
+        types: [
+          {
+            description: 'Loomlet source',
+            accept: {
+              'text/plain': ['.loom', '.txt']
+            }
+          }
+        ]
+      });
+
+      const handle = handles[0];
+      const file = await handle.getFile();
+      const text = await file.text();
+
+      setDslText(text);
+      currentFileHandle = handle;
+      currentFileName = handle.name;
+      await applyDsl({ markDirty: false });
+      hasUnsyncedDslText = false;
+      setDirty(false);
+      return;
+    }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.loom,.txt';
+    input.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const text = await file.text();
+      setDslText(text);
+      currentFileName = file.name;
+      currentFileHandle = null;
+      await applyDsl({ markDirty: false });
+      hasUnsyncedDslText = false;
+      setDirty(false);
+    });
+    input.click();
+  } catch (error) {
+    if (isAbortError(error)) return;
+    setEditorError(`Open failed: ${error.message}`);
+  }
+}
+
+async function applyDsl({ markDirty = true } = {}) {
   const sourceText = getDslText();
   const { ast, errors: parseErrors } = parseDSLToAST(sourceText);
 
@@ -107,6 +308,7 @@ async function applyDsl() {
     selectedNodeId = null;
     renderErrors();
     renderInspector();
+    if (markDirty) setDirty(true);
     return;
   }
 
@@ -116,6 +318,7 @@ async function applyDsl() {
     selectedNodeId = null;
     renderErrors();
     renderInspector();
+    if (markDirty) setDirty(true);
     return;
   }
 
@@ -135,6 +338,8 @@ async function applyDsl() {
   renderErrors();
   renderInspector();
   runPreview(graph);
+  hasUnsyncedDslText = false;
+  if (markDirty) setDirty(true);
 }
 
 function generateDsl() {
@@ -155,6 +360,8 @@ function generateDsl() {
   renderErrors();
   renderInspector();
   runPreview(graph);
+  hasUnsyncedDslText = false;
+  setDirty(true);
 }
 
 function renderGraphJSON(graph) {
@@ -418,9 +625,13 @@ function resolveValue(engine, ref) {
   return engine.getValue(ref);
 }
 
-function resetSample() {
+async function resetSample() {
   setDslText(SAMPLE_DSL);
-  applyDsl();
+  currentFileHandle = null;
+  currentFileName = '';
+  await applyDsl({ markDirty: false });
+  hasUnsyncedDslText = false;
+  setDirty(false);
 }
 
 function setupEventListeners() {
@@ -435,6 +646,9 @@ function setupEventListeners() {
   elements.togglePanelsBtn.addEventListener('click', () => {
     setPanelsVisible(!panelsVisible);
   });
+  elements.openFileBtn.addEventListener('click', openLoomFile);
+  elements.saveFileBtn.addEventListener('click', saveDslFile);
+  elements.saveAsFileBtn.addEventListener('click', saveDslAsFile);
 
   elements.tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -473,6 +687,8 @@ async function handleOperation(operation) {
     renderErrors();
     renderInspector();
     runPreview(result.state.graph);
+    hasUnsyncedDslText = false;
+    setDirty(true);
     return;
   }
 
@@ -484,7 +700,7 @@ async function handleOperation(operation) {
   renderErrors();
 }
 
-function init() {
+async function init() {
   resizePreviewCanvas();
   setPanelsVisible(true);
 
@@ -499,7 +715,9 @@ function init() {
   });
 
   setupEventListeners();
-  applyDsl();
+  renderFileStatus();
+  await applyDsl({ markDirty: false });
+  setDirty(false);
 }
 
 init();
