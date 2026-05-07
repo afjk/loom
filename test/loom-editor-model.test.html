@@ -339,6 +339,72 @@
       assertEqual(JSON.stringify(laid1), JSON.stringify(laid2));
     });
 
+    test('25. updateNodeMetadata updates label', () => {
+      const em = graphToEditorModel(sampleGraph());
+      const next = applyEditorOperation(em, { type: 'updateNodeMetadata', id: 'wave', patch: { label: 'My Wave' } });
+      assertEqual(next.nodesById.wave.label, 'My Wave');
+      assertEqual(next.nodesById.wave.type, 'sine', 'type should be unchanged');
+      assertEqual(next.nodesById.wave.params, em.nodesById.wave.params, 'params should be unchanged');
+    });
+
+    test('26. updateNodeMetadata updates comment', () => {
+      const em = graphToEditorModel(sampleGraph());
+      const next = applyEditorOperation(em, { type: 'updateNodeMetadata', id: 'wave', patch: { comment: 'Produces sine output' } });
+      assertEqual(next.nodesById.wave.comment, 'Produces sine output');
+      assertEqual(next.nodesById.wave.type, 'sine', 'type should be unchanged');
+    });
+
+    test('27. updateNodeMetadata updates both label and comment', () => {
+      const em = graphToEditorModel(sampleGraph());
+      const next = applyEditorOperation(em, { type: 'updateNodeMetadata', id: 'wave', patch: { label: 'My Wave', comment: 'Produces sine output' } });
+      assertEqual(next.nodesById.wave.label, 'My Wave');
+      assertEqual(next.nodesById.wave.comment, 'Produces sine output');
+    });
+
+    test('28. updateNodeMetadata clears label when set to empty', () => {
+      let em = graphToEditorModel(sampleGraph());
+      em = applyEditorOperation(em, { type: 'updateNodeMetadata', id: 'wave', patch: { label: 'My Wave' } });
+      const next = applyEditorOperation(em, { type: 'updateNodeMetadata', id: 'wave', patch: { label: '' } });
+      assert(!('label' in next.nodesById.wave) || next.nodesById.wave.label === '', 'label should be empty or deleted');
+    });
+
+    test('29. updateNodeMetadata clears comment when set to empty', () => {
+      let em = graphToEditorModel(sampleGraph());
+      em = applyEditorOperation(em, { type: 'updateNodeMetadata', id: 'wave', patch: { comment: 'My comment' } });
+      const next = applyEditorOperation(em, { type: 'updateNodeMetadata', id: 'wave', patch: { comment: '' } });
+      assert(!('comment' in next.nodesById.wave) || next.nodesById.wave.comment === '', 'comment should be empty or deleted');
+    });
+
+    test('30. editorModelToGraph does not leak label into execution graph', () => {
+      let em = graphToEditorModel(sampleGraph());
+      em = applyEditorOperation(em, { type: 'updateNodeMetadata', id: 'wave', patch: { label: 'My Wave' } });
+      const g = editorModelToGraph(em);
+      const waveNode = g.nodes.find(n => n.id === 'wave');
+      assert(!('label' in waveNode), 'label should not be in execution graph node');
+      assert(waveNode.meta.position, 'position should be in meta');
+    });
+
+    test('31. editorModelToGraph does not leak comment into execution graph', () => {
+      let em = graphToEditorModel(sampleGraph());
+      em = applyEditorOperation(em, { type: 'updateNodeMetadata', id: 'wave', patch: { comment: 'My comment' } });
+      const g = editorModelToGraph(em);
+      const waveNode = g.nodes.find(n => n.id === 'wave');
+      assert(!('comment' in waveNode), 'comment should not be in execution graph node');
+    });
+
+    test('32. updateNodeMetadata throws for non-existent node', () => {
+      const em = graphToEditorModel(sampleGraph());
+      assertThrows(() => applyEditorOperation(em, { type: 'updateNodeMetadata', id: 'nonexistent', patch: { label: 'test' } }));
+    });
+
+    test('33. updateNodeMetadata is immutable', () => {
+      const em = graphToEditorModel(sampleGraph());
+      const before = JSON.stringify(em);
+      const next = applyEditorOperation(em, { type: 'updateNodeMetadata', id: 'wave', patch: { label: 'test' } });
+      assertEqual(JSON.stringify(em), before, 'input should not be modified');
+      assert(next !== em, 'should return new object');
+    });
+
     async function run() {
       let pass = 0; let fail = 0; const failures = [];
       for (const t of results) {

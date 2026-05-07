@@ -347,5 +347,31 @@ export function applyEditorOperation(em, op) {
     return next;
   }
 
+  if (op.type === 'updateNodeMetadata') {
+    const node = next.nodesById[op.id];
+    if (!node) throw new Error(`Node '${op.id}' does not exist`);
+
+    const updated = { ...node };
+    if (op.patch) {
+      if ('label' in op.patch) {
+        if (op.patch.label) {
+          updated.label = op.patch.label;
+        } else {
+          delete updated.label;
+        }
+      }
+      if ('comment' in op.patch) {
+        if (op.patch.comment) {
+          updated.comment = op.patch.comment;
+        } else {
+          delete updated.comment;
+        }
+      }
+    }
+
+    next.nodesById[op.id] = updated;
+    return next;
+  }
+
   throw new Error(`Unknown operation type: ${op.type}`);
 }
