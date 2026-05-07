@@ -1650,16 +1650,20 @@ async function handleOperation(operation) {
     return result;
   }
 
-  const currentModel = state.editorModel;
-  if (currentModel && result.change.shouldRerenderView) {
-    await nodeEditor?.renderModel(currentModel);
+  if (result.error) {
+    if (operation?.type === 'moveNode') {
+      finishMoveHistoryGroup();
+    }
+
+    const currentModel = state.editorModel;
+    if (currentModel && result.change.shouldRerenderView) {
+      await nodeEditor?.renderModel(currentModel);
+    }
+
+    renderErrors();
+    return result;
   }
 
-  if (operation?.type === 'moveNode') {
-    finishMoveHistoryGroup();
-  }
-
-  renderErrors();
   return result;
 }
 
