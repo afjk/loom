@@ -1,0 +1,66 @@
+name: Release Artifacts
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build-release-artifacts:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install root dependencies
+        run: |
+          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Generate VS Code metadata
+        run: npm run generate:vscode-metadata
+
+      - name: Build CLI npm tarball
+        run: npm pack
+
+      - name: Install VS Code extension dependencies
+        working-directory: extensions/vscode-loomlet
+        run: |
+          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Build VS Code extension VSIX
+        working-directory: extensions/vscode-loomlet
+        run: npx @vscode/vsce package
+
+      - name: Upload workflow artifacts (manual dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: |
+            *.tgz
+            extensions/vscode-loomlet/*.vsix
+          if-no-files-found: error
+
+      - name: Upload artifacts to GitHub Release
+        if: github.event_name == 'release'
+        env:
+          TAG_NAME: ${{ github.event.release.tag_name }}
+        run: gh release upload "$TAG_NAME" *.tgz extensions/vscode-loomlet/*.vsix --clobber
