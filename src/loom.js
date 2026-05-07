@@ -1566,21 +1566,6 @@ export const NODE_TYPES = {
     }
   },
 
-  log: {
-    category: 'sink',
-    inputs: [
-      { name: 'value', type: 'any', default: undefined, kind: 'behavior' }
-    ],
-    outputs: [],
-    params: [
-      { name: 'label', type: 'string', default: '' }
-    ],
-    evaluate: (inputs, params, ctx) => {
-      console.log(params.label || 'log', inputs.value);
-      return {};
-    }
-  },
-
   'time.serverClock': {
     category: 'source',
     inputs: [],
