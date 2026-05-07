@@ -105,6 +105,21 @@
       }
     });
 
+    test('createDefaultParamsForNodeType should use null when param default is missing', () => {
+      const nodeTypes = {
+        custom: {
+          category: 'transform',
+          inputs: [],
+          outputs: [],
+          params: [{ name: 'value', type: 'any' }]
+        }
+      };
+      const result = createDefaultParamsForNodeType('custom', nodeTypes);
+      if (result.value !== null) {
+        throw new Error(`Expected null, got ${result.value}`);
+      }
+    });
+
     // Test createNodeIdFromType
     test('createNodeIdFromType("sine") with no existing nodes should return "sine"', () => {
       const result = createNodeIdFromType('sine', {});
