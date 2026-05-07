@@ -29,6 +29,13 @@ width = map(smooth, inMin: -1, inMax: 1, outMin: 80, outMax: 680, clamp: true)
 render bar(width: width, color: "#80ed99", height: 48)
 `;
 
+const BOTTOM_PANEL_HEIGHT_KEY = 'loomlet.editorStudio.bottomPanelHeight';
+const BOTTOM_PANEL_COLLAPSED_KEY = 'loomlet.editorStudio.bottomPanelCollapsed';
+
+const DEFAULT_BOTTOM_PANEL_HEIGHT = 260;
+const MIN_BOTTOM_PANEL_HEIGHT = 120;
+const MAX_BOTTOM_PANEL_RATIO = 0.6;
+
 const store = createStore();
 let dslEditor = null;
 let nodeEditor = null;
@@ -47,6 +54,9 @@ let autoApplyTimer = null;
 let autoApplyDelayMs = 500;
 let autoApplyRequestId = 0;
 let latestSuccessfulDslText = '';
+let bottomPanelHeight = DEFAULT_BOTTOM_PANEL_HEIGHT;
+let isBottomPanelCollapsed = false;
+let isResizingBottomPanel = false;
 
 const elements = {
   dslEditorHost: document.getElementById('dsl-editor-host'),
@@ -71,7 +81,10 @@ const elements = {
   nodePaletteList: document.getElementById('node-palette-list'),
   autoApplyDslToggle: document.getElementById('autoApplyDslToggle'),
   autoApplyStatus: document.getElementById('auto-apply-status'),
-  autoSyncGraphToDslToggle: document.getElementById('autoSyncGraphToDslToggle')
+  autoSyncGraphToDslToggle: document.getElementById('autoSyncGraphToDslToggle'),
+  bottomPanel: document.getElementById('bottom-panel'),
+  bottomPanelResizeHandle: document.getElementById('bottom-panel-resize-handle'),
+  bottomPanelCollapseBtn: document.getElementById('bottom-panel-collapse-btn')
 };
 
 function setPanelsVisible(visible) {
@@ -82,6 +95,107 @@ function setPanelsVisible(visible) {
   if (button) {
     button.textContent = visible ? 'Hide Editors' : 'Show Editors';
   }
+}
+
+function getMaxBottomPanelHeight() {
+  return Math.max(
+    MIN_BOTTOM_PANEL_HEIGHT,
+    Math.floor(window.innerHeight * MAX_BOTTOM_PANEL_RATIO)
+  );
+}
+
+function clampBottomPanelHeight(height) {
+  return Math.min(
+    Math.max(height, MIN_BOTTOM_PANEL_HEIGHT),
+    getMaxBottomPanelHeight()
+  );
+}
+
+function applyBottomPanelLayout() {
+  const panel = elements.bottomPanel;
+  const handle = elements.bottomPanelResizeHandle;
+  const button = elements.bottomPanelCollapseBtn;
+
+  if (!panel) return;
+
+  if (isBottomPanelCollapsed) {
+    panel.style.height = '0px';
+    panel.classList.add('collapsed');
+    handle?.classList.add('collapsed');
+    if (button) {
+      button.textContent = 'Expand';
+      button.title = 'Expand bottom panel';
+    }
+    return;
+  }
+
+  const height = clampBottomPanelHeight(bottomPanelHeight);
+  bottomPanelHeight = height;
+  panel.style.height = `${height}px`;
+  panel.classList.remove('collapsed');
+  handle?.classList.remove('collapsed');
+
+  if (button) {
+    button.textContent = 'Collapse';
+    button.title = 'Collapse bottom panel';
+  }
+}
+
+function loadBottomPanelLayout() {
+  const savedHeight = Number(localStorage.getItem(BOTTOM_PANEL_HEIGHT_KEY));
+  if (Number.isFinite(savedHeight)) {
+    bottomPanelHeight = clampBottomPanelHeight(savedHeight);
+  }
+
+  isBottomPanelCollapsed =
+    localStorage.getItem(BOTTOM_PANEL_COLLAPSED_KEY) === 'true';
+
+  applyBottomPanelLayout();
+}
+
+function saveBottomPanelLayout() {
+  localStorage.setItem(BOTTOM_PANEL_HEIGHT_KEY, String(bottomPanelHeight));
+  localStorage.setItem(BOTTOM_PANEL_COLLAPSED_KEY, String(isBottomPanelCollapsed));
+}
+
+function startBottomPanelResize(event) {
+  if (isBottomPanelCollapsed) {
+    isBottomPanelCollapsed = false;
+  }
+
+  isResizingBottomPanel = true;
+  document.body.classList.add('resizing-bottom-panel');
+  event.preventDefault();
+}
+
+function resizeBottomPanel(event) {
+  if (!isResizingBottomPanel) return;
+
+  const viewportHeight = window.innerHeight;
+  const newHeight = viewportHeight - event.clientY;
+
+  bottomPanelHeight = clampBottomPanelHeight(newHeight);
+  applyBottomPanelLayout();
+}
+
+function stopBottomPanelResize() {
+  if (!isResizingBottomPanel) return;
+
+  isResizingBottomPanel = false;
+  document.body.classList.remove('resizing-bottom-panel');
+  saveBottomPanelLayout();
+}
+
+function handleWindowResizeForBottomPanel() {
+  bottomPanelHeight = clampBottomPanelHeight(bottomPanelHeight);
+  applyBottomPanelLayout();
+  saveBottomPanelLayout();
+}
+
+function toggleBottomPanelCollapsed() {
+  isBottomPanelCollapsed = !isBottomPanelCollapsed;
+  applyBottomPanelLayout();
+  saveBottomPanelLayout();
 }
 
 function resizePreviewCanvas() {
@@ -1153,6 +1267,12 @@ function setupEventListeners() {
   elements.nodePaletteSearch?.addEventListener('input', renderNodePalette);
   elements.nodePaletteCategory?.addEventListener('change', renderNodePalette);
 
+  elements.bottomPanelResizeHandle?.addEventListener('pointerdown', startBottomPanelResize);
+  window.addEventListener('pointermove', resizeBottomPanel);
+  window.addEventListener('pointerup', stopBottomPanelResize);
+  window.addEventListener('resize', handleWindowResizeForBottomPanel);
+  elements.bottomPanelCollapseBtn?.addEventListener('click', toggleBottomPanelCollapsed);
+
   window.addEventListener('resize', resizePreviewCanvas);
   window.addEventListener('keydown', handleGlobalKeyDown);
 }
@@ -1219,6 +1339,7 @@ async function init() {
   });
 
   setupEventListeners();
+  loadBottomPanelLayout();
   renderFileStatus();
   renderAutoApplyStatus();
   renderNodePaletteCategories();
