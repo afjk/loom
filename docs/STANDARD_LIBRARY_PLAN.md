@@ -145,10 +145,13 @@ Purpose: scene graph output control.
 Current:
 - `scene.setPosition`, `scene.setRotation`, `scene.setScale`
 Used by tour samples:
-- `scene.setPosition`; drafts need `scene.find`
+- runnable: `scene.setPosition`, `scene.setRotation`, `scene.setScale`
+- draft (pending end-to-end target/runtime confirmation): `scene.setColor`, `scene.setVisible`
 Recommended baseline:
-- `scene.setColor`, `scene.setVisible`, `scene.setText`, `scene.setMaterial`, `scene.emit`, `scene.find`, `scene.getPosition`
-Status summary: partial; discovery helpers missing
+- extend runnable sinks with `scene.setColor`, `scene.setVisible`
+- plus `scene.find`, `scene.getPosition`, `scene.emit`, `scene.setMaterial`, `scene.setAsset`
+- `scene.setText` is intentionally deferred
+Status summary: transform sinks are implemented end-to-end; color/visibility and discovery/timeline/audio-linked helpers remain planned for full Scene Sync graph parity.
 Targets: scenesync, unity, web
 
 ## input

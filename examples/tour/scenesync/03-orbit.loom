@@ -1,11 +1,22 @@
 # Tour: Orbit
-# Goal: Draft Scene Sync choreography for orbit.
-# Status: draft
+# Goal: Animate circular motion using cosine/sine on X/Z.
+# Status: runnable
 # Run:
 #   loomlet scenesync dev examples/tour/scenesync/03-orbit.loom
+# Setup:
+#   - Open a Scene Sync room.
+#   - Link Loomlet with `loomlet scenesync redeem <code> --save`.
+#   - Ensure an object named `sample-cube` exists in the scene.
 # Requires:
-#   - missing timeline/scene nodes listed below
-# TODO NODE: timeline.sequence
-# TODO NODE: scene.find
-import timeline
+#   - time.serverClock
+#   - math.cosine
+#   - math.sine
+#   - scene.setPosition
+import time
+import math
 import scene
+
+t = time.serverClock()
+x = math.cosine(t, freq: 0.15, amplitude: 2, offset: 0)
+z = math.sine(t, freq: 0.15, amplitude: 2, offset: 0)
+scene.setPosition(objectId: "sample-cube", x: x, y: 1.2, z: z)
