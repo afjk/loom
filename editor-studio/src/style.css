@@ -388,3 +388,13 @@ body.panels-hidden .editor-panels {
   min-height: 72px;
   resize: vertical;
 }
+
+.file-status {
+  color: var(--text-dim);
+  font-size: 12px;
+  padding: 0 8px;
+  white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
