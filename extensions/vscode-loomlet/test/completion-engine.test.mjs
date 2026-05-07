@@ -49,3 +49,23 @@ test('planned items excluded by default and shown when enabled', () => {
   const plannedItems = buildCompletions(getCompletionContext('random.', 'random.'.length), true).map((i) => i.label);
   assert.ok(plannedItems.includes('seeded'));
 });
+
+test('binary operator snippets use two positional args', () => {
+  const items = buildCompletions(getCompletionContext('math.', 'math.'.length), false);
+  const add = items.find((i) => i.label === 'add');
+  const mod = items.find((i) => i.label === 'mod');
+  assert.equal(add.insertText, 'add(${1:0}, ${2:0})');
+  assert.equal(mod.insertText, 'mod(${1:0}, ${2:0})');
+});
+
+test('multi-argument snippets keep named args after first arg', () => {
+  const items = buildCompletions(getCompletionContext('math.', 'math.'.length), false);
+  const map = items.find((i) => i.label === 'map');
+  assert.match(map.insertText, /map\(\$\{1:0\}, inMin:/);
+});
+
+test('scene snippets keep named args after first positional argument', () => {
+  const items = buildCompletions(getCompletionContext('scene.', 'scene.'.length), false);
+  const setPosition = items.find((i) => i.label === 'setPosition');
+  assert.match(setPosition.insertText, /setPosition\(\$\{1:"sample"\}, x:/);
+});

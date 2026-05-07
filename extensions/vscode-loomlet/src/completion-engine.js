@@ -1,4 +1,3 @@
-const path = require('node:path');
 const metadata = require('../generated/library-metadata.json');
 
 function getIncludePlanned(configGetter) {
@@ -27,7 +26,8 @@ function buildFunctionSnippet(member) {
   let index = 1;
   args.forEach((arg, i) => {
     const placeholder = inferPlaceholder(arg);
-    if (i === 0 || arg.positional) {
+    const usePositional = i === 0 || (i === 1 && member.allowsTwoPositionalArgs);
+    if (usePositional) {
       parts.push(`\${${index}:${placeholder}}`);
     } else {
       parts.push(`${arg.name}: \${${index}:${placeholder}}`);

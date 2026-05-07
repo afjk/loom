@@ -18,6 +18,7 @@
           "signature": "text.upper(value)",
           "description": "Converts text to uppercase.",
           "returns": "string",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "value",
@@ -34,6 +35,7 @@
           "signature": "text.lower(value)",
           "description": "Converts text to lowercase.",
           "returns": "string",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "value",
@@ -50,6 +52,7 @@
           "signature": "text.trim(value)",
           "description": "Removes whitespace from both ends of text.",
           "returns": "string",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "value",
@@ -66,6 +69,7 @@
           "signature": "text.replace(value, search: \"...\", replacement: \"...\")",
           "description": "Replaces all occurrences of a substring.",
           "returns": "string",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "value",
@@ -94,6 +98,7 @@
           "signature": "text.concat(...values)",
           "description": "Converts values to strings and concatenates them.",
           "returns": "string",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -103,6 +108,7 @@
           "signature": "text.split(value, separator: \",\")",
           "description": "Splits text into a list.",
           "returns": "array",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -112,6 +118,7 @@
           "signature": "text.join(list, separator: \",\")",
           "description": "Joins a list into text.",
           "returns": "string",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -121,6 +128,7 @@
           "signature": "text.includes(value, search: \"...\")",
           "description": "Returns true when text contains the search text.",
           "returns": "boolean",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -130,6 +138,7 @@
           "signature": "text.startsWith(value, search: \"...\")",
           "description": "Returns true when text starts with the search text.",
           "returns": "boolean",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -139,6 +148,7 @@
           "signature": "text.endsWith(value, search: \"...\")",
           "description": "Returns true when text ends with the search text.",
           "returns": "boolean",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -148,6 +158,7 @@
           "signature": "text.length(value)",
           "description": "Returns string length after user-facing conversion.",
           "returns": "number",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -157,6 +168,7 @@
           "signature": "text.isEmpty(value)",
           "description": "Returns true when converted text has zero length.",
           "returns": "boolean",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -166,6 +178,7 @@
           "signature": "text.stringify(value)",
           "description": "Converts values to readable text; null and undefined become empty text.",
           "returns": "string",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         }
       ]
@@ -188,6 +201,7 @@
           "signature": "json.parse(value)",
           "description": "Parses a JSON string into an object.",
           "returns": "any",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "value",
@@ -204,6 +218,7 @@
           "signature": "json.stringify(value, pretty: false)",
           "description": "Converts a value to a JSON string.",
           "returns": "string",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "value",
@@ -239,6 +254,7 @@
           "signature": "console.log(value)",
           "description": "Outputs a value to the console.",
           "returns": "void",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "value",
@@ -255,6 +271,7 @@
           "signature": "console.warn(value)",
           "description": "Outputs a warning to the console.",
           "returns": "void",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "value",
@@ -271,6 +288,7 @@
           "signature": "console.error(value)",
           "description": "Outputs an error to the console.",
           "returns": "void",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "value",
@@ -287,6 +305,7 @@
           "signature": "console.table(value)",
           "description": "Outputs a table-shaped value to the host console when available.",
           "returns": "void",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         }
       ]
@@ -309,6 +328,7 @@
           "signature": "scene.setPosition(objectId: \"...\", x: 0, y: 0, z: 0)",
           "description": "Sets the position of a scene object.",
           "returns": "void",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "objectId",
@@ -343,6 +363,7 @@
           "signature": "scene.setRotation(objectId: \"...\", x: 0, y: 0, z: 0, w: 1)",
           "description": "Sets the rotation of a scene object (quaternion).",
           "returns": "void",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "objectId",
@@ -383,6 +404,7 @@
           "signature": "scene.setScale(objectId: \"...\", x: 1, y: 1, z: 1)",
           "description": "Sets the scale of a scene object.",
           "returns": "void",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "objectId",
@@ -430,6 +452,7 @@
           "signature": "time.serverClock()",
           "description": "Returns the current server time.",
           "returns": "number",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         }
       ]
@@ -452,6 +475,7 @@
           "signature": "math.sine(t, freq: 1, amplitude: 1, offset: 0)",
           "description": "Computes a sine wave.",
           "returns": "number",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "t",
@@ -486,6 +510,7 @@
           "signature": "cosine(t, freq: 1, amplitude: 1, phase: 0, offset: 0)",
           "description": "Computes a cosine wave.",
           "returns": "number",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "t",
@@ -526,6 +551,7 @@
           "signature": "add(a: 0, b: 0)",
           "description": "Adds two numbers.",
           "returns": "number",
+          "allowsTwoPositionalArgs": true,
           "inputs": [
             {
               "name": "a",
@@ -548,6 +574,7 @@
           "signature": "multiply(a: 1, b: 1)",
           "description": "Multiplies two numbers.",
           "returns": "number",
+          "allowsTwoPositionalArgs": true,
           "inputs": [
             {
               "name": "a",
@@ -570,6 +597,7 @@
           "signature": "subtract(a: 0, b: 0)",
           "description": "Subtracts two numbers.",
           "returns": "number",
+          "allowsTwoPositionalArgs": true,
           "inputs": [
             {
               "name": "a",
@@ -592,6 +620,7 @@
           "signature": "divide(a: 0, b: 1)",
           "description": "Divides two numbers.",
           "returns": "number",
+          "allowsTwoPositionalArgs": true,
           "inputs": [
             {
               "name": "a",
@@ -614,6 +643,7 @@
           "signature": "mod(a: 0, b: 1)",
           "description": "Computes the modulo (remainder) of two numbers.",
           "returns": "number",
+          "allowsTwoPositionalArgs": true,
           "inputs": [
             {
               "name": "a",
@@ -636,6 +666,7 @@
           "signature": "clamp(value: 0, min: 0, max: 1)",
           "description": "Clamps a value between min and max.",
           "returns": "number",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "value",
@@ -664,6 +695,7 @@
           "signature": "map(value: 0, inMin: 0, inMax: 1, outMin: 0, outMax: 1, clamp: false)",
           "description": "Maps a value from one range to another.",
           "returns": "number",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "value",
@@ -710,6 +742,7 @@
           "signature": "negate(a: 0)",
           "description": "Negates a number.",
           "returns": "number",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "a",
@@ -726,6 +759,7 @@
           "signature": "abs(a: 0)",
           "description": "Computes the absolute value of a number.",
           "returns": "number",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "a",
@@ -742,6 +776,7 @@
           "signature": "lerp(a: 0, b: 1, t: 0)",
           "description": "Linear interpolation between two values.",
           "returns": "number",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "a",
@@ -770,6 +805,7 @@
           "signature": "smoothstep(x: 0, edge0: 0, edge1: 1)",
           "description": "Smooth Hermite interpolation between 0 and 1.",
           "returns": "number",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "x",
@@ -798,6 +834,7 @@
           "signature": "greaterThan(a: 0, b: 0)",
           "description": "Compares if a > b.",
           "returns": "boolean",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "a",
@@ -820,6 +857,7 @@
           "signature": "lessThan(a: 0, b: 0)",
           "description": "Compares if a < b.",
           "returns": "boolean",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "a",
@@ -842,6 +880,7 @@
           "signature": "math.floor(value)",
           "description": "Rounds down using Math.floor.",
           "returns": "number",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -851,6 +890,7 @@
           "signature": "math.ceil(value)",
           "description": "Rounds up using Math.ceil.",
           "returns": "number",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -860,6 +900,7 @@
           "signature": "math.round(value)",
           "description": "Rounds to nearest integer using Math.round.",
           "returns": "number",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -869,6 +910,7 @@
           "signature": "math.min(a, b)",
           "description": "Returns the smaller of two numbers.",
           "returns": "number",
+          "allowsTwoPositionalArgs": true,
           "inputs": []
         },
         {
@@ -878,6 +920,7 @@
           "signature": "math.max(a, b)",
           "description": "Returns the larger of two numbers.",
           "returns": "number",
+          "allowsTwoPositionalArgs": true,
           "inputs": []
         },
         {
@@ -887,6 +930,7 @@
           "signature": "math.tan(value)",
           "description": "Returns tangent using Math.tan.",
           "returns": "number",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -896,6 +940,7 @@
           "signature": "math.sqrt(value)",
           "description": "Returns square root using Math.sqrt.",
           "returns": "number",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -905,6 +950,7 @@
           "signature": "math.pow(value, exponent: 2)",
           "description": "Raises value to exponent using Math.pow.",
           "returns": "number",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         }
       ]
@@ -927,6 +973,7 @@
           "signature": "lowpass(value: 0, tau: 0.2, initial: 0)",
           "description": "Low-pass filter with exponential smoothing.",
           "returns": "number",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "value",
@@ -955,6 +1002,7 @@
           "signature": "delay1(value: 0, initial: 0)",
           "description": "Delays a value by one sample.",
           "returns": "number",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "value",
@@ -977,6 +1025,7 @@
           "signature": "integrate(value: 0, initial: 0, min: null, max: null)",
           "description": "Integrates a value over time.",
           "returns": "number",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "value",
@@ -1011,6 +1060,7 @@
           "signature": "smoothLerp(value: 0, rate: 5, initial: 0)",
           "description": "Exponentially smooths a value with a rate parameter.",
           "returns": "number",
+          "allowsTwoPositionalArgs": false,
           "inputs": [
             {
               "name": "value",
@@ -1049,6 +1099,7 @@
           "signature": "fs.readText(path: \"file.txt\")",
           "description": "CLI-only: reads UTF-8 text from the local filesystem.",
           "returns": "string",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1058,6 +1109,7 @@
           "signature": "fs.writeText(path: \"file.txt\", value: \"text\")",
           "description": "CLI-only: writes UTF-8 text to the local filesystem.",
           "returns": "void",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1067,6 +1119,7 @@
           "signature": "fs.exists(path: \"file.txt\")",
           "description": "CLI-only: returns whether a local path exists.",
           "returns": "boolean",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1076,6 +1129,7 @@
           "signature": "fs.list(path: \".\")",
           "description": "CLI-only: returns filenames in a local directory.",
           "returns": "array",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         }
       ]
@@ -1145,6 +1199,7 @@
           "signature": "logic.not(value)",
           "description": "Boolean negation using JavaScript-style truthiness.",
           "returns": "boolean",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1154,6 +1209,7 @@
           "signature": "logic.and(a, b)",
           "description": "Boolean AND using JavaScript-style truthiness, returned as a boolean.",
           "returns": "boolean",
+          "allowsTwoPositionalArgs": true,
           "inputs": []
         },
         {
@@ -1163,6 +1219,7 @@
           "signature": "logic.or(a, b)",
           "description": "Boolean OR using JavaScript-style truthiness, returned as a boolean.",
           "returns": "boolean",
+          "allowsTwoPositionalArgs": true,
           "inputs": []
         },
         {
@@ -1172,6 +1229,7 @@
           "signature": "logic.equals(value, other: value)",
           "description": "Strict equality using Object.is.",
           "returns": "boolean",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1181,6 +1239,7 @@
           "signature": "logic.notEquals(value, other: value)",
           "description": "Inverse of logic.equals.",
           "returns": "boolean",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1190,6 +1249,7 @@
           "signature": "logic.greaterThan(value, other: 0)",
           "description": "Numeric greater-than comparison.",
           "returns": "boolean",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1199,6 +1259,7 @@
           "signature": "logic.lessThan(value, other: 0)",
           "description": "Numeric less-than comparison.",
           "returns": "boolean",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1208,6 +1269,7 @@
           "signature": "logic.greaterOrEqual(value, other: 0)",
           "description": "Numeric greater-or-equal comparison.",
           "returns": "boolean",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1217,6 +1279,7 @@
           "signature": "logic.lessOrEqual(value, other: 0)",
           "description": "Numeric less-or-equal comparison.",
           "returns": "boolean",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1226,6 +1289,7 @@
           "signature": "logic.select(condition, whenTrue: value, whenFalse: value)",
           "description": "Returns whenTrue when condition is truthy using JavaScript-style truthiness, otherwise whenFalse.",
           "returns": "any",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1235,6 +1299,7 @@
           "signature": "logic.when(condition, value: value)",
           "description": "Returns value when condition is truthy using JavaScript-style truthiness, otherwise null.",
           "returns": "any",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         }
       ]
@@ -1257,6 +1322,7 @@
           "signature": "list.of(...values)",
           "description": "Builds a list from up to eight positional values.",
           "returns": "array",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1266,6 +1332,7 @@
           "signature": "list.range(start, end: 5)",
           "description": "Builds an inclusive ascending or descending numeric range.",
           "returns": "array",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1275,6 +1342,7 @@
           "signature": "list.length(list)",
           "description": "Returns list length.",
           "returns": "number",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1284,6 +1352,7 @@
           "signature": "list.at(list, index: 0)",
           "description": "Returns an item by index; negative indexes count from the end.",
           "returns": "any",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1293,6 +1362,7 @@
           "signature": "list.first(list)",
           "description": "Returns first item or null.",
           "returns": "any",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1302,6 +1372,7 @@
           "signature": "list.last(list)",
           "description": "Returns last item or null.",
           "returns": "any",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1311,6 +1382,7 @@
           "signature": "list.map(list, fn: fn(value) => value)",
           "description": "Returns a new list by calling fn(item) for each item.",
           "returns": "array",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1320,6 +1392,7 @@
           "signature": "list.filter(list, fn: fn(value) => condition)",
           "description": "Returns items where fn(item) is truthy.",
           "returns": "array",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1329,6 +1402,7 @@
           "signature": "list.reduce(list, fn: fn(acc, value) => next, initial: value)",
           "description": "Reduces items by calling fn(accumulator, item), starting with initial.",
           "returns": "any",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1338,6 +1412,7 @@
           "signature": "list.join(list, separator: \",\")",
           "description": "Joins list values into text.",
           "returns": "string",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1347,6 +1422,7 @@
           "signature": "list.reverse(list)",
           "description": "Returns a new reversed list.",
           "returns": "array",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1356,6 +1432,7 @@
           "signature": "list.sort(list)",
           "description": "Returns a new sorted list; numbers sort numerically, otherwise by string.",
           "returns": "array",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1365,6 +1442,7 @@
           "signature": "list.take(list, count: 2)",
           "description": "Returns the first count items.",
           "returns": "array",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1374,6 +1452,7 @@
           "signature": "list.drop(list, count: 2)",
           "description": "Drops the first count items.",
           "returns": "array",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1383,6 +1462,7 @@
           "signature": "list.concat(...lists)",
           "description": "Concatenates up to four lists.",
           "returns": "array",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         }
       ]
@@ -1403,6 +1483,7 @@
           "signature": "random.value()",
           "description": "Returns Math.random() in [0, 1).",
           "returns": "number",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1412,6 +1493,7 @@
           "signature": "random.range(min: 0, max: 1)",
           "description": "Returns a random float in [min, max).",
           "returns": "number",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1421,6 +1503,7 @@
           "signature": "random.int(min: 1, max: 6)",
           "description": "Returns a random integer in inclusive [min, max].",
           "returns": "number",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1430,6 +1513,7 @@
           "signature": "random.choice(list)",
           "description": "Returns a random item or null for an empty list.",
           "returns": "any",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1439,6 +1523,7 @@
           "signature": "random.seeded(seed: 1)",
           "description": "Planned seeded random generator.",
           "returns": "any",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1448,6 +1533,7 @@
           "signature": "random.noise(...)",
           "description": "Planned noise generator.",
           "returns": "number",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         }
       ]
@@ -1469,6 +1555,7 @@
           "signature": "debug.inspect(value)",
           "description": "Returns a readable string representation.",
           "returns": "string",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1478,6 +1565,7 @@
           "signature": "debug.trace(value, label: \"trace\")",
           "description": "Records a trace effect and returns the original value.",
           "returns": "any",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         },
         {
@@ -1487,6 +1575,7 @@
           "signature": "debug.assert(condition, message: \"Assertion failed\")",
           "description": "Throws ASSERTION_FAILED when condition is false.",
           "returns": "boolean",
+          "allowsTwoPositionalArgs": false,
           "inputs": []
         }
       ]

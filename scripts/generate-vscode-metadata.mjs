@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
+import { canUseTwoPositionalArgs } from '../src/loom.js';
 import { LIBRARY_METADATA } from '../src/toolchain/library-metadata.js';
 
 function toGenerated() {
@@ -15,6 +16,7 @@ function toGenerated() {
       signature: fn.signature ?? `${lib.name}.${fn.name}()`,
       description: fn.description ?? '',
       returns: fn.returns ?? 'any',
+      allowsTwoPositionalArgs: canUseTwoPositionalArgs(`${lib.name}.${fn.name}`, { inputs: fn.args ?? [] }),
       inputs: (fn.args ?? []).map((arg) => ({
         name: arg.name,
         type: arg.type ?? 'any',
