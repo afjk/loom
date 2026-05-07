@@ -34,6 +34,8 @@ const BOTTOM_PANEL_HEIGHT_KEY = 'loomlet.editorStudio.bottomPanelHeight';
 const BOTTOM_PANEL_COLLAPSED_KEY = 'loomlet.editorStudio.bottomPanelCollapsed';
 const EDITOR_SPLIT_WIDTH_KEY = 'loomlet.editorStudio.editorSplitWidth';
 
+const MAX_HISTORY_ENTRIES = 100;
+
 const DEFAULT_BOTTOM_PANEL_HEIGHT = 260;
 const MIN_BOTTOM_PANEL_HEIGHT = 120;
 const MAX_BOTTOM_PANEL_RATIO = 0.6;
@@ -69,6 +71,10 @@ let isResizingBottomPanel = false;
 let dslPaneWidth = DEFAULT_DSL_PANE_WIDTH;
 let isResizingEditorSplit = false;
 
+let undoStack = [];
+let redoStack = [];
+let isApplyingHistory = false;
+
 const elements = {
   dslEditorHost: document.getElementById('dsl-editor-host'),
   nodeEditorHost: document.getElementById('node-editor'),
@@ -97,7 +103,9 @@ const elements = {
   bottomPanelResizeHandle: document.getElementById('bottom-panel-resize-handle'),
   bottomPanelCollapseBtn: document.getElementById('bottom-panel-collapse-btn'),
   editorPanels: document.querySelector('.editor-panels'),
-  editorSplitResizeHandle: document.getElementById('editor-split-resize-handle')
+  editorSplitResizeHandle: document.getElementById('editor-split-resize-handle'),
+  undoBtn: document.getElementById('undo-btn'),
+  redoBtn: document.getElementById('redo-btn')
 };
 
 function setPanelsVisible(visible) {
@@ -559,6 +567,7 @@ async function openLoomFile() {
       await applyDsl({ markDirty: false });
       hasUnsyncedDslText = false;
       setDirty(false);
+      clearEditorHistory();
       return;
     }
 
@@ -576,6 +585,7 @@ async function openLoomFile() {
       await applyDsl({ markDirty: false });
       hasUnsyncedDslText = false;
       setDirty(false);
+      clearEditorHistory();
     });
     input.click();
   } catch (error) {
@@ -671,6 +681,7 @@ async function applyDsl({ markDirty = true } = {}) {
 
   if (result.ok) {
     cancelPendingAutoApplyDsl();
+    clearEditorHistory();
   }
 
   return result;
@@ -740,6 +751,7 @@ async function autoApplyDslFromEditor(requestId) {
 
   if (result.ok) {
     renderAutoApplyStatus('ok');
+    clearEditorHistory();
   } else {
     renderAutoApplyStatus('error');
   }
@@ -1189,6 +1201,7 @@ async function resetSample() {
   await applyDsl({ markDirty: false });
   hasUnsyncedDslText = false;
   setDirty(false);
+  clearEditorHistory();
 }
 
 function renderNodePaletteItem(entry) {
@@ -1306,6 +1319,145 @@ function handleGlobalKeyDown(event) {
   deleteSelectedNode();
 }
 
+function cloneJson(value) {
+  return value == null ? value : JSON.parse(JSON.stringify(value));
+}
+
+function createEditorHistorySnapshot() {
+  const state = store.getState();
+
+  return {
+    graph: cloneJson(state.graph),
+    editorModel: cloneJson(state.editorModel),
+    sourceText: state.sourceText,
+    sourceAst: cloneJson(state.sourceAst),
+    errors: cloneJson(state.errors || []),
+    selectedNodeId,
+    dslText: getDslText(),
+    hasUnsyncedDslText,
+    latestSuccessfulDslText
+  };
+}
+
+function pushUndoSnapshot(snapshot) {
+  if (!snapshot?.editorModel || !snapshot?.graph) return;
+
+  undoStack.push(snapshot);
+
+  if (undoStack.length > MAX_HISTORY_ENTRIES) {
+    undoStack.shift();
+  }
+
+  redoStack = [];
+  renderUndoRedoState();
+}
+
+function renderUndoRedoState() {
+  if (elements.undoBtn) {
+    elements.undoBtn.disabled = undoStack.length === 0;
+  }
+
+  if (elements.redoBtn) {
+    elements.redoBtn.disabled = redoStack.length === 0;
+  }
+}
+
+async function restoreEditorHistorySnapshot(snapshot, { pushRedo = false, pushUndo = false } = {}) {
+  if (!snapshot) return;
+
+  const currentSnapshot = createEditorHistorySnapshot();
+
+  if (pushRedo) {
+    redoStack.push(currentSnapshot);
+  }
+
+  if (pushUndo) {
+    undoStack.push(currentSnapshot);
+  }
+
+  store.setState({
+    graph: cloneJson(snapshot.graph),
+    editorModel: cloneJson(snapshot.editorModel),
+    sourceText: snapshot.sourceText,
+    sourceAst: cloneJson(snapshot.sourceAst),
+    errors: cloneJson(snapshot.errors || [])
+  });
+
+  selectedNodeId = snapshot.selectedNodeId;
+  hasUnsyncedDslText = snapshot.hasUnsyncedDslText;
+  latestSuccessfulDslText = snapshot.latestSuccessfulDslText;
+
+  setDslText(snapshot.dslText || snapshot.sourceText || '');
+
+  await nodeEditor?.renderModel(snapshot.editorModel, { force: true });
+
+  renderGraphJSON(snapshot.graph);
+  renderErrors();
+  renderInspector();
+  runPreview(snapshot.graph);
+
+  setDirty(true);
+  renderUndoRedoState();
+
+  if (autoApplyDslEnabled) {
+    renderAutoApplyStatus('ok');
+  }
+}
+
+async function undoGraphEdit() {
+  if (!undoStack.length) return;
+
+  cancelPendingAutoApplyDsl();
+
+  isApplyingHistory = true;
+  try {
+    const snapshot = undoStack.pop();
+    await restoreEditorHistorySnapshot(snapshot, { pushRedo: true });
+  } finally {
+    isApplyingHistory = false;
+    renderUndoRedoState();
+  }
+}
+
+async function redoGraphEdit() {
+  if (!redoStack.length) return;
+
+  cancelPendingAutoApplyDsl();
+
+  isApplyingHistory = true;
+  try {
+    const snapshot = redoStack.pop();
+    await restoreEditorHistorySnapshot(snapshot, { pushUndo: true });
+  } finally {
+    isApplyingHistory = false;
+    renderUndoRedoState();
+  }
+}
+
+function handleUndoRedoKeyDown(event) {
+  const isUndoRedoKey = event.key.toLowerCase() === 'z';
+  if (!isUndoRedoKey) return;
+  if (!(event.metaKey || event.ctrlKey)) return;
+
+  if (isTextEditingTarget(event.target)) {
+    return;
+  }
+
+  event.preventDefault();
+
+  if (event.shiftKey) {
+    redoGraphEdit();
+  } else {
+    undoGraphEdit();
+  }
+}
+
+function clearEditorHistory() {
+  undoStack = [];
+  redoStack = [];
+  renderUndoRedoState();
+}
+
 function setupEventListeners() {
   elements.applyDslBtn.addEventListener('click', applyDsl);
   elements.generateDslBtn.addEventListener('click', generateDsl);
@@ -1374,11 +1526,17 @@ function setupEventListeners() {
 
   window.addEventListener('resize', resizePreviewCanvas);
   window.addEventListener('keydown', handleGlobalKeyDown);
+
+  elements.undoBtn?.addEventListener('click', undoGraphEdit);
+  elements.redoBtn?.addEventListener('click', redoGraphEdit);
+  window.addEventListener('keydown', handleUndoRedoKeyDown);
 }
 
 async function handleOperation(operation) {
   const state = store.getState();
   if (!state.editorModel) return null;
+
+  const beforeSnapshot = createEditorHistorySnapshot();
 
   const result = applyNodeEditorOperationState(
     {
@@ -1411,6 +1569,11 @@ async function handleOperation(operation) {
     cancelPendingAutoApplyDsl();
     syncGraphToDslEditor({ markDirty: true });
     setDirty(true);
+
+    if (!isApplyingHistory) {
+      pushUndoSnapshot(beforeSnapshot);
+    }
+
     return result;
   }
 
@@ -1442,6 +1605,7 @@ async function init() {
   loadEditorSplitLayout();
   renderFileStatus();
   renderAutoApplyStatus();
+  renderUndoRedoState();
   renderNodePaletteCategories();
   renderNodePalette();
   await applyDsl({ markDirty: false });
