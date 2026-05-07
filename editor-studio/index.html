@@ -77,6 +77,7 @@
             <button class="tab-btn" data-tab="inspector">Inspector</button>
             <button class="tab-btn" data-tab="nodes">Nodes</button>
             <button class="tab-btn" data-tab="palette">Palette</button>
+            <button class="tab-btn" data-tab="output">Output</button>
           </div>
           <button id="bottom-panel-collapse-btn" class="bottom-panel-collapse-btn" title="Collapse bottom panel">Collapse</button>
         </div>
@@ -115,6 +116,14 @@
                 </select>
               </div>
               <div id="node-palette-list" class="node-palette-list"></div>
+            </div>
+          </div>
+          <div id="output-tab" class="tab-pane">
+            <div class="output-panel">
+              <div class="output-toolbar">
+                <button id="clear-output-btn" class="btn">Clear</button>
+              </div>
+              <pre id="output-log" class="output-log"></pre>
             </div>
           </div>
         </div>
