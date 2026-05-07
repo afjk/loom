@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NodeEditorView Diff Helpers Tests</title>
+  <style>
+    body {
+      font-family: monospace;
+      margin: 20px;
+      background: #f5f5f5;
+    }
+    .pass {
+      color: green;
+    }
+    .fail {
+      color: red;
+    }
+    .test-result {
+      margin: 10px 0;
+      padding: 5px;
+      border-left: 3px solid #ccc;
+    }
+    .test-result.pass {
+      background: #e8f5e9;
+      border-left-color: green;
+    }
+    .test-result.fail {
+      background: #ffebee;
+      border-left-color: red;
+    }
+  </style>
+</head>
+<body>
+  <h1>NodeEditorView Diff Helpers Tests</h1>
+  <div id="results"></div>
+
+  <script type="module">
+    import {
+      cloneEditorModelSnapshot,
+      getAddedNodeIds,
+      getRemovedNodeIds,
+      getCommonNodeIds,
+      getAddedEdgeIds,
+      getRemovedEdgeIds,
+      shouldRecreateNode,
+      sameParams,
+      samePosition
+    } from '../src/node-editor-view-diff.js';
+
+    let pass = 0;
+    let fail = 0;
+    const failures = [];
+    const resultsDiv = document.getElementById('results');
+
+    function test(name, fn) {
+      try {
+        fn();
+        log(`✓ ${name}`, 'pass');
+        pass++;
+      } catch (err) {
+        log(`✗ ${name}: ${err.message}`, 'fail');
+        failures.push({ test: name, error: err.message });
+        fail++;
+      }
+    }
+
+    function log(message, type) {
+      const div = document.createElement('div');
+      div.className = `test-result ${type}`;
+      div.textContent = message;
+      resultsDiv.appendChild(div);
+    }
+
+    function assert(condition, message) {
+      if (!condition) throw new Error(message || 'Assertion failed');
+    }
+
+    // Test cloneEditorModelSnapshot
+    test('cloneEditorModelSnapshot creates deep copy', () => {
+      const original = {
+        order: ['a', 'b'],
+        nodesById: { a: { id: 'a', type: 'clock' }, b: { id: 'b', type: 'sine' } },
+        edgesById: {}
+      };
+      const cloned = cloneEditorModelSnapshot(original);
+      cloned.nodesById.a.type = 'modified';
+      assert(original.nodesById.a.type === 'clock', 'Original should not be modified');
+    });
+
+    // Test getAddedNodeIds
+    test('getAddedNodeIds finds new nodes', () => {
+      const previous = {
+        order: ['a'],
+        nodesById: { a: { id: 'a' } },
+        edgesById: {}
+      };
+      const next = {
+        order: ['a', 'b'],
+        nodesById: { a: { id: 'a' }, b: { id: 'b' } },
+        edgesById: {}
+      };
+      const added = getAddedNodeIds(previous, next);
+      assert(added.length === 1 && added[0] === 'b', 'Should find added node b');
+    });
+
+    // Test getRemovedNodeIds
+    test('getRemovedNodeIds finds deleted nodes', () => {
+      const previous = {
+        order: ['a', 'b'],
+        nodesById: { a: { id: 'a' }, b: { id: 'b' } },
+        edgesById: {}
+      };
+      const next = {
+        order: ['a'],
+        nodesById: { a: { id: 'a' } },
+        edgesById: {}
+      };
+      const removed = getRemovedNodeIds(previous, next);
+      assert(removed.length === 1 && removed[0] === 'b', 'Should find removed node b');
+    });
+
+    // Test getCommonNodeIds
+    test('getCommonNodeIds finds common nodes', () => {
+      const previous = {
+        order: ['a', 'b'],
+        nodesById: { a: { id: 'a' }, b: { id: 'b' } },
+        edgesById: {}
+      };
+      const next = {
+        order: ['a', 'c'],
+        nodesById: { a: { id: 'a' }, c: { id: 'c' } },
+        edgesById: {}
+      };
+      const common = getCommonNodeIds(previous, next);
+      assert(common.length === 1 && common[0] === 'a', 'Should find common node a');
+    });
+
+    // Test getAddedEdgeIds
+    test('getAddedEdgeIds finds new edges', () => {
+      const previous = {
+        order: [],
+        nodesById: {},
+        edgesById: {}
+      };
+      const next = {
+        order: [],
+        nodesById: {},
+        edgesById: { 'edge1': { id: 'edge1' } }
+      };
+      const added = getAddedEdgeIds(previous, next);
+      assert(added.length === 1 && added[0] === 'edge1', 'Should find added edge');
+    });
+
+    // Test getRemovedEdgeIds
+    test('getRemovedEdgeIds finds deleted edges', () => {
+      const previous = {
+        order: [],
+        nodesById: {},
+        edgesById: { 'edge1': { id: 'edge1' } }
+      };
+      const next = {
+        order: [],
+        nodesById: {},
+        edgesById: {}
+      };
+      const removed = getRemovedEdgeIds(previous, next);
+      assert(removed.length === 1 && removed[0] === 'edge1', 'Should find removed edge');
+    });
+
+    // Test shouldRecreateNode
+    test('shouldRecreateNode detects type change', () => {
+      const previous = { id: 'a', type: 'clock', category: 'time', params: {} };
+      const next = { id: 'a', type: 'sine', category: 'time', params: {} };
+      assert(shouldRecreateNode(previous, next), 'Should recreate when type changes');
+    });
+
+    test('shouldRecreateNode detects param change', () => {
+      const previous = { id: 'a', type: 'sine', category: 'math', params: { freq: 1 } };
+      const next = { id: 'a', type: 'sine', category: 'math', params: { freq: 1, phase: 0 } };
+      assert(shouldRecreateNode(previous, next), 'Should recreate when params change');
+    });
+
+    test('shouldRecreateNode allows position change', () => {
+      const previous = { id: 'a', type: 'sine', category: 'math', params: {}, position: { x: 0, y: 0 } };
+      const next = { id: 'a', type: 'sine', category: 'math', params: {}, position: { x: 10, y: 20 } };
+      assert(!shouldRecreateNode(previous, next), 'Should not recreate for position only');
+    });
+
+    // Test sameParams
+    test('sameParams compares params', () => {
+      const a = { x: 1, y: 'test' };
+      const b = { x: 1, y: 'test' };
+      assert(sameParams(a, b), 'Same params should be equal');
+      assert(!sameParams(a, { x: 2 }), 'Different params should not be equal');
+    });
+
+    // Test samePosition
+    test('samePosition compares positions', () => {
+      const a = { x: 10, y: 20 };
+      const b = { x: 10, y: 20 };
+      assert(samePosition(a, b), 'Same positions should be equal');
+      assert(!samePosition(a, { x: 10, y: 30 }), 'Different positions should not be equal');
+      assert(samePosition(null, null), 'Null positions should be equal');
+    });
+
+    // Set test results
+    window.__loomTestResults = { pass, fail, failures };
+
+    // Display summary
+    const summary = document.createElement('div');
+    summary.style.marginTop = '20px';
+    summary.style.padding = '10px';
+    summary.style.fontSize = '16px';
+    summary.style.fontWeight = 'bold';
+    summary.className = fail === 0 ? 'pass' : 'fail';
+    summary.textContent = `Tests: ${pass} passed, ${fail} failed`;
+    resultsDiv.appendChild(summary);
+  </script>
+</body>
+</html>
