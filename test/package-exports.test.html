@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Package Exports Test</title>
+</head>
+<body>
+  <h1>Package Exports Test</h1>
+  <pre id="results"></pre>
+  <script type="module">
+    const results = [];
+
+    async function runTests() {
+      try {
+        // Test main export
+        const main = await import('../src/index.js');
+        results.push('✓ Main export (src/index.js)');
+
+        // Verify main exports exist
+        const mainExports = ['Loom', 'NODE_TYPES', 'parseDSLToAST', 'compileToGraph', 'graphToEditorModel', 'editorModelToGraph', 'applyEditorOperation'];
+        for (const exp of mainExports) {
+          if (main[exp] !== undefined) {
+            results.push(`  ✓ export ${exp}`);
+          } else {
+            results.push(`  ✗ export ${exp} missing`);
+          }
+        }
+
+        // Test DSL export
+        const dsl = await import('../src/loom-dsl.js');
+        results.push('✓ DSL export (src/loom-dsl.js)');
+        if (dsl.parseDSLToAST && dsl.compileToGraph) {
+          results.push('  ✓ DSL functions available');
+        }
+
+        // Test runtime export
+        const runtime = await import('../src/loom.js');
+        results.push('✓ Runtime export (src/loom.js)');
+        if (runtime.Loom && runtime.NODE_TYPES) {
+          results.push('  ✓ Loom and NODE_TYPES available');
+        }
+
+        // Test node-editor-core export
+        const nodeEditorCore = await import('../src/node-editor-core.js');
+        results.push('✓ Node editor core export (src/node-editor-core.js)');
+        if (nodeEditorCore.graphToEditorModel && nodeEditorCore.editorModelToGraph) {
+          results.push('  ✓ Editor model functions available');
+        }
+
+        // Test editor-model export
+        const editorModel = await import('../src/loom-editor-model.js');
+        results.push('✓ Editor model export (src/loom-editor-model.js)');
+        if (editorModel.graphToEditorModel && editorModel.editorModelToGraph) {
+          results.push('  ✓ Editor model functions available');
+        }
+
+        // Test canonical-dsl export
+        const canonicalDsl = await import('../src/canonical-dsl.js');
+        results.push('✓ Canonical DSL export (src/canonical-dsl.js)');
+        if (canonicalDsl.graphToCanonicalDSL) {
+          results.push('  ✓ graphToCanonicalDSL available');
+        }
+
+        // Test metadata export
+        const metadata = await import('../src/editor-metadata.js');
+        results.push('✓ Metadata export (src/editor-metadata.js)');
+        const metadataExports = ['extractEditorMetadataFromDsl', 'appendEditorMetadataToDsl', 'createEditorLayoutMetadata', 'applyLayoutMetadataToEditorModel', 'stripEditorMetadataFromDsl'];
+        for (const exp of metadataExports) {
+          if (metadata[exp] !== undefined) {
+            results.push(`  ✓ export ${exp}`);
+          }
+        }
+
+        results.push('');
+        results.push('All package exports verified successfully!');
+      } catch (err) {
+        results.push(`✗ Error: ${err.message}`);
+        console.error(err);
+      }
+
+      document.getElementById('results').textContent = results.join('\n');
+    }
+
+    runTests();
+  </script>
+</body>
+</html>

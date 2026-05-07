@@ -17,7 +17,7 @@ import {
   findNonOverlappingPosition,
   NODE_LAYOUT_STEP_Y
 } from '../../src/node-editor-core.js';
-import { graphToCanonicalDSL } from './canonical-dsl.js';
+import { graphToCanonicalDSL } from '../../src/canonical-dsl.js';
 import { createStore } from './studio-store.js';
 import { NodeEditorView } from './node-editor-view.js';
 import {
@@ -33,7 +33,7 @@ import {
   createEditorLayoutMetadata,
   applyLayoutMetadataToEditorModel,
   stripEditorMetadataFromDsl
-} from './editor-metadata.js';
+} from '../../src/editor-metadata.js';
 
 const SAMPLE_DSL = `t = clock()
 wave = sine(t, freq: 0.35)

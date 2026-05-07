@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": false,
   "type": "module",
-  "description": "A small dataflow language for weaving values, signals, and scene behavior.",
+  "description": "A small reactive DSL and node graph toolkit for interactive scenes.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/afjk/loomlet.git"
@@ -13,6 +13,25 @@
   },
   "homepage": "https://github.com/afjk/loomlet#readme",
   "license": "MIT",
+  "exports": {
+    ".": "./src/index.js",
+    "./dsl": "./src/loom-dsl.js",
+    "./runtime": "./src/loom.js",
+    "./node-editor-core": "./src/node-editor-core.js",
+    "./editor-model": "./src/loom-editor-model.js",
+    "./canonical-dsl": "./src/canonical-dsl.js",
+    "./metadata": "./src/editor-metadata.js"
+  },
+  "files": [
+    "src",
+    "generated",
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "keywords": [
     "loomlet",
     "dsl",
@@ -38,6 +57,7 @@
     "test:repl": "node test/loom-repl-session.test.mjs && node test/loom-repl-cli.test.mjs",
     "test:browser": "node ci/run-tests.mjs",
     "generate:vscode-metadata": "node scripts/generate-vscode-metadata.mjs",
+    "pack:dry-run": "npm pack --dry-run",
     "pack:cli": "npm pack",
     "pack:vscode": "cd extensions/vscode-loomlet && npx @vscode/vsce package"
   },
