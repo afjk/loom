@@ -5,7 +5,7 @@ import { json } from '@codemirror/lang-json';
 
 import { Loom } from '../../src/loom.js';
 import { parseDSLToAST, compileToGraph } from '../../src/loom-dsl.js';
-import { graphToEditorModel, editorModelToGraph, applyEditorOperation } from '../../src/loom-editor-model.js';
+import { graphToEditorModel, editorModelToGraph, applyEditorOperation } from '../../src/node-editor-core.js';
 import { graphToCanonicalDSL } from './canonical-dsl.js';
 import { createStore } from './studio-store.js';
 import { NodeEditorView } from './node-editor-view.js';
