@@ -330,6 +330,232 @@ SceneSync の役割は、environment を同期し、object の生成・削除・
 
 Arrowized FRP や Yampa などの背景概念については、Appendix: Influences を参照する。
 
+# アーキテクチャ
+
+## レイヤー構成
+
+Loomlet は、Core、拡張パック、統合プロダクトの 3 層で構成される。
+
+### Layer 1: Core
+
+Core はホストに依存しない言語処理系である。
+
+**Core に含めるもの:**
+
+- DSL
+- Parser
+- Source AST
+- Graph AST
+- Runtime Graph
+- 純粋ランタイム
+- 純粋ライブラリ
+- state ノード
+- 汎用 input / output 抽象
+
+**Core に含めないもの:**
+
+- Scene Sync 固有 API
+- DOM 操作
+- Unity / Godot 固有 API
+- OSC / MIDI / WebSocket / HTTP などの具体的な I/O
+- ファイルシステムへの直接依存
+
+Core は、外部世界への副作用を直接実行しない。
+
+### Layer 2: 拡張パック
+
+拡張パックは、ホスト固有の source / sink / adapter を提供する薄いレイヤーである。
+
+例:
+
+- loomlet-web
+- loomlet-scenesync
+- loomlet-osc
+- loomlet-unity
+- loomlet-godot
+- loomlet-fs
+- loomlet-console
+
+拡張パックは、`scene.setPosition` や `dom.setText` のような使いやすいノードを提供してよい。ただし、それらは Core そのものではなく、ホスト I/O への変換として扱う。
+
+### Layer 3: 統合プロダクト
+
+統合プロダクトは、Core と拡張パックを組み合わせてユーザーが使える形にしたものである。
+
+例:
+
+- Loomlet CLI
+- Loomlet REPL
+- VS Code 拡張
+- Web Studio
+- Scene Sync 連携
+- afjk.jp 上の実験的ツール
+
+統合プロダクトは、UI、保存、ネットワーク、デプロイ、ホスト固有の UX を持ってよい。
+
+## 表現パイプライン
+
+Loomlet は、`.loom` テキスト、ノードエディタ、ランタイム実行、ホスト連携を同じ形式で無理に扱わない。
+
+用途ごとに次の表現へ分ける。
+
+```text
+DSL Source
+  ↓ parse
+Source AST
+  ↓ lower / normalize
+Graph AST
+  ↓ compile
+Runtime Graph
+  ↓ adapt
+Target Graph
+```
+
+Node Editor は `Graph AST` を表示・編集し、座標や選択状態などの UI 情報は `Node Editor ViewModel` として別に持つ。
+
+| 表現 | 主な役割 | 人間 | AI | ランタイム | ノードエディタ |
+|---|---|---:|---:|---:|---:|
+| DSL Source | `.loom` テキスト。人間・AI・Git が扱う正本 | ◎ | ◎ | × | △ |
+| Source AST | DSL の構文情報。コメント、raw literal、source range を保持 | × | △ | × | △ |
+| Graph AST | ノード、ポート、エッジ、params、source map を持つ編集向け中間表現 | ○ | ◎ | △ | ◎ |
+| Runtime Graph | 実行に必要な最小グラフ。評価器が読む形式 | △ | ○ | ◎ | △ |
+| Target Graph | Scene Sync / Unity / Web など各ホスト向けに変換された形式 | △ | ○ | host 側 | △ |
+| Node Editor ViewModel | ノード位置、選択、zoom、pan など UI 状態 | △ | × | × | ◎ |
+
+### 各表現の役割
+
+`DSL Source` は正本である。人間と AI が読み書きしやすく、Git diff でも扱いやすい。
+
+`Source AST` は、DSL を安全に編集するための構文表現である。コメント、元の数値表記、名前付き引数、source range などを保持する。
+
+`Graph AST` は、ノードエディタと AI が構造を理解するための中間表現である。ノード、ポート、エッジ、params、source map を持つ。
+
+`Runtime Graph` は、実行に必要な情報だけを持つ最小表現である。Loomlet runtime は基本的にこれを評価する。
+
+`Target Graph` は、Scene Sync、Unity、Web runtime など、実行先の世界に合わせた形式である。
+
+`Node Editor ViewModel` は、表示上の状態である。ノード座標、選択状態、zoom、pan などはプログラムの意味とは別なので分離する。
+
+## ホストI/Oモデル
+
+ホストとは、Loomlet Core を載せて動かす外側の実行環境である。
+
+例:
+
+- CLI
+- Web ブラウザ
+- Scene Sync
+- Unity
+- Godot
+- Node.js
+- VS Code 拡張
+- Web Studio
+- OSC / MIDI 機器
+
+Core はホスト固有の副作用を直接実行しない。
+
+Core は次のような境界 API を通じてホストとやり取りする。
+
+```text
+setInput(channel, value)
+emitEvent(channel, event)
+getOutput(channel)
+onOutput(channel, callback)
+```
+
+### 入力
+
+ホストは、現在値やセンサー値を `setInput` で Core に渡す。
+
+例:
+
+- pointer position
+- keyboard state
+- Scene Sync object state
+- Unity Transform
+- OSC value
+- time value
+
+### イベント
+
+ホストは、一回性のイベントを `emitEvent` で Core に渡す。
+
+例:
+
+- click
+- keyDown
+- trigger enter
+- OSC message
+- Scene Sync event
+
+### 出力
+
+Core は、外の世界に反映したい結果を output として生成する。
+
+例:
+
+```json
+{
+  "channel": "scene.position",
+  "objectId": "cube",
+  "value": [1, 0, 0]
+}
+```
+
+実際の副作用は Core ではなく、拡張パックまたは host adapter が実行する。
+
+例:
+
+- `loomlet-scenesync` は `scene.position` output を Scene Sync の `scene-delta` に変換する
+- `loomlet-unity` は同じ output を Unity の `Transform.position` に反映する
+- `loomlet-web` は DOM output を `HTMLElement` に反映する
+
+このモデルにより、同じ Loomlet graph を複数のホストへ移植しやすくする。
+
+## ノードエディタの編集方針
+
+`.loom` の DSL Source を正本とする。
+
+ノードエディタは、DSL から生成された `Graph AST` を表示・編集する UI である。ノードエディタ独自の保存形式を正本にはしない。
+
+### 基本方針
+
+- DSL Source を parse して Source AST を作る
+- Source AST を lower / normalize して Graph AST を作る
+- Node Editor は Graph AST を表示する
+- 編集可能な操作は、Graph AST の source map を使って DSL Source への patch として適用する
+- レイアウトや選択状態は Node Editor ViewModel に分離する
+
+### 編集レベル
+
+最初から完全な双方向変換を目指さず、編集可能範囲を段階的に広げる。
+
+```text
+Level 1: 数値リテラル編集
+Level 2: 文字列 / boolean / objectId 編集
+Level 3: ノード名 / 変数名変更
+Level 4: sink ノード追加
+Level 5: compute ノード追加
+Level 6: edge 再接続
+Level 7: 任意の Graph AST から DSL を再生成
+```
+
+初期段階では、Level 1〜2 を優先する。
+
+例:
+
+```loom
+x = math.sine(t, freq: 0.2, amplitude: 2, offset: 0)
+```
+
+`freq` をノードエディタで `0.5` に変更する場合、Graph AST の source map を使って `0.2` の範囲だけを置換する。
+
+```loom
+x = math.sine(t, freq: 0.5, amplitude: 2, offset: 0)
+```
+
+この方針により、DSL の可読性、Git diff、AI 編集、ノードエディタの操作性を両立する。
+
 # Loom 仕様書
 
 ## 1. 概要
