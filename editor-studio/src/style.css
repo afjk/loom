@@ -946,6 +946,22 @@ button:disabled:hover,
   transform: scale(0.95);
 }
 
+.node-list-item.is-focused-pulse {
+  animation: nodeFocusPulse 0.8s ease-out;
+}
+
+@keyframes nodeFocusPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(74, 144, 226, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(74, 144, 226, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(74, 144, 226, 0);
+  }
+}
+
 .empty-state {
   padding: 16px;
   color: rgba(255, 255, 255, 0.58);
