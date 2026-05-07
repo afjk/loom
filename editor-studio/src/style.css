@@ -7,6 +7,11 @@
   --primary-color: #4a90e2;
   --success-color: #4caf50;
   --error-color: #f44336;
+  --panel-bg: rgba(20, 20, 20, 0.42);
+  --panel-bg-strong: rgba(20, 20, 20, 0.58);
+  --panel-header-bg: rgba(0, 0, 0, 0.26);
+  --editor-bg: rgba(20, 20, 20, 0.32);
+  --editor-bg-subtle: rgba(20, 20, 20, 0.18);
 }
 
 * {
@@ -64,7 +69,11 @@ html, body {
   top: 64px;
   bottom: 12px;
   display: grid;
-  grid-template-columns: minmax(360px, 1fr) minmax(420px, 1fr);
+  --dsl-pane-width-px: 520px;
+  grid-template-columns:
+    minmax(280px, var(--dsl-pane-width-px))
+    8px
+    minmax(320px, 1fr);
   grid-template-rows: 1fr auto auto;
   gap: 12px;
   z-index: 15;
@@ -81,8 +90,13 @@ body.panels-hidden .editor-panels {
   grid-row: 1;
 }
 
-.node-pane {
+.editor-split-resize-handle {
   grid-column: 2;
+  grid-row: 1;
+}
+
+.node-pane {
+  grid-column: 3;
   grid-row: 1;
 }
 
@@ -98,7 +112,7 @@ body.panels-hidden .editor-panels {
 
 /* Panel styling */
 .panel {
-  background: rgba(20, 20, 20, 0.9);
+  background: var(--panel-bg);
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 12px;
   overflow: hidden;
@@ -110,7 +124,7 @@ body.panels-hidden .editor-panels {
 .pane {
   display: flex;
   flex-direction: column;
-  background: rgba(20, 20, 20, 0.9);
+  background: var(--panel-bg);
   min-height: 0;
 }
 
@@ -120,7 +134,7 @@ body.panels-hidden .editor-panels {
   align-items: center;
   padding: 12px 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--panel-header-bg);
   flex-shrink: 0;
 }
 
@@ -133,16 +147,21 @@ body.panels-hidden .editor-panels {
 .dsl-editor-host {
   flex: 1;
   overflow: hidden;
+  background: var(--editor-bg-subtle);
 }
 
 .dsl-editor-host .cm-editor {
   height: 100%;
-  background: rgba(20, 20, 20, 0.9) !important;
+  background: transparent !important;
+}
+
+.dsl-editor-host .cm-scroller {
+  background: transparent !important;
 }
 
 .node-editor-canvas {
   flex: 1;
-  background: rgba(20, 20, 20, 0.9);
+  background: var(--editor-bg-subtle);
   border: none;
   overflow: hidden;
   position: relative;
@@ -152,18 +171,24 @@ body.panels-hidden .editor-panels {
 .node-editor-canvas .rete-area {
   width: 100%;
   height: 100%;
+  background: transparent !important;
+}
+
+.node-editor-canvas [data-testid="area"],
+.node-editor-canvas .area {
+  background: transparent !important;
 }
 
 /* Node title bar */
 .node-editor-canvas .title {
-  background: #2a2a2a !important;
+  background: rgba(42, 42, 42, 0.88) !important;
   color: var(--text-color) !important;
   border-bottom: 1px solid var(--border-color) !important;
 }
 
 /* Node body */
 .node-editor-canvas .node {
-  background: #222 !important;
+  background: rgba(28, 28, 28, 0.86) !important;
   border-color: var(--border-color) !important;
   color: var(--text-color) !important;
 }
@@ -221,6 +246,27 @@ body.resizing-bottom-panel .bottom-panel-resize-handle {
 
 .bottom-panel-resize-handle.collapsed {
   border-bottom: none;
+}
+
+.editor-split-resize-handle {
+  grid-column: 2;
+  grid-row: 1;
+  cursor: col-resize;
+  background: transparent;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  min-width: 8px;
+}
+
+.editor-split-resize-handle:hover,
+body.resizing-editor-split .editor-split-resize-handle {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+body.resizing-editor-split,
+body.resizing-editor-split * {
+  cursor: col-resize !important;
+  user-select: none !important;
 }
 
 /* Tabs */
@@ -376,13 +422,17 @@ body.resizing-bottom-panel .bottom-panel-resize-handle {
 
 /* CodeMirror theme adjustments */
 .cm-editor {
-  --cm-bg: rgba(20, 20, 20, 0.9);
+  --cm-bg: transparent;
   --cm-text: var(--text-color);
 }
 
 .cm-gutters {
-  background: rgba(0, 0, 0, 0.4) !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: rgba(0, 0, 0, 0.18) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.10) !important;
+}
+
+.cm-content {
+  background: transparent !important;
 }
 
 .cm-activeLineGutter {
