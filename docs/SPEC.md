@@ -2715,3 +2715,193 @@ Current limitations:
 - function bodies are single expressions
 - block bodies are not supported yet
 - recursion is not supported yet
+
+
+## Embedded Scene Sync 統合（草案）
+
+このセクションは、Scene Sync本体に Loomlet Node Editor を組み込む場合の設計草案である。
+現時点では確定仕様ではなく、実装前にさらに検討する。
+
+### 1. 基本方針
+
+Embedded版では、Scene SyncのScene JSONを正本とする。
+
+Loomlet Node Editorは、Scene JSON全体を別形式へ置き換えるのではなく、Scene JSON内のLoomlet behavior graph部分を編集する専用エディタとして扱う。
+
+Scene Sync Dev ToolのJSON editorはScene JSON全体を直接編集し、Loomlet Node Editorはその中のLoomlet graph部分を視覚的に編集する。
+
+### 2. Standalone版との違い
+
+Standalone版:
+- GitHub Pagesなど、Scene Sync外部で動作する
+- Scene Syncへ接続するにはredeem/link code/session tokenが必要
+- `.loom` file + hidden editor metadata を扱う
+
+Embedded版:
+- Scene Syncアプリ内で動作する
+- 既存のroom/session/contextを親アプリから受け取るためredeemは不要
+- Scene JSON内のLoomlet graphを直接編集する
+
+### 3. Scene JSON内での配置案
+
+推奨案として `behaviors.loomlet` を使う案を以下に示す。
+
+Scene-level graph:
+
+```json
+{
+  "behaviors": {
+    "loomlet": {
+      "version": 1,
+      "graph": {
+        "nodes": [],
+        "edges": []
+      },
+      "editor": {
+        "version": 1,
+        "nodes": {}
+      }
+    }
+  }
+}
+```
+
+Object-level graph:
+
+```json
+{
+  "objects": {
+    "cube1": {
+      "behaviors": {
+        "loomlet": {
+          "version": 1,
+          "graph": {
+            "nodes": [],
+            "edges": []
+          },
+          "editor": {
+            "version": 1,
+            "nodes": {}
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+`scene.behaviors.loomlet` はシーン全体のLoomlet graphを表す。
+`scene.objects[id].behaviors.loomlet` は特定objectに付与されたLoomlet graphを表す。
+
+### 4. Object graph と owner binding
+
+Object-level graphでは、graphの所有者はScene JSON内の配置場所から決まる。
+
+たとえば `scene.objects["cube1"].behaviors.loomlet` にあるgraphは、`cube1` をownerとする。
+
+このため、object-level graph内では、対象object idをDSLやgraph内に直接書かずに、owner/current objectとして扱える可能性がある。
+
+将来的には `object.setPosition(...)` のようなowner向けのDSL/APIを導入する案がある。
+ただし、この名前や構文はまだ確定していない。
+
+### 5. Scene graph と object graph の違い
+
+Scene graph:
+- シーン全体に対するbehavior
+- 複数objectを操作できる
+- object idを明示する操作と相性がよい
+- 配置候補: `scene.behaviors.loomlet`
+
+Object graph:
+- 1つのobjectに付与されるbehavior
+- 同じgraphを別objectに再利用しやすい
+- owner objectは配置場所から決まる
+- 配置候補: `scene.objects[id].behaviors.loomlet`
+
+### 6. Dev Tool JSON editor との統合
+
+Embedded版では、Scene Sync Dev ToolのJSON editorとLoomlet Node Editorは、同じScene JSONを別の視点から編集する。
+
+- JSON editor: Scene JSON全体を直接編集する
+- Loomlet Node Editor: `behaviors.loomlet` 以下を視覚的に編集する
+
+Node Editorでの変更はScene JSONへ反映され、JSON editorにも反映される。
+JSON editorでScene JSON内のLoomlet graphを変更した場合、Node Editorもそれを検出して再読み込みまたは競合解決を行う必要がある。
+
+### 7. Editor metadata の扱い
+
+Standalone `.loom` fileでは、ノード位置・label・commentなどの編集情報をhidden editor metadataとして保存する。
+
+一方、Embedded版ではScene JSON内に明示的な `editor` fieldとして保存できる。
+
+この `editor` field は実行意味には含めず、Node Editorの表示・編集補助のためだけに使う。
+
+### 8. Apply model
+
+Node Editorの変更をScene JSONへ反映する方式には、少なくとも2案がある。
+
+Manual Apply:
+- Node Editor内でdraftとして編集する
+- ApplyボタンでScene JSONへ反映する
+- 競合管理が比較的簡単
+
+Auto Apply:
+- Node Editorの変更をdebounceしてScene JSONへ反映する
+- Dev Tool JSON editorとリアルタイムに同期しやすい
+- ノードドラッグやUndo/Redoとの整合に注意が必要
+
+初期実装ではManual Applyを優先し、必要に応じてAuto Applyを追加する案がある。
+
+### 9. 競合解決
+
+JSON editorとNode Editorが同じLoomlet graphを同時に編集する可能性があるため、競合検出が必要になる。
+
+候補:
+- Node Editorが読み込んだ時点のgraph hash/versionを保持する
+- Apply時にScene JSON側のgraphが変わっていれば警告する
+- 選択肢として Reload / Overwrite / Cancel を出す
+
+初期実装では、外部変更を検出したらNode Editor側を再読み込みする簡易方式でもよい。
+
+### 10. Host Bridge
+
+Embedded版では、Node Editorが直接redeemや外部API接続を行うのではなく、Scene Sync側からHost Bridgeを受け取る。
+
+Host Bridgeの役割:
+- 現在のScene JSONを取得する
+- Scene JSONを更新する
+- object listを取得する
+- selected objectを取得・変更する
+- scene/object graphを取得・設定・削除する
+- Scene JSON変更イベントを通知する
+
+擬似interfaceの例:
+
+```ts
+type SceneSyncHostBridge = {
+  getSceneJson(): Promise<object>;
+  updateSceneJson(nextScene: object): Promise<void>;
+
+  getObjects(): Promise<Array<{ id: string; name?: string }>>;
+  getSelectedObjectId(): string | null;
+  setSelectedObjectId(id: string | null): void;
+
+  getLoomletGraph(scope: { scene?: true; object?: string }): Promise<object | null>;
+  setLoomletGraph(scope: { scene?: true; object?: string }, graph: object, editor?: object): Promise<void>;
+  clearLoomletGraph(scope: { scene?: true; object?: string }): Promise<void>;
+
+  onSceneJsonChanged(callback: () => void): () => void;
+  onSelectionChanged(callback: (objectId: string | null) => void): () => void;
+};
+```
+
+### 11. 未決事項
+
+未決事項:
+- `behaviors.loomlet` という配置で確定するか
+- scene-level graphを1つだけにするか、複数持てるようにするか
+- object-level graphを1 object 1 graphにするか、複数behaviorにするか
+- `object.setPosition(...)` のようなowner向けDSLを導入するか
+- Scene Syncの既存scene json schemaとの整合
+- Dev Tool JSON editorとの競合解決方式
+- Auto Applyを初期実装に含めるか
