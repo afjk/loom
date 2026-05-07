@@ -12,7 +12,8 @@
       extractEditorMetadataFromDsl,
       appendEditorMetadataToDsl,
       createEditorLayoutMetadata,
-      applyLayoutMetadataToEditorModel
+      applyLayoutMetadataToEditorModel,
+      stripEditorMetadataFromDsl
     } from "../editor-studio/src/editor-metadata.js";
 
     const results = [];
@@ -71,6 +72,40 @@ wave = sine(t, freq: 0.35)`;
       assert(metadata === null, 'metadata in middle should not be extracted');
     });
 
+    // stripEditorMetadataFromDsl tests
+    test('stripEditorMetadataFromDsl: removes trailing metadata comment', () => {
+      const dsl = `t = clock()
+wave = sine(t, freq: 0.35)
+render bar(width: wave)
+
+# @loomlet.editor {"version":1,"layout":{"nodes":{"wave":{"x":120,"y":80}}}}`;
+
+      const result = stripEditorMetadataFromDsl(dsl);
+
+      assert(result.includes('t = clock()'), 'should contain original code');
+      assert(result.includes('render bar(width: wave)'), 'should contain render statement');
+      assert(!result.includes('@loomlet.editor'), 'should not contain metadata');
+    });
+
+    test('stripEditorMetadataFromDsl: returns unchanged DSL if no metadata', () => {
+      const dsl = `t = clock()
+wave = sine(t, freq: 0.35)
+render bar(width: wave)`;
+
+      const result = stripEditorMetadataFromDsl(dsl);
+
+      assertEqual(result, dsl, 'should return DSL unchanged');
+    });
+
+    test('stripEditorMetadataFromDsl: handles invalid metadata gracefully', () => {
+      const dsl = `t = clock()
+# @loomlet.editor {invalid json}`;
+
+      const result = stripEditorMetadataFromDsl(dsl);
+
+      assertEqual(result, dsl, 'should return DSL unchanged when metadata is invalid');
+    });
+
     // appendEditorMetadataToDsl tests
     test('appendEditorMetadataToDsl: appends metadata to DSL', () => {
       const dsl = `t = clock()
@@ -106,6 +141,25 @@ render bar(width: wave)`;
       const metadataCount = (result.match(/# @loomlet.editor/g) || []).length;
 
       assert(metadataCount === 1, 'metadata should appear exactly once');
+    });
+
+    test('stripEditorMetadataFromDsl + appendEditorMetadataToDsl: does not duplicate after multiple saves', () => {
+      const original = `t = clock()
+wave = sine(t, freq: 0.35)
+render bar(width: wave)`;
+      const metadata = { version: 1, layout: { nodes: { wave: { x: 120, y: 80 } } } };
+
+      let result = appendEditorMetadataToDsl(original, metadata);
+      let metadataCount = (result.match(/# @loomlet.editor/g) || []).length;
+      assert(metadataCount === 1, 'first save should have one metadata comment');
+
+      result = appendEditorMetadataToDsl(stripEditorMetadataFromDsl(result), metadata);
+      metadataCount = (result.match(/# @loomlet.editor/g) || []).length;
+      assert(metadataCount === 1, 'second save should still have exactly one metadata comment');
+
+      result = appendEditorMetadataToDsl(stripEditorMetadataFromDsl(result), metadata);
+      metadataCount = (result.match(/# @loomlet.editor/g) || []).length;
+      assert(metadataCount === 1, 'third save should still have exactly one metadata comment');
     });
 
     // createEditorLayoutMetadata tests

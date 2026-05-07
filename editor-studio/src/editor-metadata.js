@@ -107,3 +107,8 @@ export function applyLayoutMetadataToEditorModel(editorModel, metadata) {
     nodesById
   };
 }
+
+export function stripEditorMetadataFromDsl(sourceText) {
+  const { textWithoutMetadata } = extractEditorMetadataFromDsl(sourceText);
+  return textWithoutMetadata;
+}
