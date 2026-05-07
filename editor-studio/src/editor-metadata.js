@@ -69,6 +69,14 @@ export function createEditorLayoutMetadata(editorModel) {
         x: node.position.x,
         y: node.position.y
       };
+
+      if (node.label) {
+        nodes[id].label = node.label;
+      }
+
+      if (node.comment) {
+        nodes[id].comment = node.comment;
+      }
     }
   }
 
@@ -88,18 +96,24 @@ export function applyLayoutMetadataToEditorModel(editorModel, metadata) {
 
   for (const [id, node] of Object.entries(editorModel.nodesById || {})) {
     const position = layoutNodes[id];
+    const updates = { ...node };
 
     if (
       Number.isFinite(position?.x) &&
       Number.isFinite(position?.y)
     ) {
-      nodesById[id] = {
-        ...node,
-        position: { x: position.x, y: position.y }
-      };
-    } else {
-      nodesById[id] = node;
+      updates.position = { x: position.x, y: position.y };
     }
+
+    if (position?.label) {
+      updates.label = position.label;
+    }
+
+    if (position?.comment) {
+      updates.comment = position.comment;
+    }
+
+    nodesById[id] = updates;
   }
 
   return {

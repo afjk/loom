@@ -47,6 +47,25 @@ function rewriteGraphReferencesForRename(graph, oldId, newId) {
 export function applyNodeEditorOperationState(state, operation) {
   try {
     const editorModel = applyEditorOperation(state.editorModel, operation);
+
+    // For metadata-only operations, don't regenerate the graph
+    if (operation.type === 'updateNodeMetadata') {
+      return {
+        state: {
+          ...state,
+          editorModel,
+          errors: []
+        },
+        change: {
+          operation,
+          graphChanged: false,
+          shouldRerenderView: true,
+          affectsDsl: false
+        },
+        error: null
+      };
+    }
+
     let graph = editorModelToGraph(editorModel, state.graph);
 
     if (operation.type === 'renameNode') {

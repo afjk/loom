@@ -29,8 +29,10 @@ function getPortName(port) {
 
 function createReteNode(editorNode, onControl) {
   const nodeTypeDef = NODE_TYPES[editorNode.type];
-  const node = new ClassicPreset.Node(editorNode.type);
+  const displayLabel = editorNode.label || editorNode.type;
+  const node = new ClassicPreset.Node(displayLabel);
   node.id = editorNode.id;
+  node._editorNode = editorNode;
 
   if (nodeTypeDef) {
     for (const input of nodeTypeDef.inputs || []) {

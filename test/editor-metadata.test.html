@@ -276,6 +276,171 @@ render bar(width: wave)`;
       assert(!('deleted' in result.nodesById), 'deleted should not be in result');
     });
 
+    // Label and Comment tests
+    test('createEditorLayoutMetadata: includes label when present', () => {
+      const editorModel = {
+        nodesById: {
+          wave: { id: 'wave', type: 'sine', category: 'transform', position: { x: 120, y: 80 }, label: 'Wave Output' }
+        },
+        edgesById: {},
+        order: ['wave']
+      };
+
+      const metadata = createEditorLayoutMetadata(editorModel);
+
+      assertEqual(metadata.layout.nodes.wave, { x: 120, y: 80, label: 'Wave Output' }, 'should include label');
+    });
+
+    test('createEditorLayoutMetadata: includes comment when present', () => {
+      const editorModel = {
+        nodesById: {
+          wave: { id: 'wave', type: 'sine', category: 'transform', position: { x: 120, y: 80 }, comment: 'Produces a sine wave' }
+        },
+        edgesById: {},
+        order: ['wave']
+      };
+
+      const metadata = createEditorLayoutMetadata(editorModel);
+
+      assertEqual(metadata.layout.nodes.wave, { x: 120, y: 80, comment: 'Produces a sine wave' }, 'should include comment');
+    });
+
+    test('createEditorLayoutMetadata: includes both label and comment', () => {
+      const editorModel = {
+        nodesById: {
+          wave: { id: 'wave', type: 'sine', category: 'transform', position: { x: 120, y: 80 }, label: 'Wave Output', comment: 'Main sine wave' }
+        },
+        edgesById: {},
+        order: ['wave']
+      };
+
+      const metadata = createEditorLayoutMetadata(editorModel);
+
+      assertEqual(metadata.layout.nodes.wave, { x: 120, y: 80, label: 'Wave Output', comment: 'Main sine wave' }, 'should include both label and comment');
+    });
+
+    test('createEditorLayoutMetadata: omits empty label and comment', () => {
+      const editorModel = {
+        nodesById: {
+          wave: { id: 'wave', type: 'sine', category: 'transform', position: { x: 120, y: 80 }, label: '', comment: '' }
+        },
+        edgesById: {},
+        order: ['wave']
+      };
+
+      const metadata = createEditorLayoutMetadata(editorModel);
+
+      assertEqual(metadata.layout.nodes.wave, { x: 120, y: 80 }, 'should not include empty label and comment');
+    });
+
+    test('createEditorLayoutMetadata: omits undefined label and comment', () => {
+      const editorModel = {
+        nodesById: {
+          wave: { id: 'wave', type: 'sine', category: 'transform', position: { x: 120, y: 80 } }
+        },
+        edgesById: {},
+        order: ['wave']
+      };
+
+      const metadata = createEditorLayoutMetadata(editorModel);
+
+      assertEqual(metadata.layout.nodes.wave, { x: 120, y: 80 }, 'should not include undefined label and comment');
+    });
+
+    test('applyLayoutMetadataToEditorModel: restores label', () => {
+      const editorModel = {
+        nodesById: {
+          wave: { id: 'wave', type: 'sine', category: 'transform', position: { x: 0, y: 0 } }
+        },
+        edgesById: {},
+        order: ['wave']
+      };
+      const metadata = {
+        version: 1,
+        layout: {
+          nodes: {
+            wave: { x: 120, y: 80, label: 'Wave Output' }
+          }
+        }
+      };
+
+      const result = applyLayoutMetadataToEditorModel(editorModel, metadata);
+
+      assertEqual(result.nodesById.wave.label, 'Wave Output', 'label should be restored');
+      assertEqual(result.nodesById.wave.position, { x: 120, y: 80 }, 'position should also be restored');
+    });
+
+    test('applyLayoutMetadataToEditorModel: restores comment', () => {
+      const editorModel = {
+        nodesById: {
+          wave: { id: 'wave', type: 'sine', category: 'transform', position: { x: 0, y: 0 } }
+        },
+        edgesById: {},
+        order: ['wave']
+      };
+      const metadata = {
+        version: 1,
+        layout: {
+          nodes: {
+            wave: { x: 120, y: 80, comment: 'Produces a sine wave' }
+          }
+        }
+      };
+
+      const result = applyLayoutMetadataToEditorModel(editorModel, metadata);
+
+      assertEqual(result.nodesById.wave.comment, 'Produces a sine wave', 'comment should be restored');
+      assertEqual(result.nodesById.wave.position, { x: 120, y: 80 }, 'position should also be restored');
+    });
+
+    test('applyLayoutMetadataToEditorModel: restores label and comment together', () => {
+      const editorModel = {
+        nodesById: {
+          wave: { id: 'wave', type: 'sine', category: 'transform', position: { x: 0, y: 0 } }
+        },
+        edgesById: {},
+        order: ['wave']
+      };
+      const metadata = {
+        version: 1,
+        layout: {
+          nodes: {
+            wave: { x: 120, y: 80, label: 'Wave Output', comment: 'Produces a sine wave' }
+          }
+        }
+      };
+
+      const result = applyLayoutMetadataToEditorModel(editorModel, metadata);
+
+      assertEqual(result.nodesById.wave.label, 'Wave Output', 'label should be restored');
+      assertEqual(result.nodesById.wave.comment, 'Produces a sine wave', 'comment should be restored');
+      assertEqual(result.nodesById.wave.position, { x: 120, y: 80 }, 'position should also be restored');
+    });
+
+    test('applyLayoutMetadataToEditorModel: does not create unknown nodes from metadata', () => {
+      const editorModel = {
+        nodesById: {
+          wave: { id: 'wave', type: 'sine', category: 'transform', position: { x: 0, y: 0 } }
+        },
+        edgesById: {},
+        order: ['wave']
+      };
+      const metadata = {
+        version: 1,
+        layout: {
+          nodes: {
+            wave: { x: 120, y: 80 },
+            unknown: { x: 200, y: 200, label: 'Unknown Node' }
+          }
+        }
+      };
+
+      const result = applyLayoutMetadataToEditorModel(editorModel, metadata);
+
+      assertEqual(Object.keys(result.nodesById).length, 1, 'should only have one node');
+      assert(!('unknown' in result.nodesById), 'unknown node should not be created');
+    });
+
     async function run() {
       let pass = 0; let fail = 0; const failures = [];
       for (const t of results) {

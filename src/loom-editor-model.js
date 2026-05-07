@@ -226,19 +226,25 @@ export function preserveEditorModelLayout(nextEditorModel, previousEditorModel) 
   const nodesById = {};
   for (const [id, node] of Object.entries(nextEditorModel.nodesById || {})) {
     const previousNode = previousEditorModel.nodesById?.[id];
+    const nextNode = { ...node };
 
     if (
       previousNode?.position &&
       Number.isFinite(previousNode.position.x) &&
       Number.isFinite(previousNode.position.y)
     ) {
-      nodesById[id] = {
-        ...node,
-        position: { ...previousNode.position }
-      };
-    } else {
-      nodesById[id] = node;
+      nextNode.position = { ...previousNode.position };
     }
+
+    if (typeof previousNode?.label === 'string' && previousNode.label !== '') {
+      nextNode.label = previousNode.label;
+    }
+
+    if (typeof previousNode?.comment === 'string' && previousNode.comment !== '') {
+      nextNode.comment = previousNode.comment;
+    }
+
+    nodesById[id] = nextNode;
   }
 
   return {
@@ -344,6 +350,32 @@ export function applyEditorOperation(em, op) {
     }
     next.edgesById = renamedEdgesById;
 
+    return next;
+  }
+
+  if (op.type === 'updateNodeMetadata') {
+    const node = next.nodesById[op.id];
+    if (!node) throw new Error(`Node '${op.id}' does not exist`);
+
+    const updated = { ...node };
+    if (op.patch) {
+      if ('label' in op.patch) {
+        if (op.patch.label) {
+          updated.label = op.patch.label;
+        } else {
+          delete updated.label;
+        }
+      }
+      if ('comment' in op.patch) {
+        if (op.patch.comment) {
+          updated.comment = op.patch.comment;
+        } else {
+          delete updated.comment;
+        }
+      }
+    }
+
+    next.nodesById[op.id] = updated;
     return next;
   }
 

@@ -1180,6 +1180,30 @@ function renderInspector() {
       </div>
 
       <div class="inspector-section">
+        <div class="inspector-row">
+          <label class="inspector-label" for="selected-node-label-input">Label:</label>
+          <input
+            id="selected-node-label-input"
+            class="inspector-input"
+            type="text"
+            value="${escapeHtml(node.label || '')}"
+            placeholder="Optional display label"
+            spellcheck="false"
+          />
+        </div>
+        <div class="inspector-row">
+          <label class="inspector-label" for="selected-node-comment-input">Comment:</label>
+          <textarea
+            id="selected-node-comment-input"
+            class="inspector-input"
+            placeholder="Optional note"
+            rows="3"
+            spellcheck="true"
+          >${escapeHtml(node.comment || '')}</textarea>
+        </div>
+      </div>
+
+      <div class="inspector-section">
         <div class="inspector-label" style="margin-bottom: 8px;">Params:</div>
   `;
 
@@ -1307,6 +1331,16 @@ function attachInspectorActionListeners() {
     renameSelectedNode();
   });
 
+  const labelInput = elements.inspectorPanel.querySelector('#selected-node-label-input');
+  labelInput?.addEventListener('change', (event) => {
+    applyNodeMetadataEdit('label', event.target.value.trim() || null);
+  });
+
+  const commentInput = elements.inspectorPanel.querySelector('#selected-node-comment-input');
+  commentInput?.addEventListener('change', (event) => {
+    applyNodeMetadataEdit('comment', event.target.value.trim() || null);
+  });
+
   elements.inspectorPanel
     .querySelectorAll('[data-remove-edge-id]')
     .forEach((button) => {
@@ -1358,6 +1392,18 @@ function applyParamEdit(key, value) {
     id: selectedNodeId,
     key,
     value
+  });
+}
+
+function applyNodeMetadataEdit(field, value) {
+  if (!selectedNodeId) return;
+
+  handleOperation({
+    type: 'updateNodeMetadata',
+    id: selectedNodeId,
+    patch: {
+      [field]: value
+    }
   });
 }
 
@@ -1480,13 +1526,16 @@ async function resetSample() {
 function renderNodeListItem(node) {
   const isSelected = selectedNodeId === node.id;
   const selectedClass = isSelected ? ' selected' : '';
+  const commentIndicator = node.comment ? ' ●' : '';
+
+  const mainLabel = node.label || node.id;
+  const subtitle = node.label ? node.id : `${node.type} • ${node.category}`;
 
   return `
     <div class="node-list-item${selectedClass}" data-node-id="${escapeHtml(node.id)}">
       <div class="node-list-item-content">
-        <div class="node-list-item-id">${escapeHtml(node.id)}</div>
-        <div class="node-list-item-type">${escapeHtml(node.type)}</div>
-        <div class="node-list-item-category">${escapeHtml(node.category)}</div>
+        <div class="node-list-item-label">${escapeHtml(mainLabel)}</div>
+        <div class="node-list-item-subtitle">${escapeHtml(subtitle)}${commentIndicator}</div>
       </div>
       <button class="btn-focus-node" data-focus-node-id="${escapeHtml(node.id)}" title="Focus on node">Focus</button>
     </div>
@@ -1532,7 +1581,9 @@ function renderNodeList() {
     return (
       node.id.toLowerCase().includes(query) ||
       node.type.toLowerCase().includes(query) ||
-      node.category.toLowerCase().includes(query)
+      node.category.toLowerCase().includes(query) ||
+      (node.label && node.label.toLowerCase().includes(query)) ||
+      (node.comment && node.comment.toLowerCase().includes(query))
     );
   });
 
@@ -2142,15 +2193,22 @@ async function handleOperation(operation) {
       selectedNodeId = null;
     }
 
-    renderGraphJSON(result.state.graph);
+    const affectsDsl = result.change.affectsDsl !== false;
+
+    if (affectsDsl) {
+      renderGraphJSON(result.state.graph);
+      runPreview(result.state.graph);
+      hasUnsyncedDslText = false;
+      cancelPendingAutoApplyDsl();
+      syncGraphToDslEditor({ markDirty: true });
+    } else {
+      renderGraphJSON(result.state.graph);
+    }
+
     renderErrors();
     renderInspector();
     updateNodeListCategories();
     renderNodeList();
-    runPreview(result.state.graph);
-    hasUnsyncedDslText = false;
-    cancelPendingAutoApplyDsl();
-    syncGraphToDslEditor({ markDirty: true });
     setDirty(true);
 
     if (shouldPushHistory) {

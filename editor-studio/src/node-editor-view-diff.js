@@ -33,6 +33,7 @@ export function getRemovedEdgeIds(previous, next) {
 export function shouldRecreateNode(previousNode, nextNode) {
   if (previousNode.type !== nextNode.type) return true;
   if (previousNode.category !== nextNode.category) return true;
+  if ((previousNode.label || '') !== (nextNode.label || '')) return true;
 
   const prevParamKeys = Object.keys(previousNode.params || {}).sort();
   const nextParamKeys = Object.keys(nextNode.params || {}).sort();
