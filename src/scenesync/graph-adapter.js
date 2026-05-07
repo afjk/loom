@@ -45,17 +45,30 @@ const OUTPUT_PORT_MAPPING = {
   'sceneSetVisible': undefined
 };
 
-function generateStableNodeId(originalId, nodeType) {
+function generateStableNodeBase(nodeType) {
   const mapped = NODE_TYPE_MAPPING[nodeType] || nodeType;
   if (mapped === 'serverClock') return 'clock';
-  if (originalId && !originalId.startsWith('_')) return originalId;
-  if (mapped === 'sine' || mapped === 'cosine') return mapped;
+  if (mapped === 'sine') return 'sine';
+  if (mapped === 'cosine') return 'cosine';
+  if (mapped === 'add') return 'add';
   if (mapped === 'sceneSetPosition') return 'pos';
   if (mapped === 'sceneSetRotation') return 'rot';
   if (mapped === 'sceneSetScale') return 'scale';
   if (mapped === 'sceneSetColor') return 'color';
   if (mapped === 'sceneSetVisible') return 'visible';
-  return originalId;
+  return mapped;
+}
+
+function makeUniqueId(base, usedIds) {
+  if (!usedIds.has(base)) {
+    usedIds.add(base);
+    return base;
+  }
+  let index = 2;
+  while (usedIds.has(`${base}_${index}`)) index += 1;
+  const id = `${base}_${index}`;
+  usedIds.add(id);
+  return id;
 }
 
 function normalizeScope(options = {}) {
@@ -103,11 +116,13 @@ export function loomGraphToSceneSyncGraph(loomGraph, options = {}) {
   const nodes = [];
   const edges = [];
   const nodeIdMap = new Map();
+  const usedIds = new Set();
 
   for (const node of loomGraph.nodes) {
     if (!SUPPORTED_NODES.has(node.type)) throw new Error(`Unsupported Scene Sync graph node: ${node.type}`);
     const sceneSyncType = NODE_TYPE_MAPPING[node.type];
-    const newId = generateStableNodeId(node.id, node.type);
+    const baseId = (node.id && !node.id.startsWith('_')) ? node.id : generateStableNodeBase(node.type);
+    const newId = makeUniqueId(baseId, usedIds);
     nodeIdMap.set(node.id, newId);
     const params = pickParams(node.type, node.params);
     nodes.push({ id: newId, type: sceneSyncType, ...(Object.keys(params).length > 0 ? { params } : {}) });

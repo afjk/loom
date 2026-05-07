@@ -1,6 +1,6 @@
 # Tour: Grid Wave
 # Goal: Move a 3x3 object grid in phase-shifted Y waves.
-# Status: runnable
+# Status: draft
 # Run:
 #   loomlet scenesync dev examples/tour/live/03-grid-wave.loom
 # Setup:

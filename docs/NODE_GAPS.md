@@ -2,7 +2,7 @@
 
 ## Scene Sync status snapshot
 - Current end-to-end sinks: `scene.setPosition`, `scene.setRotation`, `scene.setScale`.
-- Planned for end-to-end Scene Sync graph target parity: `scene.setColor`, `scene.setVisible`.
+- Planned for end-to-end Scene Sync graph target parity: `scene.setColor`, `scene.setVisible` (they may compile through the adapter, but runtime support is not yet confirmed).
 - Deferred: `scene.setText` (waiting on Scene Sync text primitive support).
 - Planned: `scene.setAsset` for GLB/image/video reassignment workflows.
 
