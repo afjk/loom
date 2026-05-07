@@ -35,6 +35,7 @@ const BOTTOM_PANEL_COLLAPSED_KEY = 'loomlet.editorStudio.bottomPanelCollapsed';
 const EDITOR_SPLIT_WIDTH_KEY = 'loomlet.editorStudio.editorSplitWidth';
 
 const MAX_HISTORY_ENTRIES = 100;
+const MOVE_HISTORY_COALESCE_MS = 250;
 
 const DEFAULT_BOTTOM_PANEL_HEIGHT = 260;
 const MIN_BOTTOM_PANEL_HEIGHT = 120;
@@ -74,6 +75,8 @@ let isResizingEditorSplit = false;
 let undoStack = [];
 let redoStack = [];
 let isApplyingHistory = false;
+let activeMoveHistoryNodeId = null;
+let moveHistoryCoalesceTimer = null;
 
 const elements = {
   dslEditorHost: document.getElementById('dsl-editor-host'),
@@ -723,6 +726,7 @@ function syncGraphToDslEditor({ markDirty = true, force = false } = {}) {
 }
 
 function generateDsl() {
+  finishMoveHistoryGroup();
   cancelPendingAutoApplyDsl();
   const dsl = syncGraphToDslEditor({ markDirty: true, force: true });
   if (!dsl) return;
@@ -1323,6 +1327,69 @@ function cloneJson(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
 }
 
+function clearMoveHistoryCoalesceTimer() {
+  if (moveHistoryCoalesceTimer) {
+    clearTimeout(moveHistoryCoalesceTimer);
+    moveHistoryCoalesceTimer = null;
+  }
+}
+
+function finishMoveHistoryGroup() {
+  clearMoveHistoryCoalesceTimer();
+  activeMoveHistoryNodeId = null;
+}
+
+function scheduleMoveHistoryGroupFinish() {
+  clearMoveHistoryCoalesceTimer();
+
+  moveHistoryCoalesceTimer = window.setTimeout(() => {
+    finishMoveHistoryGroup();
+  }, MOVE_HISTORY_COALESCE_MS);
+}
+
+function isNoopMoveOperation(operation) {
+  if (operation?.type !== 'moveNode') return false;
+
+  const state = store.getState();
+  const node = state.editorModel?.nodesById?.[operation.id];
+  if (!node) return false;
+
+  return (
+    node.position?.x === operation.position?.x &&
+    node.position?.y === operation.position?.y
+  );
+}
+
+function shouldPushHistoryForOperation(operation) {
+  if (isApplyingHistory) return false;
+
+  if (operation?.type !== 'moveNode') {
+    finishMoveHistoryGroup();
+    return true;
+  }
+
+  const nodeId = operation.id;
+
+  if (!nodeId) {
+    finishMoveHistoryGroup();
+    return true;
+  }
+
+  if (isNoopMoveOperation(operation)) {
+    return false;
+  }
+
+  if (activeMoveHistoryNodeId === nodeId) {
+    scheduleMoveHistoryGroupFinish();
+    return false;
+  }
+
+  finishMoveHistoryGroup();
+  activeMoveHistoryNodeId = nodeId;
+  scheduleMoveHistoryGroupFinish();
+  return true;
+}
+
 function createEditorHistorySnapshot() {
   const state = store.getState();
 
@@ -1364,6 +1431,8 @@ function renderUndoRedoState() {
 
 async function restoreEditorHistorySnapshot(snapshot, { pushRedo = false, pushUndo = false } = {}) {
   if (!snapshot) return;
+
+  finishMoveHistoryGroup();
 
   const currentSnapshot = createEditorHistorySnapshot();
 
@@ -1407,6 +1476,7 @@ async function restoreEditorHistorySnapshot(snapshot, { pushRedo = false, pushUn
 async function undoGraphEdit() {
   if (!undoStack.length) return;
 
+  finishMoveHistoryGroup();
   cancelPendingAutoApplyDsl();
 
   isApplyingHistory = true;
@@ -1422,6 +1492,7 @@ async function undoGraphEdit() {
 async function redoGraphEdit() {
   if (!redoStack.length) return;
 
+  finishMoveHistoryGroup();
   cancelPendingAutoApplyDsl();
 
   isApplyingHistory = true;
@@ -1453,6 +1524,7 @@ function handleUndoRedoKeyDown(event) {
 }
 
 function clearEditorHistory() {
+  finishMoveHistoryGroup();
   undoStack = [];
   redoStack = [];
   renderUndoRedoState();
@@ -1537,6 +1609,7 @@ async function handleOperation(operation) {
   if (!state.editorModel) return null;
 
   const beforeSnapshot = createEditorHistorySnapshot();
+  const shouldPushHistory = shouldPushHistoryForOperation(operation);
 
   const result = applyNodeEditorOperationState(
     {
@@ -1570,19 +1643,27 @@ async function handleOperation(operation) {
     syncGraphToDslEditor({ markDirty: true });
     setDirty(true);
 
-    if (!isApplyingHistory) {
+    if (shouldPushHistory) {
       pushUndoSnapshot(beforeSnapshot);
     }
 
     return result;
   }
 
-  const currentModel = state.editorModel;
-  if (currentModel && result.change.shouldRerenderView) {
-    await nodeEditor?.renderModel(currentModel);
+  if (result.error) {
+    if (operation?.type === 'moveNode') {
+      finishMoveHistoryGroup();
+    }
+
+    const currentModel = state.editorModel;
+    if (currentModel && result.change.shouldRerenderView) {
+      await nodeEditor?.renderModel(currentModel);
+    }
+
+    renderErrors();
+    return result;
   }
 
-  renderErrors();
   return result;
 }
 
