@@ -1327,6 +1327,30 @@ async function renameSelectedNode() {
   }
 }
 
+function commitSelectedNodeLabel(input) {
+  const node = getSelectedEditorNode();
+  if (!node) return;
+
+  const nextLabel = input.value;
+  const currentLabel = node.label || '';
+
+  if (nextLabel === currentLabel) return;
+
+  applyNodeMetadataEdit('label', nextLabel || null);
+}
+
+function commitSelectedNodeComment(textarea) {
+  const node = getSelectedEditorNode();
+  if (!node) return;
+
+  const nextComment = textarea.value;
+  const currentComment = node.comment || '';
+
+  if (nextComment === currentComment) return;
+
+  applyNodeMetadataEdit('comment', nextComment || null);
+}
+
 function attachInspectorActionListeners() {
   const deleteButton = elements.inspectorPanel.querySelector('#delete-selected-node-btn');
   deleteButton?.addEventListener('click', deleteSelectedNode);
@@ -1342,14 +1366,34 @@ function attachInspectorActionListeners() {
   });
 
   const labelInput = elements.inspectorPanel.querySelector('#selected-node-label-input');
-  labelInput?.addEventListener('change', (event) => {
-    applyNodeMetadataEdit('label', event.target.value.trim() || null);
-  });
+  if (labelInput) {
+    labelInput.addEventListener('change', () => {
+      commitSelectedNodeLabel(labelInput);
+    });
+
+    labelInput.addEventListener('blur', () => {
+      commitSelectedNodeLabel(labelInput);
+    });
+
+    labelInput.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+
+      event.preventDefault();
+      commitSelectedNodeLabel(labelInput);
+      labelInput.blur();
+    });
+  }
 
   const commentInput = elements.inspectorPanel.querySelector('#selected-node-comment-input');
-  commentInput?.addEventListener('change', (event) => {
-    applyNodeMetadataEdit('comment', event.target.value.trim() || null);
-  });
+  if (commentInput) {
+    commentInput.addEventListener('change', () => {
+      commitSelectedNodeComment(commentInput);
+    });
+
+    commentInput.addEventListener('blur', () => {
+      commitSelectedNodeComment(commentInput);
+    });
+  }
 
   elements.inspectorPanel
     .querySelectorAll('[data-remove-edge-id]')
