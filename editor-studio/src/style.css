@@ -585,3 +585,35 @@ body.panels-hidden .editor-panels {
   font-size: 12px;
   padding: 3px 6px;
 }
+
+.toolbar-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-dim);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.toolbar-toggle input {
+  margin: 0;
+  cursor: pointer;
+}
+
+.auto-apply-status {
+  color: var(--text-dim);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.auto-apply-status.pending {
+  color: #e7c66b;
+}
+
+.auto-apply-status.ok {
+  color: #80ed99;
+}
+
+.auto-apply-status.error {
+  color: #ff9b9b;
+}
