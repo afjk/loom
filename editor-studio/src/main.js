@@ -42,6 +42,9 @@ const ACTIVE_BOTTOM_TAB_KEY = 'loomlet.editorStudio.activeBottomTab';
 const MAX_HISTORY_ENTRIES = 100;
 const MOVE_HISTORY_COALESCE_MS = 250;
 
+let outputEntries = [];
+const MAX_OUTPUT_ENTRIES = 500;
+
 const DEFAULT_BOTTOM_PANEL_HEIGHT = 260;
 const MIN_BOTTOM_PANEL_HEIGHT = 120;
 const MAX_BOTTOM_PANEL_RATIO = 0.6;
@@ -119,7 +122,9 @@ const elements = {
   redoBtn: document.getElementById('redo-btn'),
   dirtyStatus: document.getElementById('dirty-status'),
   autoApplyStatusPill: document.getElementById('auto-apply-status-pill'),
-  autoSyncStatusPill: document.getElementById('auto-sync-status-pill')
+  autoSyncStatusPill: document.getElementById('auto-sync-status-pill'),
+  outputLog: document.getElementById('output-log'),
+  clearOutputBtn: document.getElementById('clear-output-btn')
 };
 
 function setPanelsVisible(visible) {
@@ -577,6 +582,7 @@ async function saveDslAsFile() {
       }
 
       setDirty(false);
+      appendOutput({ level: 'info', message: 'File saved.' });
       return;
     }
 
@@ -587,6 +593,7 @@ async function saveDslAsFile() {
     }
 
     setDirty(false);
+    appendOutput({ level: 'info', message: 'File saved.' });
   } catch (error) {
     if (isAbortError(error)) return;
     setEditorError(`Save failed: ${error.message}`);
@@ -613,6 +620,7 @@ async function saveDslFile() {
     }
 
     setDirty(false);
+    appendOutput({ level: 'info', message: 'File saved.' });
   } catch (error) {
     if (isAbortError(error)) return;
     setEditorError(`Save failed: ${error.message}`);
@@ -650,6 +658,7 @@ async function openLoomFile() {
       hasUnsyncedDslText = false;
       setDirty(false);
       clearEditorHistory();
+      appendOutput({ level: 'info', message: 'File opened.' });
       return;
     }
 
@@ -668,6 +677,7 @@ async function openLoomFile() {
       hasUnsyncedDslText = false;
       setDirty(false);
       clearEditorHistory();
+      appendOutput({ level: 'info', message: 'File opened.' });
     });
     input.click();
   } catch (error) {
@@ -757,15 +767,22 @@ async function applyDslTextToGraph(sourceText, { markDirty = true, preserveGraph
   };
 }
 
-async function applyDsl({ markDirty = true } = {}) {
+async function applyDsl({ markDirty = true, logOutput = true } = {}) {
   const result = await applyDslTextToGraph(getDslText(), {
     markDirty,
     preserveGraphOnError: false
   });
 
   if (result.ok) {
+    if (logOutput) {
+      appendOutput({ level: 'info', message: 'DSL applied successfully.' });
+    }
     cancelPendingAutoApplyDsl();
     clearEditorHistory();
+  } else {
+    if (logOutput) {
+      appendOutput({ level: 'error', message: 'DSL apply failed.' });
+    }
   }
 
   return result;
@@ -838,8 +855,50 @@ async function autoApplyDslFromEditor(requestId) {
     renderAutoApplyStatus('ok');
     clearEditorHistory();
   } else {
+    appendOutput({ level: 'error', message: 'Auto Apply DSL error.' });
     renderAutoApplyStatus('error');
   }
+}
+
+function appendOutput(entry) {
+  outputEntries.push({
+    time: new Date().toISOString(),
+    level: entry.level || 'info',
+    message: String(entry.message ?? '')
+  });
+
+  if (outputEntries.length > MAX_OUTPUT_ENTRIES) {
+    outputEntries = outputEntries.slice(-MAX_OUTPUT_ENTRIES);
+  }
+
+  renderOutput();
+}
+
+function clearOutput() {
+  outputEntries = [];
+  renderOutput();
+}
+
+function formatOutputTime(isoString) {
+  return isoString.slice(11, 19);
+}
+
+function renderOutput() {
+  if (!elements.outputLog) return;
+
+  if (!outputEntries.length) {
+    elements.outputLog.textContent = 'No output yet.';
+    elements.outputLog.classList.add('is-empty');
+    return;
+  }
+
+  elements.outputLog.classList.remove('is-empty');
+  elements.outputLog.textContent = outputEntries
+    .map((entry) => {
+      const time = formatOutputTime(entry.time);
+      return `${time} [${entry.level}] ${entry.message}`;
+    })
+    .join('\n');
 }
 
 function renderGraphJSON(graph) {
@@ -1763,6 +1822,8 @@ function setupEventListeners() {
     });
   });
 
+  elements.clearOutputBtn?.addEventListener('click', clearOutput);
+
   elements.nodePaletteSearch?.addEventListener('input', renderNodePalette);
   elements.nodePaletteCategory?.addEventListener('change', renderNodePalette);
 
@@ -1880,7 +1941,8 @@ async function init() {
   renderNodePalette();
   updateNodeListCategories();
   renderNodeList();
-  await applyDsl({ markDirty: false });
+  renderOutput();
+  await applyDsl({ markDirty: false, logOutput: false });
   setDirty(false);
 }
 
