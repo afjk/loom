@@ -42,6 +42,7 @@ let isDirty = false;
 let isApplyingProgrammaticDslChange = false;
 let hasUnsyncedDslText = false;
 let autoApplyDslEnabled = false;
+let autoSyncGraphToDslEnabled = true;
 let autoApplyTimer = null;
 let autoApplyDelayMs = 500;
 let autoApplyRequestId = 0;
@@ -69,7 +70,8 @@ const elements = {
   nodePaletteCategory: document.getElementById('node-palette-category'),
   nodePaletteList: document.getElementById('node-palette-list'),
   autoApplyDslToggle: document.getElementById('autoApplyDslToggle'),
-  autoApplyStatus: document.getElementById('auto-apply-status')
+  autoApplyStatus: document.getElementById('auto-apply-status'),
+  autoSyncGraphToDslToggle: document.getElementById('autoSyncGraphToDslToggle')
 };
 
 function setPanelsVisible(visible) {
@@ -465,28 +467,46 @@ async function applyDsl({ markDirty = true } = {}) {
   return result;
 }
 
-function generateDsl() {
+function generateCanonicalDslFromState() {
   const state = store.getState();
-  if (!state.editorModel) return;
+
+  if (!state.editorModel) {
+    return getDslText();
+  }
 
   const graph = editorModelToGraph(state.editorModel, state.graph);
-  const dsl = graphToCanonicalDSL(graph);
+  return graphToCanonicalDSL(graph);
+}
+
+function syncGraphToDslEditor({ markDirty = true, force = false } = {}) {
+  if (!force && !autoSyncGraphToDslEnabled) return null;
+
+  const dsl = generateCanonicalDslFromState();
 
   setDslText(dsl);
+
   store.setState({
     sourceText: dsl,
-    graph,
     errors: []
   });
 
-  renderGraphJSON(graph);
   renderErrors();
-  renderInspector();
-  runPreview(graph);
+
   hasUnsyncedDslText = false;
   latestSuccessfulDslText = dsl;
+
+  if (markDirty) {
+    setDirty(true);
+  }
+
+  return dsl;
+}
+
+function generateDsl() {
   cancelPendingAutoApplyDsl();
-  setDirty(true);
+  const dsl = syncGraphToDslEditor({ markDirty: true, force: true });
+  if (!dsl) return;
+  renderAutoApplyStatus(autoApplyDslEnabled ? 'ok' : null);
 }
 
 async function autoApplyDslFromEditor(requestId) {
@@ -1112,6 +1132,14 @@ function setupEventListeners() {
     }
   });
 
+  elements.autoSyncGraphToDslToggle?.addEventListener('change', () => {
+    autoSyncGraphToDslEnabled = Boolean(elements.autoSyncGraphToDslToggle.checked);
+
+    if (autoSyncGraphToDslEnabled && !hasUnsyncedDslText) {
+      syncGraphToDslEditor({ markDirty: false });
+    }
+  });
+
   elements.tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       const tabName = btn.getAttribute('data-tab');
@@ -1162,6 +1190,7 @@ async function handleOperation(operation) {
     runPreview(result.state.graph);
     hasUnsyncedDslText = false;
     cancelPendingAutoApplyDsl();
+    syncGraphToDslEditor({ markDirty: true });
     setDirty(true);
     return result;
   }
