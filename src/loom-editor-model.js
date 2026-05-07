@@ -226,19 +226,25 @@ export function preserveEditorModelLayout(nextEditorModel, previousEditorModel) 
   const nodesById = {};
   for (const [id, node] of Object.entries(nextEditorModel.nodesById || {})) {
     const previousNode = previousEditorModel.nodesById?.[id];
+    const nextNode = { ...node };
 
     if (
       previousNode?.position &&
       Number.isFinite(previousNode.position.x) &&
       Number.isFinite(previousNode.position.y)
     ) {
-      nodesById[id] = {
-        ...node,
-        position: { ...previousNode.position }
-      };
-    } else {
-      nodesById[id] = node;
+      nextNode.position = { ...previousNode.position };
     }
+
+    if (typeof previousNode?.label === 'string' && previousNode.label !== '') {
+      nextNode.label = previousNode.label;
+    }
+
+    if (typeof previousNode?.comment === 'string' && previousNode.comment !== '') {
+      nextNode.comment = previousNode.comment;
+    }
+
+    nodesById[id] = nextNode;
   }
 
   return {

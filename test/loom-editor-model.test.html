@@ -261,6 +261,84 @@
       assert(!merged.nodesById.old, 'removed node should not be restored');
     });
 
+    test('17b. preserveEditorModelLayout preserves label and comment for matching nodes', () => {
+      const previous = graphToEditorModel(sampleGraph());
+      previous.nodesById.wave = {
+        ...previous.nodesById.wave,
+        label: 'Wave Label',
+        comment: 'Wave comment',
+        position: { x: 123, y: 456 }
+      };
+
+      const next = graphToEditorModel(sampleGraph());
+      const preserved = preserveEditorModelLayout(next, previous);
+
+      assertEqual(preserved.nodesById.wave.label, 'Wave Label');
+      assertEqual(preserved.nodesById.wave.comment, 'Wave comment');
+      assertEqual(preserved.nodesById.wave.position, { x: 123, y: 456 });
+    });
+
+    test('17c. preserveEditorModelLayout preserves label only when present', () => {
+      const previous = graphToEditorModel(sampleGraph());
+      previous.nodesById.wave = {
+        ...previous.nodesById.wave,
+        label: 'My Label',
+        position: { x: 100, y: 200 }
+      };
+
+      const next = graphToEditorModel(sampleGraph());
+      const preserved = preserveEditorModelLayout(next, previous);
+
+      assertEqual(preserved.nodesById.wave.label, 'My Label');
+      assert(!('comment' in preserved.nodesById.wave), 'comment should not be set when not in previous');
+      assertEqual(preserved.nodesById.wave.position, { x: 100, y: 200 });
+    });
+
+    test('17d. preserveEditorModelLayout ignores empty label and comment', () => {
+      const previous = graphToEditorModel(sampleGraph());
+      previous.nodesById.wave = {
+        ...previous.nodesById.wave,
+        label: '',
+        comment: '',
+        position: { x: 100, y: 200 }
+      };
+
+      const next = graphToEditorModel(sampleGraph());
+      const preserved = preserveEditorModelLayout(next, previous);
+
+      assert(!('label' in preserved.nodesById.wave) || preserved.nodesById.wave.label !== '', 'empty label should not be preserved');
+      assert(!('comment' in preserved.nodesById.wave) || preserved.nodesById.wave.comment !== '', 'empty comment should not be preserved');
+      assertEqual(preserved.nodesById.wave.position, { x: 100, y: 200 });
+    });
+
+    test('17e. preserveEditorModelLayout does not resurrect removed nodes with label/comment', () => {
+      const previous = {
+        nodesById: {
+          old: {
+            id: 'old',
+            type: 'sine',
+            category: 'transform',
+            params: {},
+            position: { x: 1, y: 2 },
+            label: 'Old Label',
+            comment: 'Old Comment'
+          }
+        },
+        edgesById: {},
+        order: ['old']
+      };
+
+      const next = {
+        nodesById: {},
+        edgesById: {},
+        order: []
+      };
+
+      const merged = preserveEditorModelLayout(next, previous);
+
+      assert(!merged.nodesById.old, 'removed node should not be restored even with label/comment');
+    });
+
     test('18. doRectsOverlap detects overlapping rectangles', () => {
       const rect1 = { x: 0, y: 0, width: 100, height: 100 };
       const rect2 = { x: 50, y: 50, width: 100, height: 100 };
