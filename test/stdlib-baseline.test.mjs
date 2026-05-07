@@ -168,15 +168,39 @@ sum = list.reduce(numbers, initial: 0, fn: fn(acc, n) => math.add(acc, n))`, { t
 
 
 test('function body node calls enforce positional and named argument rules', () => {
+  const positionalBinary = runLoomSource(`a = math.add(1, 2)
+b = math.subtract(10, 3)
+c = math.multiply(a, b)
+d = math.divide(c, 3)
+e = math.mod(d, 5)
+console.log(e)`, { target: 'cli', get: '_effect1.out' });
+  assert.equal(positionalBinary.ok, true, JSON.stringify(positionalBinary.errors));
+
+  const bodyPositionalBinary = runLoomSource(`modBy = fn(n, divisor) => math.mod(n, divisor)
+console.log(modBy(10, 3))`, { target: 'cli', get: '_effect1.out' });
+  assert.equal(bodyPositionalBinary.ok, true, JSON.stringify(bodyPositionalBinary.errors));
+
   const result = runLoomSource(`bad = fn(x) => logic.greaterThan(x, 2)
 bad(3)`, { target: 'cli', get: '_effect1.out' });
   assert.equal(result.ok, false);
   assert.equal(result.errors[0]?.code, 'MISSING_ARGUMENT_NAME');
 
+  const topLevelComparison = runLoomSource('logic.greaterThan(10, 3)', { target: 'cli', get: '_effect1.out' });
+  assert.equal(topLevelComparison.ok, false);
+  assert.equal(topLevelComparison.errors[0]?.code, 'MISSING_ARGUMENT_NAME');
+
+  const multiPositional = runLoomSource('math.map(0.5, 0, 1, 0, 100)', { target: 'cli', get: '_effect1.out' });
+  assert.equal(multiPositional.ok, false);
+  assert.equal(multiPositional.errors[0]?.code, 'MISSING_ARGUMENT_NAME');
+
   const unknown = runLoomSource(`bad = fn(x) => logic.greaterThan(x, nope: 2)
 bad(3)`, { target: 'cli', get: '_effect1.out' });
   assert.equal(unknown.ok, false);
   assert.equal(unknown.errors[0]?.code, 'UNKNOWN_ARGUMENT');
+
+  const unknownTopLevel = runLoomSource('math.add(1, wrong: 2)', { target: 'cli', get: '_effect1.out' });
+  assert.equal(unknownTopLevel.ok, false);
+  assert.equal(unknownTopLevel.errors[0]?.code, 'UNKNOWN_ARGUMENT');
 });
 
 test('stdlib metadata corrections', () => {
