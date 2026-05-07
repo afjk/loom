@@ -1347,6 +1347,72 @@ sink = setCssVar(v, target: "#demo-card", nope: "x")
       }
     });
 
+    test("log ノードが値をパススルーする", () => {
+      const graph = {
+        nodes: [
+          { id: "const1", type: "constant", params: { value: 42 } },
+          { id: "logger", type: "log", params: { label: "test" } }
+        ],
+        edges: [
+          { from: "const1.out", to: "logger.value" }
+        ]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      assertEqual(engine.getValue("logger.value"), 42);
+    });
+
+    test("log ノードがメッセージを記録する", () => {
+      const graph = {
+        nodes: [
+          { id: "const1", type: "constant", params: { value: 3.14159 } },
+          { id: "logger", type: "log", params: { label: "pi" } }
+        ],
+        edges: [
+          { from: "const1.out", to: "logger.value" }
+        ]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      const effects = engine.getEffects();
+      assert(effects.length > 0, "expected at least one effect");
+      const logEffect = effects.find(e => e.type === "log");
+      assert(logEffect, "expected log effect");
+      assert(logEffect.message.includes("pi"), "expected label in message");
+      assert(logEffect.message.includes("3.14159"), "expected value in message");
+    });
+
+    test("log ノードはラベルなしで値のみを記録する", () => {
+      const graph = {
+        nodes: [
+          { id: "const1", type: "constant", params: { value: "hello" } },
+          { id: "logger", type: "log", params: { label: "" } }
+        ],
+        edges: [
+          { from: "const1.out", to: "logger.value" }
+        ]
+      };
+      const engine = new Loom(graph);
+      engine.evaluateAt(0);
+      const effects = engine.getEffects();
+      const logEffect = effects.find(e => e.type === "log");
+      assert(logEffect, "expected log effect");
+      assert(logEffect.message === '"hello"', `expected '"hello"', got '${logEffect.message}'`);
+    });
+
+    test("DSL: log を使用するスクリプトがコンパイルできる", () => {
+      const parsed = parseDSL(`
+t = clock()
+wave = sine(t, freq: 0.35)
+logged = log(wave, label: "wave")
+`);
+      const logNode = parsed.nodes.find(n => n.id === "logged");
+      assert(logNode, "logged node not found");
+      assertEqual(logNode.type, "log");
+      assertEqual(logNode.params.label, "wave");
+      assert(parsed.edges.some(e => e.from === "wave.out" && e.to === "logged.value"), "expected edge wave.out -> logged.value");
+    });
+
     // 実行とレポート
     const root = document.getElementById("results");
     let pass = 0, fail = 0;

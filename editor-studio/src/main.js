@@ -38,6 +38,7 @@ const SAMPLE_DSL = `t = clock()
 wave = sine(t, freq: 0.35)
 smooth = smoothLerp(wave, rate: 5, initial: 0)
 width = map(smooth, inMin: -1, inMax: 1, outMin: 80, outMax: 680, clamp: true)
+logged = log(smooth, label: "wave")
 
 render bar(width: width, color: "#80ed99", height: 48)
 `;
@@ -91,6 +92,9 @@ let dslPaneWidth = DEFAULT_DSL_PANE_WIDTH;
 let isResizingEditorSplit = false;
 
 let undoStack = [];
+let outputEntries = [];
+let lastLogByNodeId = new Map();
+const MAX_OUTPUT_ENTRIES = 500;
 let redoStack = [];
 let isApplyingHistory = false;
 let activeMoveHistoryNodeId = null;
@@ -132,6 +136,8 @@ const elements = {
   undoBtn: document.getElementById('undo-btn'),
   redoBtn: document.getElementById('redo-btn'),
   dirtyStatus: document.getElementById('dirty-status'),
+  autoApplyStatusPill: document.getElementById('auto-apply-status-pill'),
+  autoSyncStatusPill: document.getElementById('auto-sync-status-pill'),
   outputLog: document.getElementById('output-log'),
   clearOutputBtn: document.getElementById('clear-output-btn')
 };
@@ -1376,6 +1382,13 @@ function tick(engine, graph) {
   const ctx = canvas.getContext('2d');
 
   if (engine) {
+    const effects = engine.getEffects();
+    for (const effect of effects) {
+      if (effect.type === 'log' && effect.message) {
+        appendOutput({ level: 'log', message: effect.message });
+      }
+    }
+
     const currentRender = graph?.render;
     const trail = currentRender?.trail !== undefined ? currentRender.trail : 0.1;
 
@@ -1867,9 +1880,11 @@ function setupEventListeners() {
   elements.runPreviewBtn.addEventListener('click', () => {
     const state = store.getState();
     if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    clearOutput();
     runPreview(state.graph);
   });
   elements.resetSampleBtn.addEventListener('click', resetSample);
+  elements.outputClearBtn?.addEventListener('click', clearOutput);
   elements.togglePanelsBtn.addEventListener('click', () => {
     setPanelsVisible(!panelsVisible);
   });

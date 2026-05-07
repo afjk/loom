@@ -1610,6 +1610,25 @@ export const NODE_TYPES = {
       const offset = inputs.offset;
       return { out: Math.sin(t * freq * 2 * Math.PI) * amplitude + offset };
     }
+  },
+
+  log: {
+    category: 'output',
+    inputs: [
+      { name: 'value', type: 'any', default: undefined, kind: 'behavior' }
+    ],
+    outputs: [
+      { name: 'value', type: 'any', kind: 'behavior' }
+    ],
+    params: [
+      { name: 'label', type: 'string', default: '' }
+    ],
+    evaluate: (inputs, params, ctx) => {
+      const label = params.label ?? '';
+      const message = label ? `${label}: ${inspectValue(inputs.value)}` : inspectValue(inputs.value);
+      ctx.engine?._recordEffect({ type: 'log', message, nodeId: ctx.currentNodeId });
+      return { value: inputs.value };
+    }
   }
 };
 

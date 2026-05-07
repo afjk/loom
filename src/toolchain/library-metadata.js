@@ -1060,6 +1060,15 @@ LIBRARY_METADATA.debug = {
   ].map(([name, [signature, description, returns]]) => [name, makeFunctionMetadata('debug', name, signature, description, returns)]))
 };
 
+LIBRARY_METADATA.output = {
+  name: 'output',
+  description: LIBRARY_COMPATIBILITY.output.description,
+  targets: LIBRARY_COMPATIBILITY.output.targets,
+  functions: Object.fromEntries([
+    ['log', ['log(value, label: "")', 'Logs a value to the Output panel and returns the value.', 'any']]
+  ].map(([name, [signature, description, returns]]) => [name, makeFunctionMetadata('output', name, signature, description, returns)]))
+};
+
 LIBRARY_METADATA.fs.functions = Object.fromEntries([
   ['readText', ['fs.readText(path: "file.txt")', 'CLI-only: reads UTF-8 text from the local filesystem.', 'string']],
   ['writeText', ['fs.writeText(path: "file.txt", value: "text")', 'CLI-only: writes UTF-8 text to the local filesystem.', 'void']],
