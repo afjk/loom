@@ -10,6 +10,7 @@ Current:
 - pipeline `|>`
 - `import`, assignment, comments
 - single-expression function values: `fn(...) => expression`
+- positional binary nodes are supported in function bodies (currently: `math.add`, `math.subtract`, `math.multiply`, `math.divide`, `math.mod`, `math.min`, `math.max`, `logic.and`, `logic.or`)
 Used by tour samples:
 - `constant`, `clock`, `|>`
 Recommended baseline:

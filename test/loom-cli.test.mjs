@@ -29,6 +29,13 @@ function runCliWithEnv(args, env) {
   });
 }
 
+test('run fizzbuzz tour sample prints expected lines', () => {
+  const result = runCli(['run', 'examples/tour/language/07-fizzbuzz.loom', '--get', '_anon_1.out']);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /^1\\n2\\nFizz\\n4\\nBuzz\\nFizz/);
+  assert.match(result.stdout, /FizzBuzz/);
+});
+
 test('compile outputs GraphJSON', () => {
   const result = runCli(['compile', 'examples/cli-basic.loom']);
   assert.equal(result.status, 0, result.stderr);

@@ -2386,3 +2386,19 @@ Loom は次の 3 つの truth を分離して扱う。
 
 - v1 では DSL への書き戻し(EditorModel → Source AST → DSL)はサポートしない。
 - 将来の Yjs 統合では `nodesById` / `edgesById` を CRDT マップとしてそのまま扱う方針。
+
+
+## Function values
+
+Loomlet supports single-expression function literals: `fn(x) => math.multiply(x, 2)`.
+
+Functions can be assigned to variables: `double = fn(x) => math.multiply(x, 2)`.
+
+Functions can capture values from outer scope: `base = 10` and `addBase = fn(x) => math.add(x, base)`.
+
+Functions can be passed to list nodes: `list.map(numbers, fn: double)`.
+
+Current limitations:
+- function bodies are single expressions
+- block bodies are not supported yet
+- recursion is not supported yet
