@@ -527,3 +527,61 @@ body.panels-hidden .editor-panels {
 .btn-danger:hover {
   background: rgba(220, 60, 60, 0.28);
 }
+
+.inspector-section-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-color);
+}
+
+.connection-group {
+  margin-bottom: 12px;
+}
+
+.connection-group-title {
+  color: var(--text-dim);
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.connection-empty {
+  color: var(--text-dim);
+  font-size: 12px;
+  padding: 4px 0;
+}
+
+.connection-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.connection-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.connection-label {
+  min-width: 0;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.connection-arrow {
+  color: var(--text-dim);
+  margin: 0 4px;
+}
+
+.connection-remove-btn {
+  font-size: 12px;
+  padding: 3px 6px;
+}
