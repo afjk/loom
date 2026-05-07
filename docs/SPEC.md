@@ -330,13 +330,15 @@ SceneSync の役割は、environment を同期し、object の生成・削除・
 
 Arrowized FRP や Yampa などの背景概念については、Appendix: Influences を参照する。
 
-# アーキテクチャ
+# Loom 仕様書
 
-## レイヤー構成
+## アーキテクチャ
+
+### レイヤー構成
 
 Loomlet は、Core、拡張パック、統合プロダクトの 3 層で構成される。
 
-### Layer 1: Core
+#### Layer 1: Core
 
 Core はホストに依存しない言語処理系である。
 
@@ -362,7 +364,7 @@ Core はホストに依存しない言語処理系である。
 
 Core は、外部世界への副作用を直接実行しない。
 
-### Layer 2: 拡張パック
+#### Layer 2: 拡張パック
 
 拡張パックは、ホスト固有の source / sink / adapter を提供する薄いレイヤーである。
 
@@ -378,7 +380,7 @@ Core は、外部世界への副作用を直接実行しない。
 
 拡張パックは、`scene.setPosition` や `dom.setText` のような使いやすいノードを提供してよい。ただし、それらは Core そのものではなく、ホスト I/O への変換として扱う。
 
-### Layer 3: 統合プロダクト
+#### Layer 3: 統合プロダクト
 
 統合プロダクトは、Core と拡張パックを組み合わせてユーザーが使える形にしたものである。
 
@@ -393,7 +395,7 @@ Core は、外部世界への副作用を直接実行しない。
 
 統合プロダクトは、UI、保存、ネットワーク、デプロイ、ホスト固有の UX を持ってよい。
 
-## 表現パイプライン
+### 表現パイプライン
 
 Loomlet は、`.loom` テキスト、ノードエディタ、ランタイム実行、ホスト連携を同じ形式で無理に扱わない。
 
@@ -422,7 +424,7 @@ Node Editor は `Graph AST` を表示・編集し、座標や選択状態など�
 | Target Graph | Scene Sync / Unity / Web など各ホスト向けに変換された形式 | △ | ○ | host 側 | △ |
 | Node Editor ViewModel | ノード位置、選択、zoom、pan など UI 状態 | △ | × | × | ◎ |
 
-### 各表現の役割
+#### 各表現の役割
 
 `DSL Source` は正本である。人間と AI が読み書きしやすく、Git diff でも扱いやすい。
 
@@ -436,7 +438,7 @@ Node Editor は `Graph AST` を表示・編集し、座標や選択状態など�
 
 `Node Editor ViewModel` は、表示上の状態である。ノード座標、選択状態、zoom、pan などはプログラムの意味とは別なので分離する。
 
-## ホストI/Oモデル
+### ホストI/Oモデル
 
 ホストとは、Loomlet Core を載せて動かす外側の実行環境である。
 
@@ -463,7 +465,7 @@ getOutput(channel)
 onOutput(channel, callback)
 ```
 
-### 入力
+#### 入力
 
 ホストは、現在値やセンサー値を `setInput` で Core に渡す。
 
@@ -476,7 +478,7 @@ onOutput(channel, callback)
 - OSC value
 - time value
 
-### イベント
+#### イベント
 
 ホストは、一回性のイベントを `emitEvent` で Core に渡す。
 
@@ -488,7 +490,7 @@ onOutput(channel, callback)
 - OSC message
 - Scene Sync event
 
-### 出力
+#### 出力
 
 Core は、外の世界に反映したい結果を output として生成する。
 
@@ -512,13 +514,13 @@ Core は、外の世界に反映したい結果を output として生成する�
 
 このモデルにより、同じ Loomlet graph を複数のホストへ移植しやすくする。
 
-## ノードエディタの編集方針
+### ノードエディタの編集方針
 
 `.loom` の DSL Source を正本とする。
 
 ノードエディタは、DSL から生成された `Graph AST` を表示・編集する UI である。ノードエディタ独自の保存形式を正本にはしない。
 
-### 基本方針
+#### 基本方針
 
 - DSL Source を parse して Source AST を作る
 - Source AST を lower / normalize して Graph AST を作る
@@ -526,7 +528,7 @@ Core は、外の世界に反映したい結果を output として生成する�
 - 編集可能な操作は、Graph AST の source map を使って DSL Source への patch として適用する
 - レイアウトや選択状態は Node Editor ViewModel に分離する
 
-### 編集レベル
+#### 編集レベル
 
 最初から完全な双方向変換を目指さず、編集可能範囲を段階的に広げる。
 
@@ -555,8 +557,6 @@ x = math.sine(t, freq: 0.5, amplitude: 2, offset: 0)
 ```
 
 この方針により、DSL の可読性、Git diff、AI 編集、ノードエディタの操作性を両立する。
-
-# Loom 仕様書
 
 ## 1. 概要
 
