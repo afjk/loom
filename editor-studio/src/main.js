@@ -198,6 +198,19 @@ function scheduleAutoApplyDsl() {
   }, autoApplyDelayMs);
 }
 
+function cancelPendingAutoApplyDsl() {
+  if (autoApplyTimer) {
+    clearTimeout(autoApplyTimer);
+    autoApplyTimer = null;
+  }
+
+  autoApplyRequestId += 1;
+
+  if (autoApplyDslEnabled) {
+    renderAutoApplyStatus('ok');
+  }
+}
+
 function isAbortError(error) {
   return error && (error.name === 'AbortError' || error.code === 20);
 }
@@ -366,7 +379,7 @@ async function openLoomFile() {
   }
 }
 
-async function applyDslTextToGraph(sourceText, { markDirty = true, preserveGraphOnError = false } = {}) {
+async function applyDslTextToGraph(sourceText, { markDirty = true, preserveGraphOnError = false, shouldCommit = null } = {}) {
   const { ast, errors: parseErrors } = parseDSLToAST(sourceText);
 
   if (parseErrors.length) {
@@ -407,6 +420,14 @@ async function applyDslTextToGraph(sourceText, { markDirty = true, preserveGraph
 
   const editorModel = graphToEditorModel(graph);
 
+  if (shouldCommit && !shouldCommit()) {
+    return { ok: false, stale: true, errors: [] };
+  }
+
+  if (shouldCommit && !shouldCommit()) {
+    return { ok: false, stale: true, errors: [] };
+  }
+
   store.setState({
     sourceText,
     sourceAst: ast,
@@ -417,6 +438,11 @@ async function applyDslTextToGraph(sourceText, { markDirty = true, preserveGraph
 
   selectedNodeId = null;
   await nodeEditor?.renderModel(editorModel);
+
+  if (shouldCommit && !shouldCommit()) {
+    return { ok: false, stale: true, errors: [] };
+  }
+
   renderGraphJSON(graph);
   renderErrors();
   renderInspector();
@@ -435,10 +461,16 @@ async function applyDslTextToGraph(sourceText, { markDirty = true, preserveGraph
 }
 
 async function applyDsl({ markDirty = true } = {}) {
-  return applyDslTextToGraph(getDslText(), {
+  const result = await applyDslTextToGraph(getDslText(), {
     markDirty,
     preserveGraphOnError: false
   });
+
+  if (result.ok) {
+    cancelPendingAutoApplyDsl();
+  }
+
+  return result;
 }
 
 function generateDsl() {
@@ -461,6 +493,7 @@ function generateDsl() {
   runPreview(graph);
   hasUnsyncedDslText = false;
   latestSuccessfulDslText = dsl;
+  cancelPendingAutoApplyDsl();
   setDirty(true);
 }
 
@@ -477,9 +510,11 @@ async function autoApplyDslFromEditor(requestId) {
 
   const result = await applyDslTextToGraph(sourceText, {
     markDirty: true,
-    preserveGraphOnError: true
+    preserveGraphOnError: true,
+    shouldCommit: () => autoApplyDslEnabled && requestId === autoApplyRequestId
   });
 
+  if (result.stale) return;
   if (requestId !== autoApplyRequestId) return;
 
   if (result.ok) {
@@ -1134,6 +1169,7 @@ async function handleOperation(operation) {
     renderInspector();
     runPreview(result.state.graph);
     hasUnsyncedDslText = false;
+    cancelPendingAutoApplyDsl();
     setDirty(true);
     return result;
   }
