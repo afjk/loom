@@ -65,11 +65,13 @@ export class LoomReplSession {
     this.graph = null;
     this.lastResult = null;
     this.seenEffectNodeIds = new Set();
+    this.history = [];
   }
 
   evaluateSnippet(source) {
     const snippet = String(source ?? '');
     const trimmed = snippet.trim();
+    this.history.push(snippet);
 
     if (!trimmed) {
       return {
@@ -143,6 +145,7 @@ export class LoomReplSession {
     this.graph = null;
     this.lastResult = null;
     this.seenEffectNodeIds = new Set();
+    this.history = [];
   }
 
   inspect() {
@@ -158,5 +161,33 @@ export class LoomReplSession {
 
   getGraph() {
     return this.graph;
+  }
+
+  getHistory() {
+    return [...this.history];
+  }
+
+  loadSource(source) {
+    return this.evaluateSnippet(source);
+  }
+
+  runSource(source) {
+    return runLoomSource(String(source ?? ''), {
+      target: this.target,
+      time: this.time,
+      dt: this.dt
+    });
+  }
+
+  getVariables() {
+    const values = this.lastResult?.values || {};
+    const variables = [];
+    for (const [key, value] of Object.entries(values)) {
+      if (key.endsWith('.out')) {
+        variables.push({ name: key.slice(0, -4), value });
+      }
+    }
+    variables.sort((a, b) => a.name.localeCompare(b.name));
+    return variables;
   }
 }

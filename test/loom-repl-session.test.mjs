@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { LoomReplSession } from '../src/toolchain/repl-session.js';
 
 test('evaluates assignment snippet', () => {
@@ -146,4 +147,31 @@ test('inspect returns summary', () => {
 
   assert.equal(inspection.ok, true);
   assert.equal(inspection.summary.nodeCount >= 1, true);
+});
+
+test('vars and history are tracked', () => {
+  const session = new LoomReplSession();
+  session.evaluateSnippet('x = constant(value: 10)');
+  session.evaluateSnippet('y = fn(v) => constant(value: v)');
+  const vars = session.getVariables();
+  assert.equal(vars.some((entry) => entry.name === 'x' && entry.value === 10), true);
+  assert.equal(vars.some((entry) => entry.name === 'y'), true);
+  const history = session.getHistory();
+  assert.equal(history.length, 2);
+});
+
+test('load source persists, run source is isolated', async () => {
+  const session = new LoomReplSession();
+  const fixture = await readFile(new URL('./fixtures/repl-load.loom', import.meta.url), 'utf8');
+  const loaded = session.loadSource(fixture);
+  assert.equal(loaded.ok, true);
+  const value = session.evaluateSnippet('double(base)');
+  assert.equal(value.ok, true);
+  assert.equal(value.values['_effect1.out'], 20);
+
+  session.reset();
+  const runResult = session.runSource(fixture);
+  assert.equal(runResult.ok, true);
+  const after = session.evaluateSnippet('double(base)');
+  assert.equal(after.ok, false);
 });
