@@ -8,7 +8,7 @@
   <h1>Loom Editor Model テスト</h1>
   <div id="results"></div>
   <script type="module">
-    import { graphToEditorModel, editorModelToGraph, applyEditorOperation, layoutFallback } from "../src/loom-editor-model.js";
+    import { graphToEditorModel, editorModelToGraph, applyEditorOperation, layoutFallback, preserveEditorModelLayout } from "../src/loom-editor-model.js";
 
     const results = [];
     function test(name, fn) { results.push({ name, fn }); }
@@ -170,6 +170,95 @@
       const next = applyEditorOperation(em, { type: 'moveNode', id: 'wave', position: { x: 1, y: 1 } });
       assert(JSON.stringify(em) === before, 'input unchanged');
       assert(next !== em, 'new object');
+    });
+
+    test('15. preserveEditorModelLayout preserves positions for existing nodes', () => {
+      const previous = {
+        nodesById: {
+          wave: {
+            id: 'wave',
+            type: 'sine',
+            category: 'transform',
+            params: { freq: 0.35 },
+            position: { x: 123, y: 456 }
+          }
+        },
+        edgesById: {},
+        order: ['wave']
+      };
+
+      const next = {
+        nodesById: {
+          wave: {
+            id: 'wave',
+            type: 'sine',
+            category: 'transform',
+            params: { freq: 0.8 },
+            position: { x: 300, y: 0 }
+          }
+        },
+        edgesById: {},
+        order: ['wave']
+      };
+
+      const merged = preserveEditorModelLayout(next, previous);
+
+      assert(merged.nodesById.wave.position.x === 123, 'x should be preserved');
+      assert(merged.nodesById.wave.position.y === 456, 'y should be preserved');
+      assert(merged.nodesById.wave.params.freq === 0.8, 'params should come from next model');
+    });
+
+    test('16. preserveEditorModelLayout keeps next position for new nodes', () => {
+      const previous = {
+        nodesById: {},
+        edgesById: {},
+        order: []
+      };
+
+      const next = {
+        nodesById: {
+          wave: {
+            id: 'wave',
+            type: 'sine',
+            category: 'transform',
+            params: {},
+            position: { x: 300, y: 0 }
+          }
+        },
+        edgesById: {},
+        order: ['wave']
+      };
+
+      const merged = preserveEditorModelLayout(next, previous);
+
+      assert(merged.nodesById.wave.position.x === 300, 'new node should keep next x');
+      assert(merged.nodesById.wave.position.y === 0, 'new node should keep next y');
+    });
+
+    test('17. preserveEditorModelLayout does not re-add removed nodes', () => {
+      const previous = {
+        nodesById: {
+          old: {
+            id: 'old',
+            type: 'sine',
+            category: 'transform',
+            params: {},
+            position: { x: 1, y: 2 }
+          }
+        },
+        edgesById: {},
+        order: ['old']
+      };
+
+      const next = {
+        nodesById: {},
+        edgesById: {},
+        order: []
+      };
+
+      const merged = preserveEditorModelLayout(next, previous);
+
+      assert(!merged.nodesById.old, 'removed node should not be restored');
     });
 
     async function run() {

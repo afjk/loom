@@ -2,7 +2,8 @@ export {
   layoutFallback,
   graphToEditorModel,
   editorModelToGraph,
-  applyEditorOperation
+  applyEditorOperation,
+  preserveEditorModelLayout
 } from './loom-editor-model.js';
 
 export {
