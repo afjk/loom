@@ -30,7 +30,7 @@
   },
   "scripts": {
     "test": "npm run test:unit",
-    "test:unit": "node test/loom-cli.test.mjs && node test/loom-repl-session.test.mjs && node test/loom-repl-cli.test.mjs && node test/scenesync-client.test.mjs && node test/scenesync-session-store.test.mjs && node test/scenesync-effects.test.mjs && node test/scenesync-graphs.test.mjs && node test/scenesync-graph-adapter.test.mjs && node test/stdlib-baseline.test.mjs",
+    "test:unit": "node test/loom-cli.test.mjs && node test/tour-runnable.test.mjs && node test/loom-repl-session.test.mjs && node test/loom-repl-cli.test.mjs && node test/scenesync-client.test.mjs && node test/scenesync-session-store.test.mjs && node test/scenesync-effects.test.mjs && node test/scenesync-graphs.test.mjs && node test/scenesync-graph-adapter.test.mjs && node test/stdlib-baseline.test.mjs",
     "loom": "node bin/loom.mjs",
     "test:cli": "node test/loom-cli.test.mjs",
     "test:repl": "node test/loom-repl-session.test.mjs && node test/loom-repl-cli.test.mjs",

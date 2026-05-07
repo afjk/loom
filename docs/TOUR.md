@@ -4,6 +4,12 @@ Loomlet is a small dataflow language for weaving values, signals, and scene beha
 
 Loomlet source files use the `.loom` extension.
 
+## Sample status
+
+- `runnable`: can be executed locally and is covered by CI-safe tests.
+- `manual-runnable`: works with external setup such as a linked Scene Sync room.
+- `draft`: design sketch or requires missing features.
+
 ## Language
 
 ### 01 Hello
