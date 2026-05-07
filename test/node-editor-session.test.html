@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Node Editor Session テスト</title>
+</head>
+<body>
+  <h1>Node Editor Session テスト</h1>
+  <div id="results"></div>
+  <script type="module">
+    import {
+      createNodeEditorState,
+      applyNodeEditorOperationState,
+      graphToEditorModel,
+      editorModelToGraph
+    } from "../src/node-editor-core.js";
+
+    const results = [];
+    function test(name, fn) { results.push({ name, fn }); }
+    function assert(cond, msg) { if (!cond) throw new Error(msg || 'assertion failed'); }
+    function assertEqual(a, b, msg) {
+      const av = JSON.stringify(a);
+      const bv = JSON.stringify(b);
+      if (av !== bv) throw new Error(msg || `expected ${bv}, got ${av}`);
+    }
+
+    function sampleGraph() {
+      return {
+        nodes: [
+          { id: 't', type: 'clock' },
+          { id: 'wave', type: 'sine', params: { freq: 0.3 } },
+          { id: 'out', type: 'setVar', params: { key: 'v' } }
+        ],
+        edges: [
+          { from: 't.t', to: 'wave.t' },
+          { from: 'wave.out', to: 'out.value' }
+        ],
+        render: { type: 'point', x: 'wave.out', y: 'wave.out' }
+      };
+    }
+
+    test('API: createNodeEditorState exists', () => {
+      assert(typeof createNodeEditorState === 'function', 'createNodeEditorState should be a function');
+    });
+
+    test('API: applyNodeEditorOperationState exists', () => {
+      assert(typeof applyNodeEditorOperationState === 'function', 'applyNodeEditorOperationState should be a function');
+    });
+
+    test('Test 1: create state from graph', () => {
+      const graph = sampleGraph();
+      const state = createNodeEditorState(graph);
+
+      assert(state.graph, 'state.graph should exist');
+      assert(state.editorModel, 'state.editorModel should exist');
+      assert(Array.isArray(state.errors), 'state.errors should be an array');
+      assert(state.errors.length === 0, 'state.errors should be empty');
+      assert(state.graph === graph, 'state.graph should be the input graph');
+      assert(state.editorModel.nodesById, 'editorModel.nodesById should exist');
+      assert(state.editorModel.edgesById, 'editorModel.edgesById should exist');
+    });
+
+    test('Test 2: updateParam operation', () => {
+      const graph = sampleGraph();
+      const state = createNodeEditorState(graph);
+
+      const operation = {
+        type: 'updateParam',
+        id: 'wave',
+        key: 'freq',
+        value: 0.9
+      };
+
+      const result = applyNodeEditorOperationState(state, operation);
+
+      assert(result.error === null, 'result.error should be null');
+      assert(result.change.graphChanged === true, 'result.change.graphChanged should be true');
+      assert(result.change.shouldRerenderView === true, 'result.change.shouldRerenderView should be true');
+      assert(result.state.editorModel.nodesById.wave.params.freq === 0.9, 'freq param should be updated to 0.9');
+
+      const graphNode = result.state.graph.nodes.find(n => n.id === 'wave');
+      assert(graphNode.params.freq === 0.9, 'graph node param should be updated');
+    });
+
+    test('Test 3: moveNode operation', () => {
+      const graph = sampleGraph();
+      const state = createNodeEditorState(graph);
+
+      const operation = {
+        type: 'moveNode',
+        id: 'wave',
+        position: { x: 123, y: 456 }
+      };
+
+      const result = applyNodeEditorOperationState(state, operation);
+
+      assert(result.error === null, 'result.error should be null');
+      assert(result.change.graphChanged === true, 'result.change.graphChanged should be true');
+      assert(result.change.shouldRerenderView === false, 'result.change.shouldRerenderView should be false');
+
+      const editorNode = result.state.editorModel.nodesById.wave;
+      assert(editorNode.position.x === 123, 'position.x should be 123');
+      assert(editorNode.position.y === 456, 'position.y should be 456');
+
+      const graphNode = result.state.graph.nodes.find(n => n.id === 'wave');
+      assert(graphNode.meta.position.x === 123, 'graph node meta.position.x should be 123');
+      assert(graphNode.meta.position.y === 456, 'graph node meta.position.y should be 456');
+    });
+
+    test('Test 4: invalid operation does not mutate graph', () => {
+      const graph = sampleGraph();
+      const state = createNodeEditorState(graph);
+
+      const originalGraphStr = JSON.stringify(state.graph);
+      const originalModelStr = JSON.stringify(state.editorModel);
+
+      const operation = {
+        type: 'updateParam',
+        id: 'missing',
+        key: 'freq',
+        value: 1
+      };
+
+      const result = applyNodeEditorOperationState(state, operation);
+
+      assert(result.error !== null, 'result.error should exist');
+      assert(result.change.graphChanged === false, 'result.change.graphChanged should be false');
+      assert(result.state.errors.length > 0, 'result.state.errors should contain errors');
+      assert(result.state.errors[0].code === 'EDITOR_ERROR', 'error code should be EDITOR_ERROR');
+
+      const resultGraphStr = JSON.stringify(result.state.graph);
+      const resultModelStr = JSON.stringify(result.state.editorModel);
+
+      assert(resultGraphStr === originalGraphStr, 'graph should not be mutated');
+      assert(resultModelStr === originalModelStr, 'editorModel should not be mutated');
+    });
+
+    async function run() {
+      let pass = 0; let fail = 0; const failures = [];
+      for (const t of results) {
+        try { await t.fn(); pass++; }
+        catch (e) { fail++; failures.push({ name: t.name, error: e.message }); }
+      }
+      window.__loomTestResults = { pass, fail, failures };
+      document.getElementById('results').textContent = `${pass} passed, ${fail} failed`;
+      if (failures.length > 0) {
+        console.log('Failures:', failures);
+      }
+    }
+    run();
+  </script>
+</body>
+</html>
