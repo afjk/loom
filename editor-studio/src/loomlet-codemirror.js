@@ -2,6 +2,7 @@ import { StreamLanguage, syntaxHighlighting, HighlightStyle } from '@codemirror/
 import { tags } from '@lezer/highlight';
 import { EditorView } from '@codemirror/view';
 import { autocompletion } from '@codemirror/autocomplete';
+import { linter, lintGutter, forceLinting } from '@codemirror/lint';
 
 // Create a set of valid node/function names from metadata
 function createNodeTypeNameSet(nodeTypes = {}) {
@@ -269,10 +270,70 @@ export function getParamCompletionOptionsForNode(nodeTypes = {}, nodeName) {
   }));
 }
 
+function getErrorStartLine(error) {
+  return error?.line ?? error?.span?.start?.line ?? null;
+}
+
+function getErrorStartColumn(error) {
+  return error?.column ?? error?.span?.start?.column ?? 1;
+}
+
+function getErrorEndLine(error) {
+  return error?.span?.end?.line ?? getErrorStartLine(error);
+}
+
+function getErrorEndColumn(error) {
+  return error?.span?.end?.column ?? getErrorStartColumn(error);
+}
+
+function resolveErrorPosition(doc, error, endpoint = 'start') {
+  if (!error) return 0;
+
+  const line = endpoint === 'end'
+    ? getErrorEndLine(error)
+    : getErrorStartLine(error);
+
+  const column = endpoint === 'end'
+    ? getErrorEndColumn(error)
+    : getErrorStartColumn(error);
+
+  if (!line || line < 1) return 0;
+
+  try {
+    const lineObject = doc.line(line);
+    const colOffset = Math.max(
+      0,
+      Math.min((column || 1) - 1, lineObject.length)
+    );
+    return lineObject.from + colOffset;
+  } catch {
+    return 0;
+  }
+}
+
+export function createLoomletDslLinter({ getErrors } = {}) {
+  return linter((view) => {
+    const errors = getErrors?.() || [];
+
+    return errors.map((error) => {
+      const from = resolveErrorPosition(view.state.doc, error, 'start');
+      const explicitTo = resolveErrorPosition(view.state.doc, error, 'end');
+      const to = Math.max(from + 1, explicitTo);
+
+      return {
+        from,
+        to,
+        severity: 'error',
+        message: error.message || String(error)
+      };
+    });
+  });
+}
+
 export { findNearestCallNameBefore };
 
 // Main export: return array of CodeMirror extensions
-export function loomletDslExtensions({ nodeTypes } = {}) {
+export function loomletDslExtensions({ nodeTypes, getErrors } = {}) {
   const extensions = [
     createLoomletStreamLanguage(nodeTypes),
     syntaxHighlighting(loomletHighlightStyle),
@@ -284,6 +345,11 @@ export function loomletDslExtensions({ nodeTypes } = {}) {
       activateOnTyping: true
     })
   ];
+
+  if (getErrors) {
+    extensions.push(createLoomletDslLinter({ getErrors }));
+    extensions.push(lintGutter());
+  }
 
   return extensions;
 }
