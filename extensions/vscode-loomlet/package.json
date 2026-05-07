@@ -64,6 +64,6 @@
     }
   },
   "scripts": {
-    "test": "node test/completion-context.test.mjs && node test/completion-engine.test.mjs"
+    "test": "node test/completion-context.test.mjs && node test/completion-engine.test.mjs && node test/diagnostics.test.mjs"
   }
 }
