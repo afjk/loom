@@ -41,6 +41,11 @@ let currentFileName = '';
 let isDirty = false;
 let isApplyingProgrammaticDslChange = false;
 let hasUnsyncedDslText = false;
+let autoApplyDslEnabled = false;
+let autoApplyTimer = null;
+let autoApplyDelayMs = 500;
+let autoApplyRequestId = 0;
+let latestSuccessfulDslText = '';
 
 const elements = {
   dslEditorHost: document.getElementById('dsl-editor-host'),
@@ -62,7 +67,9 @@ const elements = {
   saveAsFileBtn: document.getElementById('saveAsFileBtn'),
   nodePaletteSearch: document.getElementById('node-palette-search'),
   nodePaletteCategory: document.getElementById('node-palette-category'),
-  nodePaletteList: document.getElementById('node-palette-list')
+  nodePaletteList: document.getElementById('node-palette-list'),
+  autoApplyDslToggle: document.getElementById('autoApplyDslToggle'),
+  autoApplyStatus: document.getElementById('auto-apply-status')
 };
 
 function setPanelsVisible(visible) {
@@ -101,6 +108,7 @@ function initDslEditor() {
 
         hasUnsyncedDslText = true;
         setDirty(true);
+        scheduleAutoApplyDsl();
       })
     ]
   });
@@ -139,6 +147,68 @@ function renderFileStatus() {
   const label = currentFileName || 'No file';
   const dirtyMark = isDirty ? ' *' : '';
   elements.fileStatus.textContent = `${label}${dirtyMark}`;
+}
+
+function renderAutoApplyStatus(status = null) {
+  if (!elements.autoApplyStatus) return;
+
+  if (!autoApplyDslEnabled) {
+    elements.autoApplyStatus.textContent = 'Manual';
+    elements.autoApplyStatus.className = 'auto-apply-status';
+    return;
+  }
+
+  if (status === 'pending') {
+    elements.autoApplyStatus.textContent = 'Auto: pending';
+    elements.autoApplyStatus.className = 'auto-apply-status pending';
+    return;
+  }
+
+  if (status === 'ok') {
+    elements.autoApplyStatus.textContent = 'Auto: synced';
+    elements.autoApplyStatus.className = 'auto-apply-status ok';
+    return;
+  }
+
+  if (status === 'error') {
+    elements.autoApplyStatus.textContent = 'Auto: error';
+    elements.autoApplyStatus.className = 'auto-apply-status error';
+    return;
+  }
+
+  elements.autoApplyStatus.textContent = 'Auto: on';
+  elements.autoApplyStatus.className = 'auto-apply-status';
+}
+
+function scheduleAutoApplyDsl() {
+  if (!autoApplyDslEnabled) return;
+  if (isApplyingProgrammaticDslChange) return;
+
+  if (autoApplyTimer) {
+    clearTimeout(autoApplyTimer);
+  }
+
+  renderAutoApplyStatus('pending');
+
+  const requestId = ++autoApplyRequestId;
+
+  autoApplyTimer = window.setTimeout(() => {
+    autoApplyTimer = null;
+    autoApplyDslFromEditor(requestId);
+  }, autoApplyDelayMs);
+}
+
+function cancelPendingAutoApplyDsl() {
+  if (autoApplyTimer) {
+    clearTimeout(autoApplyTimer);
+    autoApplyTimer = null;
+  }
+
+  autoApplyRequestId += 1;
+
+  if (autoApplyDslEnabled) {
+    renderAutoApplyStatus('ok');
+  }
 }
 
 function isAbortError(error) {
@@ -309,30 +379,50 @@ async function openLoomFile() {
   }
 }
 
-async function applyDsl({ markDirty = true } = {}) {
-  const sourceText = getDslText();
+async function applyDslTextToGraph(sourceText, { markDirty = true, preserveGraphOnError = false, shouldCommit = null } = {}) {
   const { ast, errors: parseErrors } = parseDSLToAST(sourceText);
 
   if (parseErrors.length) {
     store.setState({ errors: parseErrors });
-    selectedNodeId = null;
+
+    if (!preserveGraphOnError) {
+      selectedNodeId = null;
+      renderInspector();
+    }
+
     renderErrors();
-    renderInspector();
     if (markDirty) setDirty(true);
-    return;
+
+    return {
+      ok: false,
+      errors: parseErrors
+    };
   }
 
   const { graph, errors: compileErrors } = compileToGraph(ast);
+
   if (compileErrors.length) {
     store.setState({ errors: compileErrors });
-    selectedNodeId = null;
+
+    if (!preserveGraphOnError) {
+      selectedNodeId = null;
+      renderInspector();
+    }
+
     renderErrors();
-    renderInspector();
     if (markDirty) setDirty(true);
-    return;
+
+    return {
+      ok: false,
+      errors: compileErrors
+    };
   }
 
   const editorModel = graphToEditorModel(graph);
+
+  if (shouldCommit && !shouldCommit()) {
+    return { ok: false, stale: true, errors: [] };
+  }
 
   store.setState({
     sourceText,
@@ -344,12 +434,35 @@ async function applyDsl({ markDirty = true } = {}) {
 
   selectedNodeId = null;
   await nodeEditor?.renderModel(editorModel);
+
   renderGraphJSON(graph);
   renderErrors();
   renderInspector();
   runPreview(graph);
+
   hasUnsyncedDslText = false;
+  latestSuccessfulDslText = sourceText;
+
   if (markDirty) setDirty(true);
+
+  return {
+    ok: true,
+    graph,
+    editorModel
+  };
+}
+
+async function applyDsl({ markDirty = true } = {}) {
+  const result = await applyDslTextToGraph(getDslText(), {
+    markDirty,
+    preserveGraphOnError: false
+  });
+
+  if (result.ok) {
+    cancelPendingAutoApplyDsl();
+  }
+
+  return result;
 }
 
 function generateDsl() {
@@ -371,7 +484,36 @@ function generateDsl() {
   renderInspector();
   runPreview(graph);
   hasUnsyncedDslText = false;
+  latestSuccessfulDslText = dsl;
+  cancelPendingAutoApplyDsl();
   setDirty(true);
+}
+
+async function autoApplyDslFromEditor(requestId) {
+  if (!autoApplyDslEnabled) return;
+  if (requestId !== autoApplyRequestId) return;
+
+  const sourceText = getDslText();
+
+  if (sourceText === latestSuccessfulDslText) {
+    renderAutoApplyStatus('ok');
+    return;
+  }
+
+  const result = await applyDslTextToGraph(sourceText, {
+    markDirty: true,
+    preserveGraphOnError: true,
+    shouldCommit: () => autoApplyDslEnabled && requestId === autoApplyRequestId
+  });
+
+  if (result.stale) return;
+  if (requestId !== autoApplyRequestId) return;
+
+  if (result.ok) {
+    renderAutoApplyStatus('ok');
+  } else {
+    renderAutoApplyStatus('error');
+  }
 }
 
 function renderGraphJSON(graph) {
@@ -951,6 +1093,25 @@ function setupEventListeners() {
   elements.saveFileBtn.addEventListener('click', saveDslFile);
   elements.saveAsFileBtn.addEventListener('click', saveDslAsFile);
 
+  elements.autoApplyDslToggle?.addEventListener('change', () => {
+    autoApplyDslEnabled = Boolean(elements.autoApplyDslToggle.checked);
+
+    if (!autoApplyDslEnabled) {
+      if (autoApplyTimer) {
+        clearTimeout(autoApplyTimer);
+        autoApplyTimer = null;
+      }
+      renderAutoApplyStatus();
+      return;
+    }
+
+    renderAutoApplyStatus();
+
+    if (hasUnsyncedDslText) {
+      scheduleAutoApplyDsl();
+    }
+  });
+
   elements.tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       const tabName = btn.getAttribute('data-tab');
@@ -1000,6 +1161,7 @@ async function handleOperation(operation) {
     renderInspector();
     runPreview(result.state.graph);
     hasUnsyncedDslText = false;
+    cancelPendingAutoApplyDsl();
     setDirty(true);
     return result;
   }
@@ -1029,6 +1191,7 @@ async function init() {
 
   setupEventListeners();
   renderFileStatus();
+  renderAutoApplyStatus();
   renderNodePaletteCategories();
   renderNodePalette();
   await applyDsl({ markDirty: false });
