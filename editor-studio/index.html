@@ -36,8 +36,6 @@
       </label>
       <div class="toolbar-status" aria-label="Editor status">
         <span id="dirty-status" class="status-pill">Saved</span>
-        <span id="auto-apply-status-pill" class="status-pill">Auto Apply OFF</span>
-        <span id="auto-sync-status-pill" class="status-pill">Auto Sync OFF</span>
       </div>
       <span id="auto-apply-status" class="auto-apply-status">Manual</span>
     </div>
@@ -47,6 +45,10 @@
       <div class="panel dsl-pane">
         <div class="pane-header">
           <h2>DSL Editor</h2>
+          <div class="pane-controls">
+            <button class="btn-icon" data-action="maximize-dsl" title="Maximize DSL Editor" style="display: none;">↗</button>
+            <button class="btn-icon" data-action="restore-split" title="Restore Split View" style="display: none;">↙</button>
+          </div>
         </div>
         <div id="dsl-editor-host" class="dsl-editor-host"></div>
       </div>
@@ -62,6 +64,10 @@
       <div class="panel node-pane">
         <div class="pane-header">
           <h2>Node Editor</h2>
+          <div class="pane-controls">
+            <button class="btn-icon" data-action="maximize-node" title="Maximize Node Editor" style="display: none;">↗</button>
+            <button class="btn-icon" data-action="restore-split" title="Restore Split View" style="display: none;">↙</button>
+          </div>
         </div>
         <div id="node-editor" class="node-editor-canvas"></div>
       </div>

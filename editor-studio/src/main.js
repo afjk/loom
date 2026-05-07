@@ -38,6 +38,8 @@ const BOTTOM_PANEL_HEIGHT_KEY = 'loomlet.editorStudio.bottomPanelHeight';
 const BOTTOM_PANEL_COLLAPSED_KEY = 'loomlet.editorStudio.bottomPanelCollapsed';
 const EDITOR_SPLIT_WIDTH_KEY = 'loomlet.editorStudio.editorSplitWidth';
 const ACTIVE_BOTTOM_TAB_KEY = 'loomlet.editorStudio.activeBottomTab';
+const AUTO_APPLY_DSL_KEY = 'loomlet.editorStudio.autoApplyDslEnabled';
+const EDITOR_MAXIMIZE_MODE_KEY = 'loomlet.editorStudio.editorMaximizeMode';
 
 const MAX_HISTORY_ENTRIES = 100;
 const MOVE_HISTORY_COALESCE_MS = 250;
@@ -85,6 +87,7 @@ let redoStack = [];
 let isApplyingHistory = false;
 let activeMoveHistoryNodeId = null;
 let moveHistoryCoalesceTimer = null;
+let editorMaximizeMode = 'split';
 
 const elements = {
   dslEditorHost: document.getElementById('dsl-editor-host'),
@@ -121,8 +124,6 @@ const elements = {
   undoBtn: document.getElementById('undo-btn'),
   redoBtn: document.getElementById('redo-btn'),
   dirtyStatus: document.getElementById('dirty-status'),
-  autoApplyStatusPill: document.getElementById('auto-apply-status-pill'),
-  autoSyncStatusPill: document.getElementById('auto-sync-status-pill'),
   outputLog: document.getElementById('output-log'),
   clearOutputBtn: document.getElementById('clear-output-btn')
 };
@@ -287,6 +288,54 @@ function saveEditorSplitLayout() {
   localStorage.setItem(EDITOR_SPLIT_WIDTH_KEY, String(dslPaneWidth));
 }
 
+function applyEditorMaximizeMode() {
+  const panels = elements.editorPanels;
+  if (!panels) return;
+
+  panels.classList.remove('is-maximized-dsl', 'is-maximized-node');
+
+  if (editorMaximizeMode === 'dsl') {
+    panels.classList.add('is-maximized-dsl');
+  } else if (editorMaximizeMode === 'node') {
+    panels.classList.add('is-maximized-node');
+  }
+
+  updateEditorMaximizeButtons();
+}
+
+function setEditorMaximizeMode(mode) {
+  if (!['split', 'dsl', 'node'].includes(mode)) return;
+
+  if (mode === 'split') {
+    editorMaximizeMode = 'split';
+    applyEditorSplitLayout();
+  } else if (mode === 'dsl') {
+    editorMaximizeMode = 'dsl';
+  } else if (mode === 'node') {
+    editorMaximizeMode = 'node';
+  }
+
+  applyEditorMaximizeMode();
+  saveEditorMaximizeMode();
+}
+
+function updateEditorMaximizeButtons() {
+  const panels = elements.editorPanels;
+  if (!panels) return;
+
+  panels.querySelectorAll('[data-action="maximize-dsl"]').forEach((btn) => {
+    btn.style.display = editorMaximizeMode === 'split' ? 'block' : 'none';
+  });
+
+  panels.querySelectorAll('[data-action="maximize-node"]').forEach((btn) => {
+    btn.style.display = editorMaximizeMode === 'split' ? 'block' : 'none';
+  });
+
+  panels.querySelectorAll('[data-action="restore-split"]').forEach((btn) => {
+    btn.style.display = editorMaximizeMode !== 'split' ? 'block' : 'none';
+  });
+}
+
 function selectBottomTab(tabName) {
   elements.tabBtns.forEach(b => b.classList.remove('active'));
   elements.tabPanes.forEach(p => p.classList.remove('active'));
@@ -314,6 +363,28 @@ function loadActiveBottomTab() {
   if (!button || !pane) return;
 
   selectBottomTab(savedTab);
+}
+
+function loadAutoApplyDslSetting() {
+  const saved = localStorage.getItem(AUTO_APPLY_DSL_KEY);
+  if (saved !== null) {
+    autoApplyDslEnabled = saved === 'true';
+  }
+}
+
+function saveAutoApplyDslSetting() {
+  localStorage.setItem(AUTO_APPLY_DSL_KEY, String(autoApplyDslEnabled));
+}
+
+function loadEditorMaximizeMode() {
+  const saved = localStorage.getItem(EDITOR_MAXIMIZE_MODE_KEY);
+  if (saved && ['split', 'dsl', 'node'].includes(saved)) {
+    editorMaximizeMode = saved;
+  }
+}
+
+function saveEditorMaximizeMode() {
+  localStorage.setItem(EDITOR_MAXIMIZE_MODE_KEY, editorMaximizeMode);
 }
 
 function startEditorSplitResize(event) {
@@ -462,23 +533,6 @@ function renderDirtyStatus() {
   elements.dirtyStatus.classList.toggle('is-saved', !isDirty);
 }
 
-function renderAutoApplyStatusPill() {
-  if (!elements.autoApplyStatusPill) return;
-
-  elements.autoApplyStatusPill.textContent =
-    autoApplyDslEnabled ? 'Auto Apply ON' : 'Auto Apply OFF';
-
-  elements.autoApplyStatusPill.classList.toggle('is-on', autoApplyDslEnabled);
-}
-
-function renderAutoSyncStatusPill() {
-  if (!elements.autoSyncStatusPill) return;
-
-  elements.autoSyncStatusPill.textContent =
-    autoSyncGraphToDslEnabled ? 'Auto Sync ON' : 'Auto Sync OFF';
-
-  elements.autoSyncStatusPill.classList.toggle('is-on', autoSyncGraphToDslEnabled);
-}
 
 function scheduleAutoApplyDsl() {
   if (!autoApplyDslEnabled) return;
@@ -1360,9 +1414,12 @@ function renderNodeListItem(node) {
 
   return `
     <div class="node-list-item${selectedClass}" data-node-id="${escapeHtml(node.id)}">
-      <div class="node-list-item-id">${escapeHtml(node.id)}</div>
-      <div class="node-list-item-type">${escapeHtml(node.type)}</div>
-      <div class="node-list-item-category">${escapeHtml(node.category)}</div>
+      <div class="node-list-item-content">
+        <div class="node-list-item-id">${escapeHtml(node.id)}</div>
+        <div class="node-list-item-type">${escapeHtml(node.type)}</div>
+        <div class="node-list-item-category">${escapeHtml(node.category)}</div>
+      </div>
+      <button class="btn-focus-node" data-focus-node-id="${escapeHtml(node.id)}" title="Focus on node">Focus</button>
     </div>
   `;
 }
@@ -1401,10 +1458,22 @@ function renderNodeList() {
   list.innerHTML = filtered.map(renderNodeListItem).join('');
 
   list.querySelectorAll('[data-node-id]').forEach((item) => {
-    item.addEventListener('click', () => {
+    item.addEventListener('click', (e) => {
+      if (e.target.classList.contains('btn-focus-node')) return;
       const nodeId = item.getAttribute('data-node-id');
       setSelectedNodeId(nodeId);
       renderNodeList();
+    });
+  });
+
+  list.querySelectorAll('[data-focus-node-id]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const nodeId = btn.getAttribute('data-focus-node-id');
+      setSelectedNodeId(nodeId);
+      renderNodeList();
+      if (nodeEditor?.focusNode) {
+        await nodeEditor.focusNode(nodeId);
+      }
     });
   });
 }
@@ -1787,6 +1856,7 @@ function setupEventListeners() {
 
   elements.autoApplyDslToggle?.addEventListener('change', () => {
     autoApplyDslEnabled = Boolean(elements.autoApplyDslToggle.checked);
+    saveAutoApplyDslSetting();
 
     if (!autoApplyDslEnabled) {
       if (autoApplyTimer) {
@@ -1794,12 +1864,10 @@ function setupEventListeners() {
         autoApplyTimer = null;
       }
       renderAutoApplyStatus();
-      renderAutoApplyStatusPill();
       return;
     }
 
     renderAutoApplyStatus();
-    renderAutoApplyStatusPill();
 
     if (hasUnsyncedDslText) {
       scheduleAutoApplyDsl();
@@ -1808,11 +1876,22 @@ function setupEventListeners() {
 
   elements.autoSyncGraphToDslToggle?.addEventListener('change', () => {
     autoSyncGraphToDslEnabled = Boolean(elements.autoSyncGraphToDslToggle.checked);
-    renderAutoSyncStatusPill();
 
     if (autoSyncGraphToDslEnabled && !hasUnsyncedDslText) {
       syncGraphToDslEditor({ markDirty: false });
     }
+  });
+
+  elements.editorPanels?.querySelectorAll('[data-action="maximize-dsl"]').forEach(btn => {
+    btn.addEventListener('click', () => setEditorMaximizeMode('dsl'));
+  });
+
+  elements.editorPanels?.querySelectorAll('[data-action="maximize-node"]').forEach(btn => {
+    btn.addEventListener('click', () => setEditorMaximizeMode('node'));
+  });
+
+  elements.editorPanels?.querySelectorAll('[data-action="restore-split"]').forEach(btn => {
+    btn.addEventListener('click', () => setEditorMaximizeMode('split'));
   });
 
   elements.tabBtns.forEach(btn => {
@@ -1931,18 +2010,26 @@ async function init() {
   loadBottomPanelLayout();
   loadEditorSplitLayout();
   loadActiveBottomTab();
+  loadAutoApplyDslSetting();
+  loadEditorMaximizeMode();
   renderFileStatus();
   renderDirtyStatus();
   renderAutoApplyStatus();
-  renderAutoApplyStatusPill();
-  renderAutoSyncStatusPill();
   renderUndoRedoState();
   renderNodePaletteCategories();
   renderNodePalette();
   updateNodeListCategories();
   renderNodeList();
+<<<<<<< HEAD
   renderOutput();
   await applyDsl({ markDirty: false, logOutput: false });
+=======
+
+  elements.autoApplyDslToggle.checked = autoApplyDslEnabled;
+  applyEditorMaximizeMode();
+
+  await applyDsl({ markDirty: false });
+>>>>>>> 5bd5a67 (Improve editor interaction polish)
   setDirty(false);
 }
 

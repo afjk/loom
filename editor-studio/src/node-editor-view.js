@@ -1,5 +1,5 @@
 import { NodeEditor, ClassicPreset } from 'rete';
-import { AreaPlugin } from 'rete-area-plugin';
+import { AreaPlugin, AreaExtensions } from 'rete-area-plugin';
 import { ConnectionPlugin, Presets as ConnectionPresets } from 'rete-connection-plugin';
 import { ReactPlugin, Presets } from 'rete-react-plugin';
 import { NODE_TYPES } from '../../src/loom.js';
@@ -344,6 +344,23 @@ export class NodeEditorView {
     }
 
     this.currentEditorModel = cloneEditorModelSnapshot(editorModel);
+  }
+
+  async focusNode(nodeId) {
+    if (!nodeId || !this.editor || !this.area) {
+      return false;
+    }
+
+    try {
+      const node = this.editor.getNode(nodeId);
+      if (!node) return false;
+
+      await AreaExtensions.zoomAt(this.area, [node]);
+      return true;
+    } catch (e) {
+      console.warn('focusNode failed:', e.message);
+      return false;
+    }
   }
 
   destroy() {

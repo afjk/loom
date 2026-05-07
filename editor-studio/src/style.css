@@ -85,6 +85,25 @@ body.panels-hidden .editor-panels {
   display: none;
 }
 
+/* Maximize modes */
+.editor-panels.is-maximized-dsl {
+  grid-template-columns: 1fr;
+}
+
+.editor-panels.is-maximized-dsl .node-pane,
+.editor-panels.is-maximized-dsl .editor-split-resize-handle {
+  display: none;
+}
+
+.editor-panels.is-maximized-node {
+  grid-template-columns: 1fr;
+}
+
+.editor-panels.is-maximized-node .dsl-pane,
+.editor-panels.is-maximized-node .editor-split-resize-handle {
+  display: none;
+}
+
 .dsl-pane {
   grid-column: 1;
   grid-row: 1;
@@ -142,6 +161,36 @@ body.panels-hidden .editor-panels {
   font-size: 14px;
   font-weight: 600;
   margin: 0;
+}
+
+.pane-controls {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-icon {
+  padding: 4px 8px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-color);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+}
+
+.btn-icon:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.btn-icon:active {
+  transform: scale(0.95);
 }
 
 .dsl-editor-host {
@@ -831,6 +880,9 @@ button:disabled:hover,
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
 }
 
 .node-list-item:hover {
@@ -841,6 +893,11 @@ button:disabled:hover,
 .node-list-item.selected {
   background: rgba(74, 144, 226, 0.2);
   border-color: var(--primary-color);
+}
+
+.node-list-item-content {
+  flex: 1;
+  min-width: 0;
 }
 
 .node-list-item-id {
@@ -865,6 +922,28 @@ button:disabled:hover,
   padding: 2px 6px;
   border-radius: 3px;
   display: inline-block;
+}
+
+.btn-focus-node {
+  padding: 4px 8px;
+  background: rgba(74, 144, 226, 0.2);
+  border: 1px solid rgba(74, 144, 226, 0.4);
+  color: #8fb3ff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-focus-node:hover {
+  background: rgba(74, 144, 226, 0.35);
+  border-color: rgba(74, 144, 226, 0.6);
+}
+
+.btn-focus-node:active {
+  transform: scale(0.95);
 }
 
 .empty-state {
