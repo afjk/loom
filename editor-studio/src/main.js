@@ -431,8 +431,17 @@ function renderInspector() {
     <div class="inspector-content">
       <div class="inspector-section">
         <div class="inspector-row">
-          <div class="inspector-label">ID:</div>
-          <div class="inspector-value">${escapeHtml(node.id)}</div>
+          <label class="inspector-label" for="selected-node-id-input">ID:</label>
+          <div class="inspector-inline-edit">
+            <input
+              id="selected-node-id-input"
+              class="inspector-node-id-input"
+              type="text"
+              value="${escapeHtml(node.id)}"
+              spellcheck="false"
+            />
+            <button id="rename-selected-node-btn" class="btn">Rename</button>
+          </div>
         </div>
         <div class="inspector-row">
           <div class="inspector-label">Type:</div>
@@ -533,9 +542,42 @@ function attachParamListeners() {
   });
 }
 
+async function renameSelectedNode() {
+  const node = getSelectedEditorNode();
+  if (!node) return;
+
+  const input = elements.inspectorPanel.querySelector('#selected-node-id-input');
+  const newId = input?.value?.trim();
+
+  if (!newId || newId === node.id) {
+    return;
+  }
+
+  const result = await handleOperation({
+    type: 'renameNode',
+    id: node.id,
+    newId
+  });
+
+  if (result && !result.error) {
+    selectedNodeId = newId;
+    renderInspector();
+  }
+}
+
 function attachInspectorActionListeners() {
   const deleteButton = elements.inspectorPanel.querySelector('#delete-selected-node-btn');
   deleteButton?.addEventListener('click', deleteSelectedNode);
+
+  const renameButton = elements.inspectorPanel.querySelector('#rename-selected-node-btn');
+  renameButton?.addEventListener('click', renameSelectedNode);
+
+  const idInput = elements.inspectorPanel.querySelector('#selected-node-id-input');
+  idInput?.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    renameSelectedNode();
+  });
 }
 
 async function deleteSelectedNode() {
@@ -843,7 +885,10 @@ async function handleOperation(operation) {
       await nodeEditor?.renderModel(result.state.editorModel);
     }
 
-    if (selectedNodeId && !result.state.editorModel.nodesById[selectedNodeId]) {
+    if (result.change.operation.type === 'renameNode' && selectedNodeId === result.change.operation.id) {
+      const renamedId = result.change.operation.newId.trim();
+      selectedNodeId = result.state.editorModel.nodesById[renamedId] ? renamedId : null;
+    } else if (selectedNodeId && !result.state.editorModel.nodesById[selectedNodeId]) {
       selectedNodeId = null;
     }
 

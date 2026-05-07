@@ -389,6 +389,16 @@ body.panels-hidden .editor-panels {
   resize: vertical;
 }
 
+.inspector-inline-edit {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.inspector-node-id-input {
+  flex: 1;
+}
+
 .file-status {
   color: var(--text-dim);
   font-size: 12px;
