@@ -4,6 +4,14 @@
 
 A small dataflow language for weaving values, signals, and scene behavior. Build reactive visual, audio, and 3D content by composing small graph parts.
 
+## Editor
+
+- `editor/`: simple editor (plain HTML/JS, no build step)
+- `editor-studio/`: source for the full Node Editor (Vite + React + Rete.js)
+- GitHub Pages:
+  - [`/editor/`](https://afjk.github.io/loomlet/editor/): simple editor
+  - [`/node-editor/`](https://afjk.github.io/loomlet/node-editor/): full Node Editor
+
 ---
 
 ブラウザで動くデータフロー実行エンジン。純粋関数ノードを基本にしつつ、必要な箇所だけを `state` ノードとして明示し、リアクティブな視覚・音響・3D コンテンツを構築します。
