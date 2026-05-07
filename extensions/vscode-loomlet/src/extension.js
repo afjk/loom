@@ -24,16 +24,12 @@ function activate(context) {
   context.subscriptions.push(
     vscode.commands.registerCommand('loomlet.runCurrentFile', () => runCurrentFile('run')),
     vscode.commands.registerCommand('loomlet.sceneSyncDevCurrentFile', () => runCurrentFile('scenesync dev')),
-    vscode.commands.registerCommand('loomlet.openNodePreviewToSide', () => openNodePreviewToSide(context))
-  );
-
-  vscode.workspace.onDidChangeTextDocument((event) => {
-    if (nodePreviewPanel && currentPreviewDocument && event.document === currentPreviewDocument) {
-      sendDocumentToPreview(event.document);
-    }
-  });
-
-  context.subscriptions.push(
+    vscode.commands.registerCommand('loomlet.openNodePreviewToSide', () => openNodePreviewToSide(context)),
+    vscode.workspace.onDidChangeTextDocument((event) => {
+      if (nodePreviewPanel && currentPreviewDocument && event.document.uri.toString() === currentPreviewDocument.uri.toString()) {
+        sendDocumentToPreview(event.document);
+      }
+    }),
     vscode.window.onDidChangeActiveTextEditor((editor) => {
       if (nodePreviewPanel && editor?.document.languageId === 'loomlet') {
         currentPreviewDocument = editor.document;
