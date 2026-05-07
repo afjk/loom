@@ -132,10 +132,25 @@ export class NodeEditorView {
     const nodeElement = titleElement.closest('[class*="node"]');
     if (!nodeElement) return null;
 
-    if (this.area.nodeViews instanceof Map) {
+    // 試み1: data-node-id属性を探す（もしあれば）
+    const dataNodeId = nodeElement.getAttribute('data-node-id');
+    if (dataNodeId) return dataNodeId;
+
+    // 試み2: Rete nodeViews から逆引き
+    if (this.area?.nodeViews instanceof Map) {
       for (const [nodeId, view] of this.area.nodeViews) {
         if (view && view.element === nodeElement) {
           return nodeId;
+        }
+      }
+    }
+
+    // 試み3: Rete editor のノードを列挙して近似マッチ
+    if (this.editor && titleElement.textContent) {
+      const labelText = titleElement.textContent.trim();
+      for (const node of this.editor.getNodes()) {
+        if (node.label === labelText || node.id === labelText) {
+          return node.id;
         }
       }
     }
@@ -157,10 +172,10 @@ export class NodeEditorView {
     input.placeholder = editorNode.id;
     input.spellcheck = false;
 
-    let isCommitting = false;
+    let isEditingActive = true;
 
     const handleBlur = () => {
-      if (!isCommitting) {
+      if (isEditingActive) {
         commit();
       }
     };
@@ -193,8 +208,8 @@ export class NodeEditorView {
     };
 
     const commit = () => {
-      if (isCommitting) return;
-      isCommitting = true;
+      if (!isEditingActive) return;
+      isEditingActive = false;
 
       const nextLabel = getNormalizedLabelValue(input.value);
       const currentLabel = getNormalizedLabelValue(initialValue);
@@ -211,6 +226,8 @@ export class NodeEditorView {
     };
 
     const cancel = () => {
+      if (!isEditingActive) return;
+      isEditingActive = false;
       cleanup();
     };
 
