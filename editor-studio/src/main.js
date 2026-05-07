@@ -5,7 +5,12 @@ import { json } from '@codemirror/lang-json';
 
 import { Loom } from '../../src/loom.js';
 import { parseDSLToAST, compileToGraph } from '../../src/loom-dsl.js';
-import { graphToEditorModel, editorModelToGraph, applyEditorOperation } from '../../src/node-editor-core.js';
+import {
+  graphToEditorModel,
+  editorModelToGraph,
+  applyEditorOperation,
+  applyNodeEditorOperationState
+} from '../../src/node-editor-core.js';
 import { graphToCanonicalDSL } from './canonical-dsl.js';
 import { createStore } from './studio-store.js';
 import { NodeEditorView } from './node-editor-view.js';
@@ -282,28 +287,34 @@ async function handleOperation(operation) {
   const state = store.getState();
   if (!state.editorModel) return;
 
-  try {
-    const newModel = applyEditorOperation(state.editorModel, operation);
-    store.setState({ editorModel: newModel });
+  const result = applyNodeEditorOperationState(
+    {
+      graph: state.graph,
+      editorModel: state.editorModel,
+      errors: state.errors || []
+    },
+    operation
+  );
 
-    // moveNode: Rete already reflects the position visually; skip full re-render
-    if (operation.type !== 'moveNode') {
-      await nodeEditor?.renderModel(newModel);
+  store.setState(result.state);
+
+  if (!result.error) {
+    if (result.change.shouldRerenderView) {
+      await nodeEditor?.renderModel(result.state.editorModel);
     }
 
-    const graph = editorModelToGraph(newModel, state.graph);
-    store.setState({ graph });
-    renderGraphJSON(graph);
-    runPreview(graph);
-  } catch (e) {
-    // Revert Rete state to current model if operation fails
-    const currentModel = store.getState().editorModel;
-    if (currentModel && operation.type !== 'moveNode') {
-      await nodeEditor?.renderModel(currentModel);
-    }
-    store.setState({ errors: [{ message: `Operation error: ${e.message}`, code: 'EDITOR_ERROR' }] });
+    renderGraphJSON(result.state.graph);
     renderErrors();
+    runPreview(result.state.graph);
+    return;
   }
+
+  const currentModel = state.editorModel;
+  if (currentModel && result.change.shouldRerenderView) {
+    await nodeEditor?.renderModel(currentModel);
+  }
+
+  renderErrors();
 }
 
 function init() {
