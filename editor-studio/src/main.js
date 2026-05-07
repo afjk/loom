@@ -1,9 +1,12 @@
 import { EditorState } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers } from '@codemirror/view';
-import { defaultKeymap } from '@codemirror/commands';
-import { json } from '@codemirror/lang-json';
+import { history, defaultKeymap, historyKeymap } from '@codemirror/commands';
+import { bracketMatching, foldGutter, indentOnInput } from '@codemirror/language';
+import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
+import { closeBrackets, closeBracketsKeymap, completionKeymap } from '@codemirror/autocomplete';
 
 import { Loom, NODE_TYPES } from '../../src/loom.js';
+import { loomletDslExtensions } from './loomlet-codemirror.js';
 import { parseDSLToAST, compileToGraph } from '../../src/loom-dsl.js';
 import {
   graphToEditorModel,
@@ -312,12 +315,21 @@ function initDslEditor() {
   const initialState = EditorState.create({
     doc: SAMPLE_DSL,
     extensions: [
-      keymap.of(defaultKeymap),
       lineNumbers(),
-      EditorView.theme({
-        '&': { height: '100%' },
-        '.cm-scroller': { overflow: 'auto' }
-      }),
+      history(),
+      foldGutter(),
+      indentOnInput(),
+      bracketMatching(),
+      closeBrackets(),
+      highlightSelectionMatches(),
+      keymap.of([
+        ...closeBracketsKeymap,
+        ...defaultKeymap,
+        ...historyKeymap,
+        ...searchKeymap,
+        ...completionKeymap
+      ]),
+      ...loomletDslExtensions({ nodeTypes: NODE_TYPES }),
       EditorView.updateListener.of((update) => {
         if (!update.docChanged) return;
         if (isApplyingProgrammaticDslChange) return;
