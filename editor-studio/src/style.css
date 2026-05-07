@@ -272,6 +272,20 @@ body.panels-hidden .editor-panels {
   padding: 2px 4px !important;
 }
 
+/* Inline node label editing */
+.node-label-input {
+  background: #222 !important;
+  color: var(--text-color) !important;
+  border: 2px solid var(--primary-color) !important;
+  border-radius: 4px !important;
+  padding: 4px 6px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  font-family: inherit !important;
+  max-width: 280px;
+  box-sizing: border-box;
+}
+
 /* Graph/Errors panel */
 .graph-errors-panel {
   grid-column: 1 / -1;

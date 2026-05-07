@@ -27,6 +27,11 @@ function getPortName(port) {
   return typeof port === 'string' ? port : port.name;
 }
 
+function getNormalizedLabelValue(value) {
+  const text = String(value ?? '');
+  return text.trim() === '' ? null : text;
+}
+
 function createReteNode(editorNode, onControl) {
   const nodeTypeDef = NODE_TYPES[editorNode.type];
   const displayLabel = editorNode.label || editorNode.type;
@@ -95,6 +100,143 @@ export class NodeEditorView {
     this.area.use(this.renderPlugin);
 
     this._setupPipes();
+    this._setupInlineLabelEditing();
+  }
+
+  _setupInlineLabelEditing() {
+    if (!this.area || !this.container) return;
+
+    this.container.addEventListener('dblclick', (event) => {
+      const titleElement = this._findNodeTitleElement(event.target);
+      if (!titleElement || titleElement.querySelector('input')) return;
+
+      const nodeId = this._findNodeIdFromTitle(titleElement);
+      if (!nodeId) return;
+
+      this._startInlineNodeLabelEditing(nodeId, titleElement);
+    }, true);
+  }
+
+  _findNodeTitleElement(target) {
+    let element = target;
+    while (element) {
+      if (element.tagName === 'H2' && element.closest('[class*="node"]')) {
+        return element;
+      }
+      element = element.parentElement;
+    }
+    return null;
+  }
+
+  _findNodeIdFromTitle(titleElement) {
+    const nodeElement = titleElement.closest('[class*="node"]');
+    if (!nodeElement) return null;
+
+    if (this.area.nodeViews instanceof Map) {
+      for (const [nodeId, view] of this.area.nodeViews) {
+        if (view && view.element === nodeElement) {
+          return nodeId;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  _startInlineNodeLabelEditing(nodeId, titleElement) {
+    const node = this.editor.getNode(nodeId);
+    if (!node || !node._editorNode) return;
+
+    const editorNode = node._editorNode;
+    const initialValue = editorNode.label || '';
+
+    const input = document.createElement('input');
+    input.className = 'node-label-input';
+    input.type = 'text';
+    input.value = initialValue;
+    input.placeholder = editorNode.id;
+    input.spellcheck = false;
+
+    let isCommitting = false;
+
+    const handleBlur = () => {
+      if (!isCommitting) {
+        commit();
+      }
+    };
+
+    const handleKeydown = (event) => {
+      event.stopPropagation();
+
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        commit();
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        cancel();
+      }
+    };
+
+    const handlePointerdown = (event) => {
+      event.stopPropagation();
+    };
+
+    const handleClick = (event) => {
+      event.stopPropagation();
+    };
+
+    const handleDblclick = (event) => {
+      event.stopPropagation();
+    };
+
+    const commit = () => {
+      if (isCommitting) return;
+      isCommitting = true;
+
+      const nextLabel = getNormalizedLabelValue(input.value);
+      const currentLabel = getNormalizedLabelValue(initialValue);
+
+      if (nextLabel !== currentLabel && this.onOperation) {
+        this.onOperation({
+          type: 'updateNodeMetadata',
+          id: nodeId,
+          patch: { label: nextLabel }
+        });
+      }
+
+      cleanup();
+    };
+
+    const cancel = () => {
+      cleanup();
+    };
+
+    const cleanup = () => {
+      input.removeEventListener('blur', handleBlur);
+      input.removeEventListener('keydown', handleKeydown);
+      input.removeEventListener('pointerdown', handlePointerdown);
+      input.removeEventListener('click', handleClick);
+      input.removeEventListener('dblclick', handleDblclick);
+      input.remove();
+      titleElement.style.display = '';
+    };
+
+    input.addEventListener('blur', handleBlur);
+    input.addEventListener('keydown', handleKeydown);
+    input.addEventListener('pointerdown', handlePointerdown);
+    input.addEventListener('click', handleClick);
+    input.addEventListener('dblclick', handleDblclick);
+
+    titleElement.style.display = 'none';
+    const parent = titleElement.parentElement;
+    if (parent) {
+      parent.insertBefore(input, titleElement);
+    }
+    input.focus();
+    input.select();
   }
 
   _setupPipes() {
