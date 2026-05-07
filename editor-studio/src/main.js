@@ -365,6 +365,11 @@ function selectBottomTab(tabName) {
   localStorage.setItem(ACTIVE_BOTTOM_TAB_KEY, tabName);
 }
 
+function getActiveBottomTab() {
+  const activeButton = document.querySelector('.tab-btn.active');
+  return activeButton?.getAttribute('data-tab') || null;
+}
+
 function loadActiveBottomTab() {
   const savedTab = localStorage.getItem(ACTIVE_BOTTOM_TAB_KEY);
   if (!savedTab) return;
@@ -1065,6 +1070,7 @@ function setSelectedNodeId(nodeId) {
     selectedNodeId = nodeId || null;
   }
   renderInspector();
+  renderNodeList();
 }
 
 function setEditorError(message) {
@@ -1483,6 +1489,23 @@ function renderNodeListItem(node) {
   `;
 }
 
+function findNodeListItemById(nodeId) {
+  if (!elements.nodeList || !nodeId) return null;
+
+  return Array.from(elements.nodeList.querySelectorAll('[data-node-id]'))
+    .find((item) => item.getAttribute('data-node-id') === nodeId) || null;
+}
+
+function scrollSelectedNodeListItemIntoView() {
+  if (!selectedNodeId) return;
+
+  const item = findNodeListItemById(selectedNodeId);
+  item?.scrollIntoView({
+    block: 'nearest',
+    inline: 'nearest'
+  });
+}
+
 function renderNodeList() {
   const list = elements.nodeList;
   if (!list) return;
@@ -1521,7 +1544,6 @@ function renderNodeList() {
       if (e.target.classList.contains('btn-focus-node')) return;
       const nodeId = item.getAttribute('data-node-id');
       setSelectedNodeId(nodeId);
-      renderNodeList();
     });
   });
 
@@ -1529,12 +1551,24 @@ function renderNodeList() {
     btn.addEventListener('click', async () => {
       const nodeId = btn.getAttribute('data-focus-node-id');
       setSelectedNodeId(nodeId);
-      renderNodeList();
       if (nodeEditor?.focusNode) {
-        await nodeEditor.focusNode(nodeId);
+        try {
+          await nodeEditor.focusNode(nodeId);
+          const item = findNodeListItemById(nodeId);
+          if (item) {
+            item.classList.add('is-focused-pulse');
+            setTimeout(() => {
+              item.classList.remove('is-focused-pulse');
+            }, 800);
+          }
+        } catch (err) {
+          console.error('Focus node error:', err);
+        }
       }
     });
   });
+
+  scrollSelectedNodeListItemIntoView();
 }
 
 function updateNodeListCategories() {
@@ -1680,6 +1714,26 @@ function isTextEditingTarget(target) {
 }
 
 function handleGlobalKeyDown(event) {
+  // Handle node search focus with Cmd/Ctrl+Shift+F or /
+  if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'f') {
+    if (!isTextEditingTarget(event.target)) {
+      event.preventDefault();
+      selectBottomTab('nodes');
+      elements.nodeListSearch?.focus();
+      return;
+    }
+  }
+
+  if (event.key === '/' && !isTextEditingTarget(event.target)) {
+    const activeTab = getActiveBottomTab();
+    if (activeTab === 'nodes') {
+      event.preventDefault();
+      elements.nodeListSearch?.focus();
+      return;
+    }
+  }
+
+  // Handle node deletion with Delete/Backspace
   if (event.key !== 'Delete' && event.key !== 'Backspace') return;
   if (!selectedNodeId) return;
   if (isTextEditingTarget(event.target)) return;
