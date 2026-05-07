@@ -50,10 +50,10 @@ Loomlet source files use the `.loom` extension.
 
 ### 07 FizzBuzz
 - Path: `examples/tour/language/07-fizzbuzz.loom`
-- Status: Draft
+- Status: Runnable
 - Run: `loomlet run examples/tour/language/07-fizzbuzz.loom`
-- Teaches: range generation, mapping, nested branching
-- Missing: block function bodies are still draft-only; single-expression `fn(...) => ...` and `list.map` are implemented
+- Teaches: function values, `list.range`, `list.map`, nested `logic.select`, `text.stringify`, `text.join`
+- Missing: none
 
 ### 08 List Map Filter
 - Path: `examples/tour/language/08-list-map-filter.loom`
