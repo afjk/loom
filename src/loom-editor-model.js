@@ -1,5 +1,13 @@
 import { NODE_TYPES } from './loom.js';
 
+export const DEFAULT_NODE_WIDTH = 220;
+export const DEFAULT_NODE_HEIGHT = 120;
+export const NODE_LAYOUT_GAP = 32;
+export const NODE_LAYOUT_STEP_X = 260;
+export const NODE_LAYOUT_STEP_Y = 160;
+export const NODE_LAYOUT_MAX_ROWS = 50;
+export const NODE_LAYOUT_MAX_COLS = 50;
+
 /**
  * @typedef {Object} EditorNode
  * @property {string} id
@@ -61,6 +69,50 @@ function validateNodeId(id) {
   return trimmed;
 }
 
+export function doRectsOverlap(a, b) {
+  return !(
+    a.x + a.width <= b.x ||
+    b.x + b.width <= a.x ||
+    a.y + a.height <= b.y ||
+    b.y + b.height <= a.y
+  );
+}
+
+export function makeNodeLayoutRect(position) {
+  return {
+    x: position.x,
+    y: position.y,
+    width: DEFAULT_NODE_WIDTH + NODE_LAYOUT_GAP,
+    height: DEFAULT_NODE_HEIGHT + NODE_LAYOUT_GAP
+  };
+}
+
+export function findNonOverlappingPosition(desiredPosition, occupiedPositions) {
+  const occupiedRects = occupiedPositions
+    .filter(Boolean)
+    .map(makeNodeLayoutRect);
+
+  for (let row = 0; row < NODE_LAYOUT_MAX_ROWS; row++) {
+    for (let col = 0; col < NODE_LAYOUT_MAX_COLS; col++) {
+      const candidate = {
+        x: desiredPosition.x + col * NODE_LAYOUT_STEP_X,
+        y: desiredPosition.y + row * NODE_LAYOUT_STEP_Y
+      };
+
+      const candidateRect = makeNodeLayoutRect(candidate);
+      const overlaps = occupiedRects.some((rect) =>
+        doRectsOverlap(candidateRect, rect)
+      );
+
+      if (!overlaps) {
+        return candidate;
+      }
+    }
+  }
+
+  return desiredPosition;
+}
+
 export function layoutFallback(nodes) {
   const categoryX = {
     input: 0,
@@ -69,9 +121,11 @@ export function layoutFallback(nodes) {
     sink: 900
   };
   const counts = {};
+  const occupiedPositions = [];
 
   return nodes.map((node) => {
     if (node.position && Number.isFinite(node.position.x) && Number.isFinite(node.position.y)) {
+      occupiedPositions.push(node.position);
       return { ...node, position: { ...node.position } };
     }
 
@@ -80,9 +134,13 @@ export function layoutFallback(nodes) {
     const idx = counts[category] || 0;
     counts[category] = idx + 1;
 
+    const desiredPosition = { x, y: idx * NODE_LAYOUT_STEP_Y };
+    const finalPosition = findNonOverlappingPosition(desiredPosition, occupiedPositions);
+    occupiedPositions.push(finalPosition);
+
     return {
       ...node,
-      position: { x, y: idx * 120 }
+      position: finalPosition
     };
   });
 }

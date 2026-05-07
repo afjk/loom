@@ -35,7 +35,7 @@ export function createNodeIdFromType(typeName, existingNodeIds) {
   return `${base}_${index}`;
 }
 
-export function createPositionForNewNode(category, nodes) {
+export function createPositionForNewNode(category, nodes, findNonOverlappingPosition, NODE_LAYOUT_STEP_Y) {
   const categoryX = {
     input: 0,
     transform: 300,
@@ -44,11 +44,17 @@ export function createPositionForNewNode(category, nodes) {
   };
 
   const sameCategoryCount = (nodes || []).filter((node) => node.category === category).length;
-
-  return {
+  const desiredPosition = {
     x: categoryX[category] ?? 1200,
-    y: sameCategoryCount * 120
+    y: sameCategoryCount * (NODE_LAYOUT_STEP_Y || 120)
   };
+
+  if (!findNonOverlappingPosition) {
+    return desiredPosition;
+  }
+
+  const existingPositions = (nodes || []).map((node) => node.position).filter(Boolean);
+  return findNonOverlappingPosition(desiredPosition, existingPositions);
 }
 
 export function getNodeTypeEntries(NODE_TYPES) {

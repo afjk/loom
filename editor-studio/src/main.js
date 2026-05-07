@@ -13,7 +13,9 @@ import {
   graphToEditorModel,
   editorModelToGraph,
   applyNodeEditorOperationState,
-  preserveEditorModelLayout
+  preserveEditorModelLayout,
+  findNonOverlappingPosition,
+  NODE_LAYOUT_STEP_Y
 } from '../../src/node-editor-core.js';
 import { graphToCanonicalDSL } from './canonical-dsl.js';
 import { createStore } from './studio-store.js';
@@ -1594,7 +1596,7 @@ async function addNodeFromPalette(typeName) {
     type: typeName,
     category,
     params: createDefaultParamsForNodeType(typeName, NODE_TYPES),
-    position: createPositionForNewNode(category, nodes)
+    position: createPositionForNewNode(category, nodes, findNonOverlappingPosition, NODE_LAYOUT_STEP_Y)
   };
 
   await handleOperation({
