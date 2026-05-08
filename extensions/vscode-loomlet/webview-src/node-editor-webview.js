@@ -85,9 +85,6 @@ function initHostInputs() {
   canvas.tabIndex = 0;
   canvas.style.outline = 'none';
 
-  // Capture phase is important because the Node Editor overlay can receive the
-  // pointer event before the canvas. `event.buttons` also fixes missed pointerup
-  // cases so mouseDown does not get stuck true.
   window.addEventListener('pointermove', (event) => {
     updatePointerFromEvent(event);
     syncMouseDownFromButtons(event);
@@ -142,7 +139,15 @@ function resolveValue(engine, ref) {
   const numVal = parseFloat(ref);
   if (!Number.isNaN(numVal) && String(ref).trim() === String(numVal)) return numVal;
 
-  const value = engine?.getValue(ref);
+  let value = engine?.getValue(ref);
+
+  // Render configs may contain either "down.out" or the bare variable name
+  // "down" depending on the compiler path. Console effects already resolve via
+  // the evaluated value, but render values need to be defensive here.
+  if (value === undefined && typeof ref === 'string' && !ref.includes('.')) {
+    value = engine?.getValue(`${ref}.out`);
+  }
+
   if (typeof value === 'string' && value.startsWith('__loomlet_host:')) {
     return resolveHostInput(value);
   }
