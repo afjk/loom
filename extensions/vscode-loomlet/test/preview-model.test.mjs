@@ -106,4 +106,59 @@ await ensurePreviewModulesLoaded();
   assert.equal(result.editorModel, null, 'null input should produce null editorModel');
 }
 
+// Test 11: buildPreviewModelFromDsl returns a graph object on success
+{
+  const result = buildPreviewModelFromDsl('x = 1');
+  assert.ok(result.graph, 'Valid DSL should return a graph');
+  assert.ok(Array.isArray(result.graph.nodes), 'graph should have nodes array');
+  assert.ok(Array.isArray(result.graph.edges), 'graph should have edges array');
+}
+
+// Test 12: graph is null on parse error
+{
+  const result = buildPreviewModelFromDsl('x = math.sine(t, frequency:');
+  assert.equal(result.graph, null, 'Parse error should produce null graph');
+  assert.ok(result.errors.length > 0, 'Should have parse errors');
+}
+
+// Test 13: graph is null on compile error
+{
+  const result = buildPreviewModelFromDsl('a = 1\nb = add(a, undefined_var)');
+  assert.equal(result.graph, null, 'Compile error should produce null graph');
+  assert.ok(result.errors.length > 0, 'Should have compile errors');
+}
+
+// Test 14: render bar produces graph.render with type bar
+{
+  const result = buildPreviewModelFromDsl('t = clock()\nwave = sine(t, freq: 0.5)\nrender bar(width: wave)');
+  assert.equal(result.errors.length, 0, 'Valid render bar DSL should have no errors');
+  assert.ok(result.graph, 'Should produce a graph');
+  assert.ok(result.graph.render, 'graph should have render config');
+  assert.equal(result.graph.render.type, 'bar', 'render type should be bar');
+}
+
+// Test 15: render point produces graph.render with type point
+{
+  const result = buildPreviewModelFromDsl('t = clock()\nx = sine(t, freq: 0.2)\nrender point(x: x, y: x)');
+  assert.equal(result.errors.length, 0, 'Valid render point DSL should have no errors');
+  assert.ok(result.graph, 'Should produce a graph');
+  assert.ok(result.graph.render, 'graph should have render config');
+  assert.equal(result.graph.render.type, 'point', 'render type should be point');
+}
+
+// Test 16: empty DSL returns null graph with no errors
+{
+  const result = buildPreviewModelFromDsl('');
+  assert.equal(result.errors.length, 0, 'Empty DSL should have no errors');
+  assert.equal(result.graph, null, 'Empty DSL should return null graph');
+}
+
+// Test 17: metadata-annotated DSL produces graph
+{
+  const result = buildPreviewModelFromDsl(`t = clock()\nwave = sine(t)\nrender bar(width: wave)\n\n# @loomlet.editor {"version":1,"layout":{"nodes":{}}}`);
+  assert.equal(result.errors.length, 0, 'DSL with metadata should have no errors');
+  assert.ok(result.graph, 'Should produce a graph with metadata');
+  assert.equal(result.graph.render.type, 'bar', 'render type should be bar');
+}
+
 console.log('All preview-model tests passed!');

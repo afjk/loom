@@ -178,15 +178,17 @@ function sendDocumentToPreview(document) {
   if (!nodePreviewPanel) return;
 
   const text = document.getText();
-  const { editorModel, errors } = buildPreviewModelFromDsl(text, previousEditorModel);
+  const { editorModel, graph, errors } = buildPreviewModelFromDsl(text, previousEditorModel);
 
   if (errors.length === 0 && editorModel) {
     previousEditorModel = editorModel;
   }
 
+  // On error, send graph: null so the WebView stops the runtime preview
   nodePreviewPanel.webview.postMessage({
     type: 'setModel',
     editorModel: errors.length === 0 ? editorModel : null,
+    graph: errors.length === 0 ? graph : null,
     errors
   });
 }

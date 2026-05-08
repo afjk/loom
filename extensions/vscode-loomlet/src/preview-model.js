@@ -27,33 +27,40 @@ async function ensurePreviewModulesLoaded() {
 
 /**
  * Build a preview model from DSL source text.
- * Returns { editorModel, errors } where errors is an array of error objects.
- * On parse/compile failure, editorModel is null and errors is non-empty.
+ * Returns { editorModel, graph, errors }.
+ * - editorModel: null on failure, used for Node Editor overlay
+ * - graph: null on failure, sent to WebView for Loom runtime rendering
+ * - errors: array of parse/compile error objects
+ *
  * previousEditorModel is used to preserve node positions across updates.
  *
  * @param {string} sourceText
  * @param {object|null} previousEditorModel
- * @returns {{ editorModel: object|null, errors: object[] }}
+ * @returns {{ editorModel: object|null, graph: object|null, errors: object[] }}
  */
 function buildPreviewModelFromDsl(sourceText, previousEditorModel = null) {
   if (!modulesLoaded) {
-    return { editorModel: null, errors: [{ message: 'Preview modules not yet loaded' }] };
+    return {
+      editorModel: null,
+      graph: null,
+      errors: [{ message: 'Preview modules not yet loaded' }]
+    };
   }
 
   const cleanText = stripEditorMetadataFromDsl(sourceText || '');
 
   if (cleanText.trim() === '') {
-    return { editorModel: null, errors: [] };
+    return { editorModel: null, graph: null, errors: [] };
   }
 
   const { ast, errors: parseErrors } = parseDSLToAST(cleanText);
   if (parseErrors && parseErrors.length > 0) {
-    return { editorModel: null, errors: parseErrors };
+    return { editorModel: null, graph: null, errors: parseErrors };
   }
 
   const { graph, errors: compileErrors } = compileToGraph(ast);
   if (compileErrors && compileErrors.length > 0) {
-    return { editorModel: null, errors: compileErrors };
+    return { editorModel: null, graph: null, errors: compileErrors };
   }
 
   let editorModel = graphToEditorModel(graph);
@@ -61,7 +68,7 @@ function buildPreviewModelFromDsl(sourceText, previousEditorModel = null) {
     editorModel = preserveEditorModelLayout(editorModel, previousEditorModel);
   }
 
-  return { editorModel, errors: [] };
+  return { editorModel, graph, errors: [] };
 }
 
 module.exports = { ensurePreviewModulesLoaded, buildPreviewModelFromDsl };
