@@ -1,0 +1,15 @@
+# VS Code Runtime Preview example: Orbit Point
+# Open this file with Loomlet: Open Node Preview to the Side.
+# The background canvas should show a point moving in a circle.
+
+# Status: runnable
+# Host: vscode-runtime-preview
+
+t = clock()
+xWave = sine(t, freq: 0.4)
+yWave = cosine(t, freq: 0.4)
+
+x = map(xWave, inMin: -1, inMax: 1, outMin: 80, outMax: 320)
+y = map(yWave, inMin: -1, inMax: 1, outMin: 80, outMax: 240)
+
+render point(x: x, y: y, color: "#ff70a6", trail: 0.08)
