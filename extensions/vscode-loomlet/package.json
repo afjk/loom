@@ -16,7 +16,9 @@
     "onCommand:loomlet.runCurrentFile",
     "onCommand:loomlet.sceneSyncDevCurrentFile",
     "onCommand:loomlet.openNodePreviewToSide",
-    "onCommand:loomlet.insertExample"
+    "onCommand:loomlet.insertExample",
+    "onCommand:loomlet.openLibraryReference",
+    "onCommand:loomlet.clearOutput"
   ],
   "contributes": {
     "languages": [
@@ -55,6 +57,14 @@
       {
         "command": "loomlet.insertExample",
         "title": "Loomlet: Insert Example"
+      },
+      {
+        "command": "loomlet.openLibraryReference",
+        "title": "Loomlet: Open Library Reference"
+      },
+      {
+        "command": "loomlet.clearOutput",
+        "title": "Loomlet: Clear Output"
       }
     ],
     "configuration": {
@@ -64,12 +74,17 @@
           "type": "boolean",
           "default": false,
           "description": "Include planned Loomlet libraries/functions in completion suggestions."
+        },
+        "loomlet.examples.openPreviewAfterInsert": {
+          "type": "boolean",
+          "default": true,
+          "description": "Open the Node Preview automatically after inserting a Loomlet example."
         }
       }
     }
   },
   "scripts": {
-    "test": "node test/completion-context.test.mjs && node test/completion-engine.test.mjs && node test/diagnostics.test.mjs && node test/preview-model.test.mjs && node test/examples.test.mjs",
+    "test": "node test/completion-context.test.mjs && node test/completion-engine.test.mjs && node test/diagnostics.test.mjs && node test/preview-model.test.mjs && node test/examples.test.mjs && node test/library-reference.test.mjs",
     "build:webview": "node scripts/build-webview.mjs",
     "build": "npm run build:webview"
   },
