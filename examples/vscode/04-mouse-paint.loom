@@ -1,7 +1,11 @@
-# Mouse Paint
-# VS Code Node Preview example.
+# VS Code Runtime Preview example: Mouse Paint
+# Open this file with Loomlet: Open Node Preview to the Side.
 # Hold the mouse button down and draw on the preview canvas.
 # Press Reset in the preview toolbar to clear the drawing.
+
+# Status: runnable
+# Host: vscode-runtime-preview
+# Note: input.mouseDown and render point(enabled: ...) are currently VS Code Preview host features.
 
 import input
 
