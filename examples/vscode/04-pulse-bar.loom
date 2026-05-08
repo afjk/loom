@@ -1,0 +1,13 @@
+# VS Code Runtime Preview example: Pulse Bar
+# Open this file with Loomlet: Open Node Preview to the Side.
+# The background canvas should show a bar changing width and vertical position.
+
+# Status: runnable
+# Host: vscode-runtime-preview
+
+t = clock()
+wave = sine(t, freq: 1.2)
+width = map(wave, inMin: -1, inMax: 1, outMin: 20, outMax: 360)
+y = map(wave, inMin: -1, inMax: 1, outMin: 100, outMax: 180)
+
+render bar(width: width, y: y, height: 32, color: "#ffd166")
