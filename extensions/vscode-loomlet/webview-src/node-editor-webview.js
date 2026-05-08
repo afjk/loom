@@ -26,6 +26,14 @@ let accumulatedPausedMs = 0;
 let lastEffectsPostMs = 0;
 const EFFECTS_POST_INTERVAL_MS = 100;
 
+// Host input state used by VS Code Preview-only input aliases.
+const hostInput = {
+  mouseX: 320,
+  mouseY: 240,
+  mouseDown: false,
+  keys: new Set()
+};
+
 // ── Canvas: Loom Runtime Preview ─────────────────────────────────────────────
 
 function resizePreviewCanvas() {
@@ -70,21 +78,98 @@ function drawPlaceholder(canvas, dpr) {
 
   ctx.fillStyle = 'rgba(255,255,255,0.09)';
   ctx.font = `${Math.round(11 * dpr)}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
-  ctx.fillText('add render bar() or render point() to see output', w / 2, h / 2 + Math.round(13 * dpr));
+  ctx.fillText('add render bar(), render point(), or render keys() to see output', w / 2, h / 2 + Math.round(13 * dpr));
+}
+
+function initHostInputs() {
+  const canvas = document.getElementById('lp-preview-canvas');
+  if (!canvas) return;
+
+  canvas.tabIndex = 0;
+  canvas.style.outline = 'none';
+
+  canvas.addEventListener('pointermove', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    hostInput.mouseX = event.clientX - rect.left;
+    hostInput.mouseY = event.clientY - rect.top;
+  });
+
+  canvas.addEventListener('pointerdown', (event) => {
+    canvas.focus();
+    const rect = canvas.getBoundingClientRect();
+    hostInput.mouseX = event.clientX - rect.left;
+    hostInput.mouseY = event.clientY - rect.top;
+    hostInput.mouseDown = true;
+    try { canvas.setPointerCapture(event.pointerId); } catch (_) {}
+  });
+
+  canvas.addEventListener('pointerup', (event) => {
+    hostInput.mouseDown = false;
+    try { canvas.releasePointerCapture(event.pointerId); } catch (_) {}
+  });
+
+  canvas.addEventListener('pointercancel', () => {
+    hostInput.mouseDown = false;
+  });
+
+  canvas.addEventListener('mouseleave', () => {
+    hostInput.mouseDown = false;
+  });
+
+  window.addEventListener('keydown', (event) => {
+    hostInput.keys.add(event.code || event.key);
+    hostInput.keys.add(event.key);
+    if (['Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.code)) {
+      event.preventDefault();
+    }
+  });
+
+  window.addEventListener('keyup', (event) => {
+    hostInput.keys.delete(event.code || event.key);
+    hostInput.keys.delete(event.key);
+    if (['Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.code)) {
+      event.preventDefault();
+    }
+  });
+
+  window.addEventListener('blur', () => {
+    hostInput.mouseDown = false;
+    hostInput.keys.clear();
+  });
 }
 
 // ── Loom runtime: resolve & draw ─────────────────────────────────────────────
 
 /**
- * Resolve a render config value: either a literal number or a node-output ref
- * string like "wave.out" that is looked up in the Loom engine.
+ * Resolve a render config value: either a literal number/string/bool, a host
+ * input token, or a node-output ref string like "wave.out" that is looked up
+ * in the Loom engine.
  */
 function resolveValue(engine, ref) {
-  if (typeof ref === 'number') return ref;
+  if (typeof ref === 'number' || typeof ref === 'boolean') return ref;
   if (ref === null || ref === undefined) return null;
+  if (typeof ref === 'string' && ref.startsWith('__loomlet_host:')) return resolveHostInput(ref);
   const numVal = parseFloat(ref);
   if (!isNaN(numVal) && String(ref).trim() === String(numVal)) return numVal;
   return engine.getValue(ref);
+}
+
+function resolveHostInput(token) {
+  if (token === '__loomlet_host:mouseX') return hostInput.mouseX;
+  if (token === '__loomlet_host:mouseY') return hostInput.mouseY;
+  if (token === '__loomlet_host:mouseDown') return hostInput.mouseDown;
+  const keyPrefix = '__loomlet_host:key:';
+  if (token.startsWith(keyPrefix)) {
+    const key = token.slice(keyPrefix.length);
+    return hostInput.keys.has(key);
+  }
+  return null;
+}
+
+function isEnabled(engine, renderConfig) {
+  const enabled = renderConfig?.enabled;
+  if (enabled === undefined || enabled === null) return true;
+  return Boolean(resolveValue(engine, enabled));
 }
 
 function drawFrame(timestamp) {
@@ -161,42 +246,117 @@ function drawRuntimeCanvas(timestamp) {
   if (trail > 0) {
     ctx.fillStyle = `rgba(0, 0, 0, ${trail})`;
     ctx.fillRect(0, 0, w, h);
-  } else {
+  } else if (renderConfig?.type !== 'point' || isEnabled(loomEngine, renderConfig)) {
     ctx.fillStyle = '#1a1a1a';
     ctx.fillRect(0, 0, w, h);
   }
 
-  if (renderConfig?.type === 'point') {
-    const x = resolveValue(loomEngine, renderConfig.x);
-    const y = resolveValue(loomEngine, renderConfig.y);
-    const color = renderConfig.color || '#00ff00';
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    if (x !== null && typeof x === 'number' && y !== null && typeof y === 'number') {
-      // Scale from CSS-px space to device-px space
-      ctx.arc(x * dpr, y * dpr, 4 * dpr, 0, Math.PI * 2);
-    } else {
-      ctx.arc(w / 2, h / 2, 4 * dpr, 0, Math.PI * 2);
-    }
-    ctx.fill();
-
-  } else if (renderConfig?.type === 'bar') {
-    const width = resolveValue(loomEngine, renderConfig.width);
-    const color = renderConfig.color || '#00ccff';
-    const cssHeight = renderConfig.height !== undefined ? renderConfig.height : 40;
-    const heightPx = cssHeight * dpr;
-    const cssY = renderConfig.y !== undefined
-      ? resolveValue(loomEngine, renderConfig.y)
-      : null;
-    const yPx = cssY !== null && typeof cssY === 'number'
-      ? cssY * dpr
-      : (h - heightPx) / 2;
-
-    if (width !== null && typeof width === 'number') {
-      ctx.fillStyle = color;
-      ctx.fillRect(0, yPx, width * dpr, heightPx);
-    }
+  if (!isEnabled(loomEngine, renderConfig)) {
+    if (renderConfig?.type === 'keys') drawKeyVisualizer(ctx, renderConfig, dpr, w, h);
+    return;
   }
+
+  if (renderConfig?.type === 'point') {
+    drawPoint(ctx, renderConfig, dpr, w, h);
+  } else if (renderConfig?.type === 'bar') {
+    drawBar(ctx, renderConfig, dpr, w, h);
+  } else if (renderConfig?.type === 'keys') {
+    drawKeyVisualizer(ctx, renderConfig, dpr, w, h);
+  }
+}
+
+function drawPoint(ctx, renderConfig, dpr, w, h) {
+  const x = resolveValue(loomEngine, renderConfig.x);
+  const y = resolveValue(loomEngine, renderConfig.y);
+  const radius = resolveValue(loomEngine, renderConfig.radius) ?? 4;
+  const color = renderConfig.color || '#00ff00';
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  if (x !== null && typeof x === 'number' && y !== null && typeof y === 'number') {
+    // Scale from CSS-px space to device-px space
+    ctx.arc(x * dpr, y * dpr, radius * dpr, 0, Math.PI * 2);
+  } else {
+    ctx.arc(w / 2, h / 2, radius * dpr, 0, Math.PI * 2);
+  }
+  ctx.fill();
+}
+
+function drawBar(ctx, renderConfig, dpr, w, h) {
+  const width = resolveValue(loomEngine, renderConfig.width);
+  const color = renderConfig.color || '#00ccff';
+  const cssHeight = renderConfig.height !== undefined ? resolveValue(loomEngine, renderConfig.height) : 40;
+  const heightPx = cssHeight * dpr;
+  const cssX = renderConfig.x !== undefined
+    ? resolveValue(loomEngine, renderConfig.x)
+    : 0;
+  const cssY = renderConfig.y !== undefined
+    ? resolveValue(loomEngine, renderConfig.y)
+    : null;
+  const xPx = typeof cssX === 'number' ? cssX * dpr : 0;
+  const yPx = cssY !== null && typeof cssY === 'number'
+    ? cssY * dpr
+    : (h - heightPx) / 2;
+
+  if (width !== null && typeof width === 'number') {
+    ctx.fillStyle = color;
+    ctx.fillRect(xPx, yPx, width * dpr, heightPx);
+  }
+}
+
+function drawKeyVisualizer(ctx, renderConfig, dpr, w, h) {
+  const states = [
+    ['Space', resolveValue(loomEngine, renderConfig.space)],
+    ['←', resolveValue(loomEngine, renderConfig.left)],
+    ['→', resolveValue(loomEngine, renderConfig.right)],
+    ['↑', resolveValue(loomEngine, renderConfig.up)],
+    ['↓', resolveValue(loomEngine, renderConfig.down)]
+  ];
+
+  const cx = w / 2;
+  const cy = h / 2;
+  const keyW = 78 * dpr;
+  const keyH = 52 * dpr;
+  const gap = 10 * dpr;
+
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `${Math.round(16 * dpr)}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.fillText('Click preview, then press Space / Arrow keys', cx, cy - 110 * dpr);
+
+  drawKey(ctx, '↑', states[3][1], cx, cy - keyH - gap, keyW, keyH, dpr);
+  drawKey(ctx, '←', states[1][1], cx - keyW - gap, cy, keyW, keyH, dpr);
+  drawKey(ctx, 'Space', states[0][1], cx, cy, keyW, keyH, dpr);
+  drawKey(ctx, '→', states[2][1], cx + keyW + gap, cy, keyW, keyH, dpr);
+  drawKey(ctx, '↓', states[4][1], cx, cy + keyH + gap, keyW, keyH, dpr);
+  ctx.restore();
+}
+
+function drawKey(ctx, label, active, cx, cy, w, h, dpr) {
+  const x = cx - w / 2;
+  const y = cy - h / 2;
+  ctx.fillStyle = active ? 'rgba(112,214,255,0.9)' : 'rgba(255,255,255,0.08)';
+  ctx.strokeStyle = active ? 'rgba(112,214,255,1)' : 'rgba(255,255,255,0.18)';
+  ctx.lineWidth = 1 * dpr;
+  ctx.beginPath();
+  roundRect(ctx, x, y, w, h, 10 * dpr);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = active ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.62)';
+  ctx.fillText(label, cx, cy);
+}
+
+function roundRect(ctx, x, y, width, height, radius) {
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
 }
 
 // ── Runtime error handling ───────────────────────────────────────────────────
@@ -470,6 +630,7 @@ window.addEventListener('message', async (event) => {
 
 resizePreviewCanvas();
 window.addEventListener('resize', resizePreviewCanvas);
+initHostInputs();
 initControlButtons();
 
 // Notify the extension that the webview is ready
