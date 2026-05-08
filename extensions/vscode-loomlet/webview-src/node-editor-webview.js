@@ -6,27 +6,19 @@ import { Loom } from '../../../src/loom.js';
 const vscode = acquireVsCodeApi();
 let editorView = null;
 
-// ── State ────────────────────────────────────────────────────────────────────
-
 let editorVisible = true;
 let lastErrors = [];
-
-// Loom runtime state
 let loomEngine = null;
 let loomRafId = null;
-let currentGraph = null;  // keeps the full graph including .render config
-let runtimeStartTimestampMs = null;  // timestamp when runtime started
-
-// Pause/Resume state
+let currentGraph = null;
+let runtimeStartTimestampMs = null;
 let isRuntimePaused = false;
 let pausedAtTimestampMs = null;
 let accumulatedPausedMs = 0;
-
-// Console effect forwarding state
 let lastEffectsPostMs = 0;
+
 const EFFECTS_POST_INTERVAL_MS = 100;
 
-// Host input state used by VS Code Preview-only input aliases.
 const hostInput = {
   mouseX: 320,
   mouseY: 240,
@@ -34,17 +26,13 @@ const hostInput = {
   keys: new Set()
 };
 
-// ── Canvas: Loom Runtime Preview ─────────────────────────────────────────────
-
 function resizePreviewCanvas() {
   const canvas = document.getElementById('lp-preview-canvas');
   if (!canvas) return;
   const dpr = window.devicePixelRatio || 1;
   canvas.width = Math.round(window.innerWidth * dpr);
   canvas.height = Math.round(window.innerHeight * dpr);
-  if (!loomEngine) {
-    drawPlaceholder(canvas, dpr);
-  }
+  if (!loomEngine) drawPlaceholder(canvas, dpr);
 }
 
 function drawPlaceholder(canvas, dpr) {
@@ -68,11 +56,9 @@ function drawPlaceholder(canvas, dpr) {
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-
   ctx.fillStyle = 'rgba(255,255,255,0.18)';
   ctx.font = `${Math.round(15 * dpr)}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
   ctx.fillText('Runtime Preview', w / 2, h / 2 - Math.round(13 * dpr));
-
   ctx.fillStyle = 'rgba(255,255,255,0.09)';
   ctx.font = `${Math.round(11 * dpr)}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
   ctx.fillText('add render bar(), render point(), or render keys() to see output', w / 2, h / 2 + Math.round(13 * dpr));
@@ -86,6 +72,12 @@ function updatePointerFromEvent(event) {
   hostInput.mouseY = event.clientY - rect.top;
 }
 
+function syncMouseDownFromButtons(event) {
+  if (typeof event.buttons === 'number') {
+    hostInput.mouseDown = (event.buttons & 1) === 1;
+  }
+}
+
 function initHostInputs() {
   const canvas = document.getElementById('lp-preview-canvas');
   if (!canvas) return;
@@ -93,25 +85,32 @@ function initHostInputs() {
   canvas.tabIndex = 0;
   canvas.style.outline = 'none';
 
-  // Listen on the whole window because the Node Editor overlay can sit above
-  // the preview canvas. This keeps interactive examples usable even when the
-  // editor is visible.
-  window.addEventListener('pointermove', updatePointerFromEvent);
+  // Capture phase is important because the Node Editor overlay can receive the
+  // pointer event before the canvas. `event.buttons` also fixes missed pointerup
+  // cases so mouseDown does not get stuck true.
+  window.addEventListener('pointermove', (event) => {
+    updatePointerFromEvent(event);
+    syncMouseDownFromButtons(event);
+  }, true);
 
   window.addEventListener('pointerdown', (event) => {
     canvas.focus();
     updatePointerFromEvent(event);
-    hostInput.mouseDown = true;
-  });
+    syncMouseDownFromButtons(event);
+  }, true);
 
   window.addEventListener('pointerup', (event) => {
     updatePointerFromEvent(event);
-    hostInput.mouseDown = false;
-  });
+    syncMouseDownFromButtons(event);
+  }, true);
 
   window.addEventListener('pointercancel', () => {
     hostInput.mouseDown = false;
-  });
+  }, true);
+
+  window.addEventListener('mouseup', () => {
+    hostInput.mouseDown = false;
+  }, true);
 
   window.addEventListener('keydown', (event) => {
     hostInput.keys.add(event.code || event.key);
@@ -119,7 +118,7 @@ function initHostInputs() {
     if (['Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.code)) {
       event.preventDefault();
     }
-  });
+  }, true);
 
   window.addEventListener('keyup', (event) => {
     hostInput.keys.delete(event.code || event.key);
@@ -127,7 +126,7 @@ function initHostInputs() {
     if (['Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.code)) {
       event.preventDefault();
     }
-  });
+  }, true);
 
   window.addEventListener('blur', () => {
     hostInput.mouseDown = false;
@@ -135,20 +134,42 @@ function initHostInputs() {
   });
 }
 
-// ── Loom runtime: resolve & draw ─────────────────────────────────────────────
-
 function resolveValue(engine, ref) {
   if (typeof ref === 'number' || typeof ref === 'boolean') return ref;
   if (ref === null || ref === undefined) return null;
   if (typeof ref === 'string' && ref.startsWith('__loomlet_host:')) return resolveHostInput(ref);
-  const numVal = parseFloat(ref);
-  if (!isNaN(numVal) && String(ref).trim() === String(numVal)) return numVal;
 
-  const value = engine.getValue(ref);
+  const numVal = parseFloat(ref);
+  if (!Number.isNaN(numVal) && String(ref).trim() === String(numVal)) return numVal;
+
+  const value = engine?.getValue(ref);
   if (typeof value === 'string' && value.startsWith('__loomlet_host:')) {
     return resolveHostInput(value);
   }
   return value;
+}
+
+function resolveEffectValue(value) {
+  if (typeof value === 'string' && value.startsWith('__loomlet_host:')) return resolveHostInput(value);
+  if (Array.isArray(value)) return value.map(resolveEffectValue);
+  if (value && typeof value === 'object') {
+    const copy = {};
+    for (const [key, nested] of Object.entries(value)) {
+      copy[key] = resolveEffectValue(nested);
+    }
+    return copy;
+  }
+  return value;
+}
+
+function resolveConsoleEffect(effect) {
+  const copy = { ...effect };
+  for (const key of ['args', 'values', 'value', 'message', 'payload']) {
+    if (Object.prototype.hasOwnProperty.call(copy, key)) {
+      copy[key] = resolveEffectValue(copy[key]);
+    }
+  }
+  return copy;
 }
 
 function resolveHostInput(token) {
@@ -157,8 +178,7 @@ function resolveHostInput(token) {
   if (token === '__loomlet_host:mouseDown') return hostInput.mouseDown;
   const keyPrefix = '__loomlet_host:key:';
   if (token.startsWith(keyPrefix)) {
-    const key = token.slice(keyPrefix.length);
-    return hostInput.keys.has(key);
+    return hostInput.keys.has(token.slice(keyPrefix.length));
   }
   return null;
 }
@@ -172,21 +192,17 @@ function isEnabled(engine, renderConfig) {
 function drawFrame(timestamp) {
   const canvas = document.getElementById('lp-preview-canvas');
   if (!canvas || !loomEngine || !currentGraph) return;
-
   if (isRuntimePaused) {
     loomRafId = null;
     return;
   }
 
   try {
-    if (runtimeStartTimestampMs === null) {
-      runtimeStartTimestampMs = timestamp;
-    }
+    if (runtimeStartTimestampMs === null) runtimeStartTimestampMs = timestamp;
     const elapsedSeconds = (timestamp - runtimeStartTimestampMs - accumulatedPausedMs) / 1000;
-
     loomEngine.evaluateAt(elapsedSeconds, timestamp);
     postRuntimeEffects(timestamp);
-    drawRuntimeCanvas(timestamp);
+    drawRuntimeCanvas();
   } catch (error) {
     console.error('[loomlet-preview] Runtime error in drawFrame:', error);
     handleRuntimeError(error);
@@ -201,14 +217,11 @@ function postRuntimeEffects(timestamp) {
   if (timestamp - lastEffectsPostMs < EFFECTS_POST_INTERVAL_MS) return;
 
   const effects = loomEngine.getEffects() || [];
-  const consoleEffects = effects.filter(isConsoleEffect);
+  const consoleEffects = effects.filter(isConsoleEffect).map(resolveConsoleEffect);
   if (consoleEffects.length === 0) return;
 
   lastEffectsPostMs = timestamp;
-  vscode.postMessage({
-    type: 'runtimeEffects',
-    effects: consoleEffects
-  });
+  vscode.postMessage({ type: 'runtimeEffects', effects: consoleEffects });
 }
 
 function isConsoleEffect(effect) {
@@ -222,7 +235,7 @@ function isConsoleEffect(effect) {
     || target === 'console';
 }
 
-function drawRuntimeCanvas(timestamp) {
+function drawRuntimeCanvas() {
   const canvas = document.getElementById('lp-preview-canvas');
   if (!canvas || !loomEngine || !currentGraph) return;
 
@@ -233,7 +246,7 @@ function drawRuntimeCanvas(timestamp) {
   const renderConfig = currentGraph.render;
   const enabled = isEnabled(loomEngine, renderConfig);
 
-  const trail = renderConfig?.trail !== undefined ? renderConfig.trail : 0.1;
+  const trail = renderConfig?.trail !== undefined ? resolveValue(loomEngine, renderConfig.trail) : 0.1;
   if (trail > 0) {
     ctx.fillStyle = `rgba(0, 0, 0, ${trail})`;
     ctx.fillRect(0, 0, w, h);
@@ -247,13 +260,9 @@ function drawRuntimeCanvas(timestamp) {
     return;
   }
 
-  if (renderConfig?.type === 'point') {
-    drawPoint(ctx, renderConfig, dpr, w, h);
-  } else if (renderConfig?.type === 'bar') {
-    drawBar(ctx, renderConfig, dpr, w, h);
-  } else if (renderConfig?.type === 'keys') {
-    drawKeyVisualizer(ctx, renderConfig, dpr, w, h);
-  }
+  if (renderConfig?.type === 'point') drawPoint(ctx, renderConfig, dpr, w, h);
+  else if (renderConfig?.type === 'bar') drawBar(ctx, renderConfig, dpr, w, h);
+  else if (renderConfig?.type === 'keys') drawKeyVisualizer(ctx, renderConfig, dpr, w, h);
 }
 
 function drawPoint(ctx, renderConfig, dpr, w, h) {
@@ -263,7 +272,7 @@ function drawPoint(ctx, renderConfig, dpr, w, h) {
   const color = renderConfig.color || '#00ff00';
   ctx.fillStyle = color;
   ctx.beginPath();
-  if (x !== null && typeof x === 'number' && y !== null && typeof y === 'number') {
+  if (typeof x === 'number' && typeof y === 'number') {
     ctx.arc(x * dpr, y * dpr, radius * dpr, 0, Math.PI * 2);
   } else {
     ctx.arc(w / 2, h / 2, radius * dpr, 0, Math.PI * 2);
@@ -273,35 +282,19 @@ function drawPoint(ctx, renderConfig, dpr, w, h) {
 
 function drawBar(ctx, renderConfig, dpr, w, h) {
   const width = resolveValue(loomEngine, renderConfig.width);
+  if (typeof width !== 'number') return;
   const color = renderConfig.color || '#00ccff';
   const cssHeight = renderConfig.height !== undefined ? resolveValue(loomEngine, renderConfig.height) : 40;
+  const cssX = renderConfig.x !== undefined ? resolveValue(loomEngine, renderConfig.x) : 0;
+  const cssY = renderConfig.y !== undefined ? resolveValue(loomEngine, renderConfig.y) : null;
   const heightPx = cssHeight * dpr;
-  const cssX = renderConfig.x !== undefined
-    ? resolveValue(loomEngine, renderConfig.x)
-    : 0;
-  const cssY = renderConfig.y !== undefined
-    ? resolveValue(loomEngine, renderConfig.y)
-    : null;
   const xPx = typeof cssX === 'number' ? cssX * dpr : 0;
-  const yPx = cssY !== null && typeof cssY === 'number'
-    ? cssY * dpr
-    : (h - heightPx) / 2;
-
-  if (width !== null && typeof width === 'number') {
-    ctx.fillStyle = color;
-    ctx.fillRect(xPx, yPx, width * dpr, heightPx);
-  }
+  const yPx = typeof cssY === 'number' ? cssY * dpr : (h - heightPx) / 2;
+  ctx.fillStyle = color;
+  ctx.fillRect(xPx, yPx, width * dpr, heightPx);
 }
 
 function drawKeyVisualizer(ctx, renderConfig, dpr, w, h) {
-  const states = [
-    ['Space', resolveValue(loomEngine, renderConfig.space)],
-    ['←', resolveValue(loomEngine, renderConfig.left)],
-    ['→', resolveValue(loomEngine, renderConfig.right)],
-    ['↑', resolveValue(loomEngine, renderConfig.up)],
-    ['↓', resolveValue(loomEngine, renderConfig.down)]
-  ];
-
   const cx = w / 2;
   const cy = h / 2;
   const keyW = 78 * dpr;
@@ -315,11 +308,11 @@ function drawKeyVisualizer(ctx, renderConfig, dpr, w, h) {
   ctx.fillStyle = 'rgba(255,255,255,0.15)';
   ctx.fillText('Click preview, then press Space / Arrow keys', cx, cy - 110 * dpr);
 
-  drawKey(ctx, '↑', states[3][1], cx, cy - keyH - gap, keyW, keyH, dpr);
-  drawKey(ctx, '←', states[1][1], cx - keyW - gap, cy, keyW, keyH, dpr);
-  drawKey(ctx, 'Space', states[0][1], cx, cy, keyW, keyH, dpr);
-  drawKey(ctx, '→', states[2][1], cx + keyW + gap, cy, keyW, keyH, dpr);
-  drawKey(ctx, '↓', states[4][1], cx, cy + keyH + gap, keyW, keyH, dpr);
+  drawKey(ctx, '↑', resolveValue(loomEngine, renderConfig.up), cx, cy - keyH - gap, keyW, keyH, dpr);
+  drawKey(ctx, '←', resolveValue(loomEngine, renderConfig.left), cx - keyW - gap, cy, keyW, keyH, dpr);
+  drawKey(ctx, 'Space', resolveValue(loomEngine, renderConfig.space), cx, cy, keyW, keyH, dpr);
+  drawKey(ctx, '→', resolveValue(loomEngine, renderConfig.right), cx + keyW + gap, cy, keyW, keyH, dpr);
+  drawKey(ctx, '↓', resolveValue(loomEngine, renderConfig.down), cx, cy + keyH + gap, keyW, keyH, dpr);
   ctx.restore();
 }
 
@@ -349,8 +342,6 @@ function roundRect(ctx, x, y, width, height, radius) {
   ctx.quadraticCurveTo(x, y, x + radius, y);
 }
 
-// ── Runtime error handling ───────────────────────────────────────────────────
-
 function handleRuntimeError(error) {
   setStatus('Runtime error · Read-only Node Preview', true);
   stopLoom();
@@ -359,28 +350,24 @@ function handleRuntimeError(error) {
   if (canvas) drawPlaceholder(canvas, window.devicePixelRatio || 1);
 }
 
-// ── Loom engine lifecycle ─────────────────────────────────────────────────────
-
 function stopLoom() {
-  if (loomRafId !== null) {
-    cancelAnimationFrame(loomRafId);
-    loomRafId = null;
-  }
+  if (loomRafId !== null) cancelAnimationFrame(loomRafId);
+  loomRafId = null;
   if (loomEngine) {
     try { loomEngine.stop(); } catch (_) {}
-    loomEngine = null;
   }
+  loomEngine = null;
   runtimeStartTimestampMs = null;
   isRuntimePaused = false;
   pausedAtTimestampMs = null;
   accumulatedPausedMs = 0;
   lastEffectsPostMs = 0;
+  hostInput.mouseDown = false;
 }
 
 function startLoom(graph) {
   stopLoom();
   currentGraph = graph || null;
-
   if (!graph || !graph.render) {
     const canvas = document.getElementById('lp-preview-canvas');
     if (canvas) drawPlaceholder(canvas, window.devicePixelRatio || 1);
@@ -389,42 +376,29 @@ function startLoom(graph) {
   }
 
   try {
-    const graphForLoom = { nodes: graph.nodes || [], edges: graph.edges || [] };
-    loomEngine = new Loom(graphForLoom);
-    runtimeStartTimestampMs = null;
-    isRuntimePaused = false;
-    pausedAtTimestampMs = null;
-    accumulatedPausedMs = 0;
-    lastEffectsPostMs = 0;
+    loomEngine = new Loom({ nodes: graph.nodes || [], edges: graph.edges || [] });
     loomRafId = requestAnimationFrame(drawFrame);
     updateControlStates();
-  } catch (e) {
-    console.error('[loomlet-preview] Loom engine initialization failed:', e);
-    handleRuntimeError(e);
+  } catch (error) {
+    console.error('[loomlet-preview] Loom engine initialization failed:', error);
+    handleRuntimeError(error);
   }
 }
-
-// ── Status & error helpers ────────────────────────────────────────────────────
 
 function setStatus(text, isError) {
   const el = document.getElementById('lp-status');
   if (!el) return;
   el.textContent = text;
-  if (isError) {
-    el.style.borderLeftColor = '#f44747';
-    el.style.color = '#f88';
-  } else {
-    el.style.borderLeftColor = '#4a90e2';
-    el.style.color = '#9cdcfe';
-  }
+  el.style.borderLeftColor = isError ? '#f44747' : '#4a90e2';
+  el.style.color = isError ? '#f88' : '#9cdcfe';
 }
 
 function setErrors(errors) {
   lastErrors = errors || [];
-  _renderErrors();
+  renderErrors();
 }
 
-function _renderErrors() {
+function renderErrors() {
   const el = document.getElementById('lp-errors');
   if (!el) return;
   if (!editorVisible || lastErrors.length === 0) {
@@ -433,56 +407,39 @@ function _renderErrors() {
     return;
   }
   el.style.display = 'block';
-  el.innerHTML = lastErrors
-    .map(e => `<div class=\"lp-error-item\">${escapeHtml(e.message || String(e))}</div>`)
-    .join('');
+  el.innerHTML = lastErrors.map((e) => `<div class="lp-error-item">${escapeHtml(e.message || String(e))}</div>`).join('');
 }
 
 function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/\"/g, '&quot;');
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-// ── Runtime controls ──────────────────────────────────────────────────────────
-
 function togglePauseResume() {
-  if (!loomEngine || !currentGraph || !currentGraph.render) return;
-
+  if (!loomEngine || !currentGraph?.render) return;
   if (isRuntimePaused) {
     const now = performance.now();
-    if (pausedAtTimestampMs !== null) {
-      accumulatedPausedMs += (now - pausedAtTimestampMs);
-      pausedAtTimestampMs = null;
-    }
+    if (pausedAtTimestampMs !== null) accumulatedPausedMs += now - pausedAtTimestampMs;
+    pausedAtTimestampMs = null;
     isRuntimePaused = false;
-    updateControlStates();
-    updateStatus();
-    if (loomRafId === null) {
-      loomRafId = requestAnimationFrame(drawFrame);
-    }
+    if (loomRafId === null) loomRafId = requestAnimationFrame(drawFrame);
   } else {
     pausedAtTimestampMs = performance.now();
     isRuntimePaused = true;
-    if (loomRafId !== null) {
-      cancelAnimationFrame(loomRafId);
-      loomRafId = null;
-    }
-    updateControlStates();
-    updateStatus();
+    if (loomRafId !== null) cancelAnimationFrame(loomRafId);
+    loomRafId = null;
   }
+  updateControlStates();
+  updateStatus();
 }
 
 function resetRuntime() {
-  if (!loomEngine || !currentGraph || !currentGraph.render) return;
-
+  if (!loomEngine || !currentGraph?.render) return;
   runtimeStartTimestampMs = null;
   accumulatedPausedMs = 0;
   isRuntimePaused = false;
   pausedAtTimestampMs = null;
   lastEffectsPostMs = 0;
+  hostInput.mouseDown = false;
 
   const canvas = document.getElementById('lp-preview-canvas');
   const ctx = canvas?.getContext('2d');
@@ -491,79 +448,50 @@ function resetRuntime() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
-  try {
-    loomEngine.evaluateAt(0, performance.now());
-    drawRuntimeCanvas(performance.now());
-  } catch (e) {
-    console.error('[loomlet-preview] Error during reset:', e);
-  }
-
+  if (loomRafId !== null) cancelAnimationFrame(loomRafId);
+  loomRafId = requestAnimationFrame(drawFrame);
   updateControlStates();
   updateStatus();
-
-  if (loomRafId !== null) {
-    cancelAnimationFrame(loomRafId);
-    loomRafId = null;
-  }
-  loomRafId = requestAnimationFrame(drawFrame);
 }
 
 function updateControlStates() {
-  const canControl = loomEngine && currentGraph && currentGraph.render;
+  const canControl = Boolean(loomEngine && currentGraph?.render);
   const toggleBtn = document.getElementById('lp-toggle-runtime');
   const resetBtn = document.getElementById('lp-reset-runtime');
-
   if (toggleBtn) {
     toggleBtn.disabled = !canControl;
     toggleBtn.textContent = isRuntimePaused ? 'Resume' : 'Pause';
   }
-  if (resetBtn) {
-    resetBtn.disabled = !canControl;
-  }
+  if (resetBtn) resetBtn.disabled = !canControl;
 }
 
 function updateStatus() {
-  if (isRuntimePaused) {
-    setStatus('Paused · Runtime Preview · Read-only Node Preview', false);
-  } else if (loomEngine && currentGraph && currentGraph.render) {
-    setStatus('Running · Runtime Preview · Read-only Node Preview', false);
-  }
+  if (isRuntimePaused) setStatus('Paused · Runtime Preview · Read-only Node Preview', false);
+  else if (loomEngine && currentGraph?.render) setStatus('Running · Runtime Preview · Read-only Node Preview', false);
 }
-
-// ── Hide / Show toggle ────────────────────────────────────────────────────────
 
 function toggleEditor() {
   editorVisible = !editorVisible;
-
   const panel = document.getElementById('lp-panel');
   const container = document.getElementById('lp-editor-container');
   const btn = document.getElementById('lp-toggle-editor');
-
   if (editorVisible) {
     if (container) container.style.display = '';
     if (panel) panel.style.flex = '1';
     if (btn) btn.textContent = 'Hide Editor';
-    _renderErrors();
   } else {
     if (container) container.style.display = 'none';
     if (panel) panel.style.flex = '0 0 auto';
     if (btn) btn.textContent = 'Show Editor';
-    _renderErrors();
   }
+  renderErrors();
 }
 
 function initControlButtons() {
-  const toggleEditorBtn = document.getElementById('lp-toggle-editor');
-  if (toggleEditorBtn) toggleEditorBtn.addEventListener('click', toggleEditor);
-
-  const toggleRuntimeBtn = document.getElementById('lp-toggle-runtime');
-  if (toggleRuntimeBtn) toggleRuntimeBtn.addEventListener('click', togglePauseResume);
-
-  const resetRuntimeBtn = document.getElementById('lp-reset-runtime');
-  if (resetRuntimeBtn) resetRuntimeBtn.addEventListener('click', resetRuntime);
+  document.getElementById('lp-toggle-editor')?.addEventListener('click', toggleEditor);
+  document.getElementById('lp-toggle-runtime')?.addEventListener('click', togglePauseResume);
+  document.getElementById('lp-reset-runtime')?.addEventListener('click', resetRuntime);
 }
-
-// ── Node Editor lifecycle ─────────────────────────────────────────────────────
 
 function initEditorView() {
   if (editorView) return;
@@ -571,12 +499,10 @@ function initEditorView() {
   if (!container) return;
   editorView = new NodeEditorView(container, {
     onOperation: () => {},
-    onError: (e) => console.error('[NodeEditorView]', e),
+    onError: (error) => console.error('[NodeEditorView]', error),
     onSelectNode: () => {}
   });
 }
-
-// ── Message handler ───────────────────────────────────────────────────────────
 
 window.addEventListener('message', async (event) => {
   const message = event.data;
@@ -600,22 +526,18 @@ window.addEventListener('message', async (event) => {
   }
 
   initEditorView();
-
   try {
     await editorView.renderModel(editorModel);
     updateStatus();
     updateControlStates();
-  } catch (e) {
-    console.error('[loomlet-preview] renderModel failed:', e);
+  } catch (error) {
+    console.error('[loomlet-preview] renderModel failed:', error);
     setStatus('Render error · Read-only Node Preview', true);
   }
 });
-
-// ── Boot ──────────────────────────────────────────────────────────────────────
 
 resizePreviewCanvas();
 window.addEventListener('resize', resizePreviewCanvas);
 initHostInputs();
 initControlButtons();
-
 vscode.postMessage({ type: 'ready' });
