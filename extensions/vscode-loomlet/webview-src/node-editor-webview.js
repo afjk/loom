@@ -22,6 +22,10 @@ let isRuntimePaused = false;
 let pausedAtTimestampMs = null;
 let accumulatedPausedMs = 0;
 
+// Console effect forwarding state
+let lastEffectsPostMs = 0;
+const EFFECTS_POST_INTERVAL_MS = 100;
+
 // ── Canvas: Loom Runtime Preview ─────────────────────────────────────────────
 
 function resizePreviewCanvas() {
@@ -102,6 +106,7 @@ function drawFrame(timestamp) {
 
     // Evaluate the Loom graph at this time
     loomEngine.evaluateAt(elapsedSeconds, timestamp);
+    postRuntimeEffects(timestamp);
 
     // Draw the canvas
     drawRuntimeCanvas(timestamp);
@@ -113,6 +118,32 @@ function drawFrame(timestamp) {
 
   // Schedule next frame
   loomRafId = requestAnimationFrame(drawFrame);
+}
+
+function postRuntimeEffects(timestamp) {
+  if (!loomEngine || typeof loomEngine.getEffects !== 'function') return;
+  if (timestamp - lastEffectsPostMs < EFFECTS_POST_INTERVAL_MS) return;
+
+  const effects = loomEngine.getEffects() || [];
+  const consoleEffects = effects.filter(isConsoleEffect);
+  if (consoleEffects.length === 0) return;
+
+  lastEffectsPostMs = timestamp;
+  vscode.postMessage({
+    type: 'runtimeEffects',
+    effects: consoleEffects
+  });
+}
+
+function isConsoleEffect(effect) {
+  if (!effect || typeof effect !== 'object') return false;
+  const type = String(effect.type || effect.kind || effect.name || '');
+  const target = String(effect.target || '');
+  return type === 'console'
+    || type === 'console.log'
+    || type === 'console.warn'
+    || type === 'console.error'
+    || target === 'console';
 }
 
 function drawRuntimeCanvas(timestamp) {
@@ -194,6 +225,7 @@ function stopLoom() {
   isRuntimePaused = false;
   pausedAtTimestampMs = null;
   accumulatedPausedMs = 0;
+  lastEffectsPostMs = 0;
 }
 
 function startLoom(graph) {
@@ -215,6 +247,7 @@ function startLoom(graph) {
     isRuntimePaused = false;
     pausedAtTimestampMs = null;
     accumulatedPausedMs = 0;
+    lastEffectsPostMs = 0;
     // Start the RAF loop - do NOT call loomEngine.start()
     loomRafId = requestAnimationFrame(drawFrame);
     updateControlStates();
@@ -306,6 +339,7 @@ function resetRuntime() {
   accumulatedPausedMs = 0;
   isRuntimePaused = false;
   pausedAtTimestampMs = null;
+  lastEffectsPostMs = 0;
 
   try {
     // Reset the engine to t=0

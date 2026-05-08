@@ -12,11 +12,16 @@ let nodePreviewPanel = null;
 let currentPreviewDocument = null;
 let previousEditorModel = null;
 let previewDebounceTimer = null;
+let loomletOutput = null;
+let runtimeOutputShown = false;
 const PREVIEW_DEBOUNCE_MS = 300;
 
 const pendingValidationTimers = new Map();
 
 async function activate(context) {
+  loomletOutput = vscode.window.createOutputChannel('Loomlet');
+  context.subscriptions.push(loomletOutput);
+
   try {
     await ensureModulesLoaded();
   } catch (err) {
@@ -154,6 +159,11 @@ function openNodePreviewToSide(context) {
   const readySub = nodePreviewPanel.webview.onDidReceiveMessage((message) => {
     if (message.type === 'ready' && currentPreviewDocument) {
       sendDocumentToPreview(currentPreviewDocument);
+      return;
+    }
+
+    if (message.type === 'runtimeEffects') {
+      appendRuntimeEffects(message.effects);
     }
   });
   context.subscriptions.push(readySub);
@@ -191,6 +201,61 @@ function sendDocumentToPreview(document) {
     graph: errors.length === 0 ? graph : null,
     errors
   });
+}
+
+function appendRuntimeEffects(effects) {
+  if (!loomletOutput || !Array.isArray(effects) || effects.length === 0) return;
+
+  const consoleEffects = effects.filter(isConsoleEffect);
+  if (consoleEffects.length === 0) return;
+
+  if (!runtimeOutputShown) {
+    runtimeOutputShown = true;
+    loomletOutput.show(true);
+  }
+
+  for (const effect of consoleEffects) {
+    const now = new Date().toLocaleTimeString();
+    const level = getConsoleEffectLevel(effect);
+    loomletOutput.appendLine(`[${now}] ${level}: ${formatConsoleEffectValue(effect)}`);
+  }
+}
+
+function isConsoleEffect(effect) {
+  if (!effect || typeof effect !== 'object') return false;
+  const type = String(effect.type || effect.kind || effect.name || '');
+  const target = String(effect.target || '');
+  return type === 'console'
+    || type === 'console.log'
+    || type === 'console.warn'
+    || type === 'console.error'
+    || target === 'console';
+}
+
+function getConsoleEffectLevel(effect) {
+  const type = String(effect.type || effect.kind || effect.name || '');
+  const method = String(effect.method || effect.level || '');
+  if (type.endsWith('.warn') || method === 'warn') return 'warn';
+  if (type.endsWith('.error') || method === 'error') return 'error';
+  return 'log';
+}
+
+function formatConsoleEffectValue(effect) {
+  const value = effect.args ?? effect.values ?? effect.value ?? effect.message ?? effect.payload ?? effect;
+  if (Array.isArray(value)) {
+    return value.map(formatValue).join(' ');
+  }
+  return formatValue(value);
+}
+
+function formatValue(value) {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean' || value == null) return String(value);
+  try {
+    return JSON.stringify(value);
+  } catch (_) {
+    return String(value);
+  }
 }
 
 function getWebviewContent(scriptUri, nonce, cspSource) {
@@ -305,8 +370,6 @@ function getWebviewContent(scriptUri, nonce, cspSource) {
       position: relative;
       overflow: hidden;
       background: rgba(30, 30, 30, 0.80);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
       min-height: 0;
     }
   </style>
