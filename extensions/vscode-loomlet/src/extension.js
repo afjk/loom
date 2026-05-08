@@ -11,7 +11,7 @@ const { ensurePreviewModulesLoaded, buildPreviewModelFromDsl } = require('./prev
 let nodePreviewPanel = null;
 let currentPreviewDocument = null;
 let previousEditorModel = null;
-let previousRenderPreview = null;
+let previousGraph = null;
 let previewDebounceTimer = null;
 const PREVIEW_DEBOUNCE_MS = 300;
 
@@ -147,7 +147,7 @@ function openNodePreviewToSide(context) {
     nodePreviewPanel = null;
     currentPreviewDocument = null;
     previousEditorModel = null;
-    previousRenderPreview = null;
+    previousGraph = null;
   });
 
   // When the WebView JS finishes loading it sends { type: 'ready' }.
@@ -180,21 +180,21 @@ function sendDocumentToPreview(document) {
   if (!nodePreviewPanel) return;
 
   const text = document.getText();
-  const { editorModel, errors, renderPreview } = buildPreviewModelFromDsl(text, previousEditorModel);
+  const { editorModel, graph, errors } = buildPreviewModelFromDsl(text, previousEditorModel);
 
   if (errors.length === 0 && editorModel) {
     previousEditorModel = editorModel;
   }
 
-  // On successful parse/compile, update renderPreview; on error, keep the last one
-  if (errors.length === 0 && renderPreview) {
-    previousRenderPreview = renderPreview;
+  // On success, update the graph for the Loom runtime; on error, keep the previous graph running
+  if (errors.length === 0 && graph) {
+    previousGraph = graph;
   }
 
   nodePreviewPanel.webview.postMessage({
     type: 'setModel',
     editorModel: errors.length === 0 ? editorModel : null,
-    renderPreview: previousRenderPreview || { items: [], unsupported: [] },
+    graph: errors.length === 0 ? graph : null,
     errors
   });
 }

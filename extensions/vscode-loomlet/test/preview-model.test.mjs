@@ -106,108 +106,59 @@ await ensurePreviewModulesLoaded();
   assert.equal(result.editorModel, null, 'null input should produce null editorModel');
 }
 
-// Test 11: render circle with literal args produces renderPreview item
+// Test 11: buildPreviewModelFromDsl returns a graph object on success
 {
-  const result = buildPreviewModelFromDsl('render circle(x: 160, y: 120, r: 32, color: "#80ed99")');
-  assert.equal(result.errors.length, 0, 'Valid render should produce no errors');
-  assert.ok(result.renderPreview, 'Should have renderPreview');
-  assert.equal(result.renderPreview.items.length, 1, 'Should have one render item');
-  assert.equal(result.renderPreview.items[0].kind, 'circle', 'Item should be a circle');
-  assert.equal(result.renderPreview.items[0].x, 160, 'Circle x should be 160');
-  assert.equal(result.renderPreview.items[0].y, 120, 'Circle y should be 120');
-  assert.equal(result.renderPreview.items[0].r, 32, 'Circle r should be 32');
-  assert.equal(result.renderPreview.items[0].color, '#80ed99', 'Circle color should match');
+  const result = buildPreviewModelFromDsl('x = 1');
+  assert.ok(result.graph, 'Valid DSL should return a graph');
+  assert.ok(Array.isArray(result.graph.nodes), 'graph should have nodes array');
+  assert.ok(Array.isArray(result.graph.edges), 'graph should have edges array');
 }
 
-// Test 12: render rect with literal args produces renderPreview item
+// Test 12: graph is null on parse error
 {
-  const result = buildPreviewModelFromDsl('render rect(x: 40, y: 180, width: 180, height: 48, color: "#70d6ff")');
-  assert.equal(result.errors.length, 0, 'Valid render should produce no errors');
-  assert.equal(result.renderPreview.items.length, 1, 'Should have one render item');
-  assert.equal(result.renderPreview.items[0].kind, 'rect', 'Item should be a rect');
-  assert.equal(result.renderPreview.items[0].x, 40, 'Rect x should be 40');
-  assert.equal(result.renderPreview.items[0].width, 180, 'Rect width should be 180');
-  assert.equal(result.renderPreview.items[0].height, 48, 'Rect height should be 48');
-}
-
-// Test 13: render bar with value clamps to 0-1
-{
-  const result1 = buildPreviewModelFromDsl('render bar(value: 1.5)');
-  assert.equal(result1.renderPreview.items[0].value, 1, 'Value > 1 should be clamped to 1');
-
-  const result2 = buildPreviewModelFromDsl('render bar(value: -0.5)');
-  assert.equal(result2.renderPreview.items[0].value, 0, 'Value < 0 should be clamped to 0');
-
-  const result3 = buildPreviewModelFromDsl('render bar(value: 0.7)');
-  assert.equal(result3.renderPreview.items[0].value, 0.7, 'Value 0.7 should be 0.7');
-}
-
-// Test 14: render text extracts text string
-{
-  const result = buildPreviewModelFromDsl('render text(x: 40, y: 70, text: "Hello Loomlet", color: "#ffffff")');
-  assert.equal(result.errors.length, 0, 'Valid render should produce no errors');
-  assert.equal(result.renderPreview.items.length, 1, 'Should have one render item');
-  assert.equal(result.renderPreview.items[0].kind, 'text', 'Item should be text');
-  assert.equal(result.renderPreview.items[0].text, 'Hello Loomlet', 'Text should match');
-  assert.equal(result.renderPreview.items[0].color, '#ffffff', 'Color should match');
-}
-
-// Test 15: render with identifier arg becomes unsupported
-{
-  const result = buildPreviewModelFromDsl('x = 160\nrender circle(x: x, y: 120, r: 32)');
-  assert.equal(result.errors.length, 0, 'Valid DSL should produce no errors');
-  assert.equal(result.renderPreview.items.length, 0, 'Circle with identifier x should not be in items');
-  assert.equal(result.renderPreview.unsupported.length, 1, 'Should have one unsupported item');
-  assert.equal(result.renderPreview.unsupported[0].kind, 'circle', 'Unsupported kind should be circle');
-  assert.ok(result.renderPreview.unsupported[0].reason.includes('x'), 'Reason should mention x');
-}
-
-// Test 16: invalid DSL returns errors and no renderPreview items
-{
-  const result = buildPreviewModelFromDsl('invalid syntax here');
+  const result = buildPreviewModelFromDsl('x = math.sine(t, frequency:');
+  assert.equal(result.graph, null, 'Parse error should produce null graph');
   assert.ok(result.errors.length > 0, 'Should have parse errors');
-  assert.equal(result.renderPreview.items.length, 0, 'Should have no render items on error');
 }
 
-// Test 17: empty DSL returns empty renderPreview
+// Test 13: graph is null on compile error
+{
+  const result = buildPreviewModelFromDsl('a = 1\nb = add(a, undefined_var)');
+  assert.equal(result.graph, null, 'Compile error should produce null graph');
+  assert.ok(result.errors.length > 0, 'Should have compile errors');
+}
+
+// Test 14: render bar produces graph.render with type bar
+{
+  const result = buildPreviewModelFromDsl('t = clock()\nwave = sine(t, freq: 0.5)\nrender bar(width: wave)');
+  assert.equal(result.errors.length, 0, 'Valid render bar DSL should have no errors');
+  assert.ok(result.graph, 'Should produce a graph');
+  assert.ok(result.graph.render, 'graph should have render config');
+  assert.equal(result.graph.render.type, 'bar', 'render type should be bar');
+}
+
+// Test 15: render point produces graph.render with type point
+{
+  const result = buildPreviewModelFromDsl('t = clock()\nx = sine(t, freq: 0.2)\nrender point(x: x, y: x)');
+  assert.equal(result.errors.length, 0, 'Valid render point DSL should have no errors');
+  assert.ok(result.graph, 'Should produce a graph');
+  assert.ok(result.graph.render, 'graph should have render config');
+  assert.equal(result.graph.render.type, 'point', 'render type should be point');
+}
+
+// Test 16: empty DSL returns null graph with no errors
 {
   const result = buildPreviewModelFromDsl('');
   assert.equal(result.errors.length, 0, 'Empty DSL should have no errors');
-  assert.equal(result.renderPreview.items.length, 0, 'Should have no render items');
-  assert.equal(result.renderPreview.unsupported.length, 0, 'Should have no unsupported items');
+  assert.equal(result.graph, null, 'Empty DSL should return null graph');
 }
 
-// Test 18: multiple render statements produce multiple items
+// Test 17: metadata-annotated DSL produces graph
 {
-  const result = buildPreviewModelFromDsl(`
-    render circle(x: 100, y: 100)
-    render rect(x: 200, y: 200)
-    render text(text: "hi")
-  `);
-  assert.equal(result.errors.length, 0, 'Valid DSL should have no errors');
-  assert.equal(result.renderPreview.items.length, 3, 'Should have three render items');
-  assert.equal(result.renderPreview.items[0].kind, 'circle', 'First item should be circle');
-  assert.equal(result.renderPreview.items[1].kind, 'rect', 'Second item should be rect');
-  assert.equal(result.renderPreview.items[2].kind, 'text', 'Third item should be text');
-}
-
-// Test 19: metadata comment付きDSLでも renderPreview が抽出できる
-{
-  const result = buildPreviewModelFromDsl(`
-    render circle(x: 100, y: 100, r: 50)
-
-    # @loomlet.editor {"version":1,"layout":{"nodes":{}}}
-  `);
-  assert.equal(result.errors.length, 0, 'Valid render with metadata should have no errors');
-  assert.equal(result.renderPreview.items.length, 1, 'Should extract render item from DSL with metadata');
-  assert.equal(result.renderPreview.items[0].kind, 'circle', 'Should be a circle');
-}
-
-// Test 20: render with partially literal args
-{
-  const result = buildPreviewModelFromDsl('x = 160\nrender circle(x: x, y: 120, r: 32, color: "#fff")');
-  assert.equal(result.renderPreview.items.length, 0, 'Circle with one non-literal arg should not render');
-  assert.equal(result.renderPreview.unsupported.length, 1, 'Should have one unsupported item');
+  const result = buildPreviewModelFromDsl(`t = clock()\nwave = sine(t)\nrender bar(width: wave)\n\n# @loomlet.editor {"version":1,"layout":{"nodes":{}}}`);
+  assert.equal(result.errors.length, 0, 'DSL with metadata should have no errors');
+  assert.ok(result.graph, 'Should produce a graph with metadata');
+  assert.equal(result.graph.render.type, 'bar', 'render type should be bar');
 }
 
 console.log('All preview-model tests passed!');

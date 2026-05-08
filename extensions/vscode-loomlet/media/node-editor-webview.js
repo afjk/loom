@@ -15373,6 +15373,473 @@ var LoomletPreview = (() => {
       }
     }
   };
+  var Loom = class {
+    constructor(graph) {
+      this._currentGraph = null;
+      this._pendingGraph = null;
+      this._sortedNodeIds = [];
+      this._values = /* @__PURE__ */ new Map();
+      this._prevOuts = /* @__PURE__ */ new Map();
+      this._eventQueue = [];
+      this._rafId = null;
+      this._startTime = null;
+      this._lastTimestamp = null;
+      this._inputStates = {};
+      this._effects = [];
+      this._loadGraphInternal(graph);
+    }
+    // 外部からノード型を追加するための静的メソッド（アダプタ層向け）
+    static registerNodeType(name, definition) {
+      if (NODE_TYPES[name]) {
+        throw new LoomError("DUPLICATE_NODE_TYPE", `Node type already registered: ${name}`, { name });
+      }
+      NODE_TYPES[name] = definition;
+    }
+    _activatePendingGraph(runLifecycle = true) {
+      if (this._pendingGraph === null) {
+        return;
+      }
+      if (runLifecycle && this._currentGraph) {
+        for (const node2 of this._currentGraph.nodes) {
+          const nodeType = NODE_TYPES[node2.type];
+          if (nodeType.onStop) {
+            nodeType.onStop(node2, this);
+          }
+        }
+      }
+      this._reconcileStateForGraph(this._pendingGraph);
+      this._currentGraph = this._pendingGraph;
+      this._sortedNodeIds = this._pendingNodeIds;
+      this._pendingGraph = null;
+      if (runLifecycle && this._currentGraph) {
+        for (const node2 of this._currentGraph.nodes) {
+          const nodeType = NODE_TYPES[node2.type];
+          if (nodeType.onStart) {
+            nodeType.onStart(node2, this);
+          }
+        }
+      }
+    }
+    evaluateAt(time, frameTimestamp = time * 1e3) {
+      this._activatePendingGraph(true);
+      if (!this._currentGraph) return;
+      this._effects = [];
+      const dt2 = this._computeDeltaTime(frameTimestamp);
+      const ctx = {
+        time,
+        dt: dt2,
+        engine: this,
+        nodePredicates: /* @__PURE__ */ new Map()
+      };
+      for (const node2 of this._currentGraph.nodes) {
+        const nodeType = NODE_TYPES[node2.type];
+        for (const output of nodeType.outputs) {
+          if (output.kind === "event") {
+            this._values.set(`${node2.id}.${output.name}`, []);
+          }
+        }
+      }
+      for (const { ref, payload } of this._eventQueue) {
+        const current = this._values.get(ref) || [];
+        current.push(payload);
+        this._values.set(ref, current);
+      }
+      this._eventQueue = [];
+      for (const nodeId of this._sortedNodeIds) {
+        const node2 = this._currentGraph.nodes.find((n2) => n2.id === nodeId);
+        const nodeType = NODE_TYPES[node2.type];
+        if (nodeType.category === "input" && nodeType.outputs.length > 0 && nodeType.outputs.every((o) => o.kind === "event")) {
+          continue;
+        }
+        const inputs = {};
+        for (const inputDef of nodeType.inputs) {
+          const portName = inputDef.name;
+          const ref = `${nodeId}.${portName}`;
+          const edge = this._currentGraph.edges.find((e) => e.to === ref);
+          if (edge) {
+            if (inputDef.kind === "event") {
+              inputs[portName] = this._values.get(edge.from) || [];
+            } else {
+              inputs[portName] = this._values.get(edge.from);
+            }
+          } else {
+            const paramValue = node2.params && node2.params[portName];
+            if (paramValue !== void 0) {
+              inputs[portName] = paramValue;
+            } else {
+              inputs[portName] = inputDef.default;
+            }
+          }
+        }
+        const params = {};
+        for (const paramDef of nodeType.params) {
+          const paramName = paramDef.name;
+          const paramValue = node2.params && node2.params[paramName];
+          if (paramValue !== void 0) {
+            params[paramName] = paramValue;
+          } else {
+            params[paramName] = paramDef.default;
+          }
+        }
+        let outputs;
+        if (nodeType.category === "state") {
+          const initial = coerceFiniteNumber(params.initial, 0);
+          const prevOut = this._prevOuts.has(nodeId) ? this._prevOuts.get(nodeId) : initial;
+          const stateCtx = { ...ctx, prevOut: sanitizeStateValue(prevOut, initial) };
+          try {
+            outputs = nodeType.evaluate(inputs, params, stateCtx);
+            const rawOut = outputs?.out;
+            const rawNewState = outputs?._newState !== void 0 ? outputs._newState : rawOut;
+            const safeOut = sanitizeStateValue(rawOut, initial);
+            const safeNewState = sanitizeStateValue(rawNewState, initial);
+            outputs = { ...outputs, out: safeOut };
+            this._prevOuts.set(nodeId, safeNewState);
+          } catch (error) {
+            console.error(`State node evaluation failed: ${nodeId}`, error);
+            outputs = { out: stateCtx.prevOut };
+          }
+        } else {
+          outputs = nodeType.evaluate(inputs, params, { ...ctx, currentNodeId: nodeId });
+        }
+        for (const outputDef of nodeType.outputs) {
+          const portName = outputDef.name;
+          const ref = `${nodeId}.${portName}`;
+          if (outputDef.kind === "event") {
+            this._values.set(ref, outputs[portName] || []);
+          } else {
+            this._values.set(ref, outputs[portName]);
+          }
+        }
+      }
+    }
+    evaluateOnce({ time = 0, dt: dt2 = 0 } = {}) {
+      const safeTime = Number.isFinite(time) ? time : 0;
+      const safeDt = Number.isFinite(dt2) ? Math.max(0, dt2) : 0;
+      const frameTimestamp = safeTime * 1e3;
+      this._activatePendingGraph(false);
+      this._lastTimestamp = frameTimestamp - safeDt * 1e3;
+      this.evaluateAt(safeTime, frameTimestamp);
+    }
+    getValue(ref) {
+      return this._values.get(ref);
+    }
+    getEffects() {
+      return [...this._effects];
+    }
+    _recordEffect(effect) {
+      this._effects.push(effect);
+    }
+    dispatchEvent(ref, payload) {
+      const [nodeId, portName] = ref.split(".");
+      if (!nodeId || !portName) {
+        throw new LoomError(
+          "INVALID_GRAPH",
+          'dispatchEvent ref must be in format "nodeId.portName"',
+          { reason: "invalid ref format" }
+        );
+      }
+      if (!this._currentGraph) {
+        throw new LoomError("UNKNOWN_NODE", `dispatchEvent references non-existent node: ${nodeId}`, { nodeId });
+      }
+      const node2 = this._currentGraph.nodes.find((n2) => n2.id === nodeId);
+      if (!node2) {
+        throw new LoomError("UNKNOWN_NODE", `dispatchEvent references non-existent node: ${nodeId}`, { nodeId });
+      }
+      const nodeType = NODE_TYPES[node2.type];
+      const outputPort = nodeType.outputs.find((o) => o.name === portName);
+      if (!outputPort) {
+        throw new LoomError(
+          "UNKNOWN_PORT",
+          `dispatchEvent references non-existent port: ${ref}`,
+          { nodeId, port: portName, side: "output" }
+        );
+      }
+      if (outputPort.kind !== "event") {
+        throw new LoomError(
+          "TYPE_MISMATCH",
+          `dispatchEvent target must be Event port`,
+          { from: ref, to: ref, fromType: outputPort.kind, toType: "event" }
+        );
+      }
+      this._eventQueue.push({ ref, payload });
+    }
+    load(graph) {
+      this._validateGraph(graph);
+      const sortedNodeIds = this._topologicalSort(graph);
+      this._pendingGraph = graph;
+      this._pendingNodeIds = sortedNodeIds;
+    }
+    start() {
+      if (this._rafId !== null) return;
+      if (this._currentGraph) {
+        for (const node2 of this._currentGraph.nodes) {
+          const nodeType = NODE_TYPES[node2.type];
+          if (nodeType.onStart) {
+            nodeType.onStart(node2, this);
+          }
+        }
+      }
+      this._lastTimestamp = null;
+      this._startTime = performance.now() / 1e3;
+      const tick = (timestamp) => {
+        const elapsed = timestamp / 1e3 - this._startTime;
+        this.evaluateAt(elapsed, timestamp);
+        this._rafId = requestAnimationFrame(tick);
+      };
+      this._rafId = requestAnimationFrame(tick);
+    }
+    stop() {
+      if (this._rafId !== null) {
+        cancelAnimationFrame(this._rafId);
+        this._rafId = null;
+      }
+      if (this._currentGraph) {
+        for (const node2 of this._currentGraph.nodes) {
+          const nodeType = NODE_TYPES[node2.type];
+          if (nodeType.onStop) {
+            nodeType.onStop(node2, this);
+          }
+        }
+      }
+    }
+    _computeDeltaTime(frameTimestamp) {
+      if (this._lastTimestamp === null) {
+        this._lastTimestamp = frameTimestamp;
+        return 0;
+      }
+      const dt2 = Math.max(0, (frameTimestamp - this._lastTimestamp) / 1e3);
+      this._lastTimestamp = frameTimestamp;
+      return Math.min(dt2, 0.1);
+    }
+    _reconcileStateForGraph(graph) {
+      const nextStateIds = new Set(
+        graph.nodes.filter((node2) => NODE_TYPES[node2.type]?.category === "state").map((node2) => node2.id)
+      );
+      for (const nodeId of Array.from(this._prevOuts.keys())) {
+        if (!nextStateIds.has(nodeId)) {
+          this._prevOuts.delete(nodeId);
+        }
+      }
+    }
+    // 内部メソッド：グラフの検証とソート
+    _loadGraphInternal(graph) {
+      this._validateGraph(graph);
+      const sortedNodeIds = this._topologicalSort(graph);
+      this._currentGraph = graph;
+      this._sortedNodeIds = sortedNodeIds;
+      this._pendingGraph = null;
+      this._reconcileStateForGraph(graph);
+    }
+    // グラフの検証
+    _validateGraph(graph) {
+      if (!graph || typeof graph !== "object") {
+        throw new LoomError("INVALID_GRAPH", "Graph must be an object", { reason: "not an object" });
+      }
+      if (!Array.isArray(graph.nodes) || !Array.isArray(graph.edges)) {
+        throw new LoomError("INVALID_GRAPH", "Graph must have nodes and edges arrays", { reason: "nodes or edges not an array" });
+      }
+      const nodeIds = /* @__PURE__ */ new Set();
+      for (const node2 of graph.nodes) {
+        if (nodeIds.has(node2.id)) {
+          throw new LoomError("DUPLICATE_NODE_ID", `Duplicate node id: ${node2.id}`, { nodeId: node2.id });
+        }
+        nodeIds.add(node2.id);
+      }
+      for (const node2 of graph.nodes) {
+        if (!NODE_TYPES[node2.type]) {
+          throw new LoomError("UNKNOWN_NODE_TYPE", `Unknown node type: ${node2.type}`, { nodeId: node2.id, type: node2.type });
+        }
+      }
+      for (const edge of graph.edges) {
+        const fromParts = edge.from.split(".");
+        const toParts = edge.to.split(".");
+        if (fromParts.length !== 2) {
+          throw new LoomError("INVALID_GRAPH", 'Edge from must be in format "nodeId.portName"', { reason: "invalid edge format" });
+        }
+        if (toParts.length !== 2) {
+          throw new LoomError("INVALID_GRAPH", 'Edge to must be in format "nodeId.portName"', { reason: "invalid edge format" });
+        }
+        const fromNodeId = fromParts[0];
+        const toNodeId = toParts[0];
+        if (!nodeIds.has(fromNodeId)) {
+          throw new LoomError("UNKNOWN_NODE", `Edge references non-existent node: ${fromNodeId}`, { nodeId: fromNodeId });
+        }
+        if (!nodeIds.has(toNodeId)) {
+          throw new LoomError("UNKNOWN_NODE", `Edge references non-existent node: ${toNodeId}`, { nodeId: toNodeId });
+        }
+        const fromPortName = fromParts[1];
+        const toPortName = toParts[1];
+        const fromNode = graph.nodes.find((n2) => n2.id === fromNodeId);
+        const fromNodeType = NODE_TYPES[fromNode.type];
+        const fromPort = fromNodeType.outputs.find((o) => o.name === fromPortName);
+        if (!fromPort) {
+          throw new LoomError("UNKNOWN_PORT", `Unknown port: ${fromNodeId}.${fromPortName}`, { nodeId: fromNodeId, port: fromPortName, side: "output" });
+        }
+        const toNode = graph.nodes.find((n2) => n2.id === toNodeId);
+        const toNodeType = NODE_TYPES[toNode.type];
+        const toPort = toNodeType.inputs.find((i2) => i2.name === toPortName);
+        if (!toPort) {
+          throw new LoomError("UNKNOWN_PORT", `Unknown port: ${toNodeId}.${toPortName}`, { nodeId: toNodeId, port: toPortName, side: "input" });
+        }
+        const fromKind = fromPort.kind;
+        const toKind = toPort.kind;
+        const isSampleValueException = toNode.type === "sample" && toPortName === "value";
+        if (fromKind !== toKind && !isSampleValueException) {
+          throw new LoomError(
+            "TYPE_MISMATCH",
+            `Cannot connect ${fromKind} port to ${toKind} port`,
+            { from: edge.from, to: edge.to, fromType: fromKind, toType: toKind }
+          );
+        }
+      }
+      const inputEdges = /* @__PURE__ */ new Map();
+      for (const edge of graph.edges) {
+        const to = edge.to;
+        if (inputEdges.has(to)) {
+          const toParts = to.split(".");
+          throw new LoomError("DUPLICATE_INPUT_EDGE", `Multiple edges connected to input port: ${to}`, { nodeId: toParts[0], port: toParts[1] });
+        }
+        inputEdges.set(to, edge);
+      }
+      const hasCycle = this._hasCycle(graph);
+      if (hasCycle) {
+        const cycleNodeIds = this._findCycleNodeIds(graph);
+        throw new LoomError("CYCLE", "Graph contains a cycle", { nodeIds: cycleNodeIds });
+      }
+      for (const node2 of graph.nodes) {
+        if (node2.type === "filter") {
+          const predicate = (node2.params && node2.params.predicate) ?? "true";
+          const dslEval = new RestrictedDSLEvaluator(predicate, node2.id);
+          dslEval.evaluate();
+        }
+      }
+    }
+    // トポロジカルソート（Kahn のアルゴリズム）
+    _topologicalSort(graph) {
+      const nodes = graph.nodes;
+      const edges = graph.edges;
+      const inDegree = /* @__PURE__ */ new Map();
+      const adjList = /* @__PURE__ */ new Map();
+      for (const node2 of nodes) {
+        inDegree.set(node2.id, 0);
+        adjList.set(node2.id, []);
+      }
+      for (const edge of edges) {
+        const fromParts = edge.from.split(".");
+        const toParts = edge.to.split(".");
+        const fromNodeId = fromParts[0];
+        const toNodeId = toParts[0];
+        adjList.get(fromNodeId).push(toNodeId);
+        inDegree.set(toNodeId, inDegree.get(toNodeId) + 1);
+      }
+      const queue = [];
+      for (const [nodeId, degree] of inDegree) {
+        if (degree === 0) {
+          queue.push(nodeId);
+        }
+      }
+      const sorted = [];
+      while (queue.length > 0) {
+        const nodeId = queue.shift();
+        sorted.push(nodeId);
+        for (const neighbor of adjList.get(nodeId)) {
+          inDegree.set(neighbor, inDegree.get(neighbor) - 1);
+          if (inDegree.get(neighbor) === 0) {
+            queue.push(neighbor);
+          }
+        }
+      }
+      return sorted;
+    }
+    // サイクル検出（DFS）
+    _hasCycle(graph) {
+      const nodes = graph.nodes;
+      const edges = graph.edges;
+      const adjList = /* @__PURE__ */ new Map();
+      for (const node2 of nodes) {
+        adjList.set(node2.id, []);
+      }
+      for (const edge of edges) {
+        const fromParts = edge.from.split(".");
+        const toParts = edge.to.split(".");
+        const fromNodeId = fromParts[0];
+        const toNodeId = toParts[0];
+        adjList.get(fromNodeId).push(toNodeId);
+      }
+      const state = /* @__PURE__ */ new Map();
+      for (const node2 of nodes) {
+        state.set(node2.id, 0);
+      }
+      for (const node2 of nodes) {
+        if (state.get(node2.id) === 0) {
+          if (this._hasCycleDFS(node2.id, adjList, state)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+    // DFS ヘルパー
+    _hasCycleDFS(nodeId, adjList, state) {
+      state.set(nodeId, 1);
+      for (const neighbor of adjList.get(nodeId)) {
+        const neighborState = state.get(neighbor);
+        if (neighborState === 1) {
+          return true;
+        }
+        if (neighborState === 0) {
+          if (this._hasCycleDFS(neighbor, adjList, state)) {
+            return true;
+          }
+        }
+      }
+      state.set(nodeId, 2);
+      return false;
+    }
+    // サイクルに含まれるノード ID を見つける
+    _findCycleNodeIds(graph) {
+      const nodes = graph.nodes;
+      const edges = graph.edges;
+      const adjList = /* @__PURE__ */ new Map();
+      for (const node2 of nodes) {
+        adjList.set(node2.id, []);
+      }
+      for (const edge of edges) {
+        const fromParts = edge.from.split(".");
+        const toParts = edge.to.split(".");
+        const fromNodeId = fromParts[0];
+        const toNodeId = toParts[0];
+        adjList.get(fromNodeId).push(toNodeId);
+      }
+      const visited = /* @__PURE__ */ new Set();
+      const recStack = /* @__PURE__ */ new Set();
+      const cycleNodes = /* @__PURE__ */ new Set();
+      const dfs = (nodeId) => {
+        visited.add(nodeId);
+        recStack.add(nodeId);
+        for (const neighbor of adjList.get(nodeId)) {
+          if (!visited.has(neighbor)) {
+            if (dfs(neighbor)) {
+              cycleNodes.add(nodeId);
+              return true;
+            }
+          } else if (recStack.has(neighbor)) {
+            cycleNodes.add(nodeId);
+            cycleNodes.add(neighbor);
+            return true;
+          }
+        }
+        recStack.delete(nodeId);
+        return false;
+      };
+      for (const node2 of nodes) {
+        if (!visited.has(node2.id)) {
+          dfs(node2.id);
+        }
+      }
+      return Array.from(cycleNodes);
+    }
+  };
 
   // ../../editor-studio/src/rete-operation-helpers.js
   function connectionToAddEdgeOp(connection) {
@@ -15737,29 +16204,20 @@ var LoomletPreview = (() => {
   var editorView = null;
   var editorVisible = true;
   var lastErrors = [];
-  var currentRenderPreview = { items: [], unsupported: [] };
+  var loomEngine = null;
+  var loomRafId = null;
+  var currentGraph = null;
   function resizePreviewCanvas() {
     const canvas = document.getElementById("lp-preview-canvas");
     if (!canvas) return;
     const dpr = window.devicePixelRatio || 1;
     canvas.width = Math.round(window.innerWidth * dpr);
     canvas.height = Math.round(window.innerHeight * dpr);
-    drawPreviewCanvas(dpr);
-  }
-  function drawPreviewCanvas(dpr) {
-    const canvas = document.getElementById("lp-preview-canvas");
-    if (!canvas) return;
-    drawPreviewBackground(canvas, dpr);
-    if (currentRenderPreview.items && currentRenderPreview.items.length > 0) {
-      drawRenderItems(canvas, currentRenderPreview.items, dpr);
-    } else {
-      drawPlaceholderText(canvas, dpr);
-    }
-    if (currentRenderPreview.unsupported && currentRenderPreview.unsupported.length > 0) {
-      drawUnsupportedHint(canvas, currentRenderPreview.unsupported, dpr);
+    if (!loomEngine) {
+      drawPlaceholder(canvas, dpr);
     }
   }
-  function drawPreviewBackground(canvas, dpr) {
+  function drawPlaceholder(canvas, dpr) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     const w2 = canvas.width;
@@ -15775,12 +16233,6 @@ var LoomletPreview = (() => {
         ctx.fill();
       }
     }
-  }
-  function drawPlaceholderText(canvas, dpr) {
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const w2 = canvas.width;
-    const h2 = canvas.height;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillStyle = "rgba(255,255,255,0.18)";
@@ -15788,81 +16240,89 @@ var LoomletPreview = (() => {
     ctx.fillText("Runtime Preview", w2 / 2, h2 / 2 - Math.round(13 * dpr));
     ctx.fillStyle = "rgba(255,255,255,0.09)";
     ctx.font = `${Math.round(11 * dpr)}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
-    ctx.fillText("render output will appear here", w2 / 2, h2 / 2 + Math.round(13 * dpr));
+    ctx.fillText("add render bar() or render point() to see output", w2 / 2, h2 / 2 + Math.round(13 * dpr));
   }
-  function drawRenderItems(canvas, items, dpr) {
+  function resolveValue(engine, ref) {
+    if (typeof ref === "number") return ref;
+    if (ref === null || ref === void 0) return null;
+    const numVal = parseFloat(ref);
+    if (!isNaN(numVal) && String(ref).trim() === String(numVal)) return numVal;
+    return engine.getValue(ref);
+  }
+  function drawFrame() {
+    const canvas = document.getElementById("lp-preview-canvas");
+    if (!canvas || !loomEngine || !currentGraph) return;
+    const dpr = window.devicePixelRatio || 1;
     const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    for (const item of items) {
-      try {
-        if (item.kind === "circle") {
-          drawCircle(ctx, item, dpr);
-        } else if (item.kind === "rect") {
-          drawRect(ctx, item, dpr);
-        } else if (item.kind === "bar") {
-          drawBar(ctx, item, dpr);
-        } else if (item.kind === "text") {
-          drawText(ctx, item, dpr);
-        }
-      } catch (e) {
-        console.warn("Failed to draw render item:", item, e);
+    const w2 = canvas.width;
+    const h2 = canvas.height;
+    const renderConfig = currentGraph.render;
+    const trail = renderConfig?.trail !== void 0 ? renderConfig.trail : 0.1;
+    if (trail > 0) {
+      ctx.fillStyle = `rgba(0, 0, 0, ${trail})`;
+      ctx.fillRect(0, 0, w2, h2);
+    } else {
+      ctx.fillStyle = "#1a1a1a";
+      ctx.fillRect(0, 0, w2, h2);
+    }
+    if (renderConfig?.type === "point") {
+      const x2 = resolveValue(loomEngine, renderConfig.x);
+      const y = resolveValue(loomEngine, renderConfig.y);
+      const color = renderConfig.color || "#00ff00";
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      if (x2 !== null && typeof x2 === "number" && y !== null && typeof y === "number") {
+        ctx.arc(x2 * dpr, y * dpr, 4 * dpr, 0, Math.PI * 2);
+      } else {
+        ctx.arc(w2 / 2, h2 / 2, 4 * dpr, 0, Math.PI * 2);
+      }
+      ctx.fill();
+    } else if (renderConfig?.type === "bar") {
+      const width = resolveValue(loomEngine, renderConfig.width);
+      const color = renderConfig.color || "#00ccff";
+      const cssHeight = renderConfig.height !== void 0 ? renderConfig.height : 40;
+      const heightPx = cssHeight * dpr;
+      const cssY = renderConfig.y !== void 0 ? resolveValue(loomEngine, renderConfig.y) : null;
+      const yPx = cssY !== null && typeof cssY === "number" ? cssY * dpr : (h2 - heightPx) / 2;
+      if (width !== null && typeof width === "number") {
+        ctx.fillStyle = color;
+        ctx.fillRect(0, yPx, width * dpr, heightPx);
       }
     }
+    loomRafId = requestAnimationFrame(drawFrame);
   }
-  function drawCircle(ctx, item, dpr) {
-    const x2 = (item.x || 100) * dpr;
-    const y = (item.y || 100) * dpr;
-    const r2 = (item.r || 24) * dpr;
-    const color = item.color || "#80ed99";
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(x2, y, r2, 0, Math.PI * 2);
-    ctx.fill();
+  function stopLoom() {
+    if (loomRafId !== null) {
+      cancelAnimationFrame(loomRafId);
+      loomRafId = null;
+    }
+    if (loomEngine) {
+      try {
+        loomEngine.stop();
+      } catch (_) {
+      }
+      loomEngine = null;
+    }
   }
-  function drawRect(ctx, item, dpr) {
-    const x2 = (item.x || 80) * dpr;
-    const y = (item.y || 80) * dpr;
-    const width = (item.width || 120) * dpr;
-    const height = (item.height || 80) * dpr;
-    const color = item.color || "#70d6ff";
-    ctx.fillStyle = color;
-    ctx.fillRect(x2, y, width, height);
-  }
-  function drawBar(ctx, item, dpr) {
-    const x2 = (item.x || 40) * dpr;
-    const y = (item.y || 120) * dpr;
-    const width = (item.width || 240) * dpr;
-    const height = (item.height || 24) * dpr;
-    const value = Math.max(0, Math.min(1, item.value || 0.5));
-    const color = item.color || "#ffd166";
-    const bgColor = item.backgroundColor || "rgba(255,255,255,0.12)";
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(x2, y, width, height);
-    ctx.fillStyle = color;
-    ctx.fillRect(x2, y, width * value, height);
-  }
-  function drawText(ctx, item, dpr) {
-    const x2 = (item.x || 40) * dpr;
-    const y = (item.y || 60) * dpr;
-    const text = item.text || "text";
-    const color = item.color || "#ffffff";
-    const size = item.size || 18;
-    ctx.fillStyle = color;
-    ctx.font = `${Math.round(size * dpr)}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
-    ctx.textAlign = "left";
-    ctx.textBaseline = "top";
-    ctx.fillText(text, x2, y);
-  }
-  function drawUnsupportedHint(canvas, unsupported, dpr) {
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const count = unsupported.length;
-    const hintText = `${count} unsupported render item${count > 1 ? "s" : ""}`;
-    ctx.fillStyle = "rgba(255,150,100,0.4)";
-    ctx.font = `${Math.round(10 * dpr)}px monospace`;
-    ctx.textAlign = "left";
-    ctx.textBaseline = "top";
-    ctx.fillText(hintText, Math.round(12 * dpr), Math.round(canvas.height - 24 * dpr));
+  function startLoom(graph) {
+    stopLoom();
+    currentGraph = graph || null;
+    if (!graph) {
+      const canvas = document.getElementById("lp-preview-canvas");
+      if (canvas) drawPlaceholder(canvas, window.devicePixelRatio || 1);
+      return;
+    }
+    try {
+      const graphForLoom = { nodes: graph.nodes || [], edges: graph.edges || [] };
+      loomEngine = new Loom(graphForLoom);
+      loomEngine.start();
+      loomRafId = requestAnimationFrame(drawFrame);
+    } catch (e) {
+      console.error("[loomlet-preview] Loom engine start failed:", e);
+      stopLoom();
+      const canvas = document.getElementById("lp-preview-canvas");
+      if (canvas) drawPlaceholder(canvas, window.devicePixelRatio || 1);
+    }
   }
   function setStatus(text, isError) {
     const el = document.getElementById("lp-status");
@@ -15875,22 +16335,6 @@ var LoomletPreview = (() => {
       el.style.borderLeftColor = "#4a90e2";
       el.style.color = "#9cdcfe";
     }
-  }
-  function buildStatusText(editorModel, errors, renderPreview) {
-    let status = "";
-    if (editorModel && renderPreview) {
-      status = "Synced";
-      if (renderPreview.items && renderPreview.items.length > 0) {
-        status += ` \xB7 ${renderPreview.items.length} render item${renderPreview.items.length > 1 ? "s" : ""}`;
-      }
-      if (renderPreview.unsupported && renderPreview.unsupported.length > 0) {
-        status += ` \xB7 ${renderPreview.unsupported.length} unsupported`;
-      }
-    } else {
-      status = "Empty";
-    }
-    status += " \xB7 Read-only Node Preview";
-    return status;
   }
   function setErrors(errors) {
     lastErrors = errors || [];
@@ -15947,25 +16391,22 @@ var LoomletPreview = (() => {
   window.addEventListener("message", async (event) => {
     const message = event.data;
     if (!message || message.type !== "setModel") return;
-    const { editorModel, errors, renderPreview } = message;
+    const { editorModel, graph, errors } = message;
     if (errors && errors.length > 0) {
       setStatus("DSL has errors \xB7 Read-only Node Preview", true);
       setErrors(errors);
       return;
     }
     setErrors([]);
-    if (renderPreview) {
-      currentRenderPreview = renderPreview;
-      resizePreviewCanvas();
-    }
+    startLoom(graph || null);
     if (!editorModel) {
-      setStatus(buildStatusText(null, [], renderPreview), false);
+      setStatus("Empty \xB7 Read-only Node Preview", false);
       return;
     }
     initEditorView();
     try {
       await editorView.renderModel(editorModel);
-      setStatus(buildStatusText(editorModel, [], renderPreview), false);
+      setStatus("Synced \xB7 Read-only Node Preview", false);
     } catch (e) {
       console.error("[loomlet-preview] renderModel failed:", e);
       setStatus("Render error \xB7 Read-only Node Preview", true);
