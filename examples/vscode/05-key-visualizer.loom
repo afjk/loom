@@ -1,7 +1,11 @@
-# Key Visualizer
-# VS Code Node Preview example.
+# VS Code Runtime Preview example: Key Visualizer
+# Open this file with Loomlet: Open Node Preview to the Side.
 # Click the preview canvas, then press Space or Arrow keys.
 # Key states are shown on the canvas and written to View > Output > Loomlet.
+
+# Status: runnable
+# Host: vscode-runtime-preview
+# Note: input.key and render keys are currently VS Code Preview host features.
 
 import input
 import console
