@@ -204,33 +204,84 @@ function getWebviewContent(scriptUri, nonce, cspSource) {
     html, body {
       margin: 0; padding: 0;
       width: 100%; height: 100%;
-      background: #1e1e1e;
+      background: #1a1a1a;
       color: #d4d4d4;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       font-size: 13px;
       overflow: hidden;
     }
-    #lp-root {
-      display: flex;
-      flex-direction: column;
+    /* ── Background: Runtime Preview canvas ── */
+    #lp-preview-canvas {
+      position: fixed;
+      inset: 0;
       width: 100%;
       height: 100%;
+      z-index: 0;
+      display: block;
+    }
+    /* ── Foreground: Node Editor overlay ── */
+    #lp-overlay {
+      position: fixed;
+      inset: 12px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      /* Pass pointer-events through to canvas where there is no panel */
+      pointer-events: none;
+    }
+    /* Panel wraps toolbar + errors + editor; collapses when editor is hidden */
+    #lp-panel {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 6px;
+      overflow: hidden;
+      pointer-events: auto;
+      flex: 1;
+    }
+    /* ── Toolbar ── */
+    #lp-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 10px;
+      background: rgba(24, 24, 24, 0.96);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      flex-shrink: 0;
     }
     #lp-status {
-      padding: 4px 12px;
-      background: rgba(74, 144, 226, 0.12);
-      border-left: 3px solid #4a90e2;
-      color: #9cdcfe;
+      flex: 1;
       font-size: 12px;
-      flex-shrink: 0;
+      color: #9cdcfe;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      border-left: 3px solid #4a90e2;
+      padding-left: 8px;
+      line-height: 1.6;
     }
+    #lp-toggle-editor {
+      flex-shrink: 0;
+      padding: 2px 10px;
+      font-size: 11px;
+      font-family: inherit;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 3px;
+      color: #bbb;
+      cursor: pointer;
+      line-height: 1.6;
+    }
+    #lp-toggle-editor:hover {
+      background: rgba(255,255,255,0.11);
+      color: #eee;
+    }
+    /* ── Errors ── */
     #lp-errors {
       padding: 6px 12px;
-      background: rgba(244, 71, 71, 0.12);
-      border-left: 3px solid #f44747;
+      background: rgba(244, 71, 71, 0.10);
+      border-bottom: 1px solid rgba(244, 71, 71, 0.25);
       overflow-y: auto;
       max-height: 120px;
       flex-shrink: 0;
@@ -242,20 +293,34 @@ function getWebviewContent(scriptUri, nonce, cspSource) {
       font-size: 11px;
       color: #f88;
     }
+    /* ── Node Editor container ── */
     #lp-editor-container {
       flex: 1;
       position: relative;
       overflow: hidden;
-      background: #252526;
+      background: rgba(30, 30, 30, 0.80);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      min-height: 0;
     }
   </style>
 </head>
 <body>
-  <div id="lp-root">
-    <div id="lp-status">Waiting for graph...</div>
-    <div id="lp-errors"></div>
-    <div id="lp-editor-container"></div>
+  <!-- Background: Runtime Preview canvas (placeholder until runtime is wired) -->
+  <canvas id="lp-preview-canvas"></canvas>
+
+  <!-- Foreground: Node Editor overlay -->
+  <div id="lp-overlay">
+    <div id="lp-panel">
+      <div id="lp-toolbar">
+        <div id="lp-status">Waiting for graph...</div>
+        <button id="lp-toggle-editor">Hide Editor</button>
+      </div>
+      <div id="lp-errors"></div>
+      <div id="lp-editor-container"></div>
+    </div>
   </div>
+
   <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
