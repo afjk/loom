@@ -1,5 +1,60 @@
 const VSCODE_EXAMPLES = [
   {
+    id: 'mouse-follower',
+    label: 'Mouse Follower',
+    description: 'input.mouseX/Y + render point',
+    detail: 'Move the mouse over the preview canvas; the point follows it.',
+    source: `# Mouse Follower
+# Move the mouse over the Node Preview canvas.
+
+import input
+
+x = input.mouseX()
+y = input.mouseY()
+
+render point(x: x, y: y, radius: 7, color: "#70d6ff", trail: 0.2)
+`
+  },
+  {
+    id: 'mouse-paint',
+    label: 'Mouse Paint',
+    description: 'input.mouseDown + render point enabled',
+    detail: 'Hold the mouse button down and draw on the preview canvas.',
+    source: `# Mouse Paint
+# Hold the mouse button down and draw on the preview canvas.
+
+import input
+
+x = input.mouseX()
+y = input.mouseY()
+painting = input.mouseDown()
+
+render point(x: x, y: y, radius: 5, color: "#ff70a6", trail: 0, enabled: painting)
+`
+  },
+  {
+    id: 'key-visualizer',
+    label: 'Key Visualizer',
+    description: 'input.key + Output Channel + canvas',
+    detail: 'Click the preview, then press Space or Arrow keys to see key state.',
+    source: `# Key Visualizer
+# Click the preview canvas, then press Space or Arrow keys.
+# Key states are shown on the canvas and written to View > Output > Loomlet.
+
+import input
+import console
+
+space = input.key("Space")
+left = input.key("ArrowLeft")
+right = input.key("ArrowRight")
+up = input.key("ArrowUp")
+down = input.key("ArrowDown")
+
+console.log(space)
+render keys(space: space, left: left, right: right, up: up, down: down, trail: 0.18)
+`
+  },
+  {
     id: 'bouncing-bar',
     label: 'Bouncing Bar',
     description: 'render bar',
