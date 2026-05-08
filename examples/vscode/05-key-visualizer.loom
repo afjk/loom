@@ -1,0 +1,16 @@
+# Key Visualizer
+# VS Code Node Preview example.
+# Click the preview canvas, then press Space or Arrow keys.
+# Key states are shown on the canvas and written to View > Output > Loomlet.
+
+import input
+import console
+
+space = input.key("Space")
+left = input.key("ArrowLeft")
+right = input.key("ArrowRight")
+up = input.key("ArrowUp")
+down = input.key("ArrowDown")
+
+console.log(space)
+render keys(space: space, left: left, right: right, up: up, down: down, trail: 0.18)
