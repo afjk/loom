@@ -369,7 +369,7 @@ function getWebviewContent(scriptUri, nonce, cspSource) {
       flex: 1;
       position: relative;
       overflow: hidden;
-      background: rgba(30, 30, 30, 0.80);
+      background: transparent;
       min-height: 0;
     }
   </style>
