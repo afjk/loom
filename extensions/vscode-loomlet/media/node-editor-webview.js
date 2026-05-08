@@ -16207,6 +16207,8 @@ var LoomletPreview = (() => {
   var loomEngine = null;
   var loomRafId = null;
   var currentGraph = null;
+  var runtimeStartTimestampMs = null;
+  var lastFrameTimestampMs = null;
   function resizePreviewCanvas() {
     const canvas = document.getElementById("lp-preview-canvas");
     if (!canvas) return;
@@ -16249,7 +16251,24 @@ var LoomletPreview = (() => {
     if (!isNaN(numVal) && String(ref).trim() === String(numVal)) return numVal;
     return engine.getValue(ref);
   }
-  function drawFrame() {
+  function drawFrame(timestamp) {
+    const canvas = document.getElementById("lp-preview-canvas");
+    if (!canvas || !loomEngine || !currentGraph) return;
+    try {
+      if (runtimeStartTimestampMs === null) {
+        runtimeStartTimestampMs = timestamp;
+      }
+      const elapsedSeconds = (timestamp - runtimeStartTimestampMs) / 1e3;
+      loomEngine.evaluateAt(elapsedSeconds, timestamp);
+      drawRuntimeCanvas(timestamp);
+    } catch (error) {
+      console.error("[loomlet-preview] Runtime error in drawFrame:", error);
+      handleRuntimeError(error);
+      return;
+    }
+    loomRafId = requestAnimationFrame(drawFrame);
+  }
+  function drawRuntimeCanvas(timestamp) {
     const canvas = document.getElementById("lp-preview-canvas");
     if (!canvas || !loomEngine || !currentGraph) return;
     const dpr = window.devicePixelRatio || 1;
@@ -16289,7 +16308,12 @@ var LoomletPreview = (() => {
         ctx.fillRect(0, yPx, width * dpr, heightPx);
       }
     }
-    loomRafId = requestAnimationFrame(drawFrame);
+  }
+  function handleRuntimeError(error) {
+    setStatus("Runtime error \xB7 Read-only Node Preview", true);
+    stopLoom();
+    const canvas = document.getElementById("lp-preview-canvas");
+    if (canvas) drawPlaceholder(canvas, window.devicePixelRatio || 1);
   }
   function stopLoom() {
     if (loomRafId !== null) {
@@ -16303,11 +16327,13 @@ var LoomletPreview = (() => {
       }
       loomEngine = null;
     }
+    runtimeStartTimestampMs = null;
+    lastFrameTimestampMs = null;
   }
   function startLoom(graph) {
     stopLoom();
     currentGraph = graph || null;
-    if (!graph) {
+    if (!graph || !graph.render) {
       const canvas = document.getElementById("lp-preview-canvas");
       if (canvas) drawPlaceholder(canvas, window.devicePixelRatio || 1);
       return;
@@ -16315,13 +16341,12 @@ var LoomletPreview = (() => {
     try {
       const graphForLoom = { nodes: graph.nodes || [], edges: graph.edges || [] };
       loomEngine = new Loom(graphForLoom);
-      loomEngine.start();
+      runtimeStartTimestampMs = null;
+      lastFrameTimestampMs = null;
       loomRafId = requestAnimationFrame(drawFrame);
     } catch (e) {
-      console.error("[loomlet-preview] Loom engine start failed:", e);
-      stopLoom();
-      const canvas = document.getElementById("lp-preview-canvas");
-      if (canvas) drawPlaceholder(canvas, window.devicePixelRatio || 1);
+      console.error("[loomlet-preview] Loom engine initialization failed:", e);
+      handleRuntimeError(e);
     }
   }
   function setStatus(text, isError) {
