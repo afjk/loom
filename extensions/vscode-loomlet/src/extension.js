@@ -1,13 +1,19 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const crypto = require('node:crypto');
 const vscode = require('vscode');
 const { getCompletionContext } = require('./completion-context');
 const { buildCompletions: buildRawCompletions, getIncludePlanned } = require('./completion-engine');
 const { isLoomletDocument, normalizeLoomletErrorLocation, collectLoomletDiagnosticItems, ensureModulesLoaded } = require('./diagnostics.js');
 const { clampCoordinates } = require('./range-utils.js');
+const { ensurePreviewModulesLoaded, buildPreviewModelFromDsl } = require('./preview-model.js');
 
 let nodePreviewPanel = null;
 let currentPreviewDocument = null;
+let previousEditorModel = null;
+let previewDebounceTimer = null;
+const PREVIEW_DEBOUNCE_MS = 300;
+
 const pendingValidationTimers = new Map();
 
 async function activate(context) {
@@ -16,6 +22,13 @@ async function activate(context) {
   } catch (err) {
     vscode.window.showErrorMessage('Failed to load Loomlet diagnostics module. Diagnostics will be unavailable.');
     console.error('Failed to load Loomlet modules:', err);
+  }
+
+  try {
+    await ensurePreviewModulesLoaded();
+  } catch (err) {
+    console.error('Failed to load Loomlet preview modules:', err);
+    // Non-fatal: preview will show an error message if used
   }
 
   const diagnosticCollection = vscode.languages.createDiagnosticCollection('loomlet');
@@ -41,13 +54,13 @@ async function activate(context) {
     vscode.workspace.onDidChangeTextDocument((event) => {
       scheduleValidation(event.document, diagnosticCollection);
       if (nodePreviewPanel && currentPreviewDocument && event.document.uri.toString() === currentPreviewDocument.uri.toString()) {
-        sendDocumentToPreview(event.document);
+        schedulePreviewUpdate(event.document);
       }
     }),
     vscode.window.onDidChangeActiveTextEditor((editor) => {
       if (nodePreviewPanel && editor?.document.languageId === 'loomlet') {
         currentPreviewDocument = editor.document;
-        sendDocumentToPreview(editor.document);
+        schedulePreviewUpdate(editor.document);
       }
     }),
     vscode.workspace.onDidOpenTextDocument((document) => {
@@ -69,6 +82,10 @@ async function activate(context) {
         clearTimeout(timer);
       }
       pendingValidationTimers.clear();
+      if (previewDebounceTimer) {
+        clearTimeout(previewDebounceTimer);
+        previewDebounceTimer = null;
+      }
     }
   });
 
@@ -101,9 +118,11 @@ function openNodePreviewToSide(context) {
   if (nodePreviewPanel) {
     nodePreviewPanel.reveal(vscode.ViewColumn.Beside);
     currentPreviewDocument = document;
-    sendDocumentToPreview(document);
+    schedulePreviewUpdate(document);
     return;
   }
+
+  const mediaDir = vscode.Uri.joinPath(context.extensionUri, 'media');
 
   nodePreviewPanel = vscode.window.createWebviewPanel(
     'loomletNodePreview',
@@ -111,86 +130,121 @@ function openNodePreviewToSide(context) {
     vscode.ViewColumn.Beside,
     {
       enableScripts: true,
-      retainContextWhenHidden: true
+      retainContextWhenHidden: true,
+      localResourceRoots: [mediaDir]
     }
   );
 
-  nodePreviewPanel.webview.html = getWebviewContent();
+  const scriptUri = nodePreviewPanel.webview.asWebviewUri(
+    vscode.Uri.joinPath(context.extensionUri, 'media', 'node-editor-webview.js')
+  );
+
+  const nonce = crypto.randomBytes(16).toString('hex');
+  nodePreviewPanel.webview.html = getWebviewContent(scriptUri, nonce, nodePreviewPanel.webview.cspSource);
 
   nodePreviewPanel.onDidDispose(() => {
     nodePreviewPanel = null;
     currentPreviewDocument = null;
+    previousEditorModel = null;
   });
 
   currentPreviewDocument = document;
   sendDocumentToPreview(document);
 }
 
+function schedulePreviewUpdate(document) {
+  if (previewDebounceTimer) {
+    clearTimeout(previewDebounceTimer);
+  }
+  previewDebounceTimer = setTimeout(() => {
+    previewDebounceTimer = null;
+    sendDocumentToPreview(document);
+  }, PREVIEW_DEBOUNCE_MS);
+}
+
 function sendDocumentToPreview(document) {
   if (!nodePreviewPanel) return;
 
   const text = document.getText();
+  const { editorModel, errors } = buildPreviewModelFromDsl(text, previousEditorModel);
+
+  if (errors.length === 0 && editorModel) {
+    previousEditorModel = editorModel;
+  }
+
   nodePreviewPanel.webview.postMessage({
-    type: 'update',
-    text
+    type: 'setModel',
+    editorModel: errors.length === 0 ? editorModel : null,
+    errors
   });
 }
 
-function getWebviewContent() {
+function getWebviewContent(scriptUri, nonce, cspSource) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; img-src ${cspSource} data:;">
   <title>Loomlet Node Preview</title>
   <style>
-    body {
-      margin: 0;
-      padding: 16px;
-      background: #1a1a1a;
-      color: #e0e0e0;
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0;
+      width: 100%; height: 100%;
+      background: #1e1e1e;
+      color: #d4d4d4;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       font-size: 13px;
+      overflow: hidden;
     }
-    .header {
-      margin-bottom: 16px;
+    #lp-root {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
     }
-    .status {
-      padding: 8px 12px;
-      background: rgba(74, 144, 226, 0.15);
+    #lp-status {
+      padding: 4px 12px;
+      background: rgba(74, 144, 226, 0.12);
       border-left: 3px solid #4a90e2;
-      border-radius: 4px;
-      margin-top: 8px;
+      color: #9cdcfe;
+      font-size: 12px;
+      flex-shrink: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #lp-errors {
+      padding: 6px 12px;
+      background: rgba(244, 71, 71, 0.12);
+      border-left: 3px solid #f44747;
+      overflow-y: auto;
+      max-height: 120px;
+      flex-shrink: 0;
+      display: none;
+    }
+    .lp-error-item {
+      padding: 2px 0;
+      font-family: 'Cascadia Code', 'Consolas', monospace;
+      font-size: 11px;
+      color: #f88;
+    }
+    #lp-editor-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background: #252526;
     }
   </style>
 </head>
 <body>
-  <div class="header">
-    <h2 style="margin: 0 0 8px 0;">Loomlet Node Preview</h2>
-    <div class="status">Waiting for graph...</div>
+  <div id="lp-root">
+    <div id="lp-status">Waiting for graph...</div>
+    <div id="lp-errors"></div>
+    <div id="lp-editor-container"></div>
   </div>
-  <div id="preview"></div>
-  <script>
-    const vscode = acquireVsCodeApi();
-    window.addEventListener('message', event => {
-      const message = event.data;
-      if (message.type === 'update') {
-        const preview = document.getElementById('preview');
-        preview.innerHTML = '<pre style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; overflow: auto;">' +
-          escapeHtml(message.text.slice(0, 200)) + '...</pre>';
-      }
-    });
-    function escapeHtml(text) {
-      const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-      };
-      return String(text).replace(/[&<>"']/g, char => map[char]);
-    }
-  </script>
+  <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
 }
