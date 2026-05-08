@@ -3,7 +3,13 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseDSLToAST, compileToGraph } from '../src/loom-dsl.js';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const {
+  ensurePreviewModulesLoaded,
+  buildPreviewModelFromDsl
+} = require('../extensions/vscode-loomlet/src/preview-model.js');
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
@@ -23,7 +29,9 @@ function walkLoomFiles(dir) {
   return files;
 }
 
-test('VS Code runtime preview examples compile to visible render outputs', () => {
+test('VS Code runtime preview examples compile to visible render outputs', async () => {
+  await ensurePreviewModulesLoaded();
+
   const files = walkLoomFiles(examplesRoot);
   assert.ok(files.length > 0, 'Expected VS Code examples to exist');
 
@@ -31,16 +39,13 @@ test('VS Code runtime preview examples compile to visible render outputs', () =>
     const source = fs.readFileSync(file, 'utf8');
     const relativeFile = path.relative(projectRoot, file).replace(/\\/g, '/');
 
-    const { ast, errors: parseErrors } = parseDSLToAST(source);
-    assert.deepEqual(parseErrors, [], `${relativeFile} parse errors`);
+    const { graph, errors } = buildPreviewModelFromDsl(source);
+    assert.deepEqual(errors, [], `${relativeFile} preview model errors`);
 
-    const { graph, errors: compileErrors } = compileToGraph(ast);
-    assert.deepEqual(compileErrors, [], `${relativeFile} compile errors`);
-
-    assert.ok(graph.render, `${relativeFile} should define graph.render`);
+    assert.ok(graph?.render, `${relativeFile} should define graph.render`);
     assert.ok(
-      graph.render.type === 'bar' || graph.render.type === 'point',
-      `${relativeFile} render type should be bar or point, got ${graph.render.type}`
+      graph.render.type === 'bar' || graph.render.type === 'point' || graph.render.type === 'keys',
+      `${relativeFile} render type should be bar, point, or keys, got ${graph.render.type}`
     );
   }
 });
