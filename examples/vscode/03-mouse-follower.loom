@@ -1,6 +1,10 @@
-# Mouse Follower
-# VS Code Node Preview example.
+# VS Code Runtime Preview example: Mouse Follower
+# Open this file with Loomlet: Open Node Preview to the Side.
 # Move the mouse over the preview canvas; the point follows it.
+
+# Status: runnable
+# Host: vscode-runtime-preview
+# Note: input.mouseX/input.mouseY are currently VS Code Preview host inputs.
 
 import input
 
