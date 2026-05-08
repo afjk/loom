@@ -263,7 +263,7 @@ function getWebviewContent(scriptUri, nonce, cspSource) {
       padding-left: 8px;
       line-height: 1.6;
     }
-    #lp-toggle-editor {
+    .lp-control-btn {
       flex-shrink: 0;
       padding: 2px 10px;
       font-size: 11px;
@@ -275,9 +275,13 @@ function getWebviewContent(scriptUri, nonce, cspSource) {
       cursor: pointer;
       line-height: 1.6;
     }
-    #lp-toggle-editor:hover {
+    .lp-control-btn:hover:not(:disabled) {
       background: rgba(255,255,255,0.11);
       color: #eee;
+    }
+    .lp-control-btn:disabled {
+      opacity: 0.4;
+      cursor: default;
     }
     /* ── Errors ── */
     #lp-errors {
@@ -316,7 +320,9 @@ function getWebviewContent(scriptUri, nonce, cspSource) {
     <div id="lp-panel">
       <div id="lp-toolbar">
         <div id="lp-status">Waiting for graph...</div>
-        <button id="lp-toggle-editor">Hide Editor</button>
+        <button id="lp-toggle-runtime" class="lp-control-btn" disabled>Pause</button>
+        <button id="lp-reset-runtime" class="lp-control-btn" disabled>Reset</button>
+        <button id="lp-toggle-editor" class="lp-control-btn">Hide Editor</button>
       </div>
       <div id="lp-errors"></div>
       <div id="lp-editor-container"></div>
