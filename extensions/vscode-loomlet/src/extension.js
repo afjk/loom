@@ -5,6 +5,7 @@ const vscode = require('vscode');
 const { getCompletionContext } = require('./completion-context');
 const { buildCompletions: buildRawCompletions, getIncludePlanned } = require('./completion-engine');
 const { VSCODE_EXAMPLES } = require('./examples.js');
+const { LIBRARY_REFERENCE, getLibraryReference } = require('./library-reference.js');
 const { isLoomletDocument, normalizeLoomletErrorLocation, collectLoomletDiagnosticItems, ensureModulesLoaded } = require('./diagnostics.js');
 const { clampCoordinates } = require('./range-utils.js');
 const { ensurePreviewModulesLoaded, buildPreviewModelFromDsl } = require('./preview-model.js');
@@ -15,11 +16,13 @@ let previousEditorModel = null;
 let previewDebounceTimer = null;
 let loomletOutput = null;
 let runtimeOutputShown = false;
+let extensionContext = null;
 const PREVIEW_DEBOUNCE_MS = 300;
 
 const pendingValidationTimers = new Map();
 
 async function activate(context) {
+  extensionContext = context;
   loomletOutput = vscode.window.createOutputChannel('Loomlet');
   context.subscriptions.push(loomletOutput);
 
@@ -49,8 +52,15 @@ async function activate(context) {
     }
   };
 
+  const hoverProvider = {
+    provideHover(document, position) {
+      return provideLoomletHover(document, position);
+    }
+  };
+
   context.subscriptions.push(
-    vscode.languages.registerCompletionItemProvider({ language: 'loomlet', scheme: 'file' }, provider, '.', '(', ':')
+    vscode.languages.registerCompletionItemProvider({ language: 'loomlet', scheme: 'file' }, provider, '.', '(', ':'),
+    vscode.languages.registerHoverProvider({ language: 'loomlet', scheme: 'file' }, hoverProvider)
   );
 
   context.subscriptions.push(
@@ -58,6 +68,8 @@ async function activate(context) {
     vscode.commands.registerCommand('loomlet.sceneSyncDevCurrentFile', () => runCurrentFile('scenesync dev')),
     vscode.commands.registerCommand('loomlet.openNodePreviewToSide', () => openNodePreviewToSide(context)),
     vscode.commands.registerCommand('loomlet.insertExample', () => insertExample()),
+    vscode.commands.registerCommand('loomlet.openLibraryReference', () => openLibraryReference()),
+    vscode.commands.registerCommand('loomlet.clearOutput', () => clearLoomletOutput()),
     vscode.workspace.onDidChangeTextDocument((event) => {
       scheduleValidation(event.document, diagnosticCollection);
       if (nodePreviewPanel && currentPreviewDocument && event.document.uri.toString() === currentPreviewDocument.uri.toString()) {
@@ -128,6 +140,7 @@ async function insertExample() {
   const editor = vscode.window.activeTextEditor;
   const activeDocument = editor?.document;
   const canInsertIntoActiveDocument = editor && isEditorInsertTarget(activeDocument);
+  let targetEditor = editor;
 
   if (canInsertIntoActiveDocument) {
     await editor.edit((editBuilder) => {
@@ -135,14 +148,19 @@ async function insertExample() {
         editBuilder.replace(selection, source);
       }
     });
-    return;
+  } else {
+    const document = await vscode.workspace.openTextDocument({
+      language: 'loomlet',
+      content: source
+    });
+    targetEditor = await vscode.window.showTextDocument(document, vscode.ViewColumn.One);
   }
 
-  const document = await vscode.workspace.openTextDocument({
-    language: 'loomlet',
-    content: source
-  });
-  await vscode.window.showTextDocument(document, vscode.ViewColumn.One);
+  const openPreview = vscode.workspace.getConfiguration().get('loomlet.examples.openPreviewAfterInsert', true);
+  if (openPreview && targetEditor?.document && extensionContext) {
+    currentPreviewDocument = targetEditor.document;
+    openNodePreviewToSide(extensionContext);
+  }
 }
 
 function ensureTrailingNewline(value) {
@@ -154,6 +172,86 @@ function isEditorInsertTarget(document) {
   return document.languageId === 'loomlet'
     || document.languageId === 'loom'
     || document.fileName.endsWith('.loom');
+}
+
+async function openLibraryReference() {
+  const selected = await vscode.window.showQuickPick(
+    LIBRARY_REFERENCE.map((entry) => ({
+      label: entry.label,
+      description: entry.signature,
+      detail: entry.description,
+      entry
+    })),
+    {
+      title: 'Loomlet: Library Reference',
+      placeHolder: 'Choose a Loomlet function or output'
+    }
+  );
+
+  if (!selected) return;
+
+  const document = await vscode.workspace.openTextDocument({
+    language: 'markdown',
+    content: formatReferenceMarkdown(selected.entry)
+  });
+  await vscode.window.showTextDocument(document, vscode.ViewColumn.Beside, true);
+}
+
+function clearLoomletOutput() {
+  if (!loomletOutput) return;
+  loomletOutput.clear();
+  runtimeOutputShown = false;
+}
+
+function provideLoomletHover(document, position) {
+  const range = getLoomletHoverRange(document, position);
+  if (!range) return null;
+
+  const name = document.getText(range);
+  const reference = getLibraryReference(name);
+  if (!reference) return null;
+
+  const markdown = new vscode.MarkdownString(undefined, true);
+  markdown.isTrusted = false;
+  markdown.appendCodeblock(reference.signature, 'loom');
+  markdown.appendMarkdown(`${reference.description}\n\n`);
+  if (reference.example) {
+    markdown.appendMarkdown('Example:\n');
+    markdown.appendCodeblock(reference.example, 'loom');
+  }
+  return new vscode.Hover(markdown, range);
+}
+
+function getLoomletHoverRange(document, position) {
+  const text = document.getText();
+  const offset = document.offsetAt(position);
+  const candidates = Array.from(new Set(
+    LIBRARY_REFERENCE.flatMap((entry) => entry.names)
+      .sort((a, b) => b.length - a.length)
+  ));
+
+  for (const name of candidates) {
+    const minStart = Math.max(0, offset - name.length + 1);
+    for (let start = minStart; start <= offset; start += 1) {
+      const end = start + name.length;
+      if (end < offset) continue;
+      if (text.slice(start, end) !== name) continue;
+      if (!isNameBoundary(text[start - 1]) || !isNameBoundary(text[end])) continue;
+      return new vscode.Range(document.positionAt(start), document.positionAt(end));
+    }
+  }
+
+  const fallback = document.getWordRangeAtPosition(position, /[A-Za-z_][A-Za-z0-9_.]*/);
+  if (!fallback) return null;
+  return getLibraryReference(document.getText(fallback)) ? fallback : null;
+}
+
+function isNameBoundary(char) {
+  return char === undefined || !/[A-Za-z0-9_.]/.test(char);
+}
+
+function formatReferenceMarkdown(entry) {
+  return `# ${entry.label}\n\n\`\`\`loom\n${entry.signature}\n\`\`\`\n\n${entry.description}\n\n## Example\n\n\`\`\`loom\n${entry.example || ''}\n\`\`\`\n`;
 }
 
 function openNodePreviewToSide(context) {
@@ -623,5 +721,6 @@ module.exports = {
   activate,
   deactivate,
   findLoomletCli,
-  buildCompletions
+  buildCompletions,
+  getLoomletHoverRange
 };
