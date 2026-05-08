@@ -25,6 +25,26 @@ async function ensurePreviewModulesLoaded() {
   return loadPromise;
 }
 
+const HOST_INPUT_ALIASES = [
+  { pattern: /\binput\.mouseX\s*\(\s*\)/g, token: '__loomlet_host:mouseX' },
+  { pattern: /\binput\.mouseY\s*\(\s*\)/g, token: '__loomlet_host:mouseY' },
+  { pattern: /\binput\.mouseDown\s*\(\s*\)/g, token: '__loomlet_host:mouseDown' }
+];
+
+function preprocessPreviewHostInputs(sourceText) {
+  let text = sourceText || '';
+  for (const alias of HOST_INPUT_ALIASES) {
+    text = text.replace(alias.pattern, JSON.stringify(alias.token));
+  }
+
+  text = text.replace(
+    /\binput\.key\s*\(\s*(['"])(.*?)\1\s*\)/g,
+    (_match, _quote, key) => JSON.stringify(`__loomlet_host:key:${key}`)
+  );
+
+  return text;
+}
+
 /**
  * Build a preview model from DSL source text.
  * Returns { editorModel, graph, errors }.
@@ -47,7 +67,7 @@ function buildPreviewModelFromDsl(sourceText, previousEditorModel = null) {
     };
   }
 
-  const cleanText = stripEditorMetadataFromDsl(sourceText || '');
+  const cleanText = preprocessPreviewHostInputs(stripEditorMetadataFromDsl(sourceText || ''));
 
   if (cleanText.trim() === '') {
     return { editorModel: null, graph: null, errors: [] };
@@ -71,4 +91,4 @@ function buildPreviewModelFromDsl(sourceText, previousEditorModel = null) {
   return { editorModel, graph, errors: [] };
 }
 
-module.exports = { ensurePreviewModulesLoaded, buildPreviewModelFromDsl };
+module.exports = { ensurePreviewModulesLoaded, buildPreviewModelFromDsl, preprocessPreviewHostInputs };
