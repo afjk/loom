@@ -89,6 +89,7 @@ function drawFrame(timestamp) {
 
   // If paused, don't update; just keep the current frame
   if (isRuntimePaused) {
+    loomRafId = null;
     return;
   }
 
@@ -253,7 +254,7 @@ function _renderErrors() {
   }
   el.style.display = 'block';
   el.innerHTML = lastErrors
-    .map(e => `<div class="lp-error-item">${escapeHtml(e.message || String(e))}</div>`)
+    .map(e => `<div class=\"lp-error-item\">${escapeHtml(e.message || String(e))}</div>`)
     .join('');
 }
 
@@ -262,7 +263,7 @@ function escapeHtml(str) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/\"/g, '&quot;');
 }
 
 // ── Runtime controls ──────────────────────────────────────────────────────────
@@ -281,11 +282,17 @@ function togglePauseResume() {
     updateControlStates();
     updateStatus();
     // Resume the RAF loop
-    loomRafId = requestAnimationFrame(drawFrame);
+    if (loomRafId === null) {
+      loomRafId = requestAnimationFrame(drawFrame);
+    }
   } else {
-    // Pause: record the current time
+    // Pause: record the current time and cancel any scheduled frame
     pausedAtTimestampMs = performance.now();
     isRuntimePaused = true;
+    if (loomRafId !== null) {
+      cancelAnimationFrame(loomRafId);
+      loomRafId = null;
+    }
     updateControlStates();
     updateStatus();
   }
@@ -314,6 +321,7 @@ function resetRuntime() {
   // Schedule next frame to continue
   if (loomRafId !== null) {
     cancelAnimationFrame(loomRafId);
+    loomRafId = null;
   }
   loomRafId = requestAnimationFrame(drawFrame);
 }
