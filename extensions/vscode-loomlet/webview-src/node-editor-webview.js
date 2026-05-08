@@ -39,11 +39,9 @@ const hostInput = {
 function resizePreviewCanvas() {
   const canvas = document.getElementById('lp-preview-canvas');
   if (!canvas) return;
-  // Use device pixel ratio for sharp rendering
   const dpr = window.devicePixelRatio || 1;
   canvas.width = Math.round(window.innerWidth * dpr);
   canvas.height = Math.round(window.innerHeight * dpr);
-  // Redraw placeholder if no runtime is running
   if (!loomEngine) {
     drawPlaceholder(canvas, dpr);
   }
@@ -58,7 +56,6 @@ function drawPlaceholder(canvas, dpr) {
   ctx.fillStyle = '#1a1a1a';
   ctx.fillRect(0, 0, w, h);
 
-  // Dot grid
   const step = 28 * dpr;
   ctx.fillStyle = 'rgba(255,255,255,0.06)';
   for (let x = step; x < w; x += step) {
@@ -81,6 +78,14 @@ function drawPlaceholder(canvas, dpr) {
   ctx.fillText('add render bar(), render point(), or render keys() to see output', w / 2, h / 2 + Math.round(13 * dpr));
 }
 
+function updatePointerFromEvent(event) {
+  const canvas = document.getElementById('lp-preview-canvas');
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  hostInput.mouseX = event.clientX - rect.left;
+  hostInput.mouseY = event.clientY - rect.top;
+}
+
 function initHostInputs() {
   const canvas = document.getElementById('lp-preview-canvas');
   if (!canvas) return;
@@ -88,31 +93,23 @@ function initHostInputs() {
   canvas.tabIndex = 0;
   canvas.style.outline = 'none';
 
-  canvas.addEventListener('pointermove', (event) => {
-    const rect = canvas.getBoundingClientRect();
-    hostInput.mouseX = event.clientX - rect.left;
-    hostInput.mouseY = event.clientY - rect.top;
-  });
+  // Listen on the whole window because the Node Editor overlay can sit above
+  // the preview canvas. This keeps interactive examples usable even when the
+  // editor is visible.
+  window.addEventListener('pointermove', updatePointerFromEvent);
 
-  canvas.addEventListener('pointerdown', (event) => {
+  window.addEventListener('pointerdown', (event) => {
     canvas.focus();
-    const rect = canvas.getBoundingClientRect();
-    hostInput.mouseX = event.clientX - rect.left;
-    hostInput.mouseY = event.clientY - rect.top;
+    updatePointerFromEvent(event);
     hostInput.mouseDown = true;
-    try { canvas.setPointerCapture(event.pointerId); } catch (_) {}
   });
 
-  canvas.addEventListener('pointerup', (event) => {
-    hostInput.mouseDown = false;
-    try { canvas.releasePointerCapture(event.pointerId); } catch (_) {}
-  });
-
-  canvas.addEventListener('pointercancel', () => {
+  window.addEventListener('pointerup', (event) => {
+    updatePointerFromEvent(event);
     hostInput.mouseDown = false;
   });
 
-  canvas.addEventListener('mouseleave', () => {
+  window.addEventListener('pointercancel', () => {
     hostInput.mouseDown = false;
   });
 
@@ -140,18 +137,18 @@ function initHostInputs() {
 
 // ── Loom runtime: resolve & draw ─────────────────────────────────────────────
 
-/**
- * Resolve a render config value: either a literal number/string/bool, a host
- * input token, or a node-output ref string like "wave.out" that is looked up
- * in the Loom engine.
- */
 function resolveValue(engine, ref) {
   if (typeof ref === 'number' || typeof ref === 'boolean') return ref;
   if (ref === null || ref === undefined) return null;
   if (typeof ref === 'string' && ref.startsWith('__loomlet_host:')) return resolveHostInput(ref);
   const numVal = parseFloat(ref);
   if (!isNaN(numVal) && String(ref).trim() === String(numVal)) return numVal;
-  return engine.getValue(ref);
+
+  const value = engine.getValue(ref);
+  if (typeof value === 'string' && value.startsWith('__loomlet_host:')) {
+    return resolveHostInput(value);
+  }
+  return value;
 }
 
 function resolveHostInput(token) {
@@ -176,24 +173,19 @@ function drawFrame(timestamp) {
   const canvas = document.getElementById('lp-preview-canvas');
   if (!canvas || !loomEngine || !currentGraph) return;
 
-  // If paused, don't update; just keep the current frame
   if (isRuntimePaused) {
     loomRafId = null;
     return;
   }
 
   try {
-    // Calculate elapsed time from runtime start, excluding accumulated paused time
     if (runtimeStartTimestampMs === null) {
       runtimeStartTimestampMs = timestamp;
     }
     const elapsedSeconds = (timestamp - runtimeStartTimestampMs - accumulatedPausedMs) / 1000;
 
-    // Evaluate the Loom graph at this time
     loomEngine.evaluateAt(elapsedSeconds, timestamp);
     postRuntimeEffects(timestamp);
-
-    // Draw the canvas
     drawRuntimeCanvas(timestamp);
   } catch (error) {
     console.error('[loomlet-preview] Runtime error in drawFrame:', error);
@@ -201,7 +193,6 @@ function drawFrame(timestamp) {
     return;
   }
 
-  // Schedule next frame
   loomRafId = requestAnimationFrame(drawFrame);
 }
 
@@ -242,9 +233,6 @@ function drawRuntimeCanvas(timestamp) {
   const renderConfig = currentGraph.render;
   const enabled = isEnabled(loomEngine, renderConfig);
 
-  // Trail (partial clear) vs hard clear. When trail is 0, point renders behave
-  // like paint: do not clear the canvas every frame, and only add strokes when
-  // enabled is true.
   const trail = renderConfig?.trail !== undefined ? renderConfig.trail : 0.1;
   if (trail > 0) {
     ctx.fillStyle = `rgba(0, 0, 0, ${trail})`;
@@ -276,7 +264,6 @@ function drawPoint(ctx, renderConfig, dpr, w, h) {
   ctx.fillStyle = color;
   ctx.beginPath();
   if (x !== null && typeof x === 'number' && y !== null && typeof y === 'number') {
-    // Scale from CSS-px space to device-px space
     ctx.arc(x * dpr, y * dpr, radius * dpr, 0, Math.PI * 2);
   } else {
     ctx.arc(w / 2, h / 2, radius * dpr, 0, Math.PI * 2);
@@ -383,7 +370,6 @@ function stopLoom() {
     try { loomEngine.stop(); } catch (_) {}
     loomEngine = null;
   }
-  // Reset time tracking state
   runtimeStartTimestampMs = null;
   isRuntimePaused = false;
   pausedAtTimestampMs = null;
@@ -405,13 +391,11 @@ function startLoom(graph) {
   try {
     const graphForLoom = { nodes: graph.nodes || [], edges: graph.edges || [] };
     loomEngine = new Loom(graphForLoom);
-    // Reset time tracking for this runtime
     runtimeStartTimestampMs = null;
     isRuntimePaused = false;
     pausedAtTimestampMs = null;
     accumulatedPausedMs = 0;
     lastEffectsPostMs = 0;
-    // Start the RAF loop - do NOT call loomEngine.start()
     loomRafId = requestAnimationFrame(drawFrame);
     updateControlStates();
   } catch (e) {
@@ -468,7 +452,6 @@ function togglePauseResume() {
   if (!loomEngine || !currentGraph || !currentGraph.render) return;
 
   if (isRuntimePaused) {
-    // Resume: add paused time to accumulated paused time
     const now = performance.now();
     if (pausedAtTimestampMs !== null) {
       accumulatedPausedMs += (now - pausedAtTimestampMs);
@@ -477,12 +460,10 @@ function togglePauseResume() {
     isRuntimePaused = false;
     updateControlStates();
     updateStatus();
-    // Resume the RAF loop
     if (loomRafId === null) {
       loomRafId = requestAnimationFrame(drawFrame);
     }
   } else {
-    // Pause: record the current time and cancel any scheduled frame
     pausedAtTimestampMs = performance.now();
     isRuntimePaused = true;
     if (loomRafId !== null) {
@@ -497,15 +478,20 @@ function togglePauseResume() {
 function resetRuntime() {
   if (!loomEngine || !currentGraph || !currentGraph.render) return;
 
-  // Reset time tracking
   runtimeStartTimestampMs = null;
   accumulatedPausedMs = 0;
   isRuntimePaused = false;
   pausedAtTimestampMs = null;
   lastEffectsPostMs = 0;
 
+  const canvas = document.getElementById('lp-preview-canvas');
+  const ctx = canvas?.getContext('2d');
+  if (canvas && ctx) {
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
   try {
-    // Reset the engine to t=0
     loomEngine.evaluateAt(0, performance.now());
     drawRuntimeCanvas(performance.now());
   } catch (e) {
@@ -515,7 +501,6 @@ function resetRuntime() {
   updateControlStates();
   updateStatus();
 
-  // Schedule next frame to continue
   if (loomRafId !== null) {
     cancelAnimationFrame(loomRafId);
     loomRafId = null;
@@ -585,7 +570,7 @@ function initEditorView() {
   const container = document.getElementById('lp-editor-container');
   if (!container) return;
   editorView = new NodeEditorView(container, {
-    onOperation: () => {},       // read-only: ignore all edit operations
+    onOperation: () => {},
     onError: (e) => console.error('[NodeEditorView]', e),
     onSelectNode: () => {}
   });
@@ -602,13 +587,10 @@ window.addEventListener('message', async (event) => {
   if (errors && errors.length > 0) {
     setStatus('DSL has errors · Read-only Node Preview', true);
     setErrors(errors);
-    // Keep the previous node editor and Loom runtime running as-is
     return;
   }
 
   setErrors([]);
-
-  // Start/restart the Loom runtime with the new graph
   startLoom(graph || null);
 
   if (!editorModel) {
@@ -636,5 +618,4 @@ window.addEventListener('resize', resizePreviewCanvas);
 initHostInputs();
 initControlButtons();
 
-// Notify the extension that the webview is ready
 vscode.postMessage({ type: 'ready' });
