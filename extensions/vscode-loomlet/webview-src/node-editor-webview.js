@@ -15,6 +15,8 @@ let lastErrors = [];
 let loomEngine = null;
 let loomRafId = null;
 let currentGraph = null;  // keeps the full graph including .render config
+let runtimeStartTimestampMs = null;  // timestamp when runtime started
+let lastFrameTimestampMs = null;  // last frame timestamp for delta calc
 
 // ── Canvas: Loom Runtime Preview ─────────────────────────────────────────────
 
@@ -77,7 +79,33 @@ function resolveValue(engine, ref) {
   return engine.getValue(ref);
 }
 
-function drawFrame() {
+function drawFrame(timestamp) {
+  const canvas = document.getElementById('lp-preview-canvas');
+  if (!canvas || !loomEngine || !currentGraph) return;
+
+  try {
+    // Calculate elapsed time from runtime start
+    if (runtimeStartTimestampMs === null) {
+      runtimeStartTimestampMs = timestamp;
+    }
+    const elapsedSeconds = (timestamp - runtimeStartTimestampMs) / 1000;
+
+    // Evaluate the Loom graph at this time
+    loomEngine.evaluateAt(elapsedSeconds, timestamp);
+
+    // Draw the canvas
+    drawRuntimeCanvas(timestamp);
+  } catch (error) {
+    console.error('[loomlet-preview] Runtime error in drawFrame:', error);
+    handleRuntimeError(error);
+    return;
+  }
+
+  // Schedule next frame
+  loomRafId = requestAnimationFrame(drawFrame);
+}
+
+function drawRuntimeCanvas(timestamp) {
   const canvas = document.getElementById('lp-preview-canvas');
   if (!canvas || !loomEngine || !currentGraph) return;
 
@@ -128,8 +156,15 @@ function drawFrame() {
       ctx.fillRect(0, yPx, width * dpr, heightPx);
     }
   }
+}
 
-  loomRafId = requestAnimationFrame(drawFrame);
+// ── Runtime error handling ───────────────────────────────────────────────────
+
+function handleRuntimeError(error) {
+  setStatus('Runtime error · Read-only Node Preview', true);
+  stopLoom();
+  const canvas = document.getElementById('lp-preview-canvas');
+  if (canvas) drawPlaceholder(canvas, window.devicePixelRatio || 1);
 }
 
 // ── Loom engine lifecycle ─────────────────────────────────────────────────────
@@ -143,13 +178,16 @@ function stopLoom() {
     try { loomEngine.stop(); } catch (_) {}
     loomEngine = null;
   }
+  // Reset time tracking state
+  runtimeStartTimestampMs = null;
+  lastFrameTimestampMs = null;
 }
 
 function startLoom(graph) {
   stopLoom();
   currentGraph = graph || null;
 
-  if (!graph) {
+  if (!graph || !graph.render) {
     const canvas = document.getElementById('lp-preview-canvas');
     if (canvas) drawPlaceholder(canvas, window.devicePixelRatio || 1);
     return;
@@ -158,13 +196,14 @@ function startLoom(graph) {
   try {
     const graphForLoom = { nodes: graph.nodes || [], edges: graph.edges || [] };
     loomEngine = new Loom(graphForLoom);
-    loomEngine.start();
+    // Reset time tracking for this runtime
+    runtimeStartTimestampMs = null;
+    lastFrameTimestampMs = null;
+    // Start the RAF loop - do NOT call loomEngine.start()
     loomRafId = requestAnimationFrame(drawFrame);
   } catch (e) {
-    console.error('[loomlet-preview] Loom engine start failed:', e);
-    stopLoom();
-    const canvas = document.getElementById('lp-preview-canvas');
-    if (canvas) drawPlaceholder(canvas, window.devicePixelRatio || 1);
+    console.error('[loomlet-preview] Loom engine initialization failed:', e);
+    handleRuntimeError(e);
   }
 }
 
