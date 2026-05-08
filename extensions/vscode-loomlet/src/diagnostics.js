@@ -22,6 +22,13 @@ function preprocessPreviewHostInputs(sourceText) {
   return text;
 }
 
+function preprocessPreviewOnlyRender(sourceText) {
+  return String(sourceText || '').replace(
+    /(^|\n)(\s*)render\s+keys\s*\([^)]*\)/m,
+    '$1$2render point(x: 0, y: 0, enabled: false)'
+  );
+}
+
 function isLoomletDocument(document) {
   if (!document) return false;
   return document.languageId === 'loomlet' || document.fileName.endsWith('.loom');
@@ -73,7 +80,7 @@ function collectLoomletDiagnosticItems(sourceText) {
     return [];
   }
 
-  const cleanText = preprocessPreviewHostInputs(stripEditorMetadataFromDsl(sourceText || ''));
+  const cleanText = preprocessPreviewOnlyRender(preprocessPreviewHostInputs(stripEditorMetadataFromDsl(sourceText || '')));
 
   if (cleanText.trim() === '') {
     return [];
@@ -98,5 +105,6 @@ module.exports = {
   normalizeLoomletErrorLocation,
   collectLoomletDiagnosticItems,
   ensureModulesLoaded,
-  preprocessPreviewHostInputs
+  preprocessPreviewHostInputs,
+  preprocessPreviewOnlyRender
 };
