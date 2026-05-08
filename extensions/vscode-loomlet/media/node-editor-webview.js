@@ -15737,15 +15737,29 @@ var LoomletPreview = (() => {
   var editorView = null;
   var editorVisible = true;
   var lastErrors = [];
+  var currentRenderPreview = { items: [], unsupported: [] };
   function resizePreviewCanvas() {
     const canvas = document.getElementById("lp-preview-canvas");
     if (!canvas) return;
     const dpr = window.devicePixelRatio || 1;
     canvas.width = Math.round(window.innerWidth * dpr);
     canvas.height = Math.round(window.innerHeight * dpr);
-    drawPreviewPlaceholder(canvas, dpr);
+    drawPreviewCanvas(dpr);
   }
-  function drawPreviewPlaceholder(canvas, dpr) {
+  function drawPreviewCanvas(dpr) {
+    const canvas = document.getElementById("lp-preview-canvas");
+    if (!canvas) return;
+    drawPreviewBackground(canvas, dpr);
+    if (currentRenderPreview.items && currentRenderPreview.items.length > 0) {
+      drawRenderItems(canvas, currentRenderPreview.items, dpr);
+    } else {
+      drawPlaceholderText(canvas, dpr);
+    }
+    if (currentRenderPreview.unsupported && currentRenderPreview.unsupported.length > 0) {
+      drawUnsupportedHint(canvas, currentRenderPreview.unsupported, dpr);
+    }
+  }
+  function drawPreviewBackground(canvas, dpr) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     const w2 = canvas.width;
@@ -15761,6 +15775,12 @@ var LoomletPreview = (() => {
         ctx.fill();
       }
     }
+  }
+  function drawPlaceholderText(canvas, dpr) {
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const w2 = canvas.width;
+    const h2 = canvas.height;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillStyle = "rgba(255,255,255,0.18)";
@@ -15769,6 +15789,80 @@ var LoomletPreview = (() => {
     ctx.fillStyle = "rgba(255,255,255,0.09)";
     ctx.font = `${Math.round(11 * dpr)}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
     ctx.fillText("render output will appear here", w2 / 2, h2 / 2 + Math.round(13 * dpr));
+  }
+  function drawRenderItems(canvas, items, dpr) {
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    for (const item of items) {
+      try {
+        if (item.kind === "circle") {
+          drawCircle(ctx, item, dpr);
+        } else if (item.kind === "rect") {
+          drawRect(ctx, item, dpr);
+        } else if (item.kind === "bar") {
+          drawBar(ctx, item, dpr);
+        } else if (item.kind === "text") {
+          drawText(ctx, item, dpr);
+        }
+      } catch (e) {
+        console.warn("Failed to draw render item:", item, e);
+      }
+    }
+  }
+  function drawCircle(ctx, item, dpr) {
+    const x2 = (item.x || 100) * dpr;
+    const y = (item.y || 100) * dpr;
+    const r2 = (item.r || 24) * dpr;
+    const color = item.color || "#80ed99";
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x2, y, r2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  function drawRect(ctx, item, dpr) {
+    const x2 = (item.x || 80) * dpr;
+    const y = (item.y || 80) * dpr;
+    const width = (item.width || 120) * dpr;
+    const height = (item.height || 80) * dpr;
+    const color = item.color || "#70d6ff";
+    ctx.fillStyle = color;
+    ctx.fillRect(x2, y, width, height);
+  }
+  function drawBar(ctx, item, dpr) {
+    const x2 = (item.x || 40) * dpr;
+    const y = (item.y || 120) * dpr;
+    const width = (item.width || 240) * dpr;
+    const height = (item.height || 24) * dpr;
+    const value = Math.max(0, Math.min(1, item.value || 0.5));
+    const color = item.color || "#ffd166";
+    const bgColor = item.backgroundColor || "rgba(255,255,255,0.12)";
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(x2, y, width, height);
+    ctx.fillStyle = color;
+    ctx.fillRect(x2, y, width * value, height);
+  }
+  function drawText(ctx, item, dpr) {
+    const x2 = (item.x || 40) * dpr;
+    const y = (item.y || 60) * dpr;
+    const text = item.text || "text";
+    const color = item.color || "#ffffff";
+    const size = item.size || 18;
+    ctx.fillStyle = color;
+    ctx.font = `${Math.round(size * dpr)}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText(text, x2, y);
+  }
+  function drawUnsupportedHint(canvas, unsupported, dpr) {
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const count = unsupported.length;
+    const hintText = `${count} unsupported render item${count > 1 ? "s" : ""}`;
+    ctx.fillStyle = "rgba(255,150,100,0.4)";
+    ctx.font = `${Math.round(10 * dpr)}px monospace`;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText(hintText, Math.round(12 * dpr), Math.round(canvas.height - 24 * dpr));
   }
   function setStatus(text, isError) {
     const el = document.getElementById("lp-status");
@@ -15781,6 +15875,22 @@ var LoomletPreview = (() => {
       el.style.borderLeftColor = "#4a90e2";
       el.style.color = "#9cdcfe";
     }
+  }
+  function buildStatusText(editorModel, errors, renderPreview) {
+    let status = "";
+    if (editorModel && renderPreview) {
+      status = "Synced";
+      if (renderPreview.items && renderPreview.items.length > 0) {
+        status += ` \xB7 ${renderPreview.items.length} render item${renderPreview.items.length > 1 ? "s" : ""}`;
+      }
+      if (renderPreview.unsupported && renderPreview.unsupported.length > 0) {
+        status += ` \xB7 ${renderPreview.unsupported.length} unsupported`;
+      }
+    } else {
+      status = "Empty";
+    }
+    status += " \xB7 Read-only Node Preview";
+    return status;
   }
   function setErrors(errors) {
     lastErrors = errors || [];
@@ -15837,21 +15947,25 @@ var LoomletPreview = (() => {
   window.addEventListener("message", async (event) => {
     const message = event.data;
     if (!message || message.type !== "setModel") return;
-    const { editorModel, errors } = message;
+    const { editorModel, errors, renderPreview } = message;
     if (errors && errors.length > 0) {
       setStatus("DSL has errors \xB7 Read-only Node Preview", true);
       setErrors(errors);
       return;
     }
     setErrors([]);
+    if (renderPreview) {
+      currentRenderPreview = renderPreview;
+      resizePreviewCanvas();
+    }
     if (!editorModel) {
-      setStatus("Empty \xB7 Read-only Node Preview", false);
+      setStatus(buildStatusText(null, [], renderPreview), false);
       return;
     }
     initEditorView();
     try {
       await editorView.renderModel(editorModel);
-      setStatus("Synced \xB7 Read-only Node Preview", false);
+      setStatus(buildStatusText(editorModel, [], renderPreview), false);
     } catch (e) {
       console.error("[loomlet-preview] renderModel failed:", e);
       setStatus("Render error \xB7 Read-only Node Preview", true);

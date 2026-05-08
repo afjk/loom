@@ -11,6 +11,7 @@ const { ensurePreviewModulesLoaded, buildPreviewModelFromDsl } = require('./prev
 let nodePreviewPanel = null;
 let currentPreviewDocument = null;
 let previousEditorModel = null;
+let previousRenderPreview = null;
 let previewDebounceTimer = null;
 const PREVIEW_DEBOUNCE_MS = 300;
 
@@ -146,6 +147,7 @@ function openNodePreviewToSide(context) {
     nodePreviewPanel = null;
     currentPreviewDocument = null;
     previousEditorModel = null;
+    previousRenderPreview = null;
   });
 
   // When the WebView JS finishes loading it sends { type: 'ready' }.
@@ -178,15 +180,21 @@ function sendDocumentToPreview(document) {
   if (!nodePreviewPanel) return;
 
   const text = document.getText();
-  const { editorModel, errors } = buildPreviewModelFromDsl(text, previousEditorModel);
+  const { editorModel, errors, renderPreview } = buildPreviewModelFromDsl(text, previousEditorModel);
 
   if (errors.length === 0 && editorModel) {
     previousEditorModel = editorModel;
   }
 
+  // On successful parse/compile, update renderPreview; on error, keep the last one
+  if (errors.length === 0 && renderPreview) {
+    previousRenderPreview = renderPreview;
+  }
+
   nodePreviewPanel.webview.postMessage({
     type: 'setModel',
     editorModel: errors.length === 0 ? editorModel : null,
+    renderPreview: previousRenderPreview || { items: [], unsupported: [] },
     errors
   });
 }
