@@ -1,0 +1,12 @@
+# Mouse Paint
+# VS Code Node Preview example.
+# Hold the mouse button down and draw on the preview canvas.
+# Press Reset in the preview toolbar to clear the drawing.
+
+import input
+
+x = input.mouseX()
+y = input.mouseY()
+down = input.mouseDown()
+
+render point(x: x, y: y, radius: 5, color: "#ff70a6", trail: 0, enabled: down)

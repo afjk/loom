@@ -2,6 +2,33 @@ let parseDSLToAST, compileToGraph, stripEditorMetadataFromDsl;
 let modulesLoaded = false;
 let loadPromise = null;
 
+const HOST_INPUT_ALIASES = [
+  { pattern: /\binput\.mouseX\s*\(\s*\)/g, token: '__loomlet_host:mouseX' },
+  { pattern: /\binput\.mouseY\s*\(\s*\)/g, token: '__loomlet_host:mouseY' },
+  { pattern: /\binput\.mouseDown\s*\(\s*\)/g, token: '__loomlet_host:mouseDown' }
+];
+
+function preprocessPreviewHostInputs(sourceText) {
+  let text = sourceText || '';
+  for (const alias of HOST_INPUT_ALIASES) {
+    text = text.replace(alias.pattern, JSON.stringify(alias.token));
+  }
+
+  text = text.replace(
+    /\binput\.key\s*\(\s*(['"])(.*?)\1\s*\)/g,
+    (_match, _quote, key) => JSON.stringify(`__loomlet_host:key:${key}`)
+  );
+
+  return text;
+}
+
+function preprocessPreviewOnlyRender(sourceText) {
+  return String(sourceText || '').replace(
+    /(^|\n)(\s*)render\s+keys\s*\([^)]*\)/m,
+    '$1$2render point(x: 0, y: 0, enabled: false)'
+  );
+}
+
 function isLoomletDocument(document) {
   if (!document) return false;
   return document.languageId === 'loomlet' || document.fileName.endsWith('.loom');
@@ -53,7 +80,7 @@ function collectLoomletDiagnosticItems(sourceText) {
     return [];
   }
 
-  const cleanText = stripEditorMetadataFromDsl(sourceText || '');
+  const cleanText = preprocessPreviewOnlyRender(preprocessPreviewHostInputs(stripEditorMetadataFromDsl(sourceText || '')));
 
   if (cleanText.trim() === '') {
     return [];
@@ -77,5 +104,7 @@ module.exports = {
   isLoomletDocument,
   normalizeLoomletErrorLocation,
   collectLoomletDiagnosticItems,
-  ensureModulesLoaded
+  ensureModulesLoaded,
+  preprocessPreviewHostInputs,
+  preprocessPreviewOnlyRender
 };

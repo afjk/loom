@@ -1,0 +1,10 @@
+# Mouse Follower
+# VS Code Node Preview example.
+# Move the mouse over the preview canvas; the point follows it.
+
+import input
+
+x = input.mouseX()
+y = input.mouseY()
+
+render point(x: x, y: y, radius: 7, color: "#70d6ff", trail: 0.2)

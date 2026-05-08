@@ -45,6 +45,73 @@ function preprocessPreviewHostInputs(sourceText) {
   return text;
 }
 
+function splitNamedArgs(argsText) {
+  const out = [];
+  let current = '';
+  let quote = null;
+  let depth = 0;
+
+  for (let i = 0; i < argsText.length; i += 1) {
+    const ch = argsText[i];
+    if (quote) {
+      current += ch;
+      if (ch === quote && argsText[i - 1] !== '\\') quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      current += ch;
+      continue;
+    }
+    if (ch === '(' || ch === '[' || ch === '{') depth += 1;
+    if (ch === ')' || ch === ']' || ch === '}') depth -= 1;
+    if (ch === ',' && depth === 0) {
+      out.push(current.trim());
+      current = '';
+      continue;
+    }
+    current += ch;
+  }
+
+  if (current.trim()) out.push(current.trim());
+  return out;
+}
+
+function parseNamedArgs(argsText) {
+  const out = {};
+  for (const part of splitNamedArgs(argsText)) {
+    const match = part.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$/);
+    if (!match) continue;
+    out[match[1]] = parseRenderArgValue(match[2].trim());
+  }
+  return out;
+}
+
+function parseRenderArgValue(rawValue) {
+  if (rawValue === 'true') return true;
+  if (rawValue === 'false') return false;
+  if (/^-?\d+(\.\d+)?$/.test(rawValue)) return Number(rawValue);
+  const quoted = rawValue.match(/^(['"])(.*)\1$/);
+  if (quoted) return quoted[2];
+  return rawValue;
+}
+
+function extractPreviewRender(sourceText) {
+  const match = String(sourceText || '').match(/(^|\n)\s*render\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)/m);
+  if (!match) return null;
+  return {
+    type: match[2],
+    ...parseNamedArgs(match[3])
+  };
+}
+
+function preprocessPreviewOnlyRender(sourceText) {
+  return String(sourceText || '').replace(
+    /(^|\n)(\s*)render\s+keys\s*\([^)]*\)/m,
+    '$1$2render point(x: 0, y: 0, enabled: false)'
+  );
+}
+
 function normalizePreviewRenderGraph(graph) {
   if (!graph?.render) return graph;
   const render = graph.render;
@@ -61,16 +128,41 @@ function normalizePreviewRenderGraph(graph) {
     }
   }
 
-  const renderNode = (graph.nodes || []).find((node) => node.id === 'render');
-  if (renderNode?.type === 'keys') {
-    render.type = 'keys';
-    for (const key of ['space', 'left', 'right', 'up', 'down', 'trail']) {
-      if (renderNode.params && Object.prototype.hasOwnProperty.call(renderNode.params, key)) {
-        render[key] = renderNode.params[key];
-      }
+  return graph;
+}
+
+function resolvePreviewRenderRefs(renderConfig, graph) {
+  if (!renderConfig) return renderConfig;
+  const resolved = { ...renderConfig };
+  const nodes = graph.nodes || [];
+
+  for (const [key, raw] of Object.entries(resolved)) {
+    if (key === 'type' || typeof raw !== 'string') continue;
+    if (raw.startsWith('__loomlet_host:')) continue;
+    if (raw.includes('.')) continue;
+
+    const node = nodes.find((candidate) => candidate.id === raw);
+    if (node) {
+      resolved[key] = `${node.id}.out`;
     }
   }
 
+  return resolved;
+}
+
+function mergePreviewRender(graph, previewRender) {
+  if (!previewRender) return graph;
+  if (!graph.render) graph.render = {};
+  const resolvedPreviewRender = resolvePreviewRenderRefs(previewRender, graph);
+
+  // Keep compiler-produced refs when present, but restore preview-only params
+  // such as enabled/radius and preview-only render functions such as keys.
+  graph.render = {
+    ...graph.render,
+    ...resolvedPreviewRender
+  };
+
+  normalizePreviewRenderGraph(graph);
   return graph;
 }
 
@@ -96,7 +188,10 @@ function buildPreviewModelFromDsl(sourceText, previousEditorModel = null) {
     };
   }
 
-  const cleanText = preprocessPreviewHostInputs(stripEditorMetadataFromDsl(sourceText || ''));
+  const originalText = stripEditorMetadataFromDsl(sourceText || '');
+  const preprocessedOriginalText = preprocessPreviewHostInputs(originalText);
+  const previewRender = extractPreviewRender(preprocessedOriginalText);
+  const cleanText = preprocessPreviewOnlyRender(preprocessedOriginalText);
 
   if (cleanText.trim() === '') {
     return { editorModel: null, graph: null, errors: [] };
@@ -113,6 +208,7 @@ function buildPreviewModelFromDsl(sourceText, previousEditorModel = null) {
   }
 
   normalizePreviewRenderGraph(graph);
+  mergePreviewRender(graph, previewRender);
 
   let editorModel = graphToEditorModel(graph);
   if (previousEditorModel) {
@@ -122,4 +218,12 @@ function buildPreviewModelFromDsl(sourceText, previousEditorModel = null) {
   return { editorModel, graph, errors: [] };
 }
 
-module.exports = { ensurePreviewModulesLoaded, buildPreviewModelFromDsl, preprocessPreviewHostInputs, normalizePreviewRenderGraph };
+module.exports = {
+  ensurePreviewModulesLoaded,
+  buildPreviewModelFromDsl,
+  preprocessPreviewHostInputs,
+  preprocessPreviewOnlyRender,
+  normalizePreviewRenderGraph,
+  extractPreviewRender,
+  mergePreviewRender
+};

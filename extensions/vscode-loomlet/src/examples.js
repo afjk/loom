@@ -27,9 +27,8 @@ import input
 
 x = input.mouseX()
 y = input.mouseY()
-painting = input.mouseDown()
 
-render point(x: x, y: y, radius: 5, color: "#ff70a6", trail: 0, enabled: painting)
+render point(x: x, y: y, radius: 5, color: "#ff70a6", trail: 0, enabled: input.mouseDown())
 `
   },
   {
