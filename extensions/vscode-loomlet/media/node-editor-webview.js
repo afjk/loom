@@ -15781,22 +15781,22 @@ var LoomletPreview = (() => {
     if (!message || message.type !== "setModel") return;
     const { editorModel, errors } = message;
     if (errors && errors.length > 0) {
-      setStatus("DSL has errors", true);
+      setStatus("DSL has errors \xB7 Read-only Node Preview", true);
       setErrors(errors);
       return;
     }
     setErrors([]);
     if (!editorModel) {
-      setStatus("Empty", false);
+      setStatus("Empty \xB7 Read-only Node Preview", false);
       return;
     }
     initEditorView();
     try {
       await editorView.renderModel(editorModel);
-      setStatus("Synced", false);
+      setStatus("Synced \xB7 Read-only Node Preview", false);
     } catch (e) {
       console.error("[loomlet-preview] renderModel failed:", e);
-      setStatus("Render error", true);
+      setStatus("Render error \xB7 Read-only Node Preview", true);
     }
   });
   vscode.postMessage({ type: "ready" });

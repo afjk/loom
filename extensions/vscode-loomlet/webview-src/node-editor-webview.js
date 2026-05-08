@@ -66,7 +66,7 @@ window.addEventListener('message', async (event) => {
   const { editorModel, errors } = message;
 
   if (errors && errors.length > 0) {
-    setStatus('DSL has errors', true);
+    setStatus('DSL has errors · Read-only Node Preview', true);
     setErrors(errors);
     // Leave the previous node editor state visible (do not touch editorView)
     return;
@@ -75,7 +75,7 @@ window.addEventListener('message', async (event) => {
   setErrors([]);
 
   if (!editorModel) {
-    setStatus('Empty', false);
+    setStatus('Empty · Read-only Node Preview', false);
     return;
   }
 
@@ -83,10 +83,10 @@ window.addEventListener('message', async (event) => {
 
   try {
     await editorView.renderModel(editorModel);
-    setStatus('Synced', false);
+    setStatus('Synced · Read-only Node Preview', false);
   } catch (e) {
     console.error('[loomlet-preview] renderModel failed:', e);
-    setStatus('Render error', true);
+    setStatus('Render error · Read-only Node Preview', true);
   }
 });
 

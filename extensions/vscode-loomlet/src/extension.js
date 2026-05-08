@@ -148,7 +148,19 @@ function openNodePreviewToSide(context) {
     previousEditorModel = null;
   });
 
+  // When the WebView JS finishes loading it sends { type: 'ready' }.
+  // Send the initial model at that point to avoid a race where the message
+  // arrives before the WebView's message listener is registered.
+  const readySub = nodePreviewPanel.webview.onDidReceiveMessage((message) => {
+    if (message.type === 'ready' && currentPreviewDocument) {
+      sendDocumentToPreview(currentPreviewDocument);
+    }
+  });
+  context.subscriptions.push(readySub);
+
   currentPreviewDocument = document;
+  // Also send immediately as a fallback (retainContextWhenHidden panels may
+  // restore without firing 'ready' again).
   sendDocumentToPreview(document);
 }
 
