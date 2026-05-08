@@ -15735,33 +15735,91 @@ var LoomletPreview = (() => {
   // webview-src/node-editor-webview.js
   var vscode = acquireVsCodeApi();
   var editorView = null;
+  var editorVisible = true;
+  var lastErrors = [];
+  function resizePreviewCanvas() {
+    const canvas = document.getElementById("lp-preview-canvas");
+    if (!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(window.innerWidth * dpr);
+    canvas.height = Math.round(window.innerHeight * dpr);
+    drawPreviewPlaceholder(canvas, dpr);
+  }
+  function drawPreviewPlaceholder(canvas, dpr) {
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const w2 = canvas.width;
+    const h2 = canvas.height;
+    ctx.fillStyle = "#1a1a1a";
+    ctx.fillRect(0, 0, w2, h2);
+    const step = 28 * dpr;
+    ctx.fillStyle = "rgba(255,255,255,0.06)";
+    for (let x2 = step; x2 < w2; x2 += step) {
+      for (let y = step; y < h2; y += step) {
+        ctx.beginPath();
+        ctx.arc(x2, y, dpr, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "rgba(255,255,255,0.18)";
+    ctx.font = `${Math.round(15 * dpr)}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+    ctx.fillText("Runtime Preview", w2 / 2, h2 / 2 - Math.round(13 * dpr));
+    ctx.fillStyle = "rgba(255,255,255,0.09)";
+    ctx.font = `${Math.round(11 * dpr)}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+    ctx.fillText("render output will appear here", w2 / 2, h2 / 2 + Math.round(13 * dpr));
+  }
   function setStatus(text, isError) {
     const el = document.getElementById("lp-status");
     if (!el) return;
     el.textContent = text;
     if (isError) {
       el.style.borderLeftColor = "#f44747";
-      el.style.background = "rgba(244,71,71,0.12)";
       el.style.color = "#f88";
     } else {
       el.style.borderLeftColor = "#4a90e2";
-      el.style.background = "rgba(74,144,226,0.12)";
       el.style.color = "#9cdcfe";
     }
   }
   function setErrors(errors) {
+    lastErrors = errors || [];
+    _renderErrors();
+  }
+  function _renderErrors() {
     const el = document.getElementById("lp-errors");
     if (!el) return;
-    if (!errors || errors.length === 0) {
+    if (!editorVisible || lastErrors.length === 0) {
       el.style.display = "none";
       el.innerHTML = "";
       return;
     }
     el.style.display = "block";
-    el.innerHTML = errors.map((e) => `<div class="lp-error-item">${escapeHtml(e.message || String(e))}</div>`).join("");
+    el.innerHTML = lastErrors.map((e) => `<div class="lp-error-item">${escapeHtml(e.message || String(e))}</div>`).join("");
   }
   function escapeHtml(str) {
     return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function toggleEditor() {
+    editorVisible = !editorVisible;
+    const panel = document.getElementById("lp-panel");
+    const container = document.getElementById("lp-editor-container");
+    const btn = document.getElementById("lp-toggle-editor");
+    if (editorVisible) {
+      if (container) container.style.display = "";
+      if (panel) panel.style.flex = "1";
+      if (btn) btn.textContent = "Hide Editor";
+      _renderErrors();
+    } else {
+      if (container) container.style.display = "none";
+      if (panel) panel.style.flex = "0 0 auto";
+      if (btn) btn.textContent = "Show Editor";
+      _renderErrors();
+    }
+  }
+  function initToggleButton() {
+    const btn = document.getElementById("lp-toggle-editor");
+    if (btn) btn.addEventListener("click", toggleEditor);
   }
   function initEditorView() {
     if (editorView) return;
@@ -15799,6 +15857,9 @@ var LoomletPreview = (() => {
       setStatus("Render error \xB7 Read-only Node Preview", true);
     }
   });
+  resizePreviewCanvas();
+  window.addEventListener("resize", resizePreviewCanvas);
+  initToggleButton();
   vscode.postMessage({ type: "ready" });
 })();
 /*! Bundled license information:
