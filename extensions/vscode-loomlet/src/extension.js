@@ -4,6 +4,7 @@ const crypto = require('node:crypto');
 const vscode = require('vscode');
 const { getCompletionContext } = require('./completion-context');
 const { buildCompletions: buildRawCompletions, getIncludePlanned } = require('./completion-engine');
+const { VSCODE_EXAMPLES } = require('./examples.js');
 const { isLoomletDocument, normalizeLoomletErrorLocation, collectLoomletDiagnosticItems, ensureModulesLoaded } = require('./diagnostics.js');
 const { clampCoordinates } = require('./range-utils.js');
 const { ensurePreviewModulesLoaded, buildPreviewModelFromDsl } = require('./preview-model.js');
@@ -56,6 +57,7 @@ async function activate(context) {
     vscode.commands.registerCommand('loomlet.runCurrentFile', () => runCurrentFile('run')),
     vscode.commands.registerCommand('loomlet.sceneSyncDevCurrentFile', () => runCurrentFile('scenesync dev')),
     vscode.commands.registerCommand('loomlet.openNodePreviewToSide', () => openNodePreviewToSide(context)),
+    vscode.commands.registerCommand('loomlet.insertExample', () => insertExample()),
     vscode.workspace.onDidChangeTextDocument((event) => {
       scheduleValidation(event.document, diagnosticCollection);
       if (nodePreviewPanel && currentPreviewDocument && event.document.uri.toString() === currentPreviewDocument.uri.toString()) {
@@ -104,6 +106,54 @@ function deactivate() {
   if (nodePreviewPanel) {
     nodePreviewPanel.dispose();
   }
+}
+
+async function insertExample() {
+  const selected = await vscode.window.showQuickPick(
+    VSCODE_EXAMPLES.map((example) => ({
+      label: example.label,
+      description: example.description,
+      detail: example.detail,
+      example
+    })),
+    {
+      title: 'Loomlet: Insert Example',
+      placeHolder: 'Choose a Loomlet example to insert'
+    }
+  );
+
+  if (!selected) return;
+
+  const source = ensureTrailingNewline(selected.example.source);
+  const editor = vscode.window.activeTextEditor;
+  const activeDocument = editor?.document;
+  const canInsertIntoActiveDocument = editor && isEditorInsertTarget(activeDocument);
+
+  if (canInsertIntoActiveDocument) {
+    await editor.edit((editBuilder) => {
+      for (const selection of editor.selections) {
+        editBuilder.replace(selection, source);
+      }
+    });
+    return;
+  }
+
+  const document = await vscode.workspace.openTextDocument({
+    language: 'loomlet',
+    content: source
+  });
+  await vscode.window.showTextDocument(document, vscode.ViewColumn.One);
+}
+
+function ensureTrailingNewline(value) {
+  return value.endsWith('\n') ? value : `${value}\n`;
+}
+
+function isEditorInsertTarget(document) {
+  if (!document) return false;
+  return document.languageId === 'loomlet'
+    || document.languageId === 'loom'
+    || document.fileName.endsWith('.loom');
 }
 
 function openNodePreviewToSide(context) {
