@@ -15,7 +15,8 @@
     "onLanguage:loomlet",
     "onCommand:loomlet.runCurrentFile",
     "onCommand:loomlet.sceneSyncDevCurrentFile",
-    "onCommand:loomlet.openNodePreviewToSide"
+    "onCommand:loomlet.openNodePreviewToSide",
+    "onCommand:loomlet.insertExample"
   ],
   "contributes": {
     "languages": [
@@ -50,6 +51,10 @@
       {
         "command": "loomlet.openNodePreviewToSide",
         "title": "Loomlet: Open Node Preview to the Side"
+      },
+      {
+        "command": "loomlet.insertExample",
+        "title": "Loomlet: Insert Example"
       }
     ],
     "configuration": {
@@ -64,7 +69,7 @@
     }
   },
   "scripts": {
-    "test": "node test/completion-context.test.mjs && node test/completion-engine.test.mjs && node test/diagnostics.test.mjs && node test/preview-model.test.mjs",
+    "test": "node test/completion-context.test.mjs && node test/completion-engine.test.mjs && node test/diagnostics.test.mjs && node test/preview-model.test.mjs && node test/examples.test.mjs",
     "build:webview": "node scripts/build-webview.mjs",
     "build": "npm run build:webview"
   },
