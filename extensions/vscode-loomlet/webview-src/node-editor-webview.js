@@ -240,18 +240,21 @@ function drawRuntimeCanvas(timestamp) {
   const w = canvas.width;
   const h = canvas.height;
   const renderConfig = currentGraph.render;
+  const enabled = isEnabled(loomEngine, renderConfig);
 
-  // Trail (partial clear) vs hard clear
+  // Trail (partial clear) vs hard clear. When trail is 0, point renders behave
+  // like paint: do not clear the canvas every frame, and only add strokes when
+  // enabled is true.
   const trail = renderConfig?.trail !== undefined ? renderConfig.trail : 0.1;
   if (trail > 0) {
     ctx.fillStyle = `rgba(0, 0, 0, ${trail})`;
     ctx.fillRect(0, 0, w, h);
-  } else if (renderConfig?.type !== 'point' || isEnabled(loomEngine, renderConfig)) {
+  } else if (renderConfig?.type !== 'point') {
     ctx.fillStyle = '#1a1a1a';
     ctx.fillRect(0, 0, w, h);
   }
 
-  if (!isEnabled(loomEngine, renderConfig)) {
+  if (!enabled) {
     if (renderConfig?.type === 'keys') drawKeyVisualizer(ctx, renderConfig, dpr, w, h);
     return;
   }
