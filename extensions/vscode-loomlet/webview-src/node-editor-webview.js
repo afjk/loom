@@ -16,7 +16,11 @@ let loomEngine = null;
 let loomRafId = null;
 let currentGraph = null;  // keeps the full graph including .render config
 let runtimeStartTimestampMs = null;  // timestamp when runtime started
-let lastFrameTimestampMs = null;  // last frame timestamp for delta calc
+
+// Pause/Resume state
+let isRuntimePaused = false;
+let pausedAtTimestampMs = null;
+let accumulatedPausedMs = 0;
 
 // ── Canvas: Loom Runtime Preview ─────────────────────────────────────────────
 
@@ -83,12 +87,17 @@ function drawFrame(timestamp) {
   const canvas = document.getElementById('lp-preview-canvas');
   if (!canvas || !loomEngine || !currentGraph) return;
 
+  // If paused, don't update; just keep the current frame
+  if (isRuntimePaused) {
+    return;
+  }
+
   try {
-    // Calculate elapsed time from runtime start
+    // Calculate elapsed time from runtime start, excluding accumulated paused time
     if (runtimeStartTimestampMs === null) {
       runtimeStartTimestampMs = timestamp;
     }
-    const elapsedSeconds = (timestamp - runtimeStartTimestampMs) / 1000;
+    const elapsedSeconds = (timestamp - runtimeStartTimestampMs - accumulatedPausedMs) / 1000;
 
     // Evaluate the Loom graph at this time
     loomEngine.evaluateAt(elapsedSeconds, timestamp);
@@ -163,6 +172,7 @@ function drawRuntimeCanvas(timestamp) {
 function handleRuntimeError(error) {
   setStatus('Runtime error · Read-only Node Preview', true);
   stopLoom();
+  updateControlStates();
   const canvas = document.getElementById('lp-preview-canvas');
   if (canvas) drawPlaceholder(canvas, window.devicePixelRatio || 1);
 }
@@ -180,7 +190,9 @@ function stopLoom() {
   }
   // Reset time tracking state
   runtimeStartTimestampMs = null;
-  lastFrameTimestampMs = null;
+  isRuntimePaused = false;
+  pausedAtTimestampMs = null;
+  accumulatedPausedMs = 0;
 }
 
 function startLoom(graph) {
@@ -190,6 +202,7 @@ function startLoom(graph) {
   if (!graph || !graph.render) {
     const canvas = document.getElementById('lp-preview-canvas');
     if (canvas) drawPlaceholder(canvas, window.devicePixelRatio || 1);
+    updateControlStates();
     return;
   }
 
@@ -198,9 +211,12 @@ function startLoom(graph) {
     loomEngine = new Loom(graphForLoom);
     // Reset time tracking for this runtime
     runtimeStartTimestampMs = null;
-    lastFrameTimestampMs = null;
+    isRuntimePaused = false;
+    pausedAtTimestampMs = null;
+    accumulatedPausedMs = 0;
     // Start the RAF loop - do NOT call loomEngine.start()
     loomRafId = requestAnimationFrame(drawFrame);
+    updateControlStates();
   } catch (e) {
     console.error('[loomlet-preview] Loom engine initialization failed:', e);
     handleRuntimeError(e);
@@ -249,6 +265,81 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+// ── Runtime controls ──────────────────────────────────────────────────────────
+
+function togglePauseResume() {
+  if (!loomEngine || !currentGraph || !currentGraph.render) return;
+
+  if (isRuntimePaused) {
+    // Resume: add paused time to accumulated paused time
+    const now = performance.now();
+    if (pausedAtTimestampMs !== null) {
+      accumulatedPausedMs += (now - pausedAtTimestampMs);
+      pausedAtTimestampMs = null;
+    }
+    isRuntimePaused = false;
+    updateControlStates();
+    updateStatus();
+    // Resume the RAF loop
+    loomRafId = requestAnimationFrame(drawFrame);
+  } else {
+    // Pause: record the current time
+    pausedAtTimestampMs = performance.now();
+    isRuntimePaused = true;
+    updateControlStates();
+    updateStatus();
+  }
+}
+
+function resetRuntime() {
+  if (!loomEngine || !currentGraph || !currentGraph.render) return;
+
+  // Reset time tracking
+  runtimeStartTimestampMs = null;
+  accumulatedPausedMs = 0;
+  isRuntimePaused = false;
+  pausedAtTimestampMs = null;
+
+  try {
+    // Reset the engine to t=0
+    loomEngine.evaluateAt(0, performance.now());
+    drawRuntimeCanvas(performance.now());
+  } catch (e) {
+    console.error('[loomlet-preview] Error during reset:', e);
+  }
+
+  updateControlStates();
+  updateStatus();
+
+  // Schedule next frame to continue
+  if (loomRafId !== null) {
+    cancelAnimationFrame(loomRafId);
+  }
+  loomRafId = requestAnimationFrame(drawFrame);
+}
+
+function updateControlStates() {
+  const canControl = loomEngine && currentGraph && currentGraph.render;
+  const toggleBtn = document.getElementById('lp-toggle-runtime');
+  const resetBtn = document.getElementById('lp-reset-runtime');
+
+  if (toggleBtn) {
+    toggleBtn.disabled = !canControl;
+    toggleBtn.textContent = isRuntimePaused ? 'Resume' : 'Pause';
+  }
+  if (resetBtn) {
+    resetBtn.disabled = !canControl;
+  }
+}
+
+function updateStatus() {
+  if (isRuntimePaused) {
+    setStatus('Paused · Runtime Preview · Read-only Node Preview', false);
+  } else if (loomEngine && currentGraph && currentGraph.render) {
+    setStatus('Running · Runtime Preview · Read-only Node Preview', false);
+  }
+}
+
 // ── Hide / Show toggle ────────────────────────────────────────────────────────
 
 function toggleEditor() {
@@ -271,9 +362,15 @@ function toggleEditor() {
   }
 }
 
-function initToggleButton() {
-  const btn = document.getElementById('lp-toggle-editor');
-  if (btn) btn.addEventListener('click', toggleEditor);
+function initControlButtons() {
+  const toggleEditorBtn = document.getElementById('lp-toggle-editor');
+  if (toggleEditorBtn) toggleEditorBtn.addEventListener('click', toggleEditor);
+
+  const toggleRuntimeBtn = document.getElementById('lp-toggle-runtime');
+  if (toggleRuntimeBtn) toggleRuntimeBtn.addEventListener('click', togglePauseResume);
+
+  const resetRuntimeBtn = document.getElementById('lp-reset-runtime');
+  if (resetRuntimeBtn) resetRuntimeBtn.addEventListener('click', resetRuntime);
 }
 
 // ── Node Editor lifecycle ─────────────────────────────────────────────────────
@@ -311,6 +408,7 @@ window.addEventListener('message', async (event) => {
 
   if (!editorModel) {
     setStatus('Empty · Read-only Node Preview', false);
+    updateControlStates();
     return;
   }
 
@@ -318,7 +416,8 @@ window.addEventListener('message', async (event) => {
 
   try {
     await editorView.renderModel(editorModel);
-    setStatus('Synced · Read-only Node Preview', false);
+    updateStatus();
+    updateControlStates();
   } catch (e) {
     console.error('[loomlet-preview] renderModel failed:', e);
     setStatus('Render error · Read-only Node Preview', true);
@@ -329,7 +428,7 @@ window.addEventListener('message', async (event) => {
 
 resizePreviewCanvas();
 window.addEventListener('resize', resizePreviewCanvas);
-initToggleButton();
+initControlButtons();
 
 // Notify the extension that the webview is ready
 vscode.postMessage({ type: 'ready' });

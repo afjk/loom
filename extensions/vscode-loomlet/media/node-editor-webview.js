@@ -16208,7 +16208,9 @@ var LoomletPreview = (() => {
   var loomRafId = null;
   var currentGraph = null;
   var runtimeStartTimestampMs = null;
-  var lastFrameTimestampMs = null;
+  var isRuntimePaused = false;
+  var pausedAtTimestampMs = null;
+  var accumulatedPausedMs = 0;
   function resizePreviewCanvas() {
     const canvas = document.getElementById("lp-preview-canvas");
     if (!canvas) return;
@@ -16254,11 +16256,14 @@ var LoomletPreview = (() => {
   function drawFrame(timestamp) {
     const canvas = document.getElementById("lp-preview-canvas");
     if (!canvas || !loomEngine || !currentGraph) return;
+    if (isRuntimePaused) {
+      return;
+    }
     try {
       if (runtimeStartTimestampMs === null) {
         runtimeStartTimestampMs = timestamp;
       }
-      const elapsedSeconds = (timestamp - runtimeStartTimestampMs) / 1e3;
+      const elapsedSeconds = (timestamp - runtimeStartTimestampMs - accumulatedPausedMs) / 1e3;
       loomEngine.evaluateAt(elapsedSeconds, timestamp);
       drawRuntimeCanvas(timestamp);
     } catch (error) {
@@ -16312,6 +16317,7 @@ var LoomletPreview = (() => {
   function handleRuntimeError(error) {
     setStatus("Runtime error \xB7 Read-only Node Preview", true);
     stopLoom();
+    updateControlStates();
     const canvas = document.getElementById("lp-preview-canvas");
     if (canvas) drawPlaceholder(canvas, window.devicePixelRatio || 1);
   }
@@ -16328,7 +16334,9 @@ var LoomletPreview = (() => {
       loomEngine = null;
     }
     runtimeStartTimestampMs = null;
-    lastFrameTimestampMs = null;
+    isRuntimePaused = false;
+    pausedAtTimestampMs = null;
+    accumulatedPausedMs = 0;
   }
   function startLoom(graph) {
     stopLoom();
@@ -16336,14 +16344,18 @@ var LoomletPreview = (() => {
     if (!graph || !graph.render) {
       const canvas = document.getElementById("lp-preview-canvas");
       if (canvas) drawPlaceholder(canvas, window.devicePixelRatio || 1);
+      updateControlStates();
       return;
     }
     try {
       const graphForLoom = { nodes: graph.nodes || [], edges: graph.edges || [] };
       loomEngine = new Loom(graphForLoom);
       runtimeStartTimestampMs = null;
-      lastFrameTimestampMs = null;
+      isRuntimePaused = false;
+      pausedAtTimestampMs = null;
+      accumulatedPausedMs = 0;
       loomRafId = requestAnimationFrame(drawFrame);
+      updateControlStates();
     } catch (e) {
       console.error("[loomlet-preview] Loom engine initialization failed:", e);
       handleRuntimeError(e);
@@ -16379,6 +16391,63 @@ var LoomletPreview = (() => {
   function escapeHtml(str) {
     return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
+  function togglePauseResume() {
+    if (!loomEngine || !currentGraph || !currentGraph.render) return;
+    if (isRuntimePaused) {
+      const now = performance.now();
+      if (pausedAtTimestampMs !== null) {
+        accumulatedPausedMs += now - pausedAtTimestampMs;
+        pausedAtTimestampMs = null;
+      }
+      isRuntimePaused = false;
+      updateControlStates();
+      updateStatus();
+      loomRafId = requestAnimationFrame(drawFrame);
+    } else {
+      pausedAtTimestampMs = performance.now();
+      isRuntimePaused = true;
+      updateControlStates();
+      updateStatus();
+    }
+  }
+  function resetRuntime() {
+    if (!loomEngine || !currentGraph || !currentGraph.render) return;
+    runtimeStartTimestampMs = null;
+    accumulatedPausedMs = 0;
+    isRuntimePaused = false;
+    pausedAtTimestampMs = null;
+    try {
+      loomEngine.evaluateAt(0, performance.now());
+      drawRuntimeCanvas(performance.now());
+    } catch (e) {
+      console.error("[loomlet-preview] Error during reset:", e);
+    }
+    updateControlStates();
+    updateStatus();
+    if (loomRafId !== null) {
+      cancelAnimationFrame(loomRafId);
+    }
+    loomRafId = requestAnimationFrame(drawFrame);
+  }
+  function updateControlStates() {
+    const canControl = loomEngine && currentGraph && currentGraph.render;
+    const toggleBtn = document.getElementById("lp-toggle-runtime");
+    const resetBtn = document.getElementById("lp-reset-runtime");
+    if (toggleBtn) {
+      toggleBtn.disabled = !canControl;
+      toggleBtn.textContent = isRuntimePaused ? "Resume" : "Pause";
+    }
+    if (resetBtn) {
+      resetBtn.disabled = !canControl;
+    }
+  }
+  function updateStatus() {
+    if (isRuntimePaused) {
+      setStatus("Paused \xB7 Runtime Preview \xB7 Read-only Node Preview", false);
+    } else if (loomEngine && currentGraph && currentGraph.render) {
+      setStatus("Running \xB7 Runtime Preview \xB7 Read-only Node Preview", false);
+    }
+  }
   function toggleEditor() {
     editorVisible = !editorVisible;
     const panel = document.getElementById("lp-panel");
@@ -16396,9 +16465,13 @@ var LoomletPreview = (() => {
       _renderErrors();
     }
   }
-  function initToggleButton() {
-    const btn = document.getElementById("lp-toggle-editor");
-    if (btn) btn.addEventListener("click", toggleEditor);
+  function initControlButtons() {
+    const toggleEditorBtn = document.getElementById("lp-toggle-editor");
+    if (toggleEditorBtn) toggleEditorBtn.addEventListener("click", toggleEditor);
+    const toggleRuntimeBtn = document.getElementById("lp-toggle-runtime");
+    if (toggleRuntimeBtn) toggleRuntimeBtn.addEventListener("click", togglePauseResume);
+    const resetRuntimeBtn = document.getElementById("lp-reset-runtime");
+    if (resetRuntimeBtn) resetRuntimeBtn.addEventListener("click", resetRuntime);
   }
   function initEditorView() {
     if (editorView) return;
@@ -16426,12 +16499,14 @@ var LoomletPreview = (() => {
     startLoom(graph || null);
     if (!editorModel) {
       setStatus("Empty \xB7 Read-only Node Preview", false);
+      updateControlStates();
       return;
     }
     initEditorView();
     try {
       await editorView.renderModel(editorModel);
-      setStatus("Synced \xB7 Read-only Node Preview", false);
+      updateStatus();
+      updateControlStates();
     } catch (e) {
       console.error("[loomlet-preview] renderModel failed:", e);
       setStatus("Render error \xB7 Read-only Node Preview", true);
@@ -16439,7 +16514,7 @@ var LoomletPreview = (() => {
   });
   resizePreviewCanvas();
   window.addEventListener("resize", resizePreviewCanvas);
-  initToggleButton();
+  initControlButtons();
   vscode.postMessage({ type: "ready" });
 })();
 /*! Bundled license information:
