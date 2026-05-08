@@ -45,6 +45,32 @@ function preprocessPreviewHostInputs(sourceText) {
   return text;
 }
 
+function extractPreviewRenderKeys(sourceText) {
+  const match = String(sourceText || '').match(/(^|\n)\s*render\s+keys\s*\(([^)]*)\)/m);
+  if (!match) return null;
+
+  const args = match[2];
+  const out = { type: 'keys' };
+  for (const key of ['space', 'left', 'right', 'up', 'down']) {
+    const valueMatch = args.match(new RegExp(`(?:^|,)\\s*${key}\\s*:\\s*([^,]+)`));
+    if (valueMatch) {
+      out[key] = valueMatch[1].trim();
+    }
+  }
+  const trailMatch = args.match(/(?:^|,)\s*trail\s*:\s*([0-9.]+)/);
+  if (trailMatch) {
+    out.trail = Number(trailMatch[1]);
+  }
+  return out;
+}
+
+function preprocessPreviewOnlyRender(sourceText) {
+  return String(sourceText || '').replace(
+    /(^|\n)(\s*)render\s+keys\s*\([^)]*\)/m,
+    '$1$2render point(x: 0, y: 0, enabled: false)'
+  );
+}
+
 function normalizePreviewRenderGraph(graph) {
   if (!graph?.render) return graph;
   const render = graph.render;
@@ -61,17 +87,25 @@ function normalizePreviewRenderGraph(graph) {
     }
   }
 
-  const renderNode = (graph.nodes || []).find((node) => node.id === 'render');
-  if (renderNode?.type === 'keys') {
-    render.type = 'keys';
-    for (const key of ['space', 'left', 'right', 'up', 'down', 'trail']) {
-      if (renderNode.params && Object.prototype.hasOwnProperty.call(renderNode.params, key)) {
-        render[key] = renderNode.params[key];
-      }
+  return graph;
+}
+
+function resolvePreviewKeyRenderRefs(renderConfig, graph) {
+  if (!renderConfig || renderConfig.type !== 'keys') return renderConfig;
+  const resolved = { ...renderConfig };
+  for (const key of ['space', 'left', 'right', 'up', 'down']) {
+    const raw = resolved[key];
+    if (typeof raw !== 'string') continue;
+    const node = (graph.nodes || []).find((candidate) => candidate.id === raw);
+    if (node) {
+      resolved[key] = `${node.id}.out`;
+      continue;
+    }
+    if (raw.startsWith('__loomlet_host:')) {
+      resolved[key] = raw;
     }
   }
-
-  return graph;
+  return resolved;
 }
 
 /**
@@ -96,7 +130,9 @@ function buildPreviewModelFromDsl(sourceText, previousEditorModel = null) {
     };
   }
 
-  const cleanText = preprocessPreviewHostInputs(stripEditorMetadataFromDsl(sourceText || ''));
+  const originalText = stripEditorMetadataFromDsl(sourceText || '');
+  const previewKeysRender = extractPreviewRenderKeys(preprocessPreviewHostInputs(originalText));
+  const cleanText = preprocessPreviewOnlyRender(preprocessPreviewHostInputs(originalText));
 
   if (cleanText.trim() === '') {
     return { editorModel: null, graph: null, errors: [] };
@@ -113,6 +149,9 @@ function buildPreviewModelFromDsl(sourceText, previousEditorModel = null) {
   }
 
   normalizePreviewRenderGraph(graph);
+  if (previewKeysRender) {
+    graph.render = resolvePreviewKeyRenderRefs(previewKeysRender, graph);
+  }
 
   let editorModel = graphToEditorModel(graph);
   if (previousEditorModel) {
@@ -122,4 +161,11 @@ function buildPreviewModelFromDsl(sourceText, previousEditorModel = null) {
   return { editorModel, graph, errors: [] };
 }
 
-module.exports = { ensurePreviewModulesLoaded, buildPreviewModelFromDsl, preprocessPreviewHostInputs, normalizePreviewRenderGraph };
+module.exports = {
+  ensurePreviewModulesLoaded,
+  buildPreviewModelFromDsl,
+  preprocessPreviewHostInputs,
+  preprocessPreviewOnlyRender,
+  normalizePreviewRenderGraph,
+  extractPreviewRenderKeys
+};
