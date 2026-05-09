@@ -1,101 +1,101 @@
-# Scoped Reactive Host Notes
+# Scoped Reactive Host メモ
 
-This is a short design memo for ideas that sit above the Loomlet core.
+このメモは、Loomlet Core の外側にある Host 設計のための短い計画メモです。
 
-Loomlet itself can remain a small dataflow / FRP graph language. Hosts such as Scene Sync, a future Grid host, or a future Agent/Boids host may manage many scopes and evaluate Loomlet graphs inside those scopes.
+Loomlet 単体は、小さな dataflow / FRP graph 言語として保つことができます。一方で、Scene Sync、将来の Grid Host、Agent / Boids Host などでは、Host が複数の scope を管理し、それぞれの scope の中で Loomlet graph を評価します。
 
-This document is not a core language specification. It is a planning note for future host contracts.
+この文書は Loomlet Core の正式仕様ではありません。将来の Host contract を検討するための計画メモです。
 
 ## Scope
 
-A scope is a host-defined unit where a Loomlet graph is evaluated.
+scope は、Host が定義する「Loomlet graph の評価単位」です。
 
-Examples:
+例:
 
-- `scene`: a whole Scene Sync scene
-- `object`: a Scene Sync object
-- `cell`: a grid cell
-- `agent`: a boid / particle / entity
-- another host-defined unit
+- `scene`: Scene Sync のシーン全体
+- `object`: Scene Sync のオブジェクト
+- `cell`: grid のセル
+- `agent`: boid / particle / entity
+- その他、Host が定義する単位
 
-A host owns scope lifecycle, scope context, input resources, output application, and batching.
+Host は、scope のライフサイクル、scope context、入力 resource、出力の適用、一括反映を管理します。
 
-## Core execution rule
+## 基本実行ルール
 
-Graphs do not communicate by directly reading each other’s live outputs.
+graph 同士は、互いの live output を直接読むことで通信しません。
 
-Instead, each turn follows a snapshot / command / commit model:
+代わりに、各 turn は snapshot / command / commit モデルで進みます。
 
 ```text
 turn start:
-  Host freezes an environment snapshot
+  Host が environment snapshot を固定する
 
 evaluate:
-  each scope graph reads snapshot + scope context + host resources
-  each graph emits output commands
+  各 scope graph が snapshot + scope context + host resource を読む
+  各 graph が output command を出す
 
 commit:
-  Host collects commands
-  Host resolves conflicts deterministically
-  Host commits the next environment
+  Host が command を収集する
+  Host が conflict を deterministic に解決する
+  Host が next environment を commit する
 ```
 
-The committed environment becomes readable by later turns.
+commit された environment は、次回以降の turn で読み取れるようになります。
 
-In other words, reading another object, cell, or agent means reading the host-provided environment snapshot, not directly reading another graph.
+つまり、別の object / cell / agent を読むということは、別の graph を直接読むことではなく、Host が提供する environment snapshot を読むことです。
 
 ## Double-buffered environment
 
-The shared environment should be treated as double-buffered:
+共有 environment は double-buffered なものとして扱います。
 
-- reads come from the turn-start snapshot
-- writes are emitted as commands or next-buffer writes
-- writes do not become readable during the same turn
-- all writes are committed after evaluation
+- 読み取りは turn 開始時の snapshot から行う
+- 書き込みは command または next buffer write として出力する
+- 書き込みは同じ turn 中には読み取れない
+- すべての書き込みは評価後に commit される
 
-This keeps evaluation order-independent and avoids immediate cyclic dependencies.
+これにより、評価順に依存しにくくなり、即時の循環依存も避けやすくなります。
 
-This model also matches the Grid Rule Host idea: a cell reads previous grid values and emits its next value. Scene Sync object rules can use the same discipline: an object reads the previous scene snapshot and emits its next transform/state.
+このモデルは Grid Rule Host の考え方とも一致します。cell は前回の grid 値を読み、次の値を出力します。Scene Sync object rule でも同じ規律を使えます。object は前回の scene snapshot を読み、次の transform / state を出力します。
 
-## Self-write by default
+## デフォルトは self-write
 
-Scope-local graphs should be self-write only by default.
+scope-local graph は、原則として self-write only にします。
 
-Examples:
+例:
 
 ```text
 object scope:
-  writes its own object state
+  自分の object state だけを書く
 
 cell scope:
-  writes its own cell state
+  自分の cell state だけを書く
 
 agent scope:
-  writes its own agent state
+  自分の agent state だけを書く
 ```
 
-This avoids most write conflicts and makes parallel execution straightforward.
+これにより、多くの write conflict を避けられ、並列実行もしやすくなります。
 
-If one scope needs to affect another scope, prefer an intent / event / request written into the environment, then handle it in a later turn through the target scope, a scene scope, or a host-level resolver.
+ある scope が別の scope に影響したい場合は、直接 write するのではなく、intent / event / request を environment に出力し、次回以降の turn で対象 scope、scene scope、または Host-level resolver が処理することを優先します。
 
-Scene-level or global scopes may have broader write authority, but that should be an explicit host capability.
+scene-level や global な scope は、より広い write 権限を持つことがあります。ただし、それは明示的な Host capability として扱うべきです。
 
-## Scene Sync mapping
+## Scene Sync への対応
 
-Scene Sync can be viewed as a scoped host:
+Scene Sync は scoped host として見ることができます。
 
-- scene-level Loomlet graph: scene scope behavior
-- object-level Loomlet graph: object scope behavior
+- scene-level Loomlet graph: scene scope のふるまい
+- object-level Loomlet graph: object scope のふるまい
 - scene snapshot: shared environment
-- scene-batch / scene-delta: committed output commands
+- scene-batch / scene-delta: commit される output command
 
-A future shared-rule mode could apply one compiled graph to many selected Scene Sync objects each turn.
+将来的な shared-rule mode では、1つの compiled graph を、選択された複数の Scene Sync object に毎 turn 適用できます。
 
-This is different from attaching a unique graph to each object, but both use the same scope model.
+これは object ごとに固有の graph を割り当てる方式とは異なりますが、どちらも同じ scope model で扱えます。
 
-## Grid and Agent mapping
+## Grid / Agent への対応
 
-The same pattern generalizes:
+同じパターンは次のように一般化できます。
 
 ```text
 Grid Rule Host:
@@ -114,53 +114,53 @@ Scene Sync Object Rule Host:
   output = next transform/component commands
 ```
 
-The host provides context for the current scope and may provide aggregate inputs such as neighbor counts, nearby object summaries, or spatial query results.
+Host は現在の scope の context を提供します。また、neighbor count、近くの object の要約、spatial query result などの集約 input を提供してもよいです。
 
-## Parallel-friendly implementation notes
+## 並列化しやすい実装メモ
 
-The model should allow a host to start single-threaded and later scale without changing semantics.
+このモデルは、最初は single-threaded に実装し、後から意味論を変えずに scale できるようにしておきます。
 
-Useful implementation directions:
+有効そうな実装方針:
 
-- compile each graph shape once
-- instantiate per-scope context/state separately
-- store scope-local state in Structure-of-Arrays buffers where useful
-- batch scopes with the same graph shape as an archetype
-- read from immutable snapshots
-- write to command buffers or next buffers
-- resolve commands using stable metadata, not worker completion order
-- provide time/random/query inputs from the host so they are deterministic per turn
+- 各 graph shape は一度だけ compile する
+- scope ごとの context / state は分離して持つ
+- 有効な場合は scope-local state を Structure of Arrays 形式の buffer に持つ
+- 同じ graph shape の scope を archetype として batch 評価する
+- immutable snapshot から読む
+- command buffer または next buffer に書く
+- command は worker の完了順ではなく、stable metadata で解決する
+- time / random / query input は Host が提供し、turn ごとに deterministic にする
 
-Possible scale path:
+想定する scale path:
 
 ```text
 1. single-thread reference implementation
 2. compile-once + per-scope state buffers
 3. archetype-style batch evaluation
 4. Web Worker / Worker pool evaluation
-5. optional GPU/WebGPU backend for grid-like workloads
+5. grid 系 workload 向けの optional GPU/WebGPU backend
 ```
 
-The important part is not parallelism first. The important part is deterministic semantics that remain valid when parallelism is introduced later.
+重要なのは、最初から並列実行することではありません。あとから並列実行を導入しても壊れない deterministic semantics を先に決めることです。
 
 ## Conflict resolution
 
-Hosts should define deterministic conflict resolution before allowing multiple commands to write the same target field in the same turn.
+Host は、同じ turn で複数の command が同じ target field に書き込むことを許す前に、deterministic な conflict resolution を定義する必要があります。
 
-Recommended default:
+推奨するデフォルト:
 
-- scope-local graphs are self-write only
-- cross-scope effects are intents/events/requests by default
-- global writes are limited to explicitly authorized scopes
-- if conflicts are still possible, resolve by stable priority and stable source order
+- scope-local graph は self-write only
+- cross-scope effect はデフォルトで intent / event / request として扱う
+- global write は明示的に許可された scope に制限する
+- それでも conflict が起きる場合は、stable priority と stable source order で解決する
 
-Never use worker completion order as semantic order.
+worker の完了順を semantic order として使ってはいけません。
 
-## AI generation implications
+## AI生成への影響
 
-AI-generated DSL should know the target scope.
+AI が生成する DSL には、対象となる scope が分かっている必要があります。
 
-Useful target comments until formal metadata exists:
+formal metadata ができるまで、有用な target comment の例:
 
 ```text
 # Target: scenesync-object-scope
@@ -179,21 +179,21 @@ Useful target comments until formal metadata exists:
 # Sketch only: not currently runnable
 ```
 
-Without a target/scope, AI may mix portable Loomlet DSL, VS Code Preview helpers, Scene Sync object logic, and future grid/agent APIs.
+target / scope がないと、AI は portable Loomlet DSL、VS Code Preview helper、Scene Sync object logic、将来の grid / agent API を混ぜてしまう可能性があります。
 
-## Summary
+## まとめ
 
-A useful mental model is:
+有用なメンタルモデルは次の通りです。
 
 ```text
 Loomlet Core:
-  evaluates a dataflow graph
+  dataflow graph を評価する
 
 Scoped Host:
-  manages many scopes
-  provides environment snapshots and scope context
-  collects output commands
-  commits the next environment
+  多数の scope を管理する
+  environment snapshot と scope context を提供する
+  output command を収集する
+  next environment を commit する
 ```
 
-This keeps Loomlet small while leaving room for Scene Sync object behaviors, grid/cellular automata, boids, and other emergent systems.
+この分離により、Loomlet Core を小さく保ちながら、Scene Sync object behavior、grid / cellular automata、boids、その他の創発的な system に拡張する余地を残せます。
