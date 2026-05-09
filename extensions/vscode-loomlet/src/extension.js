@@ -310,6 +310,11 @@ function openNodePreviewToSide(context) {
       return;
     }
 
+    if (message.type === 'replaceDocumentText') {
+      replacePreviewDocumentText(message.source);
+      return;
+    }
+
     if (message.type === 'runtimeEffects') {
       appendRuntimeEffects(message.effects);
     }
@@ -320,6 +325,35 @@ function openNodePreviewToSide(context) {
   // Also send immediately as a fallback (retainContextWhenHidden panels may
   // restore without firing 'ready' again).
   sendDocumentToPreview(document);
+}
+
+
+async function replacePreviewDocumentText(source) {
+  if (!currentPreviewDocument || typeof source !== 'string') return;
+
+  const nextText = ensureTrailingNewline(source);
+  if (currentPreviewDocument.getText() === nextText) return;
+
+  const fullRange = new vscode.Range(
+    currentPreviewDocument.positionAt(0),
+    currentPreviewDocument.positionAt(currentPreviewDocument.getText().length)
+  );
+
+  const editor = vscode.window.visibleTextEditors.find(
+    (candidate) =>
+      candidate.document.uri.toString() === currentPreviewDocument.uri.toString()
+  );
+
+  if (editor) {
+    await editor.edit((editBuilder) => {
+      editBuilder.replace(fullRange, nextText);
+    });
+    return;
+  }
+
+  const edit = new vscode.WorkspaceEdit();
+  edit.replace(currentPreviewDocument.uri, fullRange, nextText);
+  await vscode.workspace.applyEdit(edit);
 }
 
 function schedulePreviewUpdate(document) {

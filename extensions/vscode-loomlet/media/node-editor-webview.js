@@ -25,9 +25,9 @@ var LoomletPreview = (() => {
     mod
   ));
 
-  // node_modules/@babel/runtime/helpers/OverloadYield.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/OverloadYield.js
   var require_OverloadYield = __commonJS({
-    "node_modules/@babel/runtime/helpers/OverloadYield.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/OverloadYield.js"(exports, module) {
       function _OverloadYield(e, d2) {
         this.v = e, this.k = d2;
       }
@@ -35,9 +35,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/regeneratorDefine.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorDefine.js
   var require_regeneratorDefine = __commonJS({
-    "node_modules/@babel/runtime/helpers/regeneratorDefine.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorDefine.js"(exports, module) {
       function _regeneratorDefine(e, r2, n2, t2) {
         var i2 = Object.defineProperty;
         try {
@@ -63,9 +63,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/regenerator.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/regenerator.js
   var require_regenerator = __commonJS({
-    "node_modules/@babel/runtime/helpers/regenerator.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/regenerator.js"(exports, module) {
       var regeneratorDefine = require_regeneratorDefine();
       function _regenerator() {
         var e, t2, r2 = "function" == typeof Symbol ? Symbol : {}, n2 = r2.iterator || "@@iterator", o = r2.toStringTag || "@@toStringTag";
@@ -145,9 +145,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/regeneratorAsyncIterator.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorAsyncIterator.js
   var require_regeneratorAsyncIterator = __commonJS({
-    "node_modules/@babel/runtime/helpers/regeneratorAsyncIterator.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorAsyncIterator.js"(exports, module) {
       var OverloadYield = require_OverloadYield();
       var regeneratorDefine = require_regeneratorDefine();
       function AsyncIterator(t2, e) {
@@ -183,9 +183,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/regeneratorAsyncGen.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorAsyncGen.js
   var require_regeneratorAsyncGen = __commonJS({
-    "node_modules/@babel/runtime/helpers/regeneratorAsyncGen.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorAsyncGen.js"(exports, module) {
       var regenerator = require_regenerator();
       var regeneratorAsyncIterator = require_regeneratorAsyncIterator();
       function _regeneratorAsyncGen(r2, e, t2, o, n2) {
@@ -195,9 +195,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/regeneratorAsync.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorAsync.js
   var require_regeneratorAsync = __commonJS({
-    "node_modules/@babel/runtime/helpers/regeneratorAsync.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorAsync.js"(exports, module) {
       var regeneratorAsyncGen = require_regeneratorAsyncGen();
       function _regeneratorAsync(n2, e, r2, t2, o) {
         var a2 = regeneratorAsyncGen(n2, e, r2, t2, o);
@@ -209,9 +209,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/regeneratorKeys.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorKeys.js
   var require_regeneratorKeys = __commonJS({
-    "node_modules/@babel/runtime/helpers/regeneratorKeys.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorKeys.js"(exports, module) {
       function _regeneratorKeys(e) {
         var n2 = Object(e), r2 = [];
         for (var t2 in n2) r2.unshift(t2);
@@ -224,9 +224,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/typeof.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/typeof.js
   var require_typeof = __commonJS({
-    "node_modules/@babel/runtime/helpers/typeof.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/typeof.js"(exports, module) {
       function _typeof2(o) {
         "@babel/helpers - typeof";
         return module.exports = _typeof2 = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o2) {
@@ -239,9 +239,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/regeneratorValues.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorValues.js
   var require_regeneratorValues = __commonJS({
-    "node_modules/@babel/runtime/helpers/regeneratorValues.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorValues.js"(exports, module) {
       var _typeof2 = require_typeof()["default"];
       function _regeneratorValues(e) {
         if (null != e) {
@@ -263,9 +263,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/regeneratorRuntime.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorRuntime.js
   var require_regeneratorRuntime = __commonJS({
-    "node_modules/@babel/runtime/helpers/regeneratorRuntime.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorRuntime.js"(exports, module) {
       var OverloadYield = require_OverloadYield();
       var regenerator = require_regenerator();
       var regeneratorAsync = require_regeneratorAsync();
@@ -343,9 +343,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/regenerator/index.js
+  // ../../editor-studio/node_modules/@babel/runtime/regenerator/index.js
   var require_regenerator2 = __commonJS({
-    "node_modules/@babel/runtime/regenerator/index.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/regenerator/index.js"(exports, module) {
       var runtime = require_regeneratorRuntime()();
       module.exports = runtime;
       try {
@@ -360,9 +360,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/react/cjs/react.production.min.js
+  // ../../editor-studio/node_modules/react/cjs/react.production.min.js
   var require_react_production_min = __commonJS({
-    "node_modules/react/cjs/react.production.min.js"(exports) {
+    "../../editor-studio/node_modules/react/cjs/react.production.min.js"(exports) {
       "use strict";
       var l2 = Symbol.for("react.element");
       var n2 = Symbol.for("react.portal");
@@ -631,9 +631,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/react/index.js
+  // ../../editor-studio/node_modules/react/index.js
   var require_react = __commonJS({
-    "node_modules/react/index.js"(exports, module) {
+    "../../editor-studio/node_modules/react/index.js"(exports, module) {
       "use strict";
       if (true) {
         module.exports = require_react_production_min();
@@ -643,9 +643,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/scheduler/cjs/scheduler.production.min.js
+  // ../../editor-studio/node_modules/scheduler/cjs/scheduler.production.min.js
   var require_scheduler_production_min = __commonJS({
-    "node_modules/scheduler/cjs/scheduler.production.min.js"(exports) {
+    "../../editor-studio/node_modules/scheduler/cjs/scheduler.production.min.js"(exports) {
       "use strict";
       function f2(a2, b2) {
         var c2 = a2.length;
@@ -896,9 +896,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/scheduler/index.js
+  // ../../editor-studio/node_modules/scheduler/index.js
   var require_scheduler = __commonJS({
-    "node_modules/scheduler/index.js"(exports, module) {
+    "../../editor-studio/node_modules/scheduler/index.js"(exports, module) {
       "use strict";
       if (true) {
         module.exports = require_scheduler_production_min();
@@ -908,9 +908,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/react-dom/cjs/react-dom.production.min.js
+  // ../../editor-studio/node_modules/react-dom/cjs/react-dom.production.min.js
   var require_react_dom_production_min = __commonJS({
-    "node_modules/react-dom/cjs/react-dom.production.min.js"(exports) {
+    "../../editor-studio/node_modules/react-dom/cjs/react-dom.production.min.js"(exports) {
       "use strict";
       var aa = require_react();
       var ca = require_scheduler();
@@ -7520,9 +7520,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/react-dom/index.js
+  // ../../editor-studio/node_modules/react-dom/index.js
   var require_react_dom = __commonJS({
-    "node_modules/react-dom/index.js"(exports, module) {
+    "../../editor-studio/node_modules/react-dom/index.js"(exports, module) {
       "use strict";
       function checkDCE() {
         if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ === "undefined" || typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.checkDCE !== "function") {
@@ -7546,7 +7546,7 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js
   function asyncGeneratorStep(n2, t2, e, r2, o, a2, c2) {
     try {
       var i2 = n2[a2](c2), u2 = i2.value;
@@ -7571,12 +7571,12 @@ var LoomletPreview = (() => {
     };
   }
 
-  // node_modules/@babel/runtime/helpers/esm/classCallCheck.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/classCallCheck.js
   function _classCallCheck(a2, n2) {
     if (!(a2 instanceof n2)) throw new TypeError("Cannot call a class as a function");
   }
 
-  // node_modules/@babel/runtime/helpers/esm/typeof.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/typeof.js
   function _typeof(o) {
     "@babel/helpers - typeof";
     return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o2) {
@@ -7586,7 +7586,7 @@ var LoomletPreview = (() => {
     }, _typeof(o);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/toPrimitive.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/toPrimitive.js
   function toPrimitive(t2, r2) {
     if ("object" != _typeof(t2) || !t2) return t2;
     var e = t2[Symbol.toPrimitive];
@@ -7598,13 +7598,13 @@ var LoomletPreview = (() => {
     return ("string" === r2 ? String : Number)(t2);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/toPropertyKey.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/toPropertyKey.js
   function toPropertyKey(t2) {
     var i2 = toPrimitive(t2, "string");
     return "symbol" == _typeof(i2) ? i2 : i2 + "";
   }
 
-  // node_modules/@babel/runtime/helpers/esm/createClass.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/createClass.js
   function _defineProperties(e, r2) {
     for (var t2 = 0; t2 < r2.length; t2++) {
       var o = r2[t2];
@@ -7617,34 +7617,34 @@ var LoomletPreview = (() => {
     }), e;
   }
 
-  // node_modules/@babel/runtime/helpers/esm/assertThisInitialized.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/assertThisInitialized.js
   function _assertThisInitialized(e) {
     if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
     return e;
   }
 
-  // node_modules/@babel/runtime/helpers/esm/possibleConstructorReturn.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/possibleConstructorReturn.js
   function _possibleConstructorReturn(t2, e) {
     if (e && ("object" == _typeof(e) || "function" == typeof e)) return e;
     if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined");
     return _assertThisInitialized(t2);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/getPrototypeOf.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/getPrototypeOf.js
   function _getPrototypeOf(t2) {
     return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function(t3) {
       return t3.__proto__ || Object.getPrototypeOf(t3);
     }, _getPrototypeOf(t2);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/setPrototypeOf.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/setPrototypeOf.js
   function _setPrototypeOf(t2, e) {
     return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function(t3, e2) {
       return t3.__proto__ = e2, t3;
     }, _setPrototypeOf(t2, e);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/inherits.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/inherits.js
   function _inherits(t2, e) {
     if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function");
     t2.prototype = Object.create(e && e.prototype, {
@@ -7658,7 +7658,7 @@ var LoomletPreview = (() => {
     }), e && _setPrototypeOf(t2, e);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/defineProperty.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/defineProperty.js
   function _defineProperty(e, r2, t2) {
     return (r2 = toPropertyKey(r2)) in e ? Object.defineProperty(e, r2, {
       value: t2,
@@ -7668,7 +7668,7 @@ var LoomletPreview = (() => {
     }) : e[r2] = t2, e;
   }
 
-  // node_modules/rete/rete.esm.js
+  // ../../editor-studio/node_modules/rete/rete.esm.js
   var import_regenerator = __toESM(require_regenerator2());
   function _createForOfIteratorHelper$1(r2, e) {
     var t2 = "undefined" != typeof Symbol && r2[Symbol.iterator] || r2["@@iterator"];
@@ -8466,27 +8466,27 @@ var LoomletPreview = (() => {
     Connection
   });
 
-  // node_modules/rete-area-plugin/rete-area-plugin.esm.js
+  // ../../editor-studio/node_modules/rete-area-plugin/rete-area-plugin.esm.js
   var import_regenerator2 = __toESM(require_regenerator2());
 
-  // node_modules/@babel/runtime/helpers/esm/arrayLikeToArray.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/arrayLikeToArray.js
   function _arrayLikeToArray2(r2, a2) {
     (null == a2 || a2 > r2.length) && (a2 = r2.length);
     for (var e = 0, n2 = Array(a2); e < a2; e++) n2[e] = r2[e];
     return n2;
   }
 
-  // node_modules/@babel/runtime/helpers/esm/arrayWithoutHoles.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/arrayWithoutHoles.js
   function _arrayWithoutHoles(r2) {
     if (Array.isArray(r2)) return _arrayLikeToArray2(r2);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/iterableToArray.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/iterableToArray.js
   function _iterableToArray(r2) {
     if ("undefined" != typeof Symbol && null != r2[Symbol.iterator] || null != r2["@@iterator"]) return Array.from(r2);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/unsupportedIterableToArray.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/unsupportedIterableToArray.js
   function _unsupportedIterableToArray2(r2, a2) {
     if (r2) {
       if ("string" == typeof r2) return _arrayLikeToArray2(r2, a2);
@@ -8495,17 +8495,17 @@ var LoomletPreview = (() => {
     }
   }
 
-  // node_modules/@babel/runtime/helpers/esm/nonIterableSpread.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/nonIterableSpread.js
   function _nonIterableSpread() {
     throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
   }
 
-  // node_modules/@babel/runtime/helpers/esm/toConsumableArray.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/toConsumableArray.js
   function _toConsumableArray(r2) {
     return _arrayWithoutHoles(r2) || _iterableToArray(r2) || _unsupportedIterableToArray2(r2) || _nonIterableSpread();
   }
 
-  // node_modules/rete-area-plugin/rete-area-plugin.esm.js
+  // ../../editor-studio/node_modules/rete-area-plugin/rete-area-plugin.esm.js
   var Content = /* @__PURE__ */ function() {
     function Content2(reordered) {
       _classCallCheck(this, Content2);
@@ -10247,13 +10247,13 @@ var LoomletPreview = (() => {
     }]);
   }(BaseAreaPlugin);
 
-  // node_modules/@babel/runtime/helpers/esm/superPropBase.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/superPropBase.js
   function _superPropBase(t2, o) {
     for (; !{}.hasOwnProperty.call(t2, o) && null !== (t2 = _getPrototypeOf(t2)); ) ;
     return t2;
   }
 
-  // node_modules/@babel/runtime/helpers/esm/get.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/get.js
   function _get() {
     return _get = "undefined" != typeof Reflect && Reflect.get ? Reflect.get.bind() : function(e, t2, r2) {
       var p2 = _superPropBase(e, t2);
@@ -10264,15 +10264,15 @@ var LoomletPreview = (() => {
     }, _get.apply(null, arguments);
   }
 
-  // node_modules/rete-connection-plugin/rete-connection-plugin.esm.js
+  // ../../editor-studio/node_modules/rete-connection-plugin/rete-connection-plugin.esm.js
   var import_regenerator3 = __toESM(require_regenerator2());
 
-  // node_modules/@babel/runtime/helpers/esm/arrayWithHoles.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/arrayWithHoles.js
   function _arrayWithHoles(r2) {
     if (Array.isArray(r2)) return r2;
   }
 
-  // node_modules/@babel/runtime/helpers/esm/iterableToArrayLimit.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/iterableToArrayLimit.js
   function _iterableToArrayLimit(r2, l2) {
     var t2 = null == r2 ? null : "undefined" != typeof Symbol && r2[Symbol.iterator] || r2["@@iterator"];
     if (null != t2) {
@@ -10295,17 +10295,17 @@ var LoomletPreview = (() => {
     }
   }
 
-  // node_modules/@babel/runtime/helpers/esm/nonIterableRest.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/nonIterableRest.js
   function _nonIterableRest() {
     throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
   }
 
-  // node_modules/@babel/runtime/helpers/esm/slicedToArray.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/slicedToArray.js
   function _slicedToArray(r2, e) {
     return _arrayWithHoles(r2) || _iterableToArrayLimit(r2, e) || _unsupportedIterableToArray2(r2, e) || _nonIterableRest();
   }
 
-  // node_modules/rete-connection-plugin/rete-connection-plugin.esm.js
+  // ../../editor-studio/node_modules/rete-connection-plugin/rete-connection-plugin.esm.js
   function ownKeys2(e, r2) {
     var t2 = Object.keys(e);
     if (Object.getOwnPropertySymbols) {
@@ -11060,14 +11060,14 @@ var LoomletPreview = (() => {
     }]);
   }(Scope);
 
-  // node_modules/rete-react-plugin/rete-react-plugin.esm.js
+  // ../../editor-studio/node_modules/rete-react-plugin/rete-react-plugin.esm.js
   var React = __toESM(require_react());
   var import_react2 = __toESM(require_react());
   var ReactDOM = __toESM(require_react_dom());
   var import_react_dom = __toESM(require_react_dom());
   var import_regenerator5 = __toESM(require_regenerator2());
 
-  // node_modules/rete-render-utils/rete-render-utils.esm.js
+  // ../../editor-studio/node_modules/rete-render-utils/rete-render-utils.esm.js
   var import_regenerator4 = __toESM(require_regenerator2());
   function classicConnectionPath(points, curvature) {
     var _points = _slicedToArray(points, 2), _points$ = _points[0], x1 = _points$.x, y1 = _points$.y, _points$2 = _points[1], x2 = _points$2.x, y2 = _points$2.y;
@@ -11428,7 +11428,7 @@ var LoomletPreview = (() => {
     return new DOMSocketPosition(props);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/taggedTemplateLiteral.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/taggedTemplateLiteral.js
   function _taggedTemplateLiteral(e, t2) {
     return t2 || (t2 = e.slice(0)), Object.freeze(Object.defineProperties(e, {
       raw: {
@@ -11437,10 +11437,10 @@ var LoomletPreview = (() => {
     }));
   }
 
-  // node_modules/styled-components/dist/styled-components.browser.esm.js
+  // ../../editor-studio/node_modules/styled-components/dist/styled-components.browser.esm.js
   var import_react = __toESM(require_react());
 
-  // node_modules/stylis/src/Enum.js
+  // ../../editor-studio/node_modules/stylis/src/Enum.js
   var MS = "-ms-";
   var MOZ = "-moz-";
   var WEBKIT = "-webkit-";
@@ -11452,7 +11452,7 @@ var LoomletPreview = (() => {
   var KEYFRAMES = "@keyframes";
   var LAYER = "@layer";
 
-  // node_modules/stylis/src/Utility.js
+  // ../../editor-studio/node_modules/stylis/src/Utility.js
   var abs = Math.abs;
   var from = String.fromCharCode;
   var assign = Object.assign;
@@ -11495,7 +11495,7 @@ var LoomletPreview = (() => {
     });
   }
 
-  // node_modules/stylis/src/Tokenizer.js
+  // ../../editor-studio/node_modules/stylis/src/Tokenizer.js
   var line = 1;
   var column = 1;
   var length = 0;
@@ -11626,7 +11626,7 @@ var LoomletPreview = (() => {
     return slice(index4, position);
   }
 
-  // node_modules/stylis/src/Parser.js
+  // ../../editor-studio/node_modules/stylis/src/Parser.js
   function compile(value) {
     return dealloc(parse("", null, null, null, [""], value = alloc(value), 0, [0], value));
   }
@@ -11763,7 +11763,7 @@ var LoomletPreview = (() => {
     return node(value, root, parent, DECLARATION, substr(value, 0, length2), substr(value, length2 + 1, -1), length2, siblings);
   }
 
-  // node_modules/stylis/src/Prefixer.js
+  // ../../editor-studio/node_modules/stylis/src/Prefixer.js
   function prefix(value, length2, children) {
     switch (hash(value, length2)) {
       case 5103:
@@ -11913,7 +11913,7 @@ var LoomletPreview = (() => {
     return value;
   }
 
-  // node_modules/stylis/src/Serializer.js
+  // ../../editor-studio/node_modules/stylis/src/Serializer.js
   function serialize(children, callback) {
     var output = "";
     for (var i2 = 0; i2 < children.length; i2++)
@@ -11938,7 +11938,7 @@ var LoomletPreview = (() => {
     return strlen(children = serialize(element.children, callback)) ? element.return = element.value + "{" + children + "}" : "";
   }
 
-  // node_modules/stylis/src/Middleware.js
+  // ../../editor-studio/node_modules/stylis/src/Middleware.js
   function middleware(collection) {
     var length2 = sizeof(collection);
     return function(element, index4, children, callback) {
@@ -11989,7 +11989,7 @@ var LoomletPreview = (() => {
     }
   }
 
-  // node_modules/styled-components/dist/styled-components.browser.esm.js
+  // ../../editor-studio/node_modules/styled-components/dist/styled-components.browser.esm.js
   var r;
   var i;
   var c = "undefined" != typeof process && void 0 !== process.env && (process.env.REACT_APP_SC_ATTR || process.env.SC_ATTR) || "data-styled";
@@ -12610,7 +12610,7 @@ var LoomletPreview = (() => {
   var $t = `:not(style[${c}])`;
   var Rt = `style[${c}]`;
 
-  // node_modules/@babel/runtime/helpers/esm/extends.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/extends.js
   function _extends() {
     return _extends = Object.assign ? Object.assign.bind() : function(n2) {
       for (var e = 1; e < arguments.length; e++) {
@@ -12621,7 +12621,7 @@ var LoomletPreview = (() => {
     }, _extends.apply(null, arguments);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/objectWithoutPropertiesLoose.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/objectWithoutPropertiesLoose.js
   function _objectWithoutPropertiesLoose(r2, e) {
     if (null == r2) return {};
     var t2 = {};
@@ -12632,7 +12632,7 @@ var LoomletPreview = (() => {
     return t2;
   }
 
-  // node_modules/@babel/runtime/helpers/esm/objectWithoutProperties.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/objectWithoutProperties.js
   function _objectWithoutProperties(e, t2) {
     if (null == e) return {};
     var o, r2, i2 = _objectWithoutPropertiesLoose(e, t2);
@@ -12643,7 +12643,7 @@ var LoomletPreview = (() => {
     return i2;
   }
 
-  // node_modules/rete-react-plugin/rete-react-plugin.esm.js
+  // ../../editor-studio/node_modules/rete-react-plugin/rete-react-plugin.esm.js
   function getRenderer(props) {
     var createRoot = props === null || props === void 0 ? void 0 : props.createRoot;
     var wrappers = /* @__PURE__ */ new WeakMap();
@@ -15951,9 +15951,9 @@ var LoomletPreview = (() => {
     }
     return node2;
   }
-  function findReteConnectionIdByEdgeId(connectionMap, edgeId) {
+  function findReteConnectionIdByEdgeId(connectionMap, edgeId2) {
     for (const [connectionId, mappedEdgeId] of connectionMap.entries()) {
-      if (mappedEdgeId === edgeId) return connectionId;
+      if (mappedEdgeId === edgeId2) return connectionId;
     }
     return null;
   }
@@ -16006,18 +16006,18 @@ var LoomletPreview = (() => {
     }
     _onConnectionCreated(connection) {
       try {
-        const edgeId = `${connection.source}.${connection.sourceOutput}->${connection.target}.${connection.targetInput}`;
-        this.connectionMap.set(connection.id, edgeId);
+        const edgeId2 = `${connection.source}.${connection.sourceOutput}->${connection.target}.${connection.targetInput}`;
+        this.connectionMap.set(connection.id, edgeId2);
         this.onOperation(connectionToAddEdgeOp(connection));
       } catch (e) {
         this.onError(e);
       }
     }
     _onConnectionRemoved(connection) {
-      const edgeId = this.connectionMap.get(connection.id);
-      if (edgeId) {
+      const edgeId2 = this.connectionMap.get(connection.id);
+      if (edgeId2) {
         this.connectionMap.delete(connection.id);
-        this.onOperation({ type: "removeEdge", edgeId });
+        this.onOperation({ type: "removeEdge", edgeId: edgeId2 });
       }
     }
     _onNodeTranslated(data) {
@@ -16053,8 +16053,8 @@ var LoomletPreview = (() => {
         return false;
       }
     }
-    async _removeReteConnectionByEdgeId(edgeId) {
-      const connectionId = findReteConnectionIdByEdgeId(this.connectionMap, edgeId);
+    async _removeReteConnectionByEdgeId(edgeId2) {
+      const connectionId = findReteConnectionIdByEdgeId(this.connectionMap, edgeId2);
       if (!connectionId) return false;
       const connection = this.editor.getConnection(connectionId);
       if (!connection) {
@@ -16125,8 +16125,8 @@ var LoomletPreview = (() => {
             removedEdgeIds.add(edge.id);
           }
         }
-        for (const edgeId of removedEdgeIds) {
-          await this._removeReteConnectionByEdgeId(edgeId);
+        for (const edgeId2 of removedEdgeIds) {
+          await this._removeReteConnectionByEdgeId(edgeId2);
         }
         for (const nodeId of removedNodeIds) {
           await this._removeReteNode(nodeId);
@@ -16199,6 +16199,330 @@ var LoomletPreview = (() => {
     }
   };
 
+  // ../../src/loom-editor-model.js
+  function edgeId(fromNodeId, fromPort, toNodeId, toPort) {
+    return `${fromNodeId}.${fromPort}->${toNodeId}.${toPort}`;
+  }
+  function validateNodeId(id) {
+    if (typeof id !== "string") {
+      throw new Error("Node id must be a string");
+    }
+    const trimmed = id.trim();
+    if (!trimmed) {
+      throw new Error("Node id cannot be empty");
+    }
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(trimmed)) {
+      throw new Error(
+        `Invalid node id '${id}'. Use letters, numbers, and underscores, and do not start with a number.`
+      );
+    }
+    return trimmed;
+  }
+  function editorModelToGraph(em, originalGraph = null) {
+    const nodes = em.order.map((id) => {
+      const node2 = em.nodesById[id];
+      return {
+        id: node2.id,
+        type: node2.type,
+        params: { ...node2.params || {} },
+        meta: {
+          position: { ...node2.position }
+        }
+      };
+    });
+    const edgeIds = Object.keys(em.edgesById).sort();
+    const edges = edgeIds.map((id) => {
+      const edge = em.edgesById[id];
+      return {
+        from: `${edge.fromNodeId}.${edge.fromPort}`,
+        to: `${edge.toNodeId}.${edge.toPort}`
+      };
+    });
+    const graph = { nodes, edges };
+    if (originalGraph && originalGraph.render) {
+      graph.render = originalGraph.render;
+    }
+    return graph;
+  }
+  function applyEditorOperation(em, op) {
+    const next2 = {
+      nodesById: { ...em.nodesById },
+      edgesById: { ...em.edgesById },
+      order: [...em.order]
+    };
+    if (op.type === "addNode") {
+      if (next2.nodesById[op.node.id]) throw new Error(`Node '${op.node.id}' already exists`);
+      next2.nodesById[op.node.id] = {
+        ...op.node,
+        params: { ...op.node.params || {} },
+        position: { ...op.node.position }
+      };
+      next2.order.push(op.node.id);
+      return next2;
+    }
+    if (op.type === "removeNode") {
+      if (!next2.nodesById[op.id]) return next2;
+      delete next2.nodesById[op.id];
+      next2.order = next2.order.filter((id) => id !== op.id);
+      for (const id of Object.keys(next2.edgesById)) {
+        const edge = next2.edgesById[id];
+        if (edge.fromNodeId === op.id || edge.toNodeId === op.id) {
+          delete next2.edgesById[id];
+        }
+      }
+      return next2;
+    }
+    if (op.type === "updateParam") {
+      const node2 = next2.nodesById[op.id];
+      if (!node2) throw new Error(`Node '${op.id}' does not exist`);
+      next2.nodesById[op.id] = { ...node2, params: { ...node2.params || {}, [op.key]: op.value } };
+      return next2;
+    }
+    if (op.type === "moveNode") {
+      const node2 = next2.nodesById[op.id];
+      if (!node2) throw new Error(`Node '${op.id}' does not exist`);
+      next2.nodesById[op.id] = { ...node2, position: { ...op.position } };
+      return next2;
+    }
+    if (op.type === "addEdge") {
+      const edge = op.edge;
+      const normalizedId = edgeId(edge.fromNodeId, edge.fromPort, edge.toNodeId, edge.toPort);
+      const normalizedEdge = { ...edge, id: normalizedId };
+      if (next2.edgesById[normalizedId]) throw new Error(`Edge '${normalizedId}' already exists`);
+      if (!next2.nodesById[edge.fromNodeId] || !next2.nodesById[edge.toNodeId]) {
+        throw new Error("Edge endpoint does not exist");
+      }
+      next2.edgesById[normalizedId] = normalizedEdge;
+      return next2;
+    }
+    if (op.type === "removeEdge") {
+      if (!next2.edgesById[op.edgeId]) return next2;
+      delete next2.edgesById[op.edgeId];
+      return next2;
+    }
+    if (op.type === "renameNode") {
+      if (!next2.nodesById[op.id]) throw new Error(`Node '${op.id}' does not exist`);
+      const newId = validateNodeId(op.newId);
+      if (newId === op.id) return next2;
+      if (next2.nodesById[newId]) throw new Error(`Node '${newId}' already exists`);
+      const node2 = next2.nodesById[op.id];
+      delete next2.nodesById[op.id];
+      next2.nodesById[newId] = { ...node2, id: newId };
+      next2.order = next2.order.map((id) => id === op.id ? newId : id);
+      const renamedEdgesById = {};
+      for (const edge of Object.values(next2.edgesById)) {
+        const renamedEdge = {
+          ...edge,
+          fromNodeId: edge.fromNodeId === op.id ? newId : edge.fromNodeId,
+          toNodeId: edge.toNodeId === op.id ? newId : edge.toNodeId
+        };
+        const renamedEdgeId = edgeId(
+          renamedEdge.fromNodeId,
+          renamedEdge.fromPort,
+          renamedEdge.toNodeId,
+          renamedEdge.toPort
+        );
+        renamedEdgesById[renamedEdgeId] = {
+          ...renamedEdge,
+          id: renamedEdgeId
+        };
+      }
+      next2.edgesById = renamedEdgesById;
+      return next2;
+    }
+    if (op.type === "updateNodeMetadata") {
+      const node2 = next2.nodesById[op.id];
+      if (!node2) throw new Error(`Node '${op.id}' does not exist`);
+      const updated = { ...node2 };
+      if (op.patch) {
+        if ("label" in op.patch) {
+          if (op.patch.label) {
+            updated.label = op.patch.label;
+          } else {
+            delete updated.label;
+          }
+        }
+        if ("comment" in op.patch) {
+          if (op.patch.comment) {
+            updated.comment = op.patch.comment;
+          } else {
+            delete updated.comment;
+          }
+        }
+      }
+      next2.nodesById[op.id] = updated;
+      return next2;
+    }
+    throw new Error(`Unknown operation type: ${op.type}`);
+  }
+
+  // ../../src/node-editor-session.js
+  function rewriteReferenceValue(value, oldId, newId) {
+    if (typeof value === "string") {
+      if (value === oldId) return newId;
+      if (value.startsWith(`${oldId}.`)) {
+        return `${newId}${value.slice(oldId.length)}`;
+      }
+      return value;
+    }
+    if (Array.isArray(value)) {
+      return value.map((item) => rewriteReferenceValue(item, oldId, newId));
+    }
+    if (value && typeof value === "object") {
+      const next2 = {};
+      for (const [key, child] of Object.entries(value)) {
+        next2[key] = rewriteReferenceValue(child, oldId, newId);
+      }
+      return next2;
+    }
+    return value;
+  }
+  function rewriteGraphReferencesForRename(graph, oldId, newId) {
+    return {
+      ...graph,
+      render: rewriteReferenceValue(graph.render, oldId, newId)
+    };
+  }
+  function applyNodeEditorOperationState(state, operation) {
+    try {
+      const editorModel = applyEditorOperation(state.editorModel, operation);
+      if (operation.type === "updateNodeMetadata") {
+        return {
+          state: {
+            ...state,
+            editorModel,
+            errors: []
+          },
+          change: {
+            operation,
+            graphChanged: false,
+            shouldRerenderView: true,
+            affectsDsl: false
+          },
+          error: null
+        };
+      }
+      let graph = editorModelToGraph(editorModel, state.graph);
+      if (operation.type === "renameNode") {
+        graph = rewriteGraphReferencesForRename(graph, operation.id, operation.newId);
+      }
+      return {
+        state: {
+          ...state,
+          editorModel,
+          graph,
+          errors: []
+        },
+        change: {
+          operation,
+          graphChanged: true,
+          shouldRerenderView: operation.type !== "moveNode"
+        },
+        error: null
+      };
+    } catch (error) {
+      return {
+        state: {
+          ...state,
+          errors: [
+            {
+              code: "EDITOR_ERROR",
+              message: `Operation error: ${error.message}`
+            }
+          ]
+        },
+        change: {
+          operation,
+          graphChanged: false,
+          shouldRerenderView: operation.type !== "moveNode"
+        },
+        error
+      };
+    }
+  }
+
+  // ../../src/canonical-dsl.js
+  function graphToCanonicalDSL(graph) {
+    const lines = [];
+    for (const node2 of graph.nodes || []) {
+      const nodeType = NODE_TYPES[node2.type];
+      if (!nodeType) continue;
+      const inputEdges = {};
+      for (const edge of graph.edges || []) {
+        if (edge.to.startsWith(node2.id + ".")) {
+          const [, toPort] = edge.to.split(".");
+          const [fromNodeId] = edge.from.split(".");
+          inputEdges[toPort] = fromNodeId;
+        }
+      }
+      const params = { ...node2.params };
+      const inputNames = (nodeType.inputs || []).map((inp) => inp.name || inp);
+      const paramNames = (nodeType.params || []).map((p2) => p2.name || p2);
+      const allNamedArgs = [];
+      for (const inputName of inputNames) {
+        if (inputEdges[inputName]) {
+          allNamedArgs.push(formatParam(inputName, inputEdges[inputName]));
+        } else if (params[inputName] !== void 0) {
+          allNamedArgs.push(formatParam(inputName, params[inputName]));
+          delete params[inputName];
+        }
+      }
+      for (const paramName of Object.keys(params)) {
+        if (paramNames.includes(paramName)) {
+          allNamedArgs.push(formatParam(paramName, params[paramName]));
+        }
+      }
+      const callStr = `${node2.type}(${allNamedArgs.join(", ")})`;
+      lines.push(`${node2.id} = ${callStr}`);
+    }
+    if (graph.render) {
+      const renderType = graph.render.type || "bar";
+      const renderArgs = [];
+      if (graph.render.width !== void 0) {
+        renderArgs.push(formatRenderParam("width", graph.render.width));
+      }
+      if (graph.render.height !== void 0) {
+        renderArgs.push(formatRenderParam("height", graph.render.height));
+      }
+      if (graph.render.color !== void 0) {
+        renderArgs.push(formatRenderParam("color", graph.render.color));
+      }
+      if (graph.render.x !== void 0) {
+        renderArgs.push(formatRenderParam("x", graph.render.x));
+      }
+      if (graph.render.y !== void 0) {
+        renderArgs.push(formatRenderParam("y", graph.render.y));
+      }
+      lines.push("");
+      lines.push(`render ${renderType}(${renderArgs.join(", ")})`);
+    }
+    return lines.join("\n") + "\n";
+  }
+  function formatValue(val) {
+    if (val === null || val === void 0) {
+      return "null";
+    }
+    if (typeof val === "string") {
+      if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(val)) {
+        return val;
+      }
+      return `"${val.replace(/"/g, '\\"')}"`;
+    }
+    if (typeof val === "number" || typeof val === "boolean") {
+      return String(val);
+    }
+    return JSON.stringify(val);
+  }
+  function formatParam(name, value) {
+    return `${name}: ${formatValue(value)}`;
+  }
+  function formatRenderParam(name, value) {
+    if (typeof value === "string" && /^[a-zA-Z_][a-zA-Z0-9_]*\.[a-zA-Z_][a-zA-Z0-9_]*$/.test(value)) {
+      return `${name}: ${value.split(".")[0]}`;
+    }
+    return formatParam(name, value);
+  }
+
   // webview-src/node-editor-webview.js
   var vscode = acquireVsCodeApi();
   var editorView = null;
@@ -16208,18 +16532,26 @@ var LoomletPreview = (() => {
   var loomRafId = null;
   var currentGraph = null;
   var runtimeStartTimestampMs = null;
+  var previewState = null;
+  var isApplyingHostModel = false;
   var isRuntimePaused = false;
   var pausedAtTimestampMs = null;
   var accumulatedPausedMs = 0;
+  var lastEffectsPostMs = 0;
+  var EFFECTS_POST_INTERVAL_MS = 100;
+  var hostInput = {
+    mouseX: 320,
+    mouseY: 240,
+    mouseDown: false,
+    keys: /* @__PURE__ */ new Set()
+  };
   function resizePreviewCanvas() {
     const canvas = document.getElementById("lp-preview-canvas");
     if (!canvas) return;
     const dpr = window.devicePixelRatio || 1;
     canvas.width = Math.round(window.innerWidth * dpr);
     canvas.height = Math.round(window.innerHeight * dpr);
-    if (!loomEngine) {
-      drawPlaceholder(canvas, dpr);
-    }
+    if (!loomEngine) drawPlaceholder(canvas, dpr);
   }
   function drawPlaceholder(canvas, dpr) {
     const ctx = canvas.getContext("2d");
@@ -16244,28 +16576,127 @@ var LoomletPreview = (() => {
     ctx.fillText("Runtime Preview", w2 / 2, h2 / 2 - Math.round(13 * dpr));
     ctx.fillStyle = "rgba(255,255,255,0.09)";
     ctx.font = `${Math.round(11 * dpr)}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
-    ctx.fillText("add render bar() or render point() to see output", w2 / 2, h2 / 2 + Math.round(13 * dpr));
+    ctx.fillText("add render bar(), render point(), or render keys() to see output", w2 / 2, h2 / 2 + Math.round(13 * dpr));
+  }
+  function updatePointerFromEvent(event) {
+    const canvas = document.getElementById("lp-preview-canvas");
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    hostInput.mouseX = event.clientX - rect.left;
+    hostInput.mouseY = event.clientY - rect.top;
+  }
+  function syncMouseDownFromButtons(event) {
+    if (typeof event.buttons === "number") {
+      hostInput.mouseDown = (event.buttons & 1) === 1;
+    }
+  }
+  function initHostInputs() {
+    const canvas = document.getElementById("lp-preview-canvas");
+    if (!canvas) return;
+    canvas.tabIndex = 0;
+    canvas.style.outline = "none";
+    window.addEventListener("pointermove", (event) => {
+      updatePointerFromEvent(event);
+      syncMouseDownFromButtons(event);
+    }, true);
+    window.addEventListener("pointerdown", (event) => {
+      canvas.focus();
+      updatePointerFromEvent(event);
+      syncMouseDownFromButtons(event);
+    }, true);
+    window.addEventListener("pointerup", (event) => {
+      updatePointerFromEvent(event);
+      syncMouseDownFromButtons(event);
+    }, true);
+    window.addEventListener("pointercancel", () => {
+      hostInput.mouseDown = false;
+    }, true);
+    window.addEventListener("mouseup", () => {
+      hostInput.mouseDown = false;
+    }, true);
+    window.addEventListener("keydown", (event) => {
+      hostInput.keys.add(event.code || event.key);
+      hostInput.keys.add(event.key);
+      if (["Space", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.code)) {
+        event.preventDefault();
+      }
+    }, true);
+    window.addEventListener("keyup", (event) => {
+      hostInput.keys.delete(event.code || event.key);
+      hostInput.keys.delete(event.key);
+      if (["Space", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.code)) {
+        event.preventDefault();
+      }
+    }, true);
+    window.addEventListener("blur", () => {
+      hostInput.mouseDown = false;
+      hostInput.keys.clear();
+    });
   }
   function resolveValue(engine, ref) {
-    if (typeof ref === "number") return ref;
+    if (typeof ref === "number" || typeof ref === "boolean") return ref;
     if (ref === null || ref === void 0) return null;
+    if (typeof ref === "string" && ref.startsWith("__loomlet_host:")) return resolveHostInput(ref);
     const numVal = parseFloat(ref);
-    if (!isNaN(numVal) && String(ref).trim() === String(numVal)) return numVal;
-    return engine.getValue(ref);
+    if (!Number.isNaN(numVal) && String(ref).trim() === String(numVal)) return numVal;
+    let value = engine?.getValue(ref);
+    if (value === void 0 && typeof ref === "string" && !ref.includes(".")) {
+      value = engine?.getValue(`${ref}.out`);
+    }
+    if (typeof value === "string" && value.startsWith("__loomlet_host:")) {
+      return resolveHostInput(value);
+    }
+    return value;
+  }
+  function resolveEffectValue(value) {
+    if (typeof value === "string" && value.startsWith("__loomlet_host:")) return resolveHostInput(value);
+    if (Array.isArray(value)) return value.map(resolveEffectValue);
+    if (value && typeof value === "object") {
+      const copy2 = {};
+      for (const [key, nested] of Object.entries(value)) {
+        copy2[key] = resolveEffectValue(nested);
+      }
+      return copy2;
+    }
+    return value;
+  }
+  function resolveConsoleEffect(effect) {
+    const copy2 = { ...effect };
+    for (const key of ["args", "values", "value", "message", "payload"]) {
+      if (Object.prototype.hasOwnProperty.call(copy2, key)) {
+        copy2[key] = resolveEffectValue(copy2[key]);
+      }
+    }
+    return copy2;
+  }
+  function resolveHostInput(token2) {
+    if (token2 === "__loomlet_host:mouseX") return hostInput.mouseX;
+    if (token2 === "__loomlet_host:mouseY") return hostInput.mouseY;
+    if (token2 === "__loomlet_host:mouseDown") return hostInput.mouseDown;
+    const keyPrefix = "__loomlet_host:key:";
+    if (token2.startsWith(keyPrefix)) {
+      return hostInput.keys.has(token2.slice(keyPrefix.length));
+    }
+    return null;
+  }
+  function isEnabled(engine, renderConfig) {
+    const enabled = renderConfig?.enabled;
+    if (enabled === void 0 || enabled === null) return true;
+    return Boolean(resolveValue(engine, enabled));
   }
   function drawFrame(timestamp) {
     const canvas = document.getElementById("lp-preview-canvas");
     if (!canvas || !loomEngine || !currentGraph) return;
     if (isRuntimePaused) {
+      loomRafId = null;
       return;
     }
     try {
-      if (runtimeStartTimestampMs === null) {
-        runtimeStartTimestampMs = timestamp;
-      }
+      if (runtimeStartTimestampMs === null) runtimeStartTimestampMs = timestamp;
       const elapsedSeconds = (timestamp - runtimeStartTimestampMs - accumulatedPausedMs) / 1e3;
       loomEngine.evaluateAt(elapsedSeconds, timestamp);
-      drawRuntimeCanvas(timestamp);
+      postRuntimeEffects(timestamp);
+      drawRuntimeCanvas();
     } catch (error) {
       console.error("[loomlet-preview] Runtime error in drawFrame:", error);
       handleRuntimeError(error);
@@ -16273,7 +16704,22 @@ var LoomletPreview = (() => {
     }
     loomRafId = requestAnimationFrame(drawFrame);
   }
-  function drawRuntimeCanvas(timestamp) {
+  function postRuntimeEffects(timestamp) {
+    if (!loomEngine || typeof loomEngine.getEffects !== "function") return;
+    if (timestamp - lastEffectsPostMs < EFFECTS_POST_INTERVAL_MS) return;
+    const effects = loomEngine.getEffects() || [];
+    const consoleEffects = effects.filter(isConsoleEffect).map(resolveConsoleEffect);
+    if (consoleEffects.length === 0) return;
+    lastEffectsPostMs = timestamp;
+    vscode.postMessage({ type: "runtimeEffects", effects: consoleEffects });
+  }
+  function isConsoleEffect(effect) {
+    if (!effect || typeof effect !== "object") return false;
+    const type = String(effect.type || effect.kind || effect.name || "");
+    const target = String(effect.target || "");
+    return type === "console" || type === "console.log" || type === "console.warn" || type === "console.error" || target === "console";
+  }
+  function drawRuntimeCanvas() {
     const canvas = document.getElementById("lp-preview-canvas");
     if (!canvas || !loomEngine || !currentGraph) return;
     const dpr = window.devicePixelRatio || 1;
@@ -16281,62 +16727,116 @@ var LoomletPreview = (() => {
     const w2 = canvas.width;
     const h2 = canvas.height;
     const renderConfig = currentGraph.render;
-    const trail = renderConfig?.trail !== void 0 ? renderConfig.trail : 0.1;
+    const enabled = isEnabled(loomEngine, renderConfig);
+    const trail = renderConfig?.trail !== void 0 ? resolveValue(loomEngine, renderConfig.trail) : 0.1;
     if (trail > 0) {
       ctx.fillStyle = `rgba(0, 0, 0, ${trail})`;
       ctx.fillRect(0, 0, w2, h2);
-    } else {
+    } else if (renderConfig?.type !== "point") {
       ctx.fillStyle = "#1a1a1a";
       ctx.fillRect(0, 0, w2, h2);
     }
-    if (renderConfig?.type === "point") {
-      const x2 = resolveValue(loomEngine, renderConfig.x);
-      const y = resolveValue(loomEngine, renderConfig.y);
-      const color = renderConfig.color || "#00ff00";
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      if (x2 !== null && typeof x2 === "number" && y !== null && typeof y === "number") {
-        ctx.arc(x2 * dpr, y * dpr, 4 * dpr, 0, Math.PI * 2);
-      } else {
-        ctx.arc(w2 / 2, h2 / 2, 4 * dpr, 0, Math.PI * 2);
-      }
-      ctx.fill();
-    } else if (renderConfig?.type === "bar") {
-      const width = resolveValue(loomEngine, renderConfig.width);
-      const color = renderConfig.color || "#00ccff";
-      const cssHeight = renderConfig.height !== void 0 ? renderConfig.height : 40;
-      const heightPx = cssHeight * dpr;
-      const cssY = renderConfig.y !== void 0 ? resolveValue(loomEngine, renderConfig.y) : null;
-      const yPx = cssY !== null && typeof cssY === "number" ? cssY * dpr : (h2 - heightPx) / 2;
-      if (width !== null && typeof width === "number") {
-        ctx.fillStyle = color;
-        ctx.fillRect(0, yPx, width * dpr, heightPx);
-      }
+    if (!enabled) {
+      if (renderConfig?.type === "keys") drawKeyVisualizer(ctx, renderConfig, dpr, w2, h2);
+      return;
     }
+    if (renderConfig?.type === "point") drawPoint(ctx, renderConfig, dpr, w2, h2);
+    else if (renderConfig?.type === "bar") drawBar(ctx, renderConfig, dpr, w2, h2);
+    else if (renderConfig?.type === "keys") drawKeyVisualizer(ctx, renderConfig, dpr, w2, h2);
+  }
+  function drawPoint(ctx, renderConfig, dpr, w2, h2) {
+    const x2 = resolveValue(loomEngine, renderConfig.x);
+    const y = resolveValue(loomEngine, renderConfig.y);
+    const radius = resolveValue(loomEngine, renderConfig.radius) ?? 4;
+    const color = renderConfig.color || "#00ff00";
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    if (typeof x2 === "number" && typeof y === "number") {
+      ctx.arc(x2 * dpr, y * dpr, radius * dpr, 0, Math.PI * 2);
+    } else {
+      ctx.arc(w2 / 2, h2 / 2, radius * dpr, 0, Math.PI * 2);
+    }
+    ctx.fill();
+  }
+  function drawBar(ctx, renderConfig, dpr, w2, h2) {
+    const width = resolveValue(loomEngine, renderConfig.width);
+    if (typeof width !== "number") return;
+    const color = renderConfig.color || "#00ccff";
+    const cssHeight = renderConfig.height !== void 0 ? resolveValue(loomEngine, renderConfig.height) : 40;
+    const cssX = renderConfig.x !== void 0 ? resolveValue(loomEngine, renderConfig.x) : 0;
+    const cssY = renderConfig.y !== void 0 ? resolveValue(loomEngine, renderConfig.y) : null;
+    const heightPx = cssHeight * dpr;
+    const xPx = typeof cssX === "number" ? cssX * dpr : 0;
+    const yPx = typeof cssY === "number" ? cssY * dpr : (h2 - heightPx) / 2;
+    ctx.fillStyle = color;
+    ctx.fillRect(xPx, yPx, width * dpr, heightPx);
+  }
+  function drawKeyVisualizer(ctx, renderConfig, dpr, w2, h2) {
+    const cx = w2 / 2;
+    const cy = h2 / 2;
+    const keyW = 78 * dpr;
+    const keyH = 52 * dpr;
+    const gap = 10 * dpr;
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `${Math.round(16 * dpr)}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.15)";
+    ctx.fillText("Click preview, then press Space / Arrow keys", cx, cy - 110 * dpr);
+    drawKey(ctx, "\u2191", resolveValue(loomEngine, renderConfig.up), cx, cy - keyH - gap, keyW, keyH, dpr);
+    drawKey(ctx, "\u2190", resolveValue(loomEngine, renderConfig.left), cx - keyW - gap, cy, keyW, keyH, dpr);
+    drawKey(ctx, "Space", resolveValue(loomEngine, renderConfig.space), cx, cy, keyW, keyH, dpr);
+    drawKey(ctx, "\u2192", resolveValue(loomEngine, renderConfig.right), cx + keyW + gap, cy, keyW, keyH, dpr);
+    drawKey(ctx, "\u2193", resolveValue(loomEngine, renderConfig.down), cx, cy + keyH + gap, keyW, keyH, dpr);
+    ctx.restore();
+  }
+  function drawKey(ctx, label, active, cx, cy, w2, h2, dpr) {
+    const x2 = cx - w2 / 2;
+    const y = cy - h2 / 2;
+    ctx.fillStyle = active ? "rgba(112,214,255,0.9)" : "rgba(255,255,255,0.08)";
+    ctx.strokeStyle = active ? "rgba(112,214,255,1)" : "rgba(255,255,255,0.18)";
+    ctx.lineWidth = 1 * dpr;
+    ctx.beginPath();
+    roundRect(ctx, x2, y, w2, h2, 10 * dpr);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = active ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.62)";
+    ctx.fillText(label, cx, cy);
+  }
+  function roundRect(ctx, x2, y, width, height, radius) {
+    ctx.moveTo(x2 + radius, y);
+    ctx.lineTo(x2 + width - radius, y);
+    ctx.quadraticCurveTo(x2 + width, y, x2 + width, y + radius);
+    ctx.lineTo(x2 + width, y + height - radius);
+    ctx.quadraticCurveTo(x2 + width, y + height, x2 + width - radius, y + height);
+    ctx.lineTo(x2 + radius, y + height);
+    ctx.quadraticCurveTo(x2, y + height, x2, y + height - radius);
+    ctx.lineTo(x2, y + radius);
+    ctx.quadraticCurveTo(x2, y, x2 + radius, y);
   }
   function handleRuntimeError(error) {
-    setStatus("Runtime error \xB7 Read-only Node Preview", true);
+    setStatus("Runtime error \xB7 Editable Node Preview", true);
     stopLoom();
     updateControlStates();
     const canvas = document.getElementById("lp-preview-canvas");
     if (canvas) drawPlaceholder(canvas, window.devicePixelRatio || 1);
   }
   function stopLoom() {
-    if (loomRafId !== null) {
-      cancelAnimationFrame(loomRafId);
-      loomRafId = null;
-    }
+    if (loomRafId !== null) cancelAnimationFrame(loomRafId);
+    loomRafId = null;
     if (loomEngine) {
       try {
         loomEngine.stop();
       } catch (_) {
       }
-      loomEngine = null;
     }
+    loomEngine = null;
     runtimeStartTimestampMs = null;
     isRuntimePaused = false;
     pausedAtTimestampMs = null;
     accumulatedPausedMs = 0;
+    lastEffectsPostMs = 0;
+    hostInput.mouseDown = false;
   }
   function startLoom(graph) {
     stopLoom();
@@ -16348,36 +16848,26 @@ var LoomletPreview = (() => {
       return;
     }
     try {
-      const graphForLoom = { nodes: graph.nodes || [], edges: graph.edges || [] };
-      loomEngine = new Loom(graphForLoom);
-      runtimeStartTimestampMs = null;
-      isRuntimePaused = false;
-      pausedAtTimestampMs = null;
-      accumulatedPausedMs = 0;
+      loomEngine = new Loom({ nodes: graph.nodes || [], edges: graph.edges || [] });
       loomRafId = requestAnimationFrame(drawFrame);
       updateControlStates();
-    } catch (e) {
-      console.error("[loomlet-preview] Loom engine initialization failed:", e);
-      handleRuntimeError(e);
+    } catch (error) {
+      console.error("[loomlet-preview] Loom engine initialization failed:", error);
+      handleRuntimeError(error);
     }
   }
   function setStatus(text, isError) {
     const el = document.getElementById("lp-status");
     if (!el) return;
     el.textContent = text;
-    if (isError) {
-      el.style.borderLeftColor = "#f44747";
-      el.style.color = "#f88";
-    } else {
-      el.style.borderLeftColor = "#4a90e2";
-      el.style.color = "#9cdcfe";
-    }
+    el.style.borderLeftColor = isError ? "#f44747" : "#4a90e2";
+    el.style.color = isError ? "#f88" : "#9cdcfe";
   }
   function setErrors(errors) {
     lastErrors = errors || [];
-    _renderErrors();
+    renderErrors();
   }
-  function _renderErrors() {
+  function renderErrors() {
     const el = document.getElementById("lp-errors");
     if (!el) return;
     if (!editorVisible || lastErrors.length === 0) {
@@ -16392,61 +16882,54 @@ var LoomletPreview = (() => {
     return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
   function togglePauseResume() {
-    if (!loomEngine || !currentGraph || !currentGraph.render) return;
+    if (!loomEngine || !currentGraph?.render) return;
     if (isRuntimePaused) {
       const now = performance.now();
-      if (pausedAtTimestampMs !== null) {
-        accumulatedPausedMs += now - pausedAtTimestampMs;
-        pausedAtTimestampMs = null;
-      }
+      if (pausedAtTimestampMs !== null) accumulatedPausedMs += now - pausedAtTimestampMs;
+      pausedAtTimestampMs = null;
       isRuntimePaused = false;
-      updateControlStates();
-      updateStatus();
-      loomRafId = requestAnimationFrame(drawFrame);
+      if (loomRafId === null) loomRafId = requestAnimationFrame(drawFrame);
     } else {
       pausedAtTimestampMs = performance.now();
       isRuntimePaused = true;
-      updateControlStates();
-      updateStatus();
+      if (loomRafId !== null) cancelAnimationFrame(loomRafId);
+      loomRafId = null;
     }
+    updateControlStates();
+    updateStatus();
   }
   function resetRuntime() {
-    if (!loomEngine || !currentGraph || !currentGraph.render) return;
+    if (!loomEngine || !currentGraph?.render) return;
     runtimeStartTimestampMs = null;
     accumulatedPausedMs = 0;
     isRuntimePaused = false;
     pausedAtTimestampMs = null;
-    try {
-      loomEngine.evaluateAt(0, performance.now());
-      drawRuntimeCanvas(performance.now());
-    } catch (e) {
-      console.error("[loomlet-preview] Error during reset:", e);
+    lastEffectsPostMs = 0;
+    hostInput.mouseDown = false;
+    const canvas = document.getElementById("lp-preview-canvas");
+    const ctx = canvas?.getContext("2d");
+    if (canvas && ctx) {
+      ctx.fillStyle = "#1a1a1a";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
+    if (loomRafId !== null) cancelAnimationFrame(loomRafId);
+    loomRafId = requestAnimationFrame(drawFrame);
     updateControlStates();
     updateStatus();
-    if (loomRafId !== null) {
-      cancelAnimationFrame(loomRafId);
-    }
-    loomRafId = requestAnimationFrame(drawFrame);
   }
   function updateControlStates() {
-    const canControl = loomEngine && currentGraph && currentGraph.render;
+    const canControl = Boolean(loomEngine && currentGraph?.render);
     const toggleBtn = document.getElementById("lp-toggle-runtime");
     const resetBtn = document.getElementById("lp-reset-runtime");
     if (toggleBtn) {
       toggleBtn.disabled = !canControl;
       toggleBtn.textContent = isRuntimePaused ? "Resume" : "Pause";
     }
-    if (resetBtn) {
-      resetBtn.disabled = !canControl;
-    }
+    if (resetBtn) resetBtn.disabled = !canControl;
   }
   function updateStatus() {
-    if (isRuntimePaused) {
-      setStatus("Paused \xB7 Runtime Preview \xB7 Read-only Node Preview", false);
-    } else if (loomEngine && currentGraph && currentGraph.render) {
-      setStatus("Running \xB7 Runtime Preview \xB7 Read-only Node Preview", false);
-    }
+    if (isRuntimePaused) setStatus("Paused \xB7 Runtime Preview \xB7 Editable Node Preview", false);
+    else if (loomEngine && currentGraph?.render) setStatus("Running \xB7 Runtime Preview \xB7 Editable Node Preview", false);
   }
   function toggleEditor() {
     editorVisible = !editorVisible;
@@ -16457,33 +16940,58 @@ var LoomletPreview = (() => {
       if (container) container.style.display = "";
       if (panel) panel.style.flex = "1";
       if (btn) btn.textContent = "Hide Editor";
-      _renderErrors();
     } else {
       if (container) container.style.display = "none";
       if (panel) panel.style.flex = "0 0 auto";
       if (btn) btn.textContent = "Show Editor";
-      _renderErrors();
     }
+    renderErrors();
   }
   function initControlButtons() {
-    const toggleEditorBtn = document.getElementById("lp-toggle-editor");
-    if (toggleEditorBtn) toggleEditorBtn.addEventListener("click", toggleEditor);
-    const toggleRuntimeBtn = document.getElementById("lp-toggle-runtime");
-    if (toggleRuntimeBtn) toggleRuntimeBtn.addEventListener("click", togglePauseResume);
-    const resetRuntimeBtn = document.getElementById("lp-reset-runtime");
-    if (resetRuntimeBtn) resetRuntimeBtn.addEventListener("click", resetRuntime);
+    document.getElementById("lp-toggle-editor")?.addEventListener("click", toggleEditor);
+    document.getElementById("lp-toggle-runtime")?.addEventListener("click", togglePauseResume);
+    document.getElementById("lp-reset-runtime")?.addEventListener("click", resetRuntime);
   }
   function initEditorView() {
     if (editorView) return;
     const container = document.getElementById("lp-editor-container");
     if (!container) return;
     editorView = new NodeEditorView(container, {
-      onOperation: () => {
-      },
-      // read-only: ignore all edit operations
-      onError: (e) => console.error("[NodeEditorView]", e),
+      onOperation: handleNodeEditorOperation,
+      onError: (error) => console.error("[NodeEditorView]", error),
       onSelectNode: () => {
       }
+    });
+  }
+  async function handleNodeEditorOperation(operation) {
+    if (isApplyingHostModel || !previewState) return;
+    const result = applyNodeEditorOperationState(previewState, operation);
+    previewState = result?.state || previewState;
+    if (result?.error) {
+      setErrors(previewState?.errors || []);
+      setStatus("Node edit error \xB7 Editable Node Preview", true);
+      return;
+    }
+    setErrors([]);
+    if (result?.change?.shouldRerenderView) {
+      try {
+        await editorView?.renderModel(previewState.editorModel, { force: true });
+      } catch (error) {
+        console.error("[loomlet-preview] renderModel after operation failed:", error);
+        setStatus("Render error \xB7 Editable Node Preview", true);
+        return;
+      }
+    }
+    if (!result?.change?.graphChanged) return;
+    const nextDsl = graphToCanonicalDSL(previewState.graph);
+    currentGraph = previewState.graph;
+    startLoom(previewState.graph);
+    updateStatus();
+    updateControlStates();
+    vscode.postMessage({
+      type: "replaceDocumentText",
+      source: nextDsl,
+      origin: "node-editor"
     });
   }
   window.addEventListener("message", async (event) => {
@@ -16491,29 +16999,39 @@ var LoomletPreview = (() => {
     if (!message || message.type !== "setModel") return;
     const { editorModel, graph, errors } = message;
     if (errors && errors.length > 0) {
-      setStatus("DSL has errors \xB7 Read-only Node Preview", true);
+      previewState = null;
+      setStatus("DSL has errors \xB7 Editable Node Preview", true);
       setErrors(errors);
       return;
     }
+    previewState = {
+      graph: graph || { nodes: [], edges: [], render: null },
+      editorModel,
+      errors: []
+    };
     setErrors([]);
     startLoom(graph || null);
     if (!editorModel) {
-      setStatus("Empty \xB7 Read-only Node Preview", false);
+      setStatus("Empty \xB7 Editable Node Preview", false);
       updateControlStates();
       return;
     }
     initEditorView();
     try {
+      isApplyingHostModel = true;
       await editorView.renderModel(editorModel);
       updateStatus();
       updateControlStates();
-    } catch (e) {
-      console.error("[loomlet-preview] renderModel failed:", e);
-      setStatus("Render error \xB7 Read-only Node Preview", true);
+    } catch (error) {
+      console.error("[loomlet-preview] renderModel failed:", error);
+      setStatus("Render error \xB7 Editable Node Preview", true);
+    } finally {
+      isApplyingHostModel = false;
     }
   });
   resizePreviewCanvas();
   window.addEventListener("resize", resizePreviewCanvas);
+  initHostInputs();
   initControlButtons();
   vscode.postMessage({ type: "ready" });
 })();
