@@ -44,23 +44,9 @@ export function graphToCanonicalDSL(graph) {
 
   if (graph.render) {
     const renderType = graph.render.type || 'bar';
-    const renderArgs = [];
-
-    if (graph.render.width !== undefined) {
-      renderArgs.push(formatRenderParam('width', graph.render.width));
-    }
-    if (graph.render.height !== undefined) {
-      renderArgs.push(formatRenderParam('height', graph.render.height));
-    }
-    if (graph.render.color !== undefined) {
-      renderArgs.push(formatRenderParam('color', graph.render.color));
-    }
-    if (graph.render.x !== undefined) {
-      renderArgs.push(formatRenderParam('x', graph.render.x));
-    }
-    if (graph.render.y !== undefined) {
-      renderArgs.push(formatRenderParam('y', graph.render.y));
-    }
+    const renderArgs = Object.keys(graph.render)
+      .filter((key) => key !== 'type' && graph.render[key] !== undefined)
+      .map((key) => formatRenderParam(key, graph.render[key]));
 
     lines.push('');
     lines.push(`render ${renderType}(${renderArgs.join(', ')})`);
