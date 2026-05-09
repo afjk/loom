@@ -2,6 +2,8 @@
 // Bundled by esbuild; runs inside a VS Code WebView (browser context).
 import { NodeEditorView } from '../../../editor-studio/src/node-editor-view.js';
 import { Loom } from '../../../src/loom.js';
+import { applyNodeEditorOperationState } from '../../../src/node-editor-core.js';
+import { graphToCanonicalDSL } from '../../../src/canonical-dsl.js';
 
 const vscode = acquireVsCodeApi();
 let editorView = null;
@@ -12,6 +14,8 @@ let loomEngine = null;
 let loomRafId = null;
 let currentGraph = null;
 let runtimeStartTimestampMs = null;
+let previewState = null;
+let isApplyingHostModel = false;
 let isRuntimePaused = false;
 let pausedAtTimestampMs = null;
 let accumulatedPausedMs = 0;
@@ -348,7 +352,7 @@ function roundRect(ctx, x, y, width, height, radius) {
 }
 
 function handleRuntimeError(error) {
-  setStatus('Runtime error · Read-only Node Preview', true);
+  setStatus('Runtime error · Editable Node Preview', true)
   stopLoom();
   updateControlStates();
   const canvas = document.getElementById('lp-preview-canvas');
@@ -471,8 +475,8 @@ function updateControlStates() {
 }
 
 function updateStatus() {
-  if (isRuntimePaused) setStatus('Paused · Runtime Preview · Read-only Node Preview', false);
-  else if (loomEngine && currentGraph?.render) setStatus('Running · Runtime Preview · Read-only Node Preview', false);
+  if (isRuntimePaused) setStatus('Paused · Runtime Preview · Editable Node Preview', false);
+  else if (loomEngine && currentGraph?.render) setStatus('Running · Runtime Preview · Editable Node Preview', false);
 }
 
 function toggleEditor() {
@@ -503,9 +507,49 @@ function initEditorView() {
   const container = document.getElementById('lp-editor-container');
   if (!container) return;
   editorView = new NodeEditorView(container, {
-    onOperation: () => {},
+    onOperation: handleNodeEditorOperation,
     onError: (error) => console.error('[NodeEditorView]', error),
     onSelectNode: () => {}
+  });
+}
+
+
+async function handleNodeEditorOperation(operation) {
+  if (isApplyingHostModel || !previewState) return;
+
+  const result = applyNodeEditorOperationState(previewState, operation);
+  previewState = result?.state || previewState;
+
+  if (result?.error) {
+    setErrors(previewState?.errors || []);
+    setStatus('Node edit error · Editable Node Preview', true);
+    return;
+  }
+
+  setErrors([]);
+
+  if (result?.change?.shouldRerenderView) {
+    try {
+      await editorView?.renderModel(previewState.editorModel, { force: true });
+    } catch (error) {
+      console.error('[loomlet-preview] renderModel after operation failed:', error);
+      setStatus('Render error · Editable Node Preview', true);
+      return;
+    }
+  }
+
+  if (!result?.change?.graphChanged) return;
+
+  const nextDsl = graphToCanonicalDSL(previewState.graph);
+  currentGraph = previewState.graph;
+  startLoom(previewState.graph);
+  updateStatus();
+  updateControlStates();
+
+  vscode.postMessage({
+    type: 'replaceDocumentText',
+    source: nextDsl,
+    origin: 'node-editor'
   });
 }
 
@@ -516,28 +560,38 @@ window.addEventListener('message', async (event) => {
   const { editorModel, graph, errors } = message;
 
   if (errors && errors.length > 0) {
-    setStatus('DSL has errors · Read-only Node Preview', true);
+    previewState = null;
+    setStatus('DSL has errors · Editable Node Preview', true);
     setErrors(errors);
     return;
   }
+
+  previewState = {
+    graph: graph || { nodes: [], edges: [], render: null },
+    editorModel,
+    errors: []
+  };
 
   setErrors([]);
   startLoom(graph || null);
 
   if (!editorModel) {
-    setStatus('Empty · Read-only Node Preview', false);
+    setStatus('Empty · Editable Node Preview', false);
     updateControlStates();
     return;
   }
 
   initEditorView();
   try {
+    isApplyingHostModel = true;
     await editorView.renderModel(editorModel);
     updateStatus();
     updateControlStates();
   } catch (error) {
     console.error('[loomlet-preview] renderModel failed:', error);
-    setStatus('Render error · Read-only Node Preview', true);
+    setStatus('Render error · Editable Node Preview', true);
+  } finally {
+    isApplyingHostModel = false;
   }
 });
 
