@@ -18,7 +18,12 @@
     "onCommand:loomlet.openNodePreviewToSide",
     "onCommand:loomlet.insertExample",
     "onCommand:loomlet.openLibraryReference",
-    "onCommand:loomlet.clearOutput"
+    "onCommand:loomlet.clearOutput",
+    "onCommand:loomlet.compileSceneSyncBehaviorGraph",
+    "onCommand:loomlet.setSceneSyncObjectBehaviorGraph",
+    "onCommand:loomlet.clearSceneSyncObjectBehaviorGraph",
+    "onCommand:loomlet.setSceneSyncSceneBehaviorGraph",
+    "onCommand:loomlet.clearSceneSyncSceneBehaviorGraph"
   ],
   "contributes": {
     "languages": [
@@ -65,6 +70,26 @@
       {
         "command": "loomlet.clearOutput",
         "title": "Loomlet: Clear Output"
+      },
+      {
+        "command": "loomlet.compileSceneSyncBehaviorGraph",
+        "title": "Loomlet: Compile Scene Sync Behavior Graph"
+      },
+      {
+        "command": "loomlet.setSceneSyncObjectBehaviorGraph",
+        "title": "Loomlet: Set Scene Sync Object Behavior Graph"
+      },
+      {
+        "command": "loomlet.clearSceneSyncObjectBehaviorGraph",
+        "title": "Loomlet: Clear Scene Sync Object Behavior Graph"
+      },
+      {
+        "command": "loomlet.setSceneSyncSceneBehaviorGraph",
+        "title": "Loomlet: Set Scene Sync Scene Behavior Graph"
+      },
+      {
+        "command": "loomlet.clearSceneSyncSceneBehaviorGraph",
+        "title": "Loomlet: Clear Scene Sync Scene Behavior Graph"
       }
     ],
     "configuration": {

@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const cp = require('child_process');
 const vscode = require('vscode');
 const { getCompletionContext } = require('./completion-context');
 const { buildCompletions: buildRawCompletions, getIncludePlanned } = require('./completion-engine');
@@ -70,6 +71,11 @@ async function activate(context) {
     vscode.commands.registerCommand('loomlet.insertExample', () => insertExample()),
     vscode.commands.registerCommand('loomlet.openLibraryReference', () => openLibraryReference()),
     vscode.commands.registerCommand('loomlet.clearOutput', () => clearLoomletOutput()),
+    vscode.commands.registerCommand('loomlet.compileSceneSyncBehaviorGraph', () => compileSceneSyncBehaviorGraph()),
+    vscode.commands.registerCommand('loomlet.setSceneSyncObjectBehaviorGraph', () => setSceneSyncObjectBehaviorGraph()),
+    vscode.commands.registerCommand('loomlet.clearSceneSyncObjectBehaviorGraph', () => clearSceneSyncObjectBehaviorGraph()),
+    vscode.commands.registerCommand('loomlet.setSceneSyncSceneBehaviorGraph', () => setSceneSyncSceneBehaviorGraph()),
+    vscode.commands.registerCommand('loomlet.clearSceneSyncSceneBehaviorGraph', () => clearSceneSyncSceneBehaviorGraph()),
     vscode.workspace.onDidChangeTextDocument((event) => {
       scheduleValidation(event.document, diagnosticCollection);
       if (nodePreviewPanel && currentPreviewDocument && event.document.uri.toString() === currentPreviewDocument.uri.toString()) {
@@ -715,6 +721,325 @@ function diagnosticFromLoomletError(error, document) {
   }
 
   return diagnostic;
+}
+
+function runCommand(command, args, options = {}) {
+  return new Promise((resolve, reject) => {
+    const child = cp.spawn(command, args, {
+      cwd: options.cwd,
+      shell: false,
+      env: process.env
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+
+    child.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    child.on('error', (error) => {
+      reject(Object.assign(error, { stdout, stderr }));
+    });
+
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve({ code, stdout, stderr });
+      } else {
+        const error = new Error(`Command failed with exit code ${code}`);
+        error.code = code;
+        error.stdout = stdout;
+        error.stderr = stderr;
+        reject(error);
+      }
+    });
+  });
+}
+
+function buildLoomletCliInvocation(cliPath, args) {
+  if (cliPath.endsWith('.mjs')) {
+    return {
+      command: process.execPath,
+      args: [cliPath, ...args]
+    };
+  }
+
+  return {
+    command: cliPath,
+    args
+  };
+}
+
+async function getActiveFilePath() {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    vscode.window.showErrorMessage('Open a .loom file before running this command.');
+    return null;
+  }
+
+  const document = editor.document;
+  const filePath = document.uri.fsPath;
+  const isLoomlet = document.languageId === 'loomlet' || document.languageId === 'loom' || filePath.endsWith('.loom');
+  if (!isLoomlet) {
+    vscode.window.showWarningMessage('Active file is not a .loom file.');
+  }
+
+  return filePath;
+}
+
+async function ensureFileSaved(document) {
+  if (!document.isDirty) {
+    return true;
+  }
+
+  const answer = await vscode.window.showWarningMessage(
+    'The current Loomlet file has unsaved changes. Save before sending to Scene Sync?',
+    'Save',
+    'Cancel'
+  );
+
+  if (answer === 'Save') {
+    await document.save();
+    return true;
+  }
+
+  return false;
+}
+
+async function promptObjectId() {
+  const objectId = await vscode.window.showInputBox({
+    prompt: 'Enter the Scene Sync object id',
+    placeHolder: 'e.g. sample-cube',
+    validateInput: (value) => {
+      if (!value.trim()) {
+        return 'Object id is required.';
+      }
+      return null;
+    }
+  });
+
+  return objectId ? objectId.trim() : null;
+}
+
+async function compileSceneSyncBehaviorGraph() {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    vscode.window.showErrorMessage('Open a .loom file before running this command.');
+    return;
+  }
+
+  const document = editor.document;
+  const filePath = document.uri.fsPath;
+
+  if (!await ensureFileSaved(document)) {
+    return;
+  }
+
+  const scope = await vscode.window.showQuickPick(
+    ['Object Behavior Graph', 'Scene Behavior Graph'],
+    { title: 'Select Behavior Graph Scope' }
+  );
+
+  if (!scope) return;
+
+  let objectId = null;
+  if (scope === 'Object Behavior Graph') {
+    objectId = await promptObjectId();
+    if (!objectId) return;
+  }
+
+  const cliPath = await findLoomletCli(document.uri);
+  if (!cliPath) {
+    vscode.window.showErrorMessage('Could not find the Loomlet CLI. Build or install Loomlet first.');
+    return;
+  }
+
+  const inv = buildLoomletCliInvocation(cliPath, [
+    'scenesync', 'behavior', 'compile', filePath,
+    ...(scope === 'Object Behavior Graph' ? ['--object', objectId] : ['--scene'])
+  ]);
+
+  loomletOutput.clear();
+  loomletOutput.show(true);
+  loomletOutput.appendLine(`$ loomlet scenesync behavior compile ${path.basename(filePath)} ${scope === 'Object Behavior Graph' ? `--object ${objectId}` : '--scene'}`);
+  loomletOutput.appendLine('');
+
+  try {
+    const result = await runCommand(inv.command, inv.args);
+    loomletOutput.appendLine('Scene Sync Behavior Graph payload:');
+    loomletOutput.appendLine('');
+    loomletOutput.appendLine(result.stdout);
+    vscode.window.showInformationMessage('Compiled Scene Sync Behavior Graph.');
+  } catch (error) {
+    if (error.stderr) {
+      loomletOutput.appendLine(error.stderr);
+    }
+    vscode.window.showErrorMessage('Failed to compile Scene Sync Behavior Graph.');
+  }
+}
+
+async function setSceneSyncObjectBehaviorGraph() {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    vscode.window.showErrorMessage('Open a .loom file before running this command.');
+    return;
+  }
+
+  const document = editor.document;
+  const filePath = document.uri.fsPath;
+
+  if (!await ensureFileSaved(document)) {
+    return;
+  }
+
+  const objectId = await promptObjectId();
+  if (!objectId) return;
+
+  const cliPath = await findLoomletCli(document.uri);
+  if (!cliPath) {
+    vscode.window.showErrorMessage('Could not find the Loomlet CLI. Build or install Loomlet first.');
+    return;
+  }
+
+  const inv = buildLoomletCliInvocation(cliPath, [
+    'scenesync', 'behavior', 'set', filePath,
+    '--object', objectId,
+    '--send'
+  ]);
+
+  loomletOutput.clear();
+  loomletOutput.show(true);
+  loomletOutput.appendLine(`$ loomlet scenesync behavior set ${path.basename(filePath)} --object ${objectId} --send`);
+  loomletOutput.appendLine('');
+
+  try {
+    await runCommand(inv.command, inv.args);
+    vscode.window.showInformationMessage(`Set Object Behavior Graph for ${objectId}.`);
+  } catch (error) {
+    if (error.stderr) {
+      loomletOutput.appendLine(error.stderr);
+    }
+    if (error.stdout) {
+      loomletOutput.appendLine(error.stdout);
+    }
+    vscode.window.showErrorMessage(`Failed to set Object Behavior Graph for ${objectId}.`);
+  }
+}
+
+async function clearSceneSyncObjectBehaviorGraph() {
+  const objectId = await promptObjectId();
+  if (!objectId) return;
+
+  const cliPath = await findLoomletCli(vscode.window.activeTextEditor?.document.uri);
+  if (!cliPath) {
+    vscode.window.showErrorMessage('Could not find the Loomlet CLI. Build or install Loomlet first.');
+    return;
+  }
+
+  const inv = buildLoomletCliInvocation(cliPath, [
+    'scenesync', 'behavior', 'clear',
+    '--object', objectId,
+    '--send'
+  ]);
+
+  loomletOutput.clear();
+  loomletOutput.show(true);
+  loomletOutput.appendLine(`$ loomlet scenesync behavior clear --object ${objectId} --send`);
+  loomletOutput.appendLine('');
+
+  try {
+    await runCommand(inv.command, inv.args);
+    vscode.window.showInformationMessage(`Cleared Object Behavior Graph for ${objectId}.`);
+  } catch (error) {
+    if (error.stderr) {
+      loomletOutput.appendLine(error.stderr);
+    }
+    if (error.stdout) {
+      loomletOutput.appendLine(error.stdout);
+    }
+    vscode.window.showErrorMessage(`Failed to clear Object Behavior Graph for ${objectId}.`);
+  }
+}
+
+async function setSceneSyncSceneBehaviorGraph() {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    vscode.window.showErrorMessage('Open a .loom file before running this command.');
+    return;
+  }
+
+  const document = editor.document;
+  const filePath = document.uri.fsPath;
+
+  if (!await ensureFileSaved(document)) {
+    return;
+  }
+
+  const cliPath = await findLoomletCli(document.uri);
+  if (!cliPath) {
+    vscode.window.showErrorMessage('Could not find the Loomlet CLI. Build or install Loomlet first.');
+    return;
+  }
+
+  const inv = buildLoomletCliInvocation(cliPath, [
+    'scenesync', 'behavior', 'set', filePath,
+    '--scene',
+    '--send'
+  ]);
+
+  loomletOutput.clear();
+  loomletOutput.show(true);
+  loomletOutput.appendLine(`$ loomlet scenesync behavior set ${path.basename(filePath)} --scene --send`);
+  loomletOutput.appendLine('');
+
+  try {
+    await runCommand(inv.command, inv.args);
+    vscode.window.showInformationMessage('Set Scene Behavior Graph.');
+  } catch (error) {
+    if (error.stderr) {
+      loomletOutput.appendLine(error.stderr);
+    }
+    if (error.stdout) {
+      loomletOutput.appendLine(error.stdout);
+    }
+    vscode.window.showErrorMessage('Failed to set Scene Behavior Graph.');
+  }
+}
+
+async function clearSceneSyncSceneBehaviorGraph() {
+  const cliPath = await findLoomletCli(vscode.window.activeTextEditor?.document.uri);
+  if (!cliPath) {
+    vscode.window.showErrorMessage('Could not find the Loomlet CLI. Build or install Loomlet first.');
+    return;
+  }
+
+  const inv = buildLoomletCliInvocation(cliPath, [
+    'scenesync', 'behavior', 'clear',
+    '--scene',
+    '--send'
+  ]);
+
+  loomletOutput.clear();
+  loomletOutput.show(true);
+  loomletOutput.appendLine('$ loomlet scenesync behavior clear --scene --send');
+  loomletOutput.appendLine('');
+
+  try {
+    await runCommand(inv.command, inv.args);
+    vscode.window.showInformationMessage('Cleared Scene Behavior Graph.');
+  } catch (error) {
+    if (error.stderr) {
+      loomletOutput.appendLine(error.stderr);
+    }
+    if (error.stdout) {
+      loomletOutput.appendLine(error.stdout);
+    }
+    vscode.window.showErrorMessage('Failed to clear Scene Behavior Graph.');
+  }
 }
 
 module.exports = {
