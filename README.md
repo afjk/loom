@@ -58,8 +58,9 @@ npm install -g @afjk/loomlet
 loomlet --help
 
 # Or via npx
-npx @afjk/loomlet compile examples/cli-basic.loom
-npx @afjk/loomlet run examples/cli-basic.loom
+npx -p @afjk/loomlet loomlet --help
+echo 'x = 1' > hello.loom
+npx -p @afjk/loomlet loomlet compile hello.loom
 ```
 
 ### VS Code Extension
