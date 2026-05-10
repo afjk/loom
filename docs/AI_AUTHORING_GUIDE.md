@@ -42,7 +42,20 @@ Never mix `render` and `scene.set*` in one program.
 
 ---
 
-## 3. Syntax rules
+## 3. Scene Sync terminology
+
+Scene Sync has two integration paths:
+
+- **Scene Command**: a one-shot operation that immediately changes Scene Sync scene state, such as `scene-delta`, `scene-add`, or `scene-remove`.
+- **Behavior Graph**: a persistent graph definition that is evaluated continuously by each Scene Sync client, managed through `scene-graph-set` and `scene-graph-clear`.
+
+For Loomlet AI authoring, generated `.loom` programs that animate or continuously drive existing Scene Sync objects are compiled into **Behavior Graphs**.
+
+Do not use Loomlet to generate per-frame Scene Commands for continuous animation. Send the Behavior Graph definition once and let Scene Sync clients evaluate it locally.
+
+---
+
+## 4. Syntax rules
 
 - Put all `import` statements at the top.
 - Use one assignment per line: `id = call(...)`.
@@ -68,7 +81,7 @@ sum3 = math.add(a, b: b)
 
 ---
 
-## 4. Implemented node set for AI generation
+## 5. Implemented node set for AI generation
 
 ### core / time
 
@@ -131,7 +144,7 @@ These operate on existing Scene Sync objects. Loomlet does not create or delete 
 - `scene.setColor(objectId: string, r: number, g: number, b: number)`
 - `scene.setVisible(objectId: string, visible: bool)`
 
-`scene.setRotation` uses **Euler radians** because Scene Sync currently applies rotation with Three.js `rotation.set(x, y, z)`. Do not generate quaternion `w` for Scene Sync authoring.
+For the Scene Sync target, these sink calls are authored as part of a Behavior Graph. `scene.setRotation` uses **Euler radians** because Scene Sync currently applies rotation with Three.js `rotation.set(x, y, z)`. Do not generate quaternion `w` for Scene Sync authoring.
 
 The object id may be positional:
 
@@ -141,9 +154,9 @@ scene.setPosition("sample-cube", x: 0, y: 1, z: 0)
 
 ---
 
-## 5. Common patterns
+## 6. Common patterns
 
-### 5.1 Web Lissajous preview
+### 6.1 Web Lissajous preview
 
 ```loom
 import math
@@ -155,7 +168,7 @@ y = math.cosine(t, freq: 0.5) |> map(inMin: -1, inMax: 1, outMin: 50, outMax: 45
 render point(x: x, y: y, color: "#00ff00", trail: 0.05)
 ```
 
-### 5.2 Scene Sync: make an object bounce
+### 6.2 Scene Sync: make an object bounce
 
 ```loom
 import time
@@ -168,7 +181,7 @@ y = math.sine(t, freq: 0.6, amplitude: 0.4, offset: 1.2)
 scene.setPosition("sample-cube", x: 0, y: y, z: 0)
 ```
 
-### 5.3 Scene Sync: rotate around Y
+### 6.3 Scene Sync: rotate around Y
 
 ```loom
 import time
@@ -181,7 +194,7 @@ y = math.multiply(t, 1.5)
 scene.setRotation("sample-cube", x: 0, y: y, z: 0)
 ```
 
-### 5.4 Scene Sync: pulse scale
+### 6.4 Scene Sync: pulse scale
 
 ```loom
 import time
@@ -194,7 +207,7 @@ s = math.sine(t, freq: 0.7, amplitude: 0.25, offset: 1)
 scene.setScale("sample-cube", x: s, y: s, z: s)
 ```
 
-### 5.5 Scene Sync: move and recolor in one graph
+### 6.5 Scene Sync: move and recolor in one graph
 
 ```loom
 import time
@@ -209,7 +222,7 @@ scene.setPosition("sample-cube", x: x, y: 0.5, z: 0)
 scene.setColor("sample-cube", r: 0, g: g, b: 1)
 ```
 
-### 5.6 CLI text transform
+### 6.6 CLI text transform
 
 ```loom
 import text
@@ -222,19 +235,19 @@ console.log(shout)
 
 ---
 
-## 6. Scene Sync authoring rules
+## 7. Scene Sync authoring rules
 
 - Prefer `time.serverClock()` over `clock()` for shared room animations.
 - Use small amplitudes first, usually `0.2` to `3.0`.
 - Set fixed values for axes that are not animated.
 - Keep each generated program small, typically 5–20 lines.
-- If several effects should remain active on the same object, combine them in one `.loom` program. Scene Sync stores one object graph per object, so a later graph replaces the previous one.
+- If several effects should remain active on the same object, combine them in one `.loom` program. Scene Sync stores one Object Behavior Graph per object, so a later Behavior Graph replaces the previous one.
 - Do not create Scene Sync objects from Loomlet. Object creation is Scene Sync's responsibility.
 - Do not generate graph JSON unless explicitly asked to debug the compiler output.
 
 ---
 
-## 7. Unsupported requests
+## 8. Unsupported requests
 
 If the user asks for one of these, do not invent nodes:
 
@@ -246,7 +259,7 @@ If the user asks for one of these, do not invent nodes:
 
 ---
 
-## 8. Response format for AI assistants
+## 9. Response format for AI assistants
 
 When answering a natural-language request, respond with:
 
