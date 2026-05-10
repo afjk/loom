@@ -57,11 +57,11 @@ async function ensureModulesLoaded() {
 
   loadPromise = (async () => {
     try {
-      const indexModule = await import('../../../src/index.js');
+      const indexModule = await import('@afjk/loomlet');
       parseDSLToAST = indexModule.parseDSLToAST;
       compileToGraph = indexModule.compileToGraph;
 
-      const metadataModule = await import('../../../src/editor-metadata.js');
+      const metadataModule = await import('@afjk/loomlet/metadata');
       stripEditorMetadataFromDsl = metadataModule.stripEditorMetadataFromDsl;
 
       modulesLoaded = true;

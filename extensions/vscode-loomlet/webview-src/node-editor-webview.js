@@ -1,7 +1,7 @@
 // WebView bundle entry point for the Loomlet Node Preview panel.
 // Bundled by esbuild; runs inside a VS Code WebView (browser context).
 import { NodeEditorView } from '../../../editor-studio/src/node-editor-view.js';
-import { Loom } from '../../../src/loom.js';
+import { Loom } from '@afjk/loomlet/runtime';
 
 const vscode = acquireVsCodeApi();
 let editorView = null;

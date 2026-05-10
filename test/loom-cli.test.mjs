@@ -29,6 +29,22 @@ function runCliWithEnv(args, env) {
   });
 }
 
+async function runCliWithIsolatedConfig(args, env = {}) {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-config-'));
+  return {
+    result: spawnSync(process.execPath, [cliPath, ...args], {
+      cwd: projectRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        XDG_CONFIG_HOME: tmpDir,
+        ...env
+      }
+    }),
+    tmpDir
+  };
+}
+
 test('run fizzbuzz tour sample prints expected lines', () => {
   const result = runCli(['run', 'examples/tour/language/07-fizzbuzz.loom', '--get', '_anon_1.out']);
   assert.equal(result.status, 0, result.stderr);
@@ -239,13 +255,17 @@ test('scenesync help prints command group usage', () => {
   assert.match(result.stdout, /objects/);
 });
 
-test('scenesync requires room via arg or env', () => {
-  const result = runCliWithEnv(['scenesync', 'ping'], {
+test('scenesync requires room via arg or env', async () => {
+  const { result, tmpDir } = await runCliWithIsolatedConfig(['scenesync', 'ping'], {
     LOOM_SCENESYNC_ROOM: '',
     LOOM_SCENESYNC_ENDPOINT: ''
   });
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /Scene Sync room is required/);
+  try {
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /Scene Sync room is required/);
+  } finally {
+    await fsp.rm(tmpDir, { recursive: true }).catch(() => {});
+  }
 });
 
 test('parse error exits 1', async () => {

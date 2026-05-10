@@ -8,7 +8,7 @@ async function ensurePreviewModulesLoaded() {
 
   loadPromise = (async () => {
     try {
-      const indexModule = await import('../../../src/index.js');
+      const indexModule = await import('@afjk/loomlet');
       parseDSLToAST = indexModule.parseDSLToAST;
       compileToGraph = indexModule.compileToGraph;
       graphToEditorModel = indexModule.graphToEditorModel;
