@@ -12,6 +12,60 @@ A small dataflow language for weaving values, signals, and scene behavior. Build
   - [`/editor/`](https://afjk.github.io/loomlet/editor/): シンプル版エディタ
   - [`/node-editor/`](https://afjk.github.io/loomlet/node-editor/): フル版 Node Editor
 
+## Package: `@afjk/loomlet`
+
+The npm package contains both the core library and a CLI binary.
+
+### Core Library
+
+**Installation:**
+
+```bash
+npm install @afjk/loomlet
+```
+
+**Usage:**
+
+```js
+import { parseDSLToAST, compileToGraph, graphToEditorModel } from '@afjk/loomlet';
+
+// Or use individual entry points:
+import * as DSL from '@afjk/loomlet/dsl';
+import { Loom } from '@afjk/loomlet/runtime';
+import * as EditorModel from '@afjk/loomlet/editor-model';
+import * as Metadata from '@afjk/loomlet/metadata';
+```
+
+**Entry points:**
+
+- `.` — Main API (`parseDSLToAST`, `compileToGraph`, `graphToEditorModel`, etc.)
+- `/dsl` — Loom DSL parser
+- `/runtime` — Loom runtime engine (Loom class)
+- `/node-editor-core` — Node editor core utilities
+- `/editor-model` — Editor model API
+- `/canonical-dsl` — Canonical DSL formatter
+- `/metadata` — Editor metadata (completion, documentation)
+
+### CLI
+
+The CLI binary `loomlet` is included in the package.
+
+**Usage:**
+
+```bash
+# Global install
+npm install -g @afjk/loomlet
+loomlet --help
+
+# Or via npx
+npx @afjk/loomlet compile examples/cli-basic.loom
+npx @afjk/loomlet run examples/cli-basic.loom
+```
+
+### VS Code Extension
+
+The [Loomlet VS Code Extension](extensions/vscode-loomlet) depends on `@afjk/loomlet`.
+
 ---
 
 ブラウザで動くデータフロー実行エンジン。純粋関数ノードを基本にしつつ、必要な箇所だけを `state` ノードとして明示し、リアクティブな視覚・音響・3D コンテンツを構築します。

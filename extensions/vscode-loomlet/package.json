@@ -113,6 +113,9 @@
     "build:webview": "node scripts/build-webview.mjs",
     "build": "npm run build:webview"
   },
+  "dependencies": {
+    "@afjk/loomlet": "^0.1.0"
+  },
   "devDependencies": {
     "esbuild": "^0.21.0",
     "react": "18.2.0",

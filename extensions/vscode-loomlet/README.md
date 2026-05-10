@@ -2,6 +2,8 @@
 
 A minimal VS Code extension for writing `.loom` scene behavior scripts used with Scene Sync.
 
+The extension depends on the [`@afjk/loomlet`](https://www.npmjs.com/package/@afjk/loomlet) npm package.
+
 ## Features
 
 - `.loom` language association
