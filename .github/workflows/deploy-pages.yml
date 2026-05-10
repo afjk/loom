@@ -36,10 +36,12 @@ jobs:
         run: |
           mkdir -p dist-pages/node-editor
           mkdir -p dist-pages/editor
+          mkdir -p dist-pages/examples
           # The simple editor imports ../src/*.js directly, so src/ must be included in the Pages artifact.
           mkdir -p dist-pages/src
           cp -R editor-studio/dist/* dist-pages/node-editor/
           cp -R editor/* dist-pages/editor/
+          cp -R examples/* dist-pages/examples/
           cp -R src/* dist-pages/src/
 
       - name: Add index page
@@ -57,6 +59,7 @@ jobs:
               <ul>
                 <li><a href="./editor/">Simple Editor</a></li>
                 <li><a href="./node-editor/">Node Editor</a></li>
+                <li><a href="./examples/01-basic.html">Example: Basic Browser Demo</a></li>
               </ul>
             </body>
           </html>
