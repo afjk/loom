@@ -1,11 +1,27 @@
 # Examples
 
-These examples are for repository/source usage (not bundled in the npm tarball).
+Note: these examples are part of the GitHub repository. They are not included in the npm package tarball.
 
-Good starting points:
+## Examples
 
-- Basic CLI compile input: `cli-basic.loom`
-- JSON/text oriented CLI snippets: `cli-json.loom`, `cli-text.loom`
-- Scene Sync behavior examples: `lissajous.loom`, `scene-effects.loom`
-- Visual/browser preview examples: `08-lissajous.html`, `07-scenesync-mock.html`
-- VS Code extension examples: `vscode/`
+- [cli-basic.loom](cli-basic.loom) - minimal CLI compile example
+- [cli-json.loom](cli-json.loom) - JSON parse/stringify example
+- [cli-text.loom](cli-text.loom) - text processing example
+- [scene-effects.loom](scene-effects.loom) - Scene Sync effect example
+- [lissajous.loom](lissajous.loom) - Scene Sync behavior graph example
+- [scene-offset-position.loom](scene-offset-position.loom) - object offset behavior example
+- [scene-offset-circle.loom](scene-offset-circle.loom) - circular offset behavior example
+
+## Run with CLI
+
+From the repository root:
+
+```bash
+npx -p @afjk/loomlet loomlet compile examples/cli-basic.loom
+```
+
+From a local checkout (without global install):
+
+```bash
+node bin/loomlet.mjs compile examples/cli-basic.loom
+```
