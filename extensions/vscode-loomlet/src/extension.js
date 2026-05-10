@@ -628,7 +628,7 @@ async function findLoomletCli(startUri) {
     if (found) return found;
   }
 
-  return null;
+  return 'loomlet';
 }
 
 function searchUpForCli(startDir) {
@@ -637,10 +637,6 @@ function searchUpForCli(startDir) {
     const loomletCandidate = path.join(current, 'bin', 'loomlet.mjs');
     if (fs.existsSync(loomletCandidate)) {
       return loomletCandidate;
-    }
-    const loomCandidate = path.join(current, 'bin', 'loom.mjs');
-    if (fs.existsSync(loomCandidate)) {
-      return loomCandidate;
     }
     const parent = path.dirname(current);
     if (parent === current) {
@@ -917,7 +913,13 @@ async function setSceneSyncObjectBehaviorGraph() {
   loomletOutput.appendLine('');
 
   try {
-    await runCommand(inv.command, inv.args);
+    const result = await runCommand(inv.command, inv.args);
+    if (result.stdout) {
+      loomletOutput.appendLine(result.stdout.trimEnd());
+    }
+    if (result.stderr) {
+      loomletOutput.appendLine(result.stderr.trimEnd());
+    }
     vscode.window.showInformationMessage(`Set Object Behavior Graph for ${objectId}.`);
   } catch (error) {
     if (error.stderr) {
@@ -952,7 +954,13 @@ async function clearSceneSyncObjectBehaviorGraph() {
   loomletOutput.appendLine('');
 
   try {
-    await runCommand(inv.command, inv.args);
+    const result = await runCommand(inv.command, inv.args);
+    if (result.stdout) {
+      loomletOutput.appendLine(result.stdout.trimEnd());
+    }
+    if (result.stderr) {
+      loomletOutput.appendLine(result.stderr.trimEnd());
+    }
     vscode.window.showInformationMessage(`Cleared Object Behavior Graph for ${objectId}.`);
   } catch (error) {
     if (error.stderr) {
@@ -997,7 +1005,13 @@ async function setSceneSyncSceneBehaviorGraph() {
   loomletOutput.appendLine('');
 
   try {
-    await runCommand(inv.command, inv.args);
+    const result = await runCommand(inv.command, inv.args);
+    if (result.stdout) {
+      loomletOutput.appendLine(result.stdout.trimEnd());
+    }
+    if (result.stderr) {
+      loomletOutput.appendLine(result.stderr.trimEnd());
+    }
     vscode.window.showInformationMessage('Set Scene Behavior Graph.');
   } catch (error) {
     if (error.stderr) {
@@ -1029,7 +1043,13 @@ async function clearSceneSyncSceneBehaviorGraph() {
   loomletOutput.appendLine('');
 
   try {
-    await runCommand(inv.command, inv.args);
+    const result = await runCommand(inv.command, inv.args);
+    if (result.stdout) {
+      loomletOutput.appendLine(result.stdout.trimEnd());
+    }
+    if (result.stderr) {
+      loomletOutput.appendLine(result.stderr.trimEnd());
+    }
     vscode.window.showInformationMessage('Cleared Scene Behavior Graph.');
   } catch (error) {
     if (error.stderr) {
