@@ -176,7 +176,7 @@ export function loomGraphToSceneSyncGraph(loomGraph, options = {}) {
         if (toNodeId === nodeId) {
           const [fromNodeId] = edge.from.split('.');
           const fromNode = loomGraph.nodes.find(n => n.id === fromNodeId);
-          if (fromNode && SUPPORTED_NODES.has(fromNode.type)) {
+          if (fromNode) {
             findDependencies(fromNodeId, visited);
           }
         }

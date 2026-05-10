@@ -190,7 +190,9 @@ const elements = {
   compileSceneSyncPayloadBtn: document.getElementById('compileSceneSyncPayloadBtn'),
   applySceneSyncBehaviorBtn: document.getElementById('applySceneSyncBehaviorBtn'),
   clearSceneSyncBehaviorBtn: document.getElementById('clearSceneSyncBehaviorBtn'),
-  sceneSyncPayloadPreview: document.getElementById('sceneSyncPayloadPreview')
+  sceneSyncPayloadPreview: document.getElementById('sceneSyncPayloadPreview'),
+  loadSceneSyncJumpPresetBtn: document.getElementById('loadSceneSyncJumpPresetBtn'),
+  loadSceneSyncCirclePresetBtn: document.getElementById('loadSceneSyncCirclePresetBtn')
 };
 
 function setPanelsVisible(visible) {
@@ -1861,6 +1863,32 @@ async function resetSample() {
   clearEditorHistory();
 }
 
+function loadSceneSyncPreset(name, source) {
+  const currentText = getDslText();
+
+  if (currentText.trim()) {
+    const ok = window.confirm(
+      `Loading "${name}" will replace the DSL editor content. Continue?`
+    );
+
+    if (!ok) {
+      appendOutput({
+        level: 'info',
+        message: `Canceled loading Scene Sync preset: ${name}.`
+      });
+      return;
+    }
+  }
+
+  setDslText(source);
+  hasUnsyncedDslText = true;
+
+  appendOutput({
+    level: 'info',
+    message: `Loaded Scene Sync preset: ${name}. Apply DSL to preview it, then use Scene Sync Apply Behavior.`
+  });
+}
+
 function renderNodeListItem(node) {
   const isSelected = selectedNodeId === node.id;
   const selectedClass = isSelected ? ' selected' : '';
@@ -2491,6 +2519,14 @@ function setupEventListeners() {
   elements.compileSceneSyncPayloadBtn?.addEventListener('click', handleCompileSceneSyncPayload);
   elements.applySceneSyncBehaviorBtn?.addEventListener('click', handleApplySceneSyncBehavior);
   elements.clearSceneSyncBehaviorBtn?.addEventListener('click', handleClearSceneSyncBehavior);
+
+  elements.loadSceneSyncJumpPresetBtn?.addEventListener('click', () => {
+    loadSceneSyncPreset('Jump Preview', SCENE_SYNC_JUMP_PRESET);
+  });
+
+  elements.loadSceneSyncCirclePresetBtn?.addEventListener('click', () => {
+    loadSceneSyncPreset('Circle Preview', SCENE_SYNC_CIRCLE_PRESET);
+  });
 
   elements.nodePaletteSearch?.addEventListener('input', renderNodePalette);
   elements.nodePaletteCategory?.addEventListener('change', renderNodePalette);

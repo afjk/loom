@@ -352,3 +352,105 @@ scene.offsetPosition("sample-cube", y: dy)
   assert.ok(offsetNode);
   assert.equal(offsetNode.params?.target, 'sample-cube');
 });
+
+test('render point with scene.offsetPosition compiles without preview nodes', () => {
+  const source = `
+import time
+import math
+import scene
+
+t = time.serverClock()
+dy = math.sine(t, freq: 0.8, amplitude: 0.5)
+
+scene.offsetPosition(y: dy)
+
+previewY = math.add(200, math.multiply(dy, -120))
+render point(x: 300, y: previewY, radius: 8, color: "#ff70a6", trail: 0.08)
+`;
+
+  const result = compileLoomToSceneSyncGraph(source);
+
+  const nodeTypes = result.graph.nodes.map((node) => node.type);
+
+  assert.ok(nodeTypes.includes('sceneOffsetPosition'));
+  assert.ok(nodeTypes.includes('serverClock'));
+  assert.ok(nodeTypes.includes('sine'));
+
+  // Verify preview-only nodes are NOT included
+  assert.equal(nodeTypes.includes('render'), false);
+  assert.equal(nodeTypes.includes('point'), false);
+  // Preview calculation nodes should not be included
+  assert.equal(result.graph.nodes.some((n) => n.id === 'previewY'), false);
+});
+
+test('circle preview DSL includes only Scene Sync dependencies', () => {
+  const source = `
+import time
+import math
+import scene
+
+t = time.serverClock()
+
+dx = math.cosine(t, freq: 0.2, amplitude: 1.5)
+dz = math.sine(t, freq: 0.2, amplitude: 1.5)
+
+scene.offsetPosition(x: dx, z: dz)
+
+previewX = math.add(300, math.multiply(dx, 80))
+previewY = math.add(200, math.multiply(dz, 80))
+
+render point(x: previewX, y: previewY, radius: 8, color: "#80ed99", trail: 0.08)
+`;
+
+  const result = compileLoomToSceneSyncGraph(source);
+
+  const offsetNode = result.graph.nodes.find((node) => node.type === 'sceneOffsetPosition');
+  assert.ok(offsetNode);
+
+  const edgeTargets = result.graph.edges.map((edge) => edge.to);
+  assert.ok(edgeTargets.some((to) => to.endsWith('.x')));
+  assert.ok(edgeTargets.some((to) => to.endsWith('.z')));
+
+  // Verify preview nodes are NOT included
+  assert.equal(result.graph.nodes.some((n) => n.id === 'previewX'), false);
+  assert.equal(result.graph.nodes.some((n) => n.id === 'previewY'), false);
+
+  // Verify only necessary computation nodes are included
+  const nodeTypes = result.graph.nodes.map((n) => n.type);
+  assert.ok(nodeTypes.includes('cosine'));
+  assert.ok(nodeTypes.includes('sine'));
+  assert.ok(nodeTypes.includes('serverClock'));
+  assert.ok(nodeTypes.includes('sceneOffsetPosition'));
+
+  // Preview-only add and multiply nodes should not be included
+  const nodeCount = result.graph.nodes.length;
+  assert.equal(nodeCount, 4); // t, dx, dz, offset
+});
+
+test('scene sink depending on unsupported node throws error', () => {
+  const loomGraph = {
+    nodes: [
+      {
+        id: 'source',
+        type: 'unsupportedNode',
+        params: {}
+      },
+      {
+        id: 'offset',
+        type: 'scene.offsetPosition',
+        params: {}
+      }
+    ],
+    edges: [
+      {
+        from: 'source.out',
+        to: 'offset.y'
+      }
+    ]
+  };
+
+  assert.throws(
+    () => loomGraphToSceneSyncGraph(loomGraph, { scope: { object: 'sample-cube' } }),
+    /Unsupported Scene Sync graph node: unsupportedNode/
+  );
+});
