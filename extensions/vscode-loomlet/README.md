@@ -24,6 +24,20 @@ The extension depends on the [`@afjk/loomlet`](https://www.npmjs.com/package/@af
 
 Open this folder in VS Code and press F5 to launch an Extension Development Host.
 
+## Publishing the VS Code extension
+
+The VS Code extension can be published through GitHub Actions.
+
+1. Ensure `extensions/vscode-loomlet/package.json` has a new version.
+2. Ensure the repository secret `VSCE_PAT` is configured.
+3. Run the `Publish VS Code Extension` workflow manually from GitHub Actions.
+
+The workflow:
+- installs extension dependencies
+- runs extension tests
+- packages the VSIX
+- publishes to Visual Studio Marketplace using `VSCE_PAT`
+
 ## Commands
 
 ### Loomlet: Run Current File
