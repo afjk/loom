@@ -234,10 +234,6 @@ Commands:
   behavior compile <file>  Compile Loomlet DSL to a Scene Sync Behavior Graph payload
   behavior set <file>      Set a Scene Sync Behavior Graph from Loomlet DSL
   behavior clear           Clear a Scene Sync Behavior Graph
-  graph-compile <file>     Compile Loomlet DSL to Scene Sync behavior graph
-  graph-run <file>         Compile and set a Scene Sync graph from Loomlet DSL
-  graph-set <obj> <g>      Set a Loomlet graph behavior on a Scene Sync object
-  graph-clear <obj>        Clear Loomlet graph behavior from a Scene Sync object
   dev <file>               Watch Loomlet DSL and live-send Scene Sync graph updates
   demo list                List built-in Scene Sync demo samples
   demo setup <name>        Check whether required demo objects exist
@@ -249,14 +245,14 @@ Commands:
 
 Options:
   --save               Save redeemed session locally
-  --dry-run            Print payload without sending (default for run, graph-set, graph-clear)
+  --dry-run            Print payload without sending (default for behavior)
   --send               Broadcast payload to Scene Sync
-  --object <id>        Compile/run as an object-level graph (for graph-compile and graph-run)
-  --scene              Compile/run as a scene-level graph (for graph-compile and graph-run)
+  --object <id>        Use object-level graph scope
+  --scene              Use scene-level graph scope
   --room <room>        Scene Sync room code
   --session <id>       Scene Sync session ID
   --endpoint <url>     Scene Sync command endpoint. Default: ${DEFAULT_SCENESYNC_ENDPOINT}
-  --json               Print raw JSON response
+  --json               Output compact JSON (behavior compile only)
 
 Scene Command:
   A one-shot operation that immediately changes scene state, such as scene-delta.
@@ -276,23 +272,9 @@ Examples:
   loomlet scenesync behavior compile examples/lissajous.loom --scene
   loomlet scenesync behavior set examples/lissajous.loom --scene
   loomlet scenesync behavior clear --scene --send
-  loomlet scenesync graph-compile examples/lissajous.loom
-  loomlet scenesync graph-compile examples/lissajous.loom --object sample-cube
-  loomlet scenesync graph-compile examples/lissajous.loom --scene
-  loomlet scenesync graph-run examples/lissajous.loom --object sample-cube
-  loomlet scenesync graph-run examples/lissajous.loom --object sample-cube --send
-  loomlet scenesync graph-set sample-cube examples/scene-graphs/lissajous.json
-  loomlet scenesync graph-set sample-cube examples/scene-graphs/lissajous.json --send
-  loomlet scenesync graph-clear sample-cube --send
   loomlet scenesync demo list
   loomlet scenesync demo setup lissajous
   loomlet scenesync demo run lissajous
-
-Graph Commands:
-  By default graph-set, graph-clear, and graph-run are dry-run. Pass --send to broadcast.
-  graph-compile and graph-run do not require room/session in dry-run mode.
-  Use --object for object scope or --scene for scene scope (mutually exclusive).
-  If neither is specified, scope is inferred from DSL.
 
 Environment Variables:
   LOOMLET_SCENESYNC_ROOM              Default room code
@@ -908,16 +890,7 @@ async function handleSceneSyncBehaviorCompile(args) {
     }
 
     const payload = createSceneGraphSetPayload(result.scope, result.graph);
-
-    if (jsonOutput) {
-      print(stringifyJson({
-        ok: true,
-        scope: result.scope,
-        payload
-      }));
-    } else {
-      print(stringifyJson(payload, true));
-    }
+    print(stringifyJson(payload, !jsonOutput));
     return 0;
   } catch (error) {
     printError(error.message || String(error));
@@ -939,7 +912,7 @@ async function handleSceneSyncBehaviorSet(args) {
     const payload = createSceneGraphSetPayload(result.scope, result.graph);
 
     if (dryRun) {
-      print(stringifyJson(payload));
+      print(stringifyJson(payload, !jsonOutput));
       return 0;
     }
 
@@ -996,7 +969,7 @@ async function handleSceneSyncBehaviorClear(args) {
     const payload = createSceneGraphClearPayload(scope);
 
     if (dryRun) {
-      print(stringifyJson(payload));
+      print(stringifyJson(payload, !jsonOutput));
       return 0;
     }
 
