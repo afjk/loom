@@ -264,7 +264,7 @@ CLI-safe library nodes:
 - `text.upper`, `text.lower`, `text.trim`, `text.replace`
 - `json.parse`, `json.stringify`
 - `console.log`, `console.warn`, `console.error`
-- `scene.setPosition`, `scene.setRotation`, `scene.setScale`
+- `scene.setPosition`, `scene.offsetPosition`, `scene.setRotation`, `scene.setScale`
 
 ### REPL
 

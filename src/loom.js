@@ -1449,6 +1449,33 @@ export const NODE_TYPES = {
     }
   },
 
+  'scene.offsetPosition': {
+    category: 'sink',
+    inputs: [
+      { name: 'objectId', type: 'string', default: '', kind: 'behavior' },
+      { name: 'x', type: 'number', default: 0, kind: 'behavior' },
+      { name: 'y', type: 'number', default: 0, kind: 'behavior' },
+      { name: 'z', type: 'number', default: 0, kind: 'behavior' }
+    ],
+    outputs: [],
+    params: [
+      { name: 'objectId', type: 'string', default: '' },
+      { name: 'x', type: 'number', default: 0 },
+      { name: 'y', type: 'number', default: 0 },
+      { name: 'z', type: 'number', default: 0 }
+    ],
+    evaluate: (inputs, params, ctx) => {
+      ctx.engine?._recordEffect({
+        type: 'scene.offsetPosition',
+        objectId: inputs.objectId,
+        offset: [inputs.x, inputs.y, inputs.z],
+        target: 'scenesync',
+        nodeId: ctx.currentNodeId
+      });
+      return {};
+    }
+  },
+
   // DOM シンクノード
   setText: {
     category: 'sink',

@@ -632,6 +632,31 @@ test('scenesync behavior compile with --scene --json outputs payload JSON', () =
   assert(!Object.hasOwn(payload, 'payload'));
 });
 
+test('scenesync behavior compile with offsetPosition example outputs scene-graph-set payload', () => {
+  const result = runCli(['scenesync', 'behavior', 'compile', 'examples/scene-offset-position.loom', '--object', 'sample-cube', '--json']);
+
+  assert.equal(result.status, 0, result.stderr);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.type, 'scene-graph-set');
+  assert.deepEqual(payload.scope, { object: 'sample-cube' });
+  assert.ok(Array.isArray(payload.graph.nodes));
+  assert.ok(payload.graph.nodes.some((n) => n.type === 'sceneOffsetPosition'));
+  assert.ok(payload.graph.nodes.some((n) => n.type === 'sine'));
+  assert.ok(payload.graph.nodes.some((n) => n.type === 'serverClock'));
+});
+
+test('scenesync behavior compile with circle offsetPosition example outputs multiple nodes', () => {
+  const result = runCli(['scenesync', 'behavior', 'compile', 'examples/scene-offset-circle.loom', '--object', 'sample-cube', '--json']);
+
+  assert.equal(result.status, 0, result.stderr);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.type, 'scene-graph-set');
+  assert.deepEqual(payload.scope, { object: 'sample-cube' });
+  assert.ok(payload.graph.nodes.some((n) => n.type === 'sceneOffsetPosition'));
+  assert.ok(payload.graph.nodes.some((n) => n.type === 'cosine'));
+  assert.ok(payload.graph.nodes.some((n) => n.type === 'sine'));
+});
+
 test('scenesync behavior set outputs payload JSON by default', () => {
   const result = runCli(['scenesync', 'behavior', 'set', 'examples/lissajous.loom', '--object', 'sample-cube']);
 

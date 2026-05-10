@@ -328,6 +328,42 @@ export const LIBRARY_METADATA = {
         examples: [
           'scene.setScale("sample-cube", x: 2, y: 2, z: 2)'
         ]
+      },
+      offsetPosition: {
+        name: 'offsetPosition',
+        signature: 'scene.offsetPosition(objectId: "...", x: 0, y: 0, z: 0)',
+        description: 'Offsets the position of a scene object relative to its starting position.',
+        args: [
+          {
+            name: 'objectId',
+            type: 'string',
+            positional: true,
+            description: 'ID of the object.'
+          },
+          {
+            name: 'x',
+            type: 'number',
+            positional: false,
+            description: 'X offset.'
+          },
+          {
+            name: 'y',
+            type: 'number',
+            positional: false,
+            description: 'Y offset.'
+          },
+          {
+            name: 'z',
+            type: 'number',
+            positional: false,
+            description: 'Z offset.'
+          }
+        ],
+        returns: 'void',
+        targets: LIBRARY_COMPATIBILITY.scene.targets,
+        examples: [
+          'scene.offsetPosition("sample-cube", x: 1, y: 0.5, z: 0)'
+        ]
       }
     }
   },

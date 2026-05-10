@@ -552,6 +552,34 @@ scene.setScale("sample-cube", x: 2, y: 2, z: 2)
 
 オブジェクト ID と均一なスケール (x, y, z) を指定します。
 
+### scene.offsetPosition — オブジェクトの位置をオフセット
+
+```loom
+import scene
+
+scene.offsetPosition("sample-cube", x: 1, y: 0.5, z: 0)
+```
+
+オブジェクト ID と相対位置オフセット (x, y, z) を指定します。Behavior Graph が始まったときのオブジェクト位置を基準とした相対移動を指定します。
+
+Object-scoped Behavior Graph では、オブジェクト ID を省略できます：
+
+```loom
+import time
+import math
+import scene
+
+t = time.serverClock()
+dy = math.sine(t, freq: 0.8, amplitude: 0.5)
+
+scene.offsetPosition(y: dy)
+```
+
+`scene.setPosition` との違い：
+
+- `scene.setPosition`: ワールド座標の絶対位置を設定します。
+- `scene.offsetPosition`: Behavior Graph 開始時のオブジェクト位置を基準とした相対オフセットです。
+
 ### まとめた例
 
 ```loom

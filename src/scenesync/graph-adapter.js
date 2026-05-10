@@ -7,6 +7,7 @@ const SUPPORTED_NODES = new Set([
   'math.add',
   'math.multiply',
   'scene.setPosition',
+  'scene.offsetPosition',
   'scene.setRotation',
   'scene.setScale',
   'scene.setColor',
@@ -20,6 +21,7 @@ const NODE_TYPE_MAPPING = {
   'math.add': 'add',
   'math.multiply': 'multiply',
   'scene.setPosition': 'sceneSetPosition',
+  'scene.offsetPosition': 'sceneOffsetPosition',
   'scene.setRotation': 'sceneSetRotation',
   'scene.setScale': 'sceneSetScale',
   'scene.setColor': 'sceneSetColor',
@@ -39,6 +41,8 @@ const OUTPUT_PORT_MAPPING = {
   'multiply': 'out',
   'scene.setPosition': undefined,
   'sceneSetPosition': undefined,
+  'scene.offsetPosition': undefined,
+  'sceneOffsetPosition': undefined,
   'scene.setRotation': undefined,
   'sceneSetRotation': undefined,
   'scene.setScale': undefined,
@@ -57,6 +61,7 @@ function generateStableNodeBase(nodeType) {
   if (mapped === 'add') return 'add';
   if (mapped === 'multiply') return 'multiply';
   if (mapped === 'sceneSetPosition') return 'pos';
+  if (mapped === 'sceneOffsetPosition') return 'offset';
   if (mapped === 'sceneSetRotation') return 'rot';
   if (mapped === 'sceneSetScale') return 'scale';
   if (mapped === 'sceneSetColor') return 'color';
@@ -103,6 +108,14 @@ function normalizeScope(options = {}) {
 }
 
 function pickParams(nodeType, params = {}) {
+  if (nodeType === 'scene.offsetPosition') {
+    return {
+      ...(params.objectId ? { target: params.objectId } : {}),
+      ...(params.x !== undefined ? { x: params.x } : {}),
+      ...(params.y !== undefined ? { y: params.y } : {}),
+      ...(params.z !== undefined ? { z: params.z } : {})
+    };
+  }
   if (nodeType === 'scene.setPosition' || nodeType === 'scene.setScale') {
     return { ...(params.x !== undefined ? { x: params.x } : {}), ...(params.y !== undefined ? { y: params.y } : {}), ...(params.z !== undefined ? { z: params.z } : {}) };
   }
@@ -164,7 +177,7 @@ export function loomGraphToSceneSyncGraph(loomGraph, options = {}) {
   let scope = normalizeScope(options);
   if (!scope) {
     for (const node of loomGraph.nodes) {
-      if (node.type.startsWith('scene.set') && node.params?.objectId) {
+      if ((node.type.startsWith('scene.set') || node.type === 'scene.offsetPosition') && node.params?.objectId) {
         scope = { object: node.params.objectId };
         break;
       }

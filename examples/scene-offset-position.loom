@@ -1,0 +1,9 @@
+import time
+import math
+import scene
+
+t = time.serverClock()
+
+dy = math.sine(t, freq: 0.8, amplitude: 0.5)
+
+scene.offsetPosition(y: dy)
