@@ -2,6 +2,31 @@ let parseDSLToAST, compileToGraph, stripEditorMetadataFromDsl;
 let modulesLoaded = false;
 let loadPromise = null;
 
+// Prefer the published package for extension/runtime use, but fall back to
+// repository-local sources for root tests and development checkouts before
+// @afjk/loomlet has been published/installed.
+async function importLoomletIndex() {
+  try {
+    return await import('@afjk/loomlet');
+  } catch (error) {
+    if (error?.code !== 'ERR_MODULE_NOT_FOUND') {
+      throw error;
+    }
+    return import('../../../src/index.js');
+  }
+}
+
+async function importLoomletMetadata() {
+  try {
+    return await import('@afjk/loomlet/metadata');
+  } catch (error) {
+    if (error?.code !== 'ERR_MODULE_NOT_FOUND') {
+      throw error;
+    }
+    return import('../../../src/editor-metadata.js');
+  }
+}
+
 const HOST_INPUT_ALIASES = [
   { pattern: /\binput\.mouseX\s*\(\s*\)/g, token: '__loomlet_host:mouseX' },
   { pattern: /\binput\.mouseY\s*\(\s*\)/g, token: '__loomlet_host:mouseY' },
@@ -57,11 +82,11 @@ async function ensureModulesLoaded() {
 
   loadPromise = (async () => {
     try {
-      const indexModule = await import('@afjk/loomlet');
+      const indexModule = await importLoomletIndex();
       parseDSLToAST = indexModule.parseDSLToAST;
       compileToGraph = indexModule.compileToGraph;
 
-      const metadataModule = await import('@afjk/loomlet/metadata');
+      const metadataModule = await importLoomletMetadata();
       stripEditorMetadataFromDsl = metadataModule.stripEditorMetadataFromDsl;
 
       modulesLoaded = true;

@@ -2,13 +2,27 @@ let parseDSLToAST, compileToGraph, graphToEditorModel, preserveEditorModelLayout
 let modulesLoaded = false;
 let loadPromise = null;
 
+// Prefer the published package for extension/runtime use, but fall back to
+// repository-local sources for root tests and development checkouts before
+// @afjk/loomlet has been published/installed.
+async function importLoomletIndex() {
+  try {
+    return await import('@afjk/loomlet');
+  } catch (error) {
+    if (error?.code !== 'ERR_MODULE_NOT_FOUND') {
+      throw error;
+    }
+    return import('../../../src/index.js');
+  }
+}
+
 async function ensurePreviewModulesLoaded() {
   if (modulesLoaded) return;
   if (loadPromise) return loadPromise;
 
   loadPromise = (async () => {
     try {
-      const indexModule = await import('@afjk/loomlet');
+      const indexModule = await importLoomletIndex();
       parseDSLToAST = indexModule.parseDSLToAST;
       compileToGraph = indexModule.compileToGraph;
       graphToEditorModel = indexModule.graphToEditorModel;
