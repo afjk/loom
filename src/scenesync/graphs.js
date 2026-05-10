@@ -36,6 +36,32 @@ function validateSceneGraph(graph) {
   }
 }
 
+export function normalizeSceneGraphScope(scopeOrObjectId) {
+  if (typeof scopeOrObjectId === 'string') {
+    if (scopeOrObjectId === 'scene') {
+      return 'scene';
+    }
+    if (scopeOrObjectId.length === 0) {
+      throw new Error('scope must be "scene" or { object: objectId }');
+    }
+    return { object: scopeOrObjectId };
+  }
+
+  if (typeof scopeOrObjectId === 'object' && scopeOrObjectId !== null) {
+    if (scopeOrObjectId.scene === true) {
+      return 'scene';
+    }
+    if (scopeOrObjectId.object) {
+      if (typeof scopeOrObjectId.object !== 'string' || scopeOrObjectId.object.length === 0) {
+        throw new Error('scope must be "scene" or { object: objectId }');
+      }
+      return { object: scopeOrObjectId.object };
+    }
+  }
+
+  throw new Error('scope must be "scene" or { object: objectId }');
+}
+
 function validateScope(scope) {
   if (!scope || typeof scope !== 'object') {
     throw new Error('scope must be an object');
@@ -59,16 +85,15 @@ export function createSceneGraphSetPayload(scopeOrObjectId, graphOrUndefined) {
     if (scopeOrObjectId.length === 0) {
       throw new Error('objectId must be a non-empty string');
     }
-    scope = { object: scopeOrObjectId };
+    scope = normalizeSceneGraphScope(scopeOrObjectId);
     graph = graphOrUndefined;
   } else if (typeof scopeOrObjectId === 'object' && scopeOrObjectId !== null) {
-    scope = scopeOrObjectId;
+    scope = normalizeSceneGraphScope(scopeOrObjectId);
     graph = graphOrUndefined;
   } else {
     throw new Error('objectId must be a non-empty string');
   }
 
-  validateScope(scope);
   validateSceneGraph(graph);
 
   return {
@@ -78,14 +103,12 @@ export function createSceneGraphSetPayload(scopeOrObjectId, graphOrUndefined) {
   };
 }
 
-export function createSceneGraphClearPayload(objectId) {
-  if (typeof objectId !== 'string' || objectId.length === 0) {
-    throw new Error('objectId must be a non-empty string');
-  }
+export function createSceneGraphClearPayload(scopeOrObjectId) {
+  const scope = normalizeSceneGraphScope(scopeOrObjectId);
 
   return {
     type: 'scene-graph-clear',
-    scope: { object: objectId }
+    scope
   };
 }
 

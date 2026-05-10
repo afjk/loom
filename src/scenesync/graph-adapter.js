@@ -5,6 +5,7 @@ const SUPPORTED_NODES = new Set([
   'math.sine',
   'math.cosine',
   'math.add',
+  'math.multiply',
   'scene.setPosition',
   'scene.setRotation',
   'scene.setScale',
@@ -17,6 +18,7 @@ const NODE_TYPE_MAPPING = {
   'math.sine': 'sine',
   'math.cosine': 'cosine',
   'math.add': 'add',
+  'math.multiply': 'multiply',
   'scene.setPosition': 'sceneSetPosition',
   'scene.setRotation': 'sceneSetRotation',
   'scene.setScale': 'sceneSetScale',
@@ -33,6 +35,8 @@ const OUTPUT_PORT_MAPPING = {
   'cosine': 'out',
   'math.add': 'out',
   'add': 'out',
+  'math.multiply': 'out',
+  'multiply': 'out',
   'scene.setPosition': undefined,
   'sceneSetPosition': undefined,
   'scene.setRotation': undefined,
@@ -51,6 +55,7 @@ function generateStableNodeBase(nodeType) {
   if (mapped === 'sine') return 'sine';
   if (mapped === 'cosine') return 'cosine';
   if (mapped === 'add') return 'add';
+  if (mapped === 'multiply') return 'multiply';
   if (mapped === 'sceneSetPosition') return 'pos';
   if (mapped === 'sceneSetRotation') return 'rot';
   if (mapped === 'sceneSetScale') return 'scale';
@@ -72,9 +77,29 @@ function makeUniqueId(base, usedIds) {
 }
 
 function normalizeScope(options = {}) {
-  if (options.scope) return options.scope;
-  if (options.objectId) return { object: options.objectId };
-  return null;
+  let scope = null;
+  if (options.scope) {
+    scope = options.scope;
+  } else if (options.objectId) {
+    scope = { object: options.objectId };
+  } else {
+    return null;
+  }
+
+  if (typeof scope === 'string' && scope === 'scene') {
+    return 'scene';
+  }
+  if (typeof scope === 'object' && scope !== null && scope.scene === true) {
+    return 'scene';
+  }
+  if (typeof scope === 'object' && scope !== null && scope.object) {
+    return { object: scope.object };
+  }
+  if (typeof scope === 'string' && scope.length > 0) {
+    return { object: scope };
+  }
+
+  return scope;
 }
 
 function pickParams(nodeType, params = {}) {

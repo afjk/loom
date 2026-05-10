@@ -45,8 +45,7 @@
     "node": ">=20"
   },
   "bin": {
-    "loomlet": "./bin/loomlet.mjs",
-    "loom": "./bin/loom.mjs"
+    "loomlet": "./bin/loomlet.mjs"
   },
   "scripts": {
     "test": "npm run test:unit",

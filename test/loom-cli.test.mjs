@@ -609,7 +609,7 @@ test('scenesync graph-compile --scene creates scene scope', () => {
 
   assert.equal(result.status, 0, result.stderr);
   const output = JSON.parse(result.stdout);
-  assert.deepEqual(output.scope, { scene: true });
+  assert.equal(output.scope, 'scene');
 });
 
 test('scenesync graph-run --scene creates scene scope', () => {
@@ -617,7 +617,7 @@ test('scenesync graph-run --scene creates scene scope', () => {
 
   assert.equal(result.status, 0, result.stderr);
   const output = JSON.parse(result.stdout);
-  assert.deepEqual(output.payload.scope, { scene: true });
+  assert.equal(output.payload.scope, 'scene');
 });
 
 test('scenesync graph-compile --object and --scene exits 1', () => {
@@ -691,4 +691,97 @@ test('scenesync dev --json outputs JSON', () => {
   const events = jsonLines.map(line => JSON.parse(line));
   assert.ok(events.some(e => e.event === 'start'));
   assert.ok(events.some(e => e.event === 'compiled'));
+});
+
+test('scenesync behavior compile with --object outputs scene-graph-set payload', () => {
+  const result = runCli(['scenesync', 'behavior', 'compile', 'examples/lissajous.loom', '--object', 'sample-cube']);
+
+  assert.equal(result.status, 0, result.stderr);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.type, 'scene-graph-set');
+  assert.deepEqual(payload.scope, { object: 'sample-cube' });
+  assert.ok(Array.isArray(payload.graph.nodes));
+  assert.ok(Array.isArray(payload.graph.edges));
+});
+
+test('scenesync behavior compile with --scene outputs scene-graph-set payload with scene scope', () => {
+  const result = runCli(['scenesync', 'behavior', 'compile', 'examples/lissajous.loom', '--scene']);
+
+  assert.equal(result.status, 0, result.stderr);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.type, 'scene-graph-set');
+  assert.equal(payload.scope, 'scene');
+  assert.ok(Array.isArray(payload.graph.nodes));
+  assert.ok(Array.isArray(payload.graph.edges));
+});
+
+test('scenesync behavior set outputs JSON payload by default', () => {
+  const result = runCli(['scenesync', 'behavior', 'set', 'examples/lissajous.loom', '--object', 'sample-cube']);
+
+  assert.equal(result.status, 0, result.stderr);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.type, 'scene-graph-set');
+  assert.deepEqual(payload.scope, { object: 'sample-cube' });
+});
+
+test('scenesync behavior set with --scene outputs scene scope', () => {
+  const result = runCli(['scenesync', 'behavior', 'set', 'examples/lissajous.loom', '--scene']);
+
+  assert.equal(result.status, 0, result.stderr);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.type, 'scene-graph-set');
+  assert.equal(payload.scope, 'scene');
+});
+
+test('scenesync behavior clear with --object outputs scene-graph-clear payload', () => {
+  const result = runCli(['scenesync', 'behavior', 'clear', '--object', 'sample-cube']);
+
+  assert.equal(result.status, 0, result.stderr);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.type, 'scene-graph-clear');
+  assert.deepEqual(payload.scope, { object: 'sample-cube' });
+});
+
+test('scenesync behavior clear with --scene outputs scene-graph-clear payload with scene scope', () => {
+  const result = runCli(['scenesync', 'behavior', 'clear', '--scene']);
+
+  assert.equal(result.status, 0, result.stderr);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.type, 'scene-graph-clear');
+  assert.equal(payload.scope, 'scene');
+});
+
+test('scenesync behavior clear without scope exits 1', () => {
+  const result = runCli(['scenesync', 'behavior', 'clear']);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /SCOPE_REQUIRED/);
+});
+
+test('scenesync behavior set with --object and --scene exits 1', () => {
+  const result = runCli(['scenesync', 'behavior', 'set', 'examples/lissajous.loom', '--object', 'cube', '--scene']);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /SCOPE_CONFLICT/);
+});
+
+test('scenesync behavior clear with --object and --scene exits 1', () => {
+  const result = runCli(['scenesync', 'behavior', 'clear', '--object', 'cube', '--scene']);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /SCOPE_CONFLICT/);
+});
+
+test('scenesync behavior compile without file exits 1', () => {
+  const result = runCli(['scenesync', 'behavior', 'compile', '--object', 'cube']);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /file path/);
+});
+
+test('scenesync behavior set without file exits 1', () => {
+  const result = runCli(['scenesync', 'behavior', 'set', '--object', 'cube']);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /file path/);
 });
