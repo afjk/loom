@@ -26,24 +26,28 @@ npx -p @afjk/loomlet loomlet compile examples/cli-basic.loom
 
 ## Browser examples
 
-- [01-basic.html](01-basic.html) - basic browser example
-- [02-moving-box.html](02-moving-box.html)
-- [03-pointer.html](03-pointer.html)
-- [04-keydown.html](04-keydown.html)
-- [05-sink-box.html](05-sink-box.html)
-- [06-three-cube.html](06-three-cube.html)
-- [07-scenesync-mock.html](07-scenesync-mock.html)
-- [08-lissajous.html](08-lissajous.html)
-- [09-lerp-tween.html](09-lerp-tween.html)
-- [10-multi-phase.html](10-multi-phase.html)
-- [11-color-cycle.html](11-color-cycle.html)
-- [12-circular-motion.html](12-circular-motion.html)
-- [13-clamp-map.html](13-clamp-map.html)
-- [14-dom-transform-sink.html](14-dom-transform-sink.html)
-- [15-threshold-class-sink.html](15-threshold-class-sink.html)
-- [16-smooth-pointer.html](16-smooth-pointer.html)
-- [17-jitter-free-trail.html](17-jitter-free-trail.html)
-- [18-charge-gauge.html](18-charge-gauge.html)
+Browser demos are intended to run from GitHub Pages. If a demo link is unavailable, open the source file from this repository.
+
+| Demo | Source |
+|---|---|
+| [Open demo](https://afjk.github.io/loomlet/examples/01-basic.html) | [01-basic.html](01-basic.html) |
+| [Open demo](https://afjk.github.io/loomlet/examples/02-moving-box.html) | [02-moving-box.html](02-moving-box.html) |
+| [Open demo](https://afjk.github.io/loomlet/examples/03-pointer.html) | [03-pointer.html](03-pointer.html) |
+| [Open demo](https://afjk.github.io/loomlet/examples/04-keydown.html) | [04-keydown.html](04-keydown.html) |
+| [Open demo](https://afjk.github.io/loomlet/examples/05-sink-box.html) | [05-sink-box.html](05-sink-box.html) |
+| [Open demo](https://afjk.github.io/loomlet/examples/06-three-cube.html) | [06-three-cube.html](06-three-cube.html) |
+| [Open demo](https://afjk.github.io/loomlet/examples/07-scenesync-mock.html) | [07-scenesync-mock.html](07-scenesync-mock.html) |
+| [Open demo](https://afjk.github.io/loomlet/examples/08-lissajous.html) | [08-lissajous.html](08-lissajous.html) |
+| [Open demo](https://afjk.github.io/loomlet/examples/09-lerp-tween.html) | [09-lerp-tween.html](09-lerp-tween.html) |
+| [Open demo](https://afjk.github.io/loomlet/examples/10-multi-phase.html) | [10-multi-phase.html](10-multi-phase.html) |
+| [Open demo](https://afjk.github.io/loomlet/examples/11-color-cycle.html) | [11-color-cycle.html](11-color-cycle.html) |
+| [Open demo](https://afjk.github.io/loomlet/examples/12-circular-motion.html) | [12-circular-motion.html](12-circular-motion.html) |
+| [Open demo](https://afjk.github.io/loomlet/examples/13-clamp-map.html) | [13-clamp-map.html](13-clamp-map.html) |
+| [Open demo](https://afjk.github.io/loomlet/examples/14-dom-transform-sink.html) | [14-dom-transform-sink.html](14-dom-transform-sink.html) |
+| [Open demo](https://afjk.github.io/loomlet/examples/15-threshold-class-sink.html) | [15-threshold-class-sink.html](15-threshold-class-sink.html) |
+| [Open demo](https://afjk.github.io/loomlet/examples/16-smooth-pointer.html) | [16-smooth-pointer.html](16-smooth-pointer.html) |
+| [Open demo](https://afjk.github.io/loomlet/examples/17-jitter-free-trail.html) | [17-jitter-free-trail.html](17-jitter-free-trail.html) |
+| [Open demo](https://afjk.github.io/loomlet/examples/18-charge-gauge.html) | [18-charge-gauge.html](18-charge-gauge.html) |
 
 ## Scene Sync examples
 
