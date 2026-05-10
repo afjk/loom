@@ -151,7 +151,7 @@ test('scope option can use scene scope', () => {
   };
 
   const result = loomGraphToSceneSyncGraph(loomGraph, { scope: { scene: true } });
-  assert.deepEqual(result.scope, { scene: true });
+  assert.equal(result.scope, 'scene');
 });
 
 test('objectId option normalizes to scope', () => {
@@ -209,4 +209,59 @@ scene.setPosition("sample-cube", x: 1, y: 1, z: 1)
   assert.equal(posNodes.length, 2);
   assert.notEqual(posNodes[0].id, posNodes[1].id);
   assertEdgesReferToExistingNodes(result.graph);
+});
+
+test('math.multiply converts to multiply node', () => {
+  const source = `
+import time
+import math
+import scene
+
+t = time.serverClock()
+y = math.multiply(t, 2)
+
+scene.setPosition("sample-cube", x: 0, y: y, z: 0)
+`;
+
+  const result = compileLoomToSceneSyncGraph(source);
+
+  assert.ok(result.graph.nodes.some((n) => n.type === 'multiply'));
+  assert.ok(result.graph.nodes.some((n) => n.type === 'sceneSetPosition'));
+  assert.deepEqual(result.scope, { object: 'sample-cube' });
+});
+
+test('math.add still converts to add', () => {
+  const source = `
+import time
+import math
+import scene
+
+t = time.serverClock()
+y = math.add(t, 2)
+
+scene.setPosition("sample-cube", x: 0, y: y, z: 0)
+`;
+
+  const result = compileLoomToSceneSyncGraph(source);
+
+  assert.ok(result.graph.nodes.some((n) => n.type === 'add'));
+  assert.ok(result.graph.nodes.some((n) => n.type === 'sceneSetPosition'));
+});
+
+test('math.cosine still converts to cosine', () => {
+  const source = `
+import time
+import math
+import scene
+
+t = time.serverClock()
+y = math.cosine(t)
+
+scene.setPosition("sample-cube", x: 0, y: y, z: 0)
+`;
+
+  const result = compileLoomToSceneSyncGraph(source);
+
+  assert.ok(result.graph.nodes.some((n) => n.type === 'cosine'));
+  assert.ok(result.graph.nodes.some((n) => n.type === 'sceneSetPosition'));
 });

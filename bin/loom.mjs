@@ -231,10 +231,9 @@ Commands:
   status                   Alias for session
   logout                   Clear saved Scene Sync session
   run <file>               Convert Loomlet scene effects to Scene Sync broadcast payload
-  graph-compile <file>     Compile Loomlet DSL to Scene Sync behavior graph
-  graph-run <file>         Compile and set a Scene Sync graph from Loomlet DSL
-  graph-set <obj> <g>      Set a Loomlet graph behavior on a Scene Sync object
-  graph-clear <obj>        Clear Loomlet graph behavior from a Scene Sync object
+  behavior compile <file>  Compile Loomlet DSL to a Scene Sync Behavior Graph payload
+  behavior set <file>      Set a Scene Sync Behavior Graph from Loomlet DSL
+  behavior clear           Clear a Scene Sync Behavior Graph
   dev <file>               Watch Loomlet DSL and live-send Scene Sync graph updates
   demo list                List built-in Scene Sync demo samples
   demo setup <name>        Check whether required demo objects exist
@@ -246,35 +245,36 @@ Commands:
 
 Options:
   --save               Save redeemed session locally
-  --dry-run            Print payload without sending (default for run, graph-set, graph-clear)
+  --dry-run            Print payload without sending (default for behavior)
   --send               Broadcast payload to Scene Sync
-  --object <id>        Compile/run as an object-level graph (for graph-compile and graph-run)
-  --scene              Compile/run as a scene-level graph (for graph-compile and graph-run)
+  --object <id>        Use object-level graph scope
+  --scene              Use scene-level graph scope
   --room <room>        Scene Sync room code
   --session <id>       Scene Sync session ID
   --endpoint <url>     Scene Sync command endpoint. Default: ${DEFAULT_SCENESYNC_ENDPOINT}
-  --json               Print raw JSON response
+  --json               Output compact JSON
+
+Scene Command:
+  A one-shot operation that immediately changes scene state, such as scene-delta.
+
+Behavior Graph:
+  A persistent continuous behavior definition managed by scene-graph-set / scene-graph-clear.
+  Use Behavior Graphs for animation-like behavior. Do not broadcast per-frame scene-delta results.
 
 Examples:
   loomlet scenesync run examples/scene-effects.loom
   loomlet scenesync run examples/scene-effects.loom --send
-  loomlet scenesync graph-compile examples/lissajous.loom
-  loomlet scenesync graph-compile examples/lissajous.loom --object sample-cube
-  loomlet scenesync graph-compile examples/lissajous.loom --scene
-  loomlet scenesync graph-run examples/lissajous.loom --object sample-cube
-  loomlet scenesync graph-run examples/lissajous.loom --object sample-cube --send
-  loomlet scenesync graph-set sample-cube examples/scene-graphs/lissajous.json
-  loomlet scenesync graph-set sample-cube examples/scene-graphs/lissajous.json --send
-  loomlet scenesync graph-clear sample-cube --send
+  loomlet scenesync behavior compile examples/lissajous.loom --object sample-cube
+  loomlet scenesync behavior set examples/lissajous.loom --object sample-cube
+  loomlet scenesync behavior set examples/lissajous.loom --object sample-cube --send
+  loomlet scenesync behavior clear --object sample-cube
+  loomlet scenesync behavior clear --object sample-cube --send
+  loomlet scenesync behavior compile examples/lissajous.loom --scene
+  loomlet scenesync behavior set examples/lissajous.loom --scene
+  loomlet scenesync behavior clear --scene --send
   loomlet scenesync demo list
   loomlet scenesync demo setup lissajous
   loomlet scenesync demo run lissajous
-
-Graph Commands:
-  By default graph-set, graph-clear, and graph-run are dry-run. Pass --send to broadcast.
-  graph-compile and graph-run do not require room/session in dry-run mode.
-  Use --object for object scope or --scene for scene scope (mutually exclusive).
-  If neither is specified, scope is inferred from DSL.
 
 Environment Variables:
   LOOMLET_SCENESYNC_ROOM              Default room code
@@ -876,6 +876,388 @@ async function compileSceneSyncGraphFile(filePath, options = {}) {
 
 async function sendSceneSyncGraphPayload({ client, room, session, payload }) {
   return client.broadcast({ room, session, payload });
+}
+
+async function handleSceneSyncBehaviorCompile(args) {
+  const { file, scope, json: jsonOutput } = await parseSceneSyncBehaviorCompileArgs(args);
+
+  try {
+    const source = await readSourceFile(file);
+    const result = compileLoomToSceneSyncGraph(source, { scope });
+
+    if (!result.scope) {
+      throw new Error('SCOPE_REQUIRED - Pass --object <objectId>, --scene, or include an object id in scene.setPosition(...)');
+    }
+
+    const payload = createSceneGraphSetPayload(result.scope, result.graph);
+    print(stringifyJson(payload, !jsonOutput));
+    return 0;
+  } catch (error) {
+    printError(error.message || String(error));
+    return 1;
+  }
+}
+
+async function handleSceneSyncBehaviorSet(args) {
+  const { file, scope, room, session, endpoint, dryRun, send, json: jsonOutput } = await parseSceneSyncBehaviorSetArgs(args);
+
+  try {
+    const source = await readSourceFile(file);
+    const result = compileLoomToSceneSyncGraph(source, { scope });
+
+    if (!result.scope) {
+      throw new Error('SCOPE_REQUIRED - Pass --object <objectId>, --scene, or include an object id in scene.setPosition(...)');
+    }
+
+    const payload = createSceneGraphSetPayload(result.scope, result.graph);
+
+    if (dryRun) {
+      print(stringifyJson(payload, !jsonOutput));
+      return 0;
+    }
+
+    if (send) {
+      requireSceneSyncRoom(room);
+      requireSceneSyncSession(session);
+
+      const client = new SceneSyncClient({ endpoint });
+      const broadcastResult = await client.broadcast({ room, session, payload });
+
+      if (!broadcastResult.ok) {
+        printError(formatSceneSyncError(broadcastResult.error));
+        return 1;
+      }
+
+      if (jsonOutput) {
+        const output = {
+          ok: true,
+          room,
+          scope: result.scope,
+          nodeCount: result.graph.nodes.length,
+          edgeCount: result.graph.edges.length
+        };
+        if (typeof result.scope === 'object' && result.scope.object) {
+          output.objectId = result.scope.object;
+        }
+        print(stringifyJson(output));
+      } else {
+        const lines = [
+          'Sent Scene Sync graph.',
+          `Room: ${room}`
+        ];
+        if (typeof result.scope === 'object' && result.scope.object) {
+          lines.push(`Object: ${result.scope.object}`);
+        } else if (result.scope === 'scene') {
+          lines.push('Scope: scene');
+        }
+        lines.push(`Nodes: ${result.graph.nodes.length}`);
+        lines.push(`Edges: ${result.graph.edges.length}`);
+        print(lines.join('\n'));
+      }
+      return 0;
+    }
+  } catch (error) {
+    printError(error.message || String(error));
+    return 1;
+  }
+}
+
+async function handleSceneSyncBehaviorClear(args) {
+  const { scope, room, session, endpoint, dryRun, send, json: jsonOutput } = await parseSceneSyncBehaviorClearArgs(args);
+
+  try {
+    const payload = createSceneGraphClearPayload(scope);
+
+    if (dryRun) {
+      print(stringifyJson(payload, !jsonOutput));
+      return 0;
+    }
+
+    if (send) {
+      requireSceneSyncRoom(room);
+      requireSceneSyncSession(session);
+
+      const client = new SceneSyncClient({ endpoint });
+      const broadcastResult = await client.broadcast({ room, session, payload });
+
+      if (!broadcastResult.ok) {
+        printError(formatSceneSyncError(broadcastResult.error));
+        return 1;
+      }
+
+      if (jsonOutput) {
+        const output = {
+          ok: true,
+          room,
+          scope
+        };
+        if (typeof scope === 'object' && scope.object) {
+          output.objectId = scope.object;
+        }
+        print(stringifyJson(output));
+      } else {
+        const lines = [
+          'Cleared Scene Sync graph.',
+          `Room: ${room}`
+        ];
+        if (typeof scope === 'object' && scope.object) {
+          lines.push(`Object: ${scope.object}`);
+        } else if (scope === 'scene') {
+          lines.push('Scope: scene');
+        }
+        print(lines.join('\n'));
+      }
+      return 0;
+    }
+  } catch (error) {
+    printError(error.message || String(error));
+    return 1;
+  }
+}
+
+async function parseSceneSyncBehaviorCompileArgs(args) {
+  let file = null;
+  let objectId = null;
+  let scene = false;
+  let json = false;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (file === null && !arg.startsWith('-')) {
+      file = arg;
+    } else if (arg === '--object') {
+      const next = args[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--object requires an object ID');
+      }
+      objectId = next;
+      index += 1;
+    } else if (arg === '--scene') {
+      scene = true;
+    } else if (arg === '--json') {
+      json = true;
+    } else {
+      throw new Error(`Unknown option: ${arg}`);
+    }
+  }
+
+  if (objectId && scene) {
+    throw new Error('SCOPE_CONFLICT - Use either --object or --scene, not both.');
+  }
+
+  if (!file) {
+    throw new Error('behavior compile requires a file path');
+  }
+
+  let scope = null;
+  if (scene) {
+    scope = 'scene';
+  } else if (objectId) {
+    scope = objectId;
+  }
+
+  return { file, scope, json };
+}
+
+async function parseSceneSyncBehaviorSetArgs(args) {
+  let file = null;
+  let objectId = null;
+  let scene = false;
+  let room = '';
+  let session = '';
+  let endpoint = '';
+  let dryRun = true;
+  let send = false;
+  let json = false;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (file === null && !arg.startsWith('-')) {
+      file = arg;
+    } else if (arg === '--object') {
+      const next = args[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--object requires an object ID');
+      }
+      objectId = next;
+      index += 1;
+    } else if (arg === '--scene') {
+      scene = true;
+    } else if (arg === '--room') {
+      const next = args[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--room requires a room code');
+      }
+      room = next;
+      index += 1;
+    } else if (arg === '--session') {
+      const next = args[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--session requires a session ID');
+      }
+      session = next;
+      index += 1;
+    } else if (arg === '--endpoint') {
+      const next = args[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--endpoint requires a URL');
+      }
+      endpoint = next;
+      index += 1;
+    } else if (arg === '--send') {
+      send = true;
+      dryRun = false;
+    } else if (arg === '--json') {
+      json = true;
+    } else {
+      throw new Error(`Unknown option: ${arg}`);
+    }
+  }
+
+  if (objectId && scene) {
+    throw new Error('SCOPE_CONFLICT - Use either --object or --scene, not both.');
+  }
+
+  if (!file) {
+    throw new Error('behavior set requires a file path');
+  }
+
+  let scope = null;
+  if (scene) {
+    scope = 'scene';
+  } else if (objectId) {
+    scope = objectId;
+  }
+
+  const savedSession = await loadSceneSyncSession();
+  const savedData = savedSession.ok && savedSession.session ? savedSession.session : null;
+
+  if (!room && send) {
+    room = process.env.LOOMLET_SCENESYNC_ROOM || process.env.LOOM_SCENESYNC_ROOM || '';
+    if (!room && savedData) {
+      room = savedData.roomId || '';
+    }
+  }
+
+  if (!session && send) {
+    session = process.env.LOOMLET_SCENESYNC_SESSION || process.env.LOOM_SCENESYNC_SESSION || '';
+    if (!session && savedData) {
+      session = savedData.sessionId || '';
+    }
+  }
+
+  if (!endpoint) {
+    endpoint = process.env.LOOMLET_SCENESYNC_ENDPOINT || process.env.LOOM_SCENESYNC_ENDPOINT || '';
+    if (!endpoint && savedData) {
+      endpoint = savedData.endpoint || '';
+    }
+    if (!endpoint) {
+      endpoint = DEFAULT_SCENESYNC_ENDPOINT;
+    }
+  }
+
+  return { file, scope, room, session, endpoint, dryRun, send, json };
+}
+
+async function parseSceneSyncBehaviorClearArgs(args) {
+  let objectId = null;
+  let scene = false;
+  let room = '';
+  let session = '';
+  let endpoint = '';
+  let dryRun = true;
+  let send = false;
+  let json = false;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (!arg.startsWith('-')) {
+      if (!objectId) {
+        objectId = arg;
+      }
+    } else if (arg === '--object') {
+      const next = args[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--object requires an object ID');
+      }
+      objectId = next;
+      index += 1;
+    } else if (arg === '--scene') {
+      scene = true;
+    } else if (arg === '--room') {
+      const next = args[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--room requires a room code');
+      }
+      room = next;
+      index += 1;
+    } else if (arg === '--session') {
+      const next = args[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--session requires a session ID');
+      }
+      session = next;
+      index += 1;
+    } else if (arg === '--endpoint') {
+      const next = args[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--endpoint requires a URL');
+      }
+      endpoint = next;
+      index += 1;
+    } else if (arg === '--send') {
+      send = true;
+      dryRun = false;
+    } else if (arg === '--json') {
+      json = true;
+    } else {
+      throw new Error(`Unknown option: ${arg}`);
+    }
+  }
+
+  if (objectId && scene) {
+    throw new Error('SCOPE_CONFLICT - Use either --object or --scene, not both.');
+  }
+
+  if (!objectId && !scene) {
+    throw new Error('SCOPE_REQUIRED - Pass --object <objectId> or --scene');
+  }
+
+  let scope = null;
+  if (scene) {
+    scope = 'scene';
+  } else if (objectId) {
+    scope = objectId;
+  }
+
+  const savedSession = await loadSceneSyncSession();
+  const savedData = savedSession.ok && savedSession.session ? savedSession.session : null;
+
+  if (!room && send) {
+    room = process.env.LOOMLET_SCENESYNC_ROOM || process.env.LOOM_SCENESYNC_ROOM || '';
+    if (!room && savedData) {
+      room = savedData.roomId || '';
+    }
+  }
+
+  if (!session && send) {
+    session = process.env.LOOMLET_SCENESYNC_SESSION || process.env.LOOM_SCENESYNC_SESSION || '';
+    if (!session && savedData) {
+      session = savedData.sessionId || '';
+    }
+  }
+
+  if (!endpoint) {
+    endpoint = process.env.LOOMLET_SCENESYNC_ENDPOINT || process.env.LOOM_SCENESYNC_ENDPOINT || '';
+    if (!endpoint && savedData) {
+      endpoint = savedData.endpoint || '';
+    }
+    if (!endpoint) {
+      endpoint = DEFAULT_SCENESYNC_ENDPOINT;
+    }
+  }
+
+  return { scope, room, session, endpoint, dryRun, send, json };
 }
 
 async function parseSceneSyncDevArgs(args) {
@@ -1723,7 +2105,7 @@ async function handleSceneSync(args) {
   const [subcommand, ...rest] = args;
 
   // Allow these subcommands to handle their own --help
-  const selfHelpSubcommands = ['dev', 'graph-compile', 'graph-run', 'graph-set', 'graph-clear'];
+  const selfHelpSubcommands = ['dev', 'behavior', 'graph-compile', 'graph-run', 'graph-set', 'graph-clear'];
 
   if (args.includes('--help')) {
     if (selfHelpSubcommands.includes(subcommand)) {
@@ -2167,6 +2549,50 @@ async function handleSceneSync(args) {
       printError(error.message || String(error));
       return 1;
     }
+  }
+
+  if (subcommand === 'behavior') {
+    const action = rest[0];
+    const actionArgs = rest.slice(1);
+
+    if (!action || action === '--help') {
+      print(`Usage:
+  loomlet scenesync behavior compile <file> [--object <id>] [--scene] [--json]
+  loomlet scenesync behavior set <file> [--object <id>] [--scene] [--send] [--json]
+  loomlet scenesync behavior clear [--object <id>] [--scene] [--send] [--json]
+
+Options:
+  --object <id>      Use object-level graph scope
+  --scene            Use scene-level graph scope
+  --send             Broadcast to Scene Sync
+  --json             Output JSON
+  --room <room>      Scene Sync room code
+  --session <id>     Scene Sync session ID
+  --endpoint <url>   Scene Sync command endpoint
+
+Examples:
+  loomlet scenesync behavior compile examples/lissajous.loom --object sample-cube
+  loomlet scenesync behavior compile examples/lissajous.loom --scene
+  loomlet scenesync behavior set examples/lissajous.loom --object sample-cube
+  loomlet scenesync behavior set examples/lissajous.loom --object sample-cube --send
+  loomlet scenesync behavior clear --object sample-cube
+  loomlet scenesync behavior clear --scene --send`);
+      return 0;
+    }
+
+    if (action === 'compile') {
+      return await handleSceneSyncBehaviorCompile(actionArgs);
+    }
+
+    if (action === 'set') {
+      return await handleSceneSyncBehaviorSet(actionArgs);
+    }
+
+    if (action === 'clear') {
+      return await handleSceneSyncBehaviorClear(actionArgs);
+    }
+
+    throw new Error(`Unknown scenesync behavior command: ${action}`);
   }
 
   if (subcommand === 'dev') {

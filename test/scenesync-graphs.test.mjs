@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  normalizeSceneGraphScope,
   createSceneGraphSetPayload,
   createSceneGraphClearPayload,
   validateSceneGraph
@@ -171,11 +172,80 @@ test('validateSceneGraph accepts graph with optional node params', () => {
 test('createSceneGraphClearPayload throws on invalid objectId', () => {
   assert.throws(() => {
     createSceneGraphClearPayload('');
-  }, /objectId must be a non-empty string/);
+  }, /scope must be "scene" or { object: objectId }/);
 });
 
 test('createSceneGraphClearPayload throws on non-string objectId', () => {
   assert.throws(() => {
     createSceneGraphClearPayload(null);
-  }, /objectId must be a non-empty string/);
+  }, /scope must be "scene" or { object: objectId }/);
+});
+
+test('normalizeSceneGraphScope returns "scene" when passed "scene"', () => {
+  const result = normalizeSceneGraphScope('scene');
+  assert.equal(result, 'scene');
+});
+
+test('normalizeSceneGraphScope returns "scene" when passed { scene: true }', () => {
+  const result = normalizeSceneGraphScope({ scene: true });
+  assert.equal(result, 'scene');
+});
+
+test('normalizeSceneGraphScope returns { object: id } when passed object id string', () => {
+  const result = normalizeSceneGraphScope('cat-123');
+  assert.deepEqual(result, { object: 'cat-123' });
+});
+
+test('normalizeSceneGraphScope returns { object: id } when passed { object: id }', () => {
+  const result = normalizeSceneGraphScope({ object: 'cat-123' });
+  assert.deepEqual(result, { object: 'cat-123' });
+});
+
+test('normalizeSceneGraphScope throws on invalid scope', () => {
+  assert.throws(() => {
+    normalizeSceneGraphScope({});
+  }, /scope must be "scene" or { object: objectId }/);
+});
+
+test('normalizeSceneGraphScope throws on invalid object id', () => {
+  assert.throws(() => {
+    normalizeSceneGraphScope({ object: '' });
+  }, /scope must be "scene" or { object: objectId }/);
+});
+
+test('createSceneGraphSetPayload with "scene" string scope outputs scope: "scene"', () => {
+  const graph = {
+    nodes: [{ id: 'node1', type: 'sine' }],
+    edges: []
+  };
+  const payload = createSceneGraphSetPayload('scene', graph);
+  assert.equal(payload.scope, 'scene');
+});
+
+test('createSceneGraphSetPayload with { scene: true } outputs scope: "scene"', () => {
+  const graph = {
+    nodes: [{ id: 'node1', type: 'sine' }],
+    edges: []
+  };
+  const payload = createSceneGraphSetPayload({ scene: true }, graph);
+  assert.equal(payload.scope, 'scene');
+});
+
+test('createSceneGraphSetPayload with object id string outputs scope: { object: id }', () => {
+  const graph = {
+    nodes: [{ id: 'node1', type: 'sine' }],
+    edges: []
+  };
+  const payload = createSceneGraphSetPayload('sample-cube', graph);
+  assert.deepEqual(payload.scope, { object: 'sample-cube' });
+});
+
+test('createSceneGraphClearPayload with "scene" string outputs scope: "scene"', () => {
+  const payload = createSceneGraphClearPayload('scene');
+  assert.equal(payload.scope, 'scene');
+});
+
+test('createSceneGraphClearPayload with object id string outputs scope: { object: id }', () => {
+  const payload = createSceneGraphClearPayload('sample-cube');
+  assert.deepEqual(payload.scope, { object: 'sample-cube' });
 });
