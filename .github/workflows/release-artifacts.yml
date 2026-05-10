@@ -48,11 +48,11 @@ jobs:
       - name: Install packed core package into extension
         working-directory: extensions/vscode-loomlet
         run: |
-          # Find the generated tarball and install it
+          # Find the generated tarball and install it (--no-save to avoid modifying package-lock.json)
           cd ../../
           TARBALL=$(ls -t afjk-loomlet-*.tgz | head -1)
           cd extensions/vscode-loomlet
-          npm install "../../${TARBALL}"
+          npm install --no-save "../../${TARBALL}"
 
       - name: Build VS Code extension VSIX
         working-directory: extensions/vscode-loomlet
