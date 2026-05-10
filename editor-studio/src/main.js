@@ -9,6 +9,8 @@ import { forceLinting } from '@codemirror/lint';
 import { Loom, NODE_TYPES } from '../../src/loom.js';
 import { loomletDslExtensions } from './loomlet-codemirror.js';
 import { parseDSLToAST, compileToGraph } from '../../src/loom-dsl.js';
+import { compileLoomToSceneSyncGraph } from '../../src/scenesync/graph-adapter.js';
+import { createSceneGraphSetPayload, createSceneGraphClearPayload } from '../../src/scenesync/graphs.js';
 import {
   graphToEditorModel,
   editorModelToGraph,
@@ -50,6 +52,14 @@ const EDITOR_SPLIT_WIDTH_KEY = 'loomlet.editorStudio.editorSplitWidth';
 const ACTIVE_BOTTOM_TAB_KEY = 'loomlet.editorStudio.activeBottomTab';
 const AUTO_APPLY_DSL_KEY = 'loomlet.editorStudio.autoApplyDslEnabled';
 const EDITOR_MAXIMIZE_MODE_KEY = 'loomlet.editorStudio.editorMaximizeMode';
+
+const SCENE_SYNC_STORAGE_KEYS = {
+  endpoint: 'loomlet.editorStudio.sceneSync.endpoint',
+  room: 'loomlet.editorStudio.sceneSync.room',
+  scope: 'loomlet.editorStudio.sceneSync.scope',
+  objectId: 'loomlet.editorStudio.sceneSync.objectId',
+  nickname: 'loomlet.editorStudio.sceneSync.nickname'
+};
 
 const MAX_HISTORY_ENTRIES = 100;
 const MOVE_HISTORY_COALESCE_MS = 250;
@@ -140,7 +150,16 @@ const elements = {
   autoApplyStatusPill: document.getElementById('auto-apply-status-pill'),
   autoSyncStatusPill: document.getElementById('auto-sync-status-pill'),
   outputLog: document.getElementById('output-log'),
-  clearOutputBtn: document.getElementById('clear-output-btn')
+  clearOutputBtn: document.getElementById('clear-output-btn'),
+  sceneSyncEndpoint: document.getElementById('sceneSyncEndpoint'),
+  sceneSyncRoom: document.getElementById('sceneSyncRoom'),
+  sceneSyncScope: document.getElementById('sceneSyncScope'),
+  sceneSyncObjectId: document.getElementById('sceneSyncObjectId'),
+  sceneSyncNickname: document.getElementById('sceneSyncNickname'),
+  compileSceneSyncPayloadBtn: document.getElementById('compileSceneSyncPayloadBtn'),
+  applySceneSyncBehaviorBtn: document.getElementById('applySceneSyncBehaviorBtn'),
+  clearSceneSyncBehaviorBtn: document.getElementById('clearSceneSyncBehaviorBtn'),
+  sceneSyncPayloadPreview: document.getElementById('sceneSyncPayloadPreview')
 };
 
 function setPanelsVisible(visible) {
@@ -1092,6 +1111,240 @@ function setEditorError(message) {
     errors: [{ code: 'EDITOR_ERROR', message }]
   });
   renderErrors();
+}
+
+/* Scene Sync panel functions */
+
+function loadSceneSyncSettings() {
+  elements.sceneSyncEndpoint.value =
+    localStorage.getItem(SCENE_SYNC_STORAGE_KEYS.endpoint) || 'https://afjk.jp/presence';
+
+  elements.sceneSyncRoom.value =
+    localStorage.getItem(SCENE_SYNC_STORAGE_KEYS.room) || '';
+
+  elements.sceneSyncScope.value =
+    localStorage.getItem(SCENE_SYNC_STORAGE_KEYS.scope) || 'object';
+
+  elements.sceneSyncObjectId.value =
+    localStorage.getItem(SCENE_SYNC_STORAGE_KEYS.objectId) || 'sample-cube';
+
+  elements.sceneSyncNickname.value =
+    localStorage.getItem(SCENE_SYNC_STORAGE_KEYS.nickname) || 'Loomlet Editor';
+
+  updateSceneSyncScopeUi();
+}
+
+function saveSceneSyncSettings() {
+  localStorage.setItem(
+    SCENE_SYNC_STORAGE_KEYS.endpoint,
+    elements.sceneSyncEndpoint.value.trim()
+  );
+  localStorage.setItem(
+    SCENE_SYNC_STORAGE_KEYS.room,
+    elements.sceneSyncRoom.value.trim()
+  );
+  localStorage.setItem(
+    SCENE_SYNC_STORAGE_KEYS.scope,
+    elements.sceneSyncScope.value
+  );
+  localStorage.setItem(
+    SCENE_SYNC_STORAGE_KEYS.objectId,
+    elements.sceneSyncObjectId.value.trim()
+  );
+  localStorage.setItem(
+    SCENE_SYNC_STORAGE_KEYS.nickname,
+    elements.sceneSyncNickname.value.trim()
+  );
+}
+
+function updateSceneSyncScopeUi() {
+  const isObjectScope = elements.sceneSyncScope.value === 'object';
+  elements.sceneSyncObjectId.disabled = !isObjectScope;
+}
+
+function getCurrentSceneSyncSourceText() {
+  const state = store.getState();
+
+  if (!hasUnsyncedDslText && state.editorModel) {
+    return generateCanonicalDslFromState();
+  }
+
+  return getDslText();
+}
+
+function getSceneSyncScopeFromUi() {
+  const scope = elements.sceneSyncScope.value;
+
+  if (scope === 'scene') {
+    return 'scene';
+  }
+
+  const objectId = elements.sceneSyncObjectId.value.trim();
+
+  if (!objectId) {
+    throw new Error('Object ID is required for Object Behavior Graph.');
+  }
+
+  return { object: objectId };
+}
+
+function compileCurrentSceneSyncPayload() {
+  const source = getCurrentSceneSyncSourceText();
+  const scope = getSceneSyncScopeFromUi();
+
+  const result = compileLoomToSceneSyncGraph(source, { scope });
+
+  return createSceneGraphSetPayload(result.scope || scope, result.graph);
+}
+
+function createCurrentSceneSyncClearPayload() {
+  const scope = getSceneSyncScopeFromUi();
+  return createSceneGraphClearPayload(scope);
+}
+
+function normalizeSceneSyncEndpoint(endpoint) {
+  return String(endpoint || '').trim().replace(/\/+$/, '');
+}
+
+function createSceneSyncBroadcastUrl({ endpoint, room, nickname }) {
+  const base = normalizeSceneSyncEndpoint(endpoint);
+  const encodedRoom = encodeURIComponent(room);
+  const url = new URL(`${base}/api/room/${encodedRoom}/broadcast`);
+
+  if (nickname) {
+    url.searchParams.set('name', nickname);
+  }
+
+  return url.toString();
+}
+
+async function broadcastSceneSyncPayload(payload) {
+  const endpoint = elements.sceneSyncEndpoint.value.trim();
+  const room = elements.sceneSyncRoom.value.trim();
+  const nickname = elements.sceneSyncNickname.value.trim() || 'Loomlet Editor';
+
+  if (!endpoint) {
+    throw new Error('Endpoint is required.');
+  }
+
+  if (!room) {
+    throw new Error('Room is required.');
+  }
+
+  const url = createSceneSyncBroadcastUrl({ endpoint, room, nickname });
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const text = await response.text();
+
+  let body = text;
+  try {
+    body = text ? JSON.parse(text) : null;
+  } catch {
+    body = text;
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      `Scene Sync broadcast failed: ${response.status} ${response.statusText} ${
+        body ? JSON.stringify(body) : ''
+      }`
+    );
+  }
+
+  return body;
+}
+
+function renderSceneSyncPayloadPreview(payload) {
+  if (!elements.sceneSyncPayloadPreview) {
+    return;
+  }
+
+  elements.sceneSyncPayloadPreview.textContent = payload
+    ? JSON.stringify(payload, null, 2)
+    : '';
+}
+
+async function handleCompileSceneSyncPayload() {
+  try {
+    saveSceneSyncSettings();
+
+    const payload = compileCurrentSceneSyncPayload();
+
+    renderSceneSyncPayloadPreview(payload);
+
+    const state = store.getState();
+    const source = (!hasUnsyncedDslText && state.editorModel)
+      ? 'graph'
+      : 'DSL editor';
+
+    appendOutput({
+      level: 'info',
+      message: `Compiled Scene Sync payload from ${source}.`
+    });
+  } catch (error) {
+    renderSceneSyncPayloadPreview(null);
+
+    appendOutput({
+      level: 'error',
+      message: `Scene Sync compile failed: ${error.message}`
+    });
+  }
+}
+
+async function handleApplySceneSyncBehavior() {
+  try {
+    saveSceneSyncSettings();
+
+    const payload = compileCurrentSceneSyncPayload();
+
+    renderSceneSyncPayloadPreview(payload);
+
+    const state = store.getState();
+    const source = (!hasUnsyncedDslText && state.editorModel)
+      ? 'graph'
+      : 'DSL editor';
+
+    const result = await broadcastSceneSyncPayload(payload);
+
+    appendOutput({
+      level: 'info',
+      message: `Applied Scene Sync Behavior from ${source}.\n${JSON.stringify(result, null, 2)}`
+    });
+  } catch (error) {
+    appendOutput({
+      level: 'error',
+      message: `Apply Scene Sync Behavior failed: ${error.message}`
+    });
+  }
+}
+
+async function handleClearSceneSyncBehavior() {
+  try {
+    saveSceneSyncSettings();
+
+    const payload = createCurrentSceneSyncClearPayload();
+
+    renderSceneSyncPayloadPreview(payload);
+
+    const result = await broadcastSceneSyncPayload(payload);
+
+    appendOutput({
+      level: 'info',
+      message: `Cleared Scene Sync Behavior.\n${JSON.stringify(result, null, 2)}`
+    });
+  } catch (error) {
+    appendOutput({
+      level: 'error',
+      message: `Clear Scene Sync Behavior failed: ${error.message}`
+    });
+  }
 }
 
 function renderConnectionItem(edge) {
@@ -2193,6 +2446,21 @@ function setupEventListeners() {
 
   elements.clearOutputBtn?.addEventListener('click', clearOutput);
 
+  // Scene Sync event listeners
+  elements.sceneSyncEndpoint?.addEventListener('input', saveSceneSyncSettings);
+  elements.sceneSyncRoom?.addEventListener('input', saveSceneSyncSettings);
+  elements.sceneSyncObjectId?.addEventListener('input', saveSceneSyncSettings);
+  elements.sceneSyncNickname?.addEventListener('input', saveSceneSyncSettings);
+
+  elements.sceneSyncScope?.addEventListener('change', () => {
+    updateSceneSyncScopeUi();
+    saveSceneSyncSettings();
+  });
+
+  elements.compileSceneSyncPayloadBtn?.addEventListener('click', handleCompileSceneSyncPayload);
+  elements.applySceneSyncBehaviorBtn?.addEventListener('click', handleApplySceneSyncBehavior);
+  elements.clearSceneSyncBehaviorBtn?.addEventListener('click', handleClearSceneSyncBehavior);
+
   elements.nodePaletteSearch?.addEventListener('input', renderNodePalette);
   elements.nodePaletteCategory?.addEventListener('change', renderNodePalette);
 
@@ -2318,6 +2586,7 @@ async function init() {
   loadActiveBottomTab();
   loadAutoApplyDslSetting();
   loadEditorMaximizeMode();
+  loadSceneSyncSettings();
   renderFileStatus();
   renderDirtyStatus();
   renderAutoApplyStatus();
