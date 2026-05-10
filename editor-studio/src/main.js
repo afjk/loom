@@ -92,7 +92,7 @@ let isDirty = false;
 let isApplyingProgrammaticDslChange = false;
 let hasUnsyncedDslText = false;
 let autoApplyDslEnabled = false;
-let autoSyncGraphToDslEnabled = true;
+let autoSyncGraphToDslEnabled = false;
 let autoApplyTimer = null;
 let autoApplyDelayMs = 500;
 let autoApplyRequestId = 0;
@@ -641,27 +641,12 @@ function createDslTextForSave(baseDslText) {
 }
 
 function getCurrentSavePayload() {
-  const state = store.getState();
-  let text = '';
-  let source = '';
-
-  if (hasUnsyncedDslText) {
-    text = getDslText();
-    source = 'dsl';
-  } else if (state.editorModel) {
-    const graph = editorModelToGraph(state.editorModel, state.graph);
-    text = graphToCanonicalDSL(graph);
-    source = 'graph';
-  } else {
-    text = getDslText();
-    source = 'dsl';
-  }
-
+  const text = getDslText();
   const textWithMetadata = createDslTextForSave(text);
 
   return {
     text: textWithMetadata,
-    source
+    source: 'dsl'
   };
 }
 
@@ -931,6 +916,15 @@ async function applyDsl({ markDirty = true, logOutput = true } = {}) {
   return result;
 }
 
+function hasUserDslComments(text) {
+  return String(text || '')
+    .split('\n')
+    .some((line) => {
+      const trimmed = line.trim();
+      return trimmed.startsWith('#') && !trimmed.startsWith('# @loomlet.editor');
+    });
+}
+
 function generateCanonicalDslFromState() {
   const state = store.getState();
 
@@ -970,6 +964,21 @@ function generateDsl() {
   finishMoveHistoryGroup();
   finishParamHistoryGroup();
   cancelPendingAutoApplyDsl();
+
+  const currentText = getDslText();
+  if (hasUserDslComments(currentText)) {
+    const confirmed = window.confirm(
+      'Generating canonical DSL will overwrite the DSL editor and may remove comments and formatting. Continue?'
+    );
+    if (!confirmed) {
+      appendOutput({
+        level: 'info',
+        message: 'Canceled canonical DSL generation.'
+      });
+      return;
+    }
+  }
+
   const dsl = syncGraphToDslEditor({ markDirty: true, force: true });
   if (!dsl) return;
   renderAutoApplyStatus(autoApplyDslEnabled ? 'ok' : null);
