@@ -441,6 +441,27 @@ render bar(width: wave)`;
       assert(!('unknown' in result.nodesById), 'unknown node should not be created');
     });
 
+    // Test for user comment preservation during save
+    test('stripEditorMetadataFromDsl + appendEditorMetadataToDsl: preserves user comments', () => {
+      const originalDsl = `# Scene Sync behavior
+scene.offsetPosition(y: dy)
+
+# 2D preview
+render point(x: 300, y: previewY)`;
+      const metadata = { version: 1, layout: { nodes: { scene: { x: 100, y: 50 } } } };
+
+      const stripped = stripEditorMetadataFromDsl(originalDsl);
+      const result = appendEditorMetadataToDsl(stripped, metadata);
+
+      assert(result.includes('# Scene Sync behavior'), 'should preserve Scene Sync comment');
+      assert(result.includes('# 2D preview'), 'should preserve 2D preview comment');
+      assert(result.includes('scene.offsetPosition'), 'should preserve scene code');
+      assert(result.includes('render point'), 'should preserve render code');
+      assert(result.includes('# @loomlet.editor'), 'should include metadata marker');
+      const metadataCount = (result.match(/# @loomlet.editor/g) || []).length;
+      assert(metadataCount === 1, 'metadata should appear exactly once');
+    });
+
     async function run() {
       let pass = 0; let fail = 0; const failures = [];
       for (const t of results) {
