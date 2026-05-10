@@ -46,6 +46,37 @@ logged = log(smooth, label: "wave")
 render bar(width: width, color: "#80ed99", height: 48)
 `;
 
+// Scene Sync Presets
+const SCENE_SYNC_JUMP_PRESET = `import time
+import math
+import scene
+
+t = time.serverClock()
+dy = math.sine(t, freq: 0.8, amplitude: 0.5)
+
+scene.offsetPosition(y: dy)
+
+previewY = math.add(200, math.multiply(dy, -120))
+render point(x: 300, y: previewY, radius: 8, color: "#ff70a6", trail: 0.08)
+`;
+
+const SCENE_SYNC_CIRCLE_PRESET = `import time
+import math
+import scene
+
+t = time.serverClock()
+
+dx = math.cosine(t, freq: 0.2, amplitude: 1.5)
+dz = math.sine(t, freq: 0.2, amplitude: 1.5)
+
+scene.offsetPosition(x: dx, z: dz)
+
+previewX = math.add(300, math.multiply(dx, 80))
+previewY = math.add(200, math.multiply(dz, 80))
+
+render point(x: previewX, y: previewY, radius: 8, color: "#80ed99", trail: 0.08)
+`;
+
 const BOTTOM_PANEL_HEIGHT_KEY = 'loomlet.editorStudio.bottomPanelHeight';
 const BOTTOM_PANEL_COLLAPSED_KEY = 'loomlet.editorStudio.bottomPanelCollapsed';
 const EDITOR_SPLIT_WIDTH_KEY = 'loomlet.editorStudio.editorSplitWidth';
@@ -159,7 +190,9 @@ const elements = {
   compileSceneSyncPayloadBtn: document.getElementById('compileSceneSyncPayloadBtn'),
   applySceneSyncBehaviorBtn: document.getElementById('applySceneSyncBehaviorBtn'),
   clearSceneSyncBehaviorBtn: document.getElementById('clearSceneSyncBehaviorBtn'),
-  sceneSyncPayloadPreview: document.getElementById('sceneSyncPayloadPreview')
+  sceneSyncPayloadPreview: document.getElementById('sceneSyncPayloadPreview'),
+  loadSceneSyncJumpPresetBtn: document.getElementById('loadSceneSyncJumpPresetBtn'),
+  loadSceneSyncCirclePresetBtn: document.getElementById('loadSceneSyncCirclePresetBtn')
 };
 
 function setPanelsVisible(visible) {
@@ -1839,6 +1872,32 @@ async function resetSample() {
   clearEditorHistory();
 }
 
+function loadSceneSyncPreset(name, source) {
+  const currentText = getDslText();
+
+  if (currentText.trim()) {
+    const ok = window.confirm(
+      `Loading "${name}" will replace the DSL editor content. Continue?`
+    );
+
+    if (!ok) {
+      appendOutput({
+        level: 'info',
+        message: `Canceled loading Scene Sync preset: ${name}.`
+      });
+      return;
+    }
+  }
+
+  setDslText(source);
+  hasUnsyncedDslText = true;
+
+  appendOutput({
+    level: 'info',
+    message: `Loaded Scene Sync preset: ${name}. Apply DSL to preview it, then use Scene Sync Apply Behavior.`
+  });
+}
+
 function renderNodeListItem(node) {
   const isSelected = selectedNodeId === node.id;
   const selectedClass = isSelected ? ' selected' : '';
@@ -2469,6 +2528,14 @@ function setupEventListeners() {
   elements.compileSceneSyncPayloadBtn?.addEventListener('click', handleCompileSceneSyncPayload);
   elements.applySceneSyncBehaviorBtn?.addEventListener('click', handleApplySceneSyncBehavior);
   elements.clearSceneSyncBehaviorBtn?.addEventListener('click', handleClearSceneSyncBehavior);
+
+  elements.loadSceneSyncJumpPresetBtn?.addEventListener('click', () => {
+    loadSceneSyncPreset('Jump Preview', SCENE_SYNC_JUMP_PRESET);
+  });
+
+  elements.loadSceneSyncCirclePresetBtn?.addEventListener('click', () => {
+    loadSceneSyncPreset('Circle Preview', SCENE_SYNC_CIRCLE_PRESET);
+  });
 
   elements.nodePaletteSearch?.addEventListener('input', renderNodePalette);
   elements.nodePaletteCategory?.addEventListener('change', renderNodePalette);

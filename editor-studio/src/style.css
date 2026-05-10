@@ -1102,6 +1102,13 @@ button:disabled:hover,
   gap: 8px;
 }
 
+.scene-sync-preset-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
 .scene-sync-note {
   margin: 0;
   opacity: 0.75;

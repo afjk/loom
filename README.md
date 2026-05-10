@@ -418,6 +418,8 @@ loomlet scenesync graph-compile examples/lissajous.loom
 
 This outputs a Scene Sync graph JSON containing `serverClock`, `sine`, and `sceneSetPosition` nodes.
 
+**Scene Sync preview presets**: Editor Studio includes sample presets that combine `render point(...)` for 2D preview with `scene.offsetPosition(...)` for Scene Sync behavior. When compiling to Scene Sync, the compiler ignores preview-only `render` nodes and sends only the Scene Sync behavior dependencies. This enables the workflow: (1) write motion DSL with both preview and behavior, (2) confirm motion in 2D preview, (3) apply the same graph to Scene Sync objects.
+
 ### Run a Loomlet behavior graph on a Scene Sync object
 
 Loomlet DSL graphs can be compiled and sent to Scene Sync objects using `graph-run`:

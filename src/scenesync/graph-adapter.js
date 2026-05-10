@@ -151,13 +151,63 @@ export function compileLoomToSceneSyncGraph(source, options = {}) {
 
 export function loomGraphToSceneSyncGraph(loomGraph, options = {}) {
   if (!loomGraph || !loomGraph.nodes || !loomGraph.edges) throw new Error('loomGraph must have nodes and edges arrays');
+
+  // Phase 1: Find all Scene Sync sink nodes (scene.* nodes)
+  const sinkNodeIds = new Set();
+  let sceneSyncNodeIds = new Set();
+
+  // Find all scene.* sink nodes
+  for (const node of loomGraph.nodes) {
+    if (node.type.startsWith('scene.')) {
+      sinkNodeIds.add(node.id);
+      sceneSyncNodeIds.add(node.id);
+    }
+  }
+
+  // Phase 2: If scene.* nodes found, recursively find their dependencies
+  if (sinkNodeIds.size > 0) {
+    function findDependencies(nodeId, visited = new Set()) {
+      if (visited.has(nodeId)) return;
+      visited.add(nodeId);
+      sceneSyncNodeIds.add(nodeId);
+
+      for (const edge of loomGraph.edges) {
+        const [toNodeId] = edge.to.split('.');
+        if (toNodeId === nodeId) {
+          const [fromNodeId] = edge.from.split('.');
+          const fromNode = loomGraph.nodes.find(n => n.id === fromNodeId);
+          if (fromNode) {
+            findDependencies(fromNodeId, visited);
+          }
+        }
+      }
+    }
+
+    for (const sinkId of sinkNodeIds) {
+      findDependencies(sinkId);
+    }
+  } else {
+    // No scene.* nodes found: include all supported nodes (backwards compatibility)
+    for (const node of loomGraph.nodes) {
+      sceneSyncNodeIds.add(node.id);
+    }
+  }
+
+  // Phase 3: Validate that all included nodes are supported
+  for (const node of loomGraph.nodes) {
+    if (sceneSyncNodeIds.has(node.id) && !SUPPORTED_NODES.has(node.type)) {
+      throw new Error(`Unsupported Scene Sync graph node: ${node.type}`);
+    }
+  }
+
+  // Phase 4: Build Scene Sync graph with only the identified nodes
   const nodes = [];
   const edges = [];
   const nodeIdMap = new Map();
   const usedIds = new Set();
 
   for (const node of loomGraph.nodes) {
-    if (!SUPPORTED_NODES.has(node.type)) throw new Error(`Unsupported Scene Sync graph node: ${node.type}`);
+    if (!sceneSyncNodeIds.has(node.id)) continue;
     const sceneSyncType = NODE_TYPE_MAPPING[node.type];
     const baseId = (node.id && !node.id.startsWith('_')) ? node.id : generateStableNodeBase(node.type);
     const newId = makeUniqueId(baseId, usedIds);
@@ -169,6 +219,7 @@ export function loomGraphToSceneSyncGraph(loomGraph, options = {}) {
   for (const edge of loomGraph.edges) {
     const [fromNodeId, fromPort] = edge.from.split('.');
     const [toNodeId, toPort] = edge.to.split('.');
+    if (!sceneSyncNodeIds.has(fromNodeId) || !sceneSyncNodeIds.has(toNodeId)) continue;
     const newFromId = nodeIdMap.get(fromNodeId);
     const newToId = nodeIdMap.get(toNodeId);
     if (newFromId && newToId) edges.push({ from: `${newFromId}.${fromPort}`, to: `${newToId}.${toPort}` });
