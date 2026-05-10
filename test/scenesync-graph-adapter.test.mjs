@@ -287,7 +287,7 @@ scene.offsetPosition(y: dy)
   assert.ok(result.graph.edges.some((e) => e.to.split('.')[0] === offsetNode.id && e.to.split('.')[1] === 'y'));
 });
 
-test('scene.offsetPosition with explicit target includes target in params', () => {
+test('scene.offsetPosition explicit target maps to sceneOffsetPosition target param', () => {
   const source = `
 import time
 import math
@@ -304,6 +304,7 @@ scene.offsetPosition("sample-cube", y: dy)
   assert.ok(result.graph.nodes.some((n) => n.type === 'sceneOffsetPosition'));
   const offsetNode = result.graph.nodes.find((n) => n.type === 'sceneOffsetPosition');
   assert.ok(offsetNode);
+  assert.equal(offsetNode.params?.target, 'sample-cube');
   assert.deepEqual(result.scope, { object: 'sample-cube' });
   assert.ok(result.graph.edges.some((e) => e.to.split('.')[0] === offsetNode.id && e.to.split('.')[1] === 'y'));
 });
@@ -329,4 +330,25 @@ scene.offsetPosition(x: dx, z: dz)
   const offsetNode = result.graph.nodes.find((n) => n.type === 'sceneOffsetPosition');
   assert.ok(result.graph.edges.some((e) => e.to.split('.')[0] === offsetNode.id && e.to.split('.')[1] === 'x'));
   assert.ok(result.graph.edges.some((e) => e.to.split('.')[0] === offsetNode.id && e.to.split('.')[1] === 'z'));
+});
+
+test('scene.offsetPosition explicit target works with scene scope', () => {
+  const source = `
+import time
+import math
+import scene
+
+t = time.serverClock()
+dy = math.sine(t, freq: 0.8, amplitude: 0.5)
+
+scene.offsetPosition("sample-cube", y: dy)
+`;
+
+  const result = compileLoomToSceneSyncGraph(source, { scope: 'scene' });
+
+  assert.equal(result.scope, 'scene');
+
+  const offsetNode = result.graph.nodes.find((n) => n.type === 'sceneOffsetPosition');
+  assert.ok(offsetNode);
+  assert.equal(offsetNode.params?.target, 'sample-cube');
 });

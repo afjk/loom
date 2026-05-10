@@ -108,7 +108,15 @@ function normalizeScope(options = {}) {
 }
 
 function pickParams(nodeType, params = {}) {
-  if (nodeType === 'scene.setPosition' || nodeType === 'scene.offsetPosition' || nodeType === 'scene.setScale') {
+  if (nodeType === 'scene.offsetPosition') {
+    return {
+      ...(params.objectId ? { target: params.objectId } : {}),
+      ...(params.x !== undefined ? { x: params.x } : {}),
+      ...(params.y !== undefined ? { y: params.y } : {}),
+      ...(params.z !== undefined ? { z: params.z } : {})
+    };
+  }
+  if (nodeType === 'scene.setPosition' || nodeType === 'scene.setScale') {
     return { ...(params.x !== undefined ? { x: params.x } : {}), ...(params.y !== undefined ? { y: params.y } : {}), ...(params.z !== undefined ? { z: params.z } : {}) };
   }
   if (nodeType === 'scene.setRotation') {
