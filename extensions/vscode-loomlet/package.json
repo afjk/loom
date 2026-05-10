@@ -4,6 +4,12 @@
   "description": "VS Code support for Loomlet language files and Scene Sync workflows",
   "version": "0.0.1",
   "publisher": "afjk",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/afjk/loomlet.git",
+    "directory": "extensions/vscode-loomlet"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
