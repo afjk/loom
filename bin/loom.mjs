@@ -252,7 +252,7 @@ Options:
   --room <room>        Scene Sync room code
   --session <id>       Scene Sync session ID
   --endpoint <url>     Scene Sync command endpoint. Default: ${DEFAULT_SCENESYNC_ENDPOINT}
-  --json               Output compact JSON (behavior compile only)
+  --json               Output compact JSON
 
 Scene Command:
   A one-shot operation that immediately changes scene state, such as scene-delta.
