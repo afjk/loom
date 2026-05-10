@@ -569,6 +569,34 @@ npm run test:browser   # Browser tests
 
 詳細は `editor-studio/src/` の実装と `test/*.test.html` のブラウザテスト、および `npm run test:browser` を参照してください。
 
+**Scene Sync prototype**
+
+The Node Editor can send the current Loomlet graph to a Scene Sync room as a Behavior Graph.
+
+1. Open the Node Editor.
+2. Create or edit a Loomlet behavior.
+3. Open the `Scene Sync` tab in the bottom panel.
+4. Enter the endpoint and room id.
+5. Choose `Object Behavior Graph` or `Scene Behavior Graph`.
+6. For object scope, enter an object id such as `sample-cube`.
+7. Click `Compile Payload` to preview the payload.
+8. Click `Apply Behavior` to broadcast `scene-graph-set`.
+9. Click `Clear Behavior` to broadcast `scene-graph-clear`.
+
+Default endpoint:
+
+```text
+https://afjk.jp/presence
+```
+
+Prototype note:
+
+This panel uses REST broadcast only. It does not join the Scene Sync room and does not integrate with Scene Sync undo/redo, object selection, or history.
+
+Position note:
+
+`sceneSetPosition` currently writes absolute world positions. Use explicit base values in your graph if you want to keep the object near its current location.
+
 ## デモの確認方法
 
 GitHub Pages で公開されているデモを、ブラウザから直接確認できます。
