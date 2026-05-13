@@ -183,6 +183,114 @@ snapshot → evaluate → collect outputs → resolve conflicts → apply
 
 この評価モデルにより、object の評価順が結果に影響することを避ける。
 
+## behavior と event ポートのセマンティクス
+
+Loomlet のポートは payload の型とは別に、signal kind（port kind）を持つ。
+
+### Port kind
+
+現在の想定 port kind は次の 2 種である。
+
+- `behavior`
+- `event`
+
+port kind と payload 型は独立であり、次のように組み合わせられる。
+
+```text
+behavior<number>
+behavior<vec3>
+event<void>
+event<vec2>
+event<string>
+```
+
+### behavior
+
+`behavior` は current-value signal であり、各 evaluation tick ごとに 1 つの値を持つ。
+
+例:
+
+- clock time
+- pointer position
+- slider value
+- object position
+- computed number
+- computed vector
+
+`behavior` の値は、連続的な animation や current state の表現に適する。
+
+### event
+
+`event` は discrete signal であり、特定の evaluation tick の間に 0 個以上の payload を持つ。
+
+- その tick で何も起きなければ空の event list
+- payload は値として扱う（number / string / vec2 / vec3 / record など）
+
+例:
+
+- pointer click
+- key down
+- collision
+- trigger
+- drag/drop event
+- committed SceneSync event
+
+### Connection rules
+
+port kind の接続ルールは次を基本とする。
+
+```text
+behavior output -> behavior input: allowed
+event output    -> event input: allowed
+behavior output -> event input: not allowed by default
+event output    -> behavior input: not allowed by default
+```
+
+kind mismatch の直接接続は、明示的に変換セマンティクスを定義する node がない限り reject すべきである。
+
+`behavior` と `event` を橋渡しする場合は、変換 node を明示的に使う。
+
+- `sample`: event trigger + behavior value -> event payload
+- future `hold`: event -> behavior
+- future `changed`: behavior -> event
+- future `toggle`, `count`, `fold`, `stateMachine`
+
+### Evaluation tick における event の扱い
+
+semantic model として、各 tick で event は次のように扱う。
+
+1. tick 処理前に event 出力を空にリセットする
+2. queue 済みまたは inject された event をその tick で利用可能にする
+3. tick 後、event は current value として保持しない（保持したい場合は state / hold / fold などの明示 node で捕捉する）
+
+### State と determinism
+
+event を含む評価でも、次の決定論モデルを維持する。
+
+同じ graph + 同じ environment + 同じ評価規則 = 同じ出力
+
+同期シーンでは、event order / timestamp / source / payload を同期済み environment に含める必要がある場合がある。  
+ただし、これらの詳細フィールドは現時点では host・同期レイヤー側の設計課題であり、本仕様で必須フィールドとして固定しない。
+
+### 既存 node の概念上の役割
+
+- `clock`: behavior source
+- `pointerPosition`: behavior input/source
+- `pointerClick`: event input/source
+- `keyDown` / `keyUp`: event input/source
+- `filter`: event transform
+- `merge`: event transform
+- `sample`: behavior/event bridge
+
+### Future work
+
+- formal event payload envelope
+- timestamp/order/source semantics
+- event replay
+- event-to-behavior conversion nodes
+- behavior-to-event conversion nodes
+- Node Editor での behavior/event port の視覚的区別
+
 ## Output の競合
 
 同じ property に対して複数の graph が同時に output を生成すると、結果が曖昧になる。

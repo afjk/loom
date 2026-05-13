@@ -17,10 +17,10 @@ This glossary defines shared Loomlet terms used across docs, runtime, and toolin
 - **Output**: A node port that emits a value or event to downstream inputs.
 - **Param**: Static node configuration, generally not connected by edges.
 - **Value**: Data carried through behavior ports or used as params/defaults.
-- **Behavior**: A current-value signal over time, evaluated each tick.
-- **Event**: A discrete occurrence at a point in time (not a continuous current-value signal).
-- **Behavior Graph**: A graph describing object or scene behavior.
-- **Port kind**: The signal category of a port, such as `behavior` or `event`.
+- **Behavior**: A current-value signal over time, evaluated each tick on `behavior` ports. See formal semantics in `docs/SPEC.md`.
+- **Event**: A discrete signal that can carry zero or more payloads within an evaluation tick on `event` ports. See formal semantics in `docs/SPEC.md`.
+- **Behavior Graph**: A graph describing object or scene behavior (distinct from a `behavior` port kind). See formal semantics in `docs/SPEC.md`.
+- **Port kind**: The signal category of a port (currently `behavior` or `event`), independent from payload type. See formal semantics in `docs/SPEC.md`.
 - **Type**: The data type associated with a value or port.
 - **Adapter**: Integration layer that maps Loomlet runtime outputs to a host/runtime API.
 - **Package / Library**: A reusable set of nodes, helpers, and metadata distributed for Loomlet usage.
@@ -31,6 +31,7 @@ This glossary defines shared Loomlet terms used across docs, runtime, and toolin
 - A **behavior port** means a current-value signal evaluated each tick.
 - A **Behavior Graph** means a graph describing object or scene behavior.
 - These are related but not the same concept.
+- Formal `behavior` / `event` semantics and connection rules are defined in `docs/SPEC.md`.
 
 ## Input vs Param
 
