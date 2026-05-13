@@ -28,6 +28,12 @@ DSL Source -> Source AST -> Graph AST -> Runtime Graph -> Target Graph
 - **Runtime Graph**: minimal executable graph.
 - **Target Graph**: host-adapted graph (for web/runtime/integration targets).
 
+Related references for this layer model:
+
+- [TERMINOLOGY.md](TERMINOLOGY.md) defines shared vocabulary.
+- [STABILIZATION_ROADMAP.md](STABILIZATION_ROADMAP.md) tracks stabilization and labs.
+- [SPEC.md](SPEC.md) remains the place for formal semantics.
+
 The web node editor keeps UI state (position/zoom/selection) separate from program semantics.
 
 ## Node categories

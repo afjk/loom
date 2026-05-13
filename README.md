@@ -81,6 +81,8 @@ Search for `Loomlet` in the VS Code Marketplace.
 - [CLI guide](docs/cli.md)
 - [VS Code extension](docs/vscode-extension.md)
 - [Concepts and design notes](docs/concepts.md)
+- [Terminology](docs/TERMINOLOGY.md)
+- [Stabilization roadmap](docs/STABILIZATION_ROADMAP.md)
 - [設計ノート（日本語）](docs/concepts.ja.md)
 - [Scene Sync integration](docs/scene-sync.md)
 - [Release and maintainer notes](docs/RELEASE.md)
