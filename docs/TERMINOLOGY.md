@@ -41,6 +41,13 @@ This glossary defines shared Loomlet terms used across docs, runtime, and toolin
   3. a node default.
 - **Param** is static configuration for the node and is generally not connected by edges.
 
+## Round-trip and test terms
+
+- **Canonical DSL**: Generated `.loom` text produced from a graph. It should be parseable and deterministic, but it does not necessarily preserve comments, formatting, pipe syntax, or argument style from the source text.
+- **Round-trip**: A conversion between representations and back. Examples include DSL to graph to canonical DSL to graph, or graph to editor model to graph. Different round-trips can have different stability goals.
+- **Golden test**: A test that compares current output to an expected fixture or snapshot. Golden tests should only be applied to outputs that are intended to be stable.
+- **Semantic graph equivalence**: Comparing the meaning of a graph rather than exact raw JSON. Visual metadata, node layout, timestamps, or generated implementation details should not affect semantic equivalence unless intentionally part of the test.
+
 ## Future value categories
 
 Loomlet terminology and metadata should stay compatible with future value categories:
