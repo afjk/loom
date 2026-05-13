@@ -2,6 +2,12 @@
 
 This roadmap keeps core Loomlet behavior stable while still allowing focused experiments.
 
+## Relationship with SPEC
+
+`docs/SPEC.md` describes Loomlet's intended semantics, design principles, and current implementation model. This roadmap describes the order for stabilizing the implementation, tests, metadata, and labs work.
+
+When the two documents overlap, treat `docs/SPEC.md` as the source for stable semantics and this roadmap as the source for execution order. Lab ideas should remain here or in linked design notes until they are mature enough to be promoted into `docs/SPEC.md`.
+
 ## Track A: Stabilization
 
 Purpose: make the core reliable and easier to extend.
