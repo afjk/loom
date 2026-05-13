@@ -28,6 +28,8 @@ DSL Source -> Source AST -> Graph AST -> Runtime Graph -> Target Graph
 - **Runtime Graph**: minimal executable graph.
 - **Target Graph**: host-adapted graph (for web/runtime/integration targets).
 
+For stabilization, Loomlet treats each representation boundary separately. The DSL Source to Source AST to Graph path is the first boundary to lock down with tests. Canonical DSL generation and full editor round-trip are valuable, but they are tracked as separate stabilization work. See [STABILIZATION_ROADMAP.md](STABILIZATION_ROADMAP.md) for the current round-trip and golden test strategy.
+
 Related references for this layer model:
 
 - [TERMINOLOGY.md](TERMINOLOGY.md) defines shared vocabulary.
