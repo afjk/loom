@@ -1,0 +1,6 @@
+# Stabilization fixture: function with closure
+import math
+
+base = 10
+addBase = fn(x) => math.add(a: x, b: base)
+value = addBase(5)

@@ -1,0 +1,5 @@
+# Stabilization fixture: pipe, map, and render
+value = 50
+  |> map(inMin: 0, inMax: 100, outMin: 0, outMax: 200)
+
+render bar(width: value, color: "#80ed99", height: 48)
