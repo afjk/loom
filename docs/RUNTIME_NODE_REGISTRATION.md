@@ -157,6 +157,41 @@ Target filtering remains handled outside the registry.
 
 Documentation for target filtering is in `docs/RUNTIME_TARGETS.md`.
 
+## Trusted local packages
+
+Loomlet now supports loading trusted local packages using the `registerTrustedPackage()` helper:
+
+```js
+import { createNodeRegistry } from '../src/runtime/node-registry.js';
+import { registerBuiltinNodes } from '../src/nodes/index.js';
+import { registerTrustedPackage } from '../src/runtime/package-registration.js';
+import * as demoPackage from '../examples/packages/demo/index.js';
+
+const registry = createNodeRegistry();
+registerBuiltinNodes(registry);
+registerTrustedPackage(registry, demoPackage);
+```
+
+The package module must export `registerLoomletPackage(registry, context)`, which calls `registry.registerNodeType()` to add its nodes.
+
+Example package:
+
+```js
+export function registerLoomletPackage(registry) {
+  registry.registerNodeType('demo.double', {
+    category: 'transform',
+    inputs: [{ name: 'value', type: 'number', default: 0, kind: 'behavior' }],
+    params: [{ name: 'value', type: 'number', default: 0 }],
+    outputs: [{ name: 'out', type: 'number', kind: 'behavior' }],
+    evaluate(inputs) {
+      return { out: inputs.value * 2 };
+    }
+  });
+}
+```
+
+For more information, see `docs/labs/PACKAGE_SYSTEM.md` and `examples/packages/demo/`.
+
 ## Security note
 
 A package that registers executable nodes is trusted code.
