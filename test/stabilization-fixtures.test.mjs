@@ -301,3 +301,106 @@ test('logic-scene-position: produces correct Scene Sync position effect', () => 
   assert.equal(positionEffect.objectId, 'sample-cube', 'objectId should be sample-cube');
   assert.deepEqual(positionEffect.position, [5, 0, 0], 'Position should be [5, 0, 0]');
 });
+
+test('multi-import-render: parses without errors', () => {
+  parseFixture('multi-import-render.loom');
+});
+
+test('multi-import-render: compiles without errors', () => {
+  const { graph } = compileFixture('multi-import-render.loom');
+  assert.ok(graph.nodes.length > 0, 'Graph should have nodes');
+});
+
+test('multi-import-render: normalized graph preserves imports', () => {
+  const { graph } = compileFixture('multi-import-render.loom');
+  const normalized = normalizeGraph(graph);
+
+  assert.ok(normalized.imports, 'Normalized graph should have imports');
+  assert.ok(normalized.imports.includes('math'), 'Imports should include math');
+  assert.ok(normalized.imports.includes('logic'), 'Imports should include logic');
+});
+
+test('multi-import-render: has expected node structure', () => {
+  const { graph } = compileFixture('multi-import-render.loom');
+  const baseNode = findNode(graph, 'base');
+  const isLargeNode = findNode(graph, 'isLarge');
+  const widthNode = findNode(graph, 'width');
+
+  assert.ok(baseNode, 'Graph should have base node');
+  assert.equal(baseNode.type, 'math.add', 'base node should be math.add');
+
+  assert.ok(isLargeNode, 'Graph should have isLarge node');
+  assert.equal(isLargeNode.type, 'logic.greaterThan', 'isLarge node should be logic.greaterThan');
+
+  assert.ok(widthNode, 'Graph should have width node');
+  assert.equal(widthNode.type, 'logic.select', 'width node should be logic.select');
+});
+
+test('multi-import-render: has expected render config', () => {
+  const { graph } = compileFixture('multi-import-render.loom');
+  assert.ok(graph.render, 'Graph should have render config');
+  assert.equal(graph.render.type, 'bar', 'Render type should be bar');
+});
+
+test('multi-import-render: runtime values are correct', () => {
+  const run = runFixture('multi-import-render.loom');
+  assert.equal(run.values['base.out'], 30, 'base should be 30 (20+10)');
+  assert.equal(run.values['isLarge.out'], true, 'isLarge should be true (30 > 25)');
+  assert.equal(run.values['width.out'], 200, 'width should be 200 (selected from whenTrue)');
+});
+
+test('multi-import-scene: parses without errors', () => {
+  parseFixture('multi-import-scene.loom');
+});
+
+test('multi-import-scene: compiles without errors', () => {
+  compileFixture('multi-import-scene.loom');
+});
+
+test('multi-import-scene: normalized graph preserves imports', () => {
+  const { graph } = compileFixture('multi-import-scene.loom');
+  const normalized = normalizeGraph(graph);
+
+  assert.ok(normalized.imports, 'Normalized graph should have imports');
+  assert.ok(normalized.imports.includes('math'), 'Imports should include math');
+  assert.ok(normalized.imports.includes('logic'), 'Imports should include logic');
+  assert.ok(normalized.imports.includes('scene'), 'Imports should include scene');
+});
+
+test('multi-import-scene: has expected node structure', () => {
+  const { graph } = compileFixture('multi-import-scene.loom');
+  const rawXNode = findNode(graph, 'rawX');
+  const moveRightNode = findNode(graph, 'moveRight');
+  const xNode = findNode(graph, 'x');
+  const setPositionNode = findNodeByType(graph, 'scene.setPosition');
+
+  assert.ok(rawXNode, 'Graph should have rawX node');
+  assert.equal(rawXNode.type, 'math.add', 'rawX node should be math.add');
+
+  assert.ok(moveRightNode, 'Graph should have moveRight node');
+  assert.equal(moveRightNode.type, 'logic.equals', 'moveRight node should be logic.equals');
+
+  assert.ok(xNode, 'Graph should have x node');
+  assert.equal(xNode.type, 'logic.select', 'x node should be logic.select');
+
+  assert.ok(setPositionNode, 'Graph should have scene.setPosition node');
+});
+
+test('multi-import-scene: runtime values are correct', () => {
+  const run = runFixture('multi-import-scene.loom');
+  assert.equal(run.values['rawX.out'], 3, 'rawX should be 3 (1+2)');
+  assert.equal(run.values['moveRight.out'], true, 'moveRight should be true (3 equals 3)');
+  assert.equal(run.values['x.out'], 3, 'x should be 3 (selected from whenTrue using rawX)');
+});
+
+test('multi-import-scene: produces expected Scene Sync position effect', () => {
+  const run = runFixture('multi-import-scene.loom');
+  const effects = run.effects || [];
+  const positionEffect = findEffect(effects, 'scene.setPosition');
+
+  assert.ok(positionEffect, 'Should have position effect');
+  assert.equal(positionEffect.objectId, 'sample-cube', 'objectId should be sample-cube');
+  assert.equal(positionEffect.position[0], 3, 'Position x should be 3');
+  assert.equal(positionEffect.position[1], 0, 'Position y should be 0');
+  assert.equal(positionEffect.position[2], 0, 'Position z should be 0');
+});

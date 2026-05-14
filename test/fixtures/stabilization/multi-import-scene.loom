@@ -1,0 +1,10 @@
+# Stabilization fixture: multi-import Scene Sync path
+import math
+import logic
+import scene
+
+rawX = math.add(a: 1, b: 2)
+moveRight = logic.equals(value: rawX, other: 3)
+x = logic.select(condition: moveRight, whenTrue: rawX, whenFalse: -1)
+
+scene.setPosition(objectId: "sample-cube", x: x, y: 0, z: 0)
