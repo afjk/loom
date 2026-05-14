@@ -17,6 +17,8 @@ However, today the metadata is still **partially descriptive rather than prescri
 
 A future phase will promote metadata to be the primary source, with tests to ensure that implementation behavior matches the declared metadata at all boundaries.
 
+For details on the current runtime executable node registry, see `docs/RUNTIME_NODE_REGISTRY.md`.
+
 ## Terminology
 
 ### Library
