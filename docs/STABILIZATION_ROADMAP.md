@@ -18,6 +18,9 @@ Recommended order:
 2. Formalize behavior/event semantics in `docs/SPEC.md`
 3. Add golden tests for examples
 4. Stabilize node definition schema
+   - Document current node definition schema in `docs/NODE_DEFINITION_SCHEMA.md`
+   - Add conservative metadata shape tests in `test/library-metadata-schema.test.mjs`
+   - Do not yet make metadata the single runtime/compiler source of truth
 5. Clarify input vs param
 6. Clarify runtime registration API
 7. Clarify metadata as shared source for editor/docs/completion
@@ -154,5 +157,8 @@ This is future work and should not be treated as stable yet.
 1. Add a small set of parse/compile fixtures.
 2. Define graph normalization rules for tests.
 3. Add semantic graph snapshot tests.
-4. Later, stabilize `graphToCanonicalDSL`.
-5. Later, add editor round-trip tests.
+4. Add metadata schema tests to verify node definition shape.
+   - Fixture tests cover behavior.
+   - Metadata schema tests cover node definition shape.
+5. Later, stabilize `graphToCanonicalDSL`.
+6. Later, add editor round-trip tests.
