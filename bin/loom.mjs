@@ -1963,7 +1963,7 @@ async function handleRepl(args) {
         return;
       }
       if (trimmed === ':libs') {
-        print(formatLibrariesText());
+        print(session.listLibraries());
         rl.prompt();
         return;
       }
@@ -2005,9 +2005,9 @@ async function handleRepl(args) {
         const query = trimmed.slice(6).trim();
         try {
           if (query.includes('.')) {
-            print(formatFunctionHelpText(query));
+            print(session.getFunctionHelp(query));
           } else {
-            print(formatLibraryHelpText(query));
+            print(session.getLibraryHelp(query));
           }
         } catch (error) {
           if (error.code === 'UNKNOWN_LIBRARY') {

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { LoomReplSession } from '../src/toolchain/repl-session.js';
+import { createLibraryMetadataRegistry } from '../src/toolchain/metadata-registry.js';
 
 test('evaluates assignment snippet', () => {
   const session = new LoomReplSession();
@@ -174,4 +175,134 @@ test('load source persists, run source is isolated', async () => {
   assert.equal(runResult.ok, true);
   const after = session.evaluateSnippet('double(base)');
   assert.equal(after.ok, false);
+});
+
+test('session has help methods', () => {
+  const session = new LoomReplSession();
+  assert.equal(typeof session.listLibraries, 'function');
+  assert.equal(typeof session.getLibraryHelp, 'function');
+  assert.equal(typeof session.getFunctionHelp, 'function');
+});
+
+test('session listLibraries returns library names', () => {
+  const session = new LoomReplSession();
+  const libs = session.listLibraries();
+  assert.ok(libs.includes('Loomlet libraries'));
+  assert.ok(libs.includes('text'));
+  assert.ok(libs.includes('loomlet docs'));
+});
+
+test('session getLibraryHelp returns library text', () => {
+  const session = new LoomReplSession();
+  const help = session.getLibraryHelp('text');
+  assert.ok(help.includes('text'));
+  assert.ok(help.includes('text.upper'));
+});
+
+test('session getFunctionHelp returns function text', () => {
+  const session = new LoomReplSession();
+  const help = session.getFunctionHelp('text.upper');
+  assert.ok(help.includes('text.upper(value)'));
+  assert.ok(help.includes('uppercase'));
+});
+
+test('session with metadataRegistry includes custom library in listLibraries', () => {
+  const metadata = {
+    demo: {
+      name: 'demo',
+      description: 'Demo package nodes.',
+      targets: ['cli'],
+      functions: {
+        double: {
+          name: 'double',
+          signature: 'demo.double(x)',
+          description: 'Doubles a number.',
+          args: [
+            {
+              name: 'x',
+              type: 'number',
+              positional: true,
+              description: 'Input value.'
+            }
+          ],
+          returns: 'number',
+          targets: ['cli'],
+          examples: ['y = demo.double(21)']
+        }
+      }
+    }
+  };
+
+  const registry = createLibraryMetadataRegistry(metadata);
+  const session = new LoomReplSession({ metadataRegistry: registry });
+  const libs = session.listLibraries();
+  assert.ok(libs.includes('demo'));
+});
+
+test('session with metadataRegistry includes custom library in getLibraryHelp', () => {
+  const metadata = {
+    demo: {
+      name: 'demo',
+      description: 'Demo package nodes.',
+      targets: ['cli'],
+      functions: {
+        double: {
+          name: 'double',
+          signature: 'demo.double(x)',
+          description: 'Doubles a number.',
+          args: [
+            {
+              name: 'x',
+              type: 'number',
+              positional: true,
+              description: 'Input value.'
+            }
+          ],
+          returns: 'number',
+          targets: ['cli'],
+          examples: ['y = demo.double(21)']
+        }
+      }
+    }
+  };
+
+  const registry = createLibraryMetadataRegistry(metadata);
+  const session = new LoomReplSession({ metadataRegistry: registry });
+  const help = session.getLibraryHelp('demo');
+  assert.ok(help.includes('demo'));
+  assert.ok(help.includes('demo.double'));
+});
+
+test('session with metadataRegistry includes custom function in getFunctionHelp', () => {
+  const metadata = {
+    demo: {
+      name: 'demo',
+      description: 'Demo package nodes.',
+      targets: ['cli'],
+      functions: {
+        double: {
+          name: 'double',
+          signature: 'demo.double(x)',
+          description: 'Doubles a number.',
+          args: [
+            {
+              name: 'x',
+              type: 'number',
+              positional: true,
+              description: 'Input value.'
+            }
+          ],
+          returns: 'number',
+          targets: ['cli'],
+          examples: ['y = demo.double(21)']
+        }
+      }
+    }
+  };
+
+  const registry = createLibraryMetadataRegistry(metadata);
+  const session = new LoomReplSession({ metadataRegistry: registry });
+  const help = session.getFunctionHelp('demo.double');
+  assert.ok(help.includes('demo.double(x)'));
+  assert.ok(help.includes('Doubles a number'));
 });

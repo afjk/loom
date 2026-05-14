@@ -199,6 +199,46 @@ loom.evaluateOnce();
 
 The `nodeRegistry` option can be passed to both the DSL compiler and runtime to enable package nodes.
 
+## REPL Help with Package Metadata
+
+When a host creates both a node registry and a metadata registry and passes them to `LoomReplSession`, REPL evaluation, import validation, and help all use the same package-aware view:
+
+```js
+import { LoomReplSession } from '../../src/toolchain/repl-session.js';
+import { createNodeRegistry } from '../../src/runtime/node-registry.js';
+import { createLibraryMetadataRegistry } from '../../src/toolchain/metadata-registry.js';
+import { registerBuiltinNodes } from '../../src/nodes/index.js';
+import { registerTrustedPackage } from '../../src/runtime/package-registration.js';
+import * as demoPackage from '../../examples/packages/demo/index.js';
+
+const nodeRegistry = createNodeRegistry();
+const metadataRegistry = createLibraryMetadataRegistry();
+
+registerBuiltinNodes(nodeRegistry);
+registerTrustedPackage(nodeRegistry, demoPackage, { metadataRegistry });
+
+const session = new LoomReplSession({
+  target: 'cli',
+  nodeRegistry,
+  metadataRegistry
+});
+
+// Import and evaluate demo nodes
+session.evaluateSnippet('import demo');
+session.evaluateSnippet('x = demo.double(value: 5)');
+
+// Help functions use the same metadata
+console.log(session.listLibraries()); // Shows 'demo'
+console.log(session.getLibraryHelp('demo')); // Shows demo library docs
+console.log(session.getFunctionHelp('demo.double')); // Shows demo.double docs
+```
+
+The default CLI still shows builtin metadata until a package-loading UX is added. REPL help methods pass the `metadataRegistry` option to formatting functions, enabling custom package metadata to appear in:
+
+- `:libs` command
+- `:help <library>` command
+- `:help <lib.func>` command
+
 ## Example
 
 See `examples/packages/demo/` for a working example with two nodes:
