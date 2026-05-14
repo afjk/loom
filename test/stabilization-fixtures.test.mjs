@@ -6,56 +6,10 @@ import { fileURLToPath } from 'node:url';
 import { parseDSLToAST } from '../src/loom-dsl.js';
 import { compileLoomSource } from '../src/toolchain/compile.js';
 import { runLoomSource } from '../src/toolchain/run.js';
+import { normalizeGraph, findNode } from './helpers/normalize-graph.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const fixturesPath = path.join(__dirname, 'fixtures', 'stabilization');
-
-function normalizeGraph(graph) {
-  if (!graph) return null;
-
-  const nodes = (graph.nodes ?? [])
-    .map((node) => {
-      const normalized = {
-        id: node.id,
-        type: node.type
-      };
-      if (node.params !== undefined && node.params !== null) {
-        normalized.params = node.params;
-      }
-      return normalized;
-    })
-    .sort((a, b) => a.id.localeCompare(b.id));
-
-  const edges = (graph.edges ?? [])
-    .map((edge) => ({
-      from: edge.from,
-      to: edge.to
-    }))
-    .sort((a, b) => {
-      const aKey = `${a.from}->${a.to}`;
-      const bKey = `${b.from}->${b.to}`;
-      return aKey.localeCompare(bKey);
-    });
-
-  const normalized = {
-    nodes,
-    edges
-  };
-
-  if (graph.imports !== undefined && graph.imports !== null && graph.imports.length > 0) {
-    normalized.imports = graph.imports;
-  }
-
-  if (graph.render !== undefined && graph.render !== null) {
-    normalized.render = graph.render;
-  }
-
-  return normalized;
-}
-
-function findNode(graph, nodeId) {
-  return (graph.nodes ?? []).find((n) => n.id === nodeId);
-}
 
 test('basic-math: parses without errors', () => {
   const source = fs.readFileSync(path.join(fixturesPath, 'basic-math.loom'), 'utf8');
