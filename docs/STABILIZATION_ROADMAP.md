@@ -42,6 +42,7 @@ Recommended order:
    - Remote/npm package loading remains future work
 7. Clarify metadata as shared source for editor/docs/completion
    - VS Code completion, hover, and library reference now share generated library metadata as their default source
+   - Standard library reference docs are generated from shared library metadata
    - manual overrides remain only for examples, aliases, render syntax, and preview-host-specific notes
 8. Improve compatibility between JS runtime and Unity runtime where practical
 
