@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { LoomReplSession } from '../src/toolchain/repl-session.js';
 import { createLibraryMetadataRegistry } from '../src/toolchain/metadata-registry.js';
+import { createNodeRegistry } from '../src/runtime/node-registry.js';
+import { registerBuiltinNodes } from '../src/nodes/index.js';
+import { registerTrustedPackage } from '../src/runtime/package-registration.js';
 
 test('evaluates assignment snippet', () => {
   const session = new LoomReplSession();
@@ -305,4 +308,36 @@ test('session with metadataRegistry includes custom function in getFunctionHelp'
   const help = session.getFunctionHelp('demo.double');
   assert.ok(help.includes('demo.double(x)'));
   assert.ok(help.includes('Doubles a number'));
+});
+
+test('REPL session with custom nodeRegistry can execute package nodes', async () => {
+  const demoPackage = await import('../examples/packages/demo/index.js');
+
+  const nodeRegistry = createNodeRegistry();
+  const metadataRegistry = createLibraryMetadataRegistry();
+
+  registerBuiltinNodes(nodeRegistry);
+  registerTrustedPackage(nodeRegistry, demoPackage, { metadataRegistry });
+
+  const session = new LoomReplSession({
+    target: 'cli',
+    nodeRegistry,
+    metadataRegistry
+  });
+
+  const importResult = session.evaluateSnippet('import demo');
+  assert.equal(importResult.ok, true, 'import demo should succeed');
+
+  const evalResult = session.evaluateSnippet('x = demo.double(value: 21)');
+  assert.equal(evalResult.ok, true, 'demo.double execution should succeed');
+  assert.equal(evalResult.values['x.out'], 42, 'demo.double(21) should return 42');
+
+  const libs = session.listLibraries();
+  assert.ok(libs.includes('demo'), 'listLibraries should include demo');
+
+  const libHelp = session.getLibraryHelp('demo');
+  assert.ok(libHelp.includes('demo.double'), 'getLibraryHelp should include demo.double');
+
+  const funcHelp = session.getFunctionHelp('demo.double');
+  assert.ok(funcHelp.includes('double'), 'getFunctionHelp should include function description');
 });

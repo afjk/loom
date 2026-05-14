@@ -199,9 +199,13 @@ loom.evaluateOnce();
 
 The `nodeRegistry` option can be passed to both the DSL compiler and runtime to enable package nodes.
 
-## REPL Help with Package Metadata
+## REPL Session with Package Registries
 
-When a host creates both a node registry and a metadata registry and passes them to `LoomReplSession`, REPL evaluation, import validation, and help all use the same package-aware view:
+When a host creates both a node registry and a metadata registry and passes them to `LoomReplSession`, REPL evaluation, import validation, and help all use the same package-aware view. This enables:
+
+- **Evaluation**: Custom package nodes execute through `evaluateSnippet()`
+- **Import validation**: Imports are validated against the metadata registry
+- **Help**: Package metadata appears in `:libs`, `:help <library>`, and `:help <lib.func>`
 
 ```js
 import { LoomReplSession } from '../../src/toolchain/repl-session.js';
