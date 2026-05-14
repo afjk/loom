@@ -36,6 +36,76 @@ The node type definition follows the standard Loomlet node format:
 - **outputs**: Array of output port definitions `{ name, type, kind? }`
 - **evaluate(inputs, params, ctx)**: Function that evaluates the node and returns output values
 
+## Package Metadata
+
+A package may optionally export library metadata to make nodes discoverable to editors, documentation tools, and AI authoring systems. Metadata is separate from runtime registration and not required for execution.
+
+### Exporting Metadata with `loomletMetadata`
+
+```js
+export const loomletMetadata = {
+  demo: {
+    name: 'demo',
+    description: 'Demo package nodes for trusted local package tests.',
+    targets: ['cli', 'web', 'scenesync'],
+    functions: {
+      double: {
+        name: 'double',
+        signature: 'demo.double(value: 0)',
+        description: 'Doubles a numeric value.',
+        args: [
+          {
+            name: 'value',
+            type: 'number',
+            positional: false,
+            description: 'Input value.'
+          }
+        ],
+        returns: 'number',
+        targets: ['cli', 'web', 'scenesync'],
+        examples: ['result = demo.double(value: 5)']
+      }
+    }
+  }
+};
+```
+
+### Exporting Metadata with `registerLoomletMetadata`
+
+Alternatively, use a function:
+
+```js
+export function registerLoomletMetadata(metadataRegistry, context) {
+  metadataRegistry.registerLibraryMetadata('demo', {
+    name: 'demo',
+    description: 'Demo package nodes...',
+    targets: ['cli', 'web', 'scenesync'],
+    functions: { ... }
+  });
+}
+```
+
+### Registering Package Metadata
+
+When registering a package, pass a `metadataRegistry` in the context:
+
+```js
+import { createLibraryMetadataRegistry } from '../src/toolchain/metadata-registry.js';
+
+const nodeRegistry = createNodeRegistry();
+const metadataRegistry = createLibraryMetadataRegistry();
+
+registerTrustedPackage(nodeRegistry, demoPackage, { metadataRegistry });
+```
+
+The registry will:
+
+1. Call `registerLoomletPackage` to register runtime node definitions
+2. If `registerLoomletMetadata` exists, call it with the metadata registry
+3. Else if `loomletMetadata` exists, register each library automatically
+
+Runtime-only packages are still supported—metadata is optional.
+
 ## Runtime Flow
 
 ### Register a Package
@@ -89,13 +159,14 @@ Packages must be treated as trusted code. Do not load packages from untrusted so
 
 The following are planned but not yet implemented:
 
-- **Metadata registration**: Package manifests with node metadata
 - **Package manifest**: version, dependencies, targets
+- **Metadata-driven validation**: Compiler and runtime validation using package metadata
 - **Target compatibility**: Node Editor, VS Code, Unity, web
 - **npm package loading**: Load packages from npm
 - **Web/CDN loading**: Load packages from remote URLs
 - **Sandboxing and permissions**: Restrict package capabilities
 - **Package-aware VS Code completion**: Autocomplete for package nodes
 - **Package-aware Node Editor**: UI for adding package nodes
+- **Generated documentation**: Docs from package metadata
 - **Package discovery**: Registry or catalog of available packages
 - **Package versioning**: Semver support and compatibility checks

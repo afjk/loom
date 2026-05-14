@@ -1,4 +1,5 @@
 import { LIBRARY_COMPATIBILITY } from './runtime-targets.js';
+import { createLibraryMetadataRegistry } from './metadata-registry.js';
 
 export const LIBRARY_METADATA = {
   text: {
@@ -908,3 +909,9 @@ LIBRARY_METADATA.fs.functions = Object.fromEntries([
   ['exists', ['fs.exists(path: "file.txt")', 'CLI-only: returns whether a local path exists.', 'boolean']],
   ['list', ['fs.list(path: ".")', 'CLI-only: returns filenames in a local directory.', 'array']]
 ].map(([name, [signature, description, returns]]) => [name, makeFunctionMetadata('fs', name, signature, description, returns)]));
+
+export function createDefaultLibraryMetadataRegistry() {
+  return createLibraryMetadataRegistry(LIBRARY_METADATA);
+}
+
+export const DEFAULT_LIBRARY_METADATA_REGISTRY = createDefaultLibraryMetadataRegistry();

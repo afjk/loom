@@ -192,6 +192,41 @@ export function registerLoomletPackage(registry) {
 
 For more information, see `docs/labs/PACKAGE_SYSTEM.md` and `examples/packages/demo/`.
 
+## Metadata registration
+
+Node registration defines executable behavior. Metadata registration defines documentation, completion hints, and editor surface.
+
+Packages may separately export library metadata to make their nodes discoverable to non-runtime tools:
+
+```js
+export const loomletMetadata = {
+  demo: {
+    name: 'demo',
+    description: 'Demo package nodes.',
+    targets: ['cli', 'web', 'scenesync'],
+    functions: {
+      double: {
+        name: 'double',
+        signature: 'demo.double(value: 0)',
+        description: 'Doubles a numeric value.',
+        args: [...],
+        returns: 'number',
+        targets: ['cli', 'web', 'scenesync'],
+        examples: [...]
+      }
+    }
+  }
+};
+```
+
+They remain intentionally separate:
+
+- Node registration is **required** for runtime execution
+- Metadata registration is **optional** for discovery and tooling
+- A package can be runtime-only, but editor/docs tools will not know about it without metadata
+
+For details, see `docs/labs/PACKAGE_SYSTEM.md`.
+
 ## Security note
 
 A package that registers executable nodes is trusted code.

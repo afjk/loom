@@ -33,3 +33,55 @@ export function registerLoomletPackage(registry) {
     }
   });
 }
+
+export const loomletMetadata = {
+  demo: {
+    name: 'demo',
+    description: 'Demo package nodes for trusted local package tests.',
+    targets: ['cli', 'web', 'scenesync'],
+    functions: {
+      double: {
+        name: 'double',
+        signature: 'demo.double(value: 0)',
+        description: 'Doubles a numeric value.',
+        args: [
+          {
+            name: 'value',
+            type: 'number',
+            positional: false,
+            description: 'Input value.'
+          }
+        ],
+        returns: 'number',
+        targets: ['cli', 'web', 'scenesync'],
+        examples: [
+          'result = demo.double(value: 5)'
+        ]
+      },
+      offset: {
+        name: 'offset',
+        signature: 'demo.offset(value, amount: 1)',
+        description: 'Adds an offset amount to a numeric value.',
+        args: [
+          {
+            name: 'value',
+            type: 'number',
+            positional: true,
+            description: 'Input value.'
+          },
+          {
+            name: 'amount',
+            type: 'number',
+            positional: false,
+            description: 'Offset amount.'
+          }
+        ],
+        returns: 'number',
+        targets: ['cli', 'web', 'scenesync'],
+        examples: [
+          'result = demo.offset(5, amount: 3)'
+        ]
+      }
+    }
+  }
+};

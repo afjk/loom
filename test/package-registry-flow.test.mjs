@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { Loom, NODE_TYPES } from '../src/loom.js';
 import { parseDSL, parseDSLToAST, compileToGraph } from '../src/loom-dsl.js';
 import { createNodeRegistry } from '../src/runtime/node-registry.js';
+import { createLibraryMetadataRegistry } from '../src/toolchain/metadata-registry.js';
 import { registerBuiltinNodes } from '../src/nodes/index.js';
 import { registerTrustedPackage } from '../src/runtime/package-registration.js';
 import * as demoPackage from '../examples/packages/demo/index.js';
@@ -90,4 +91,28 @@ result = math.add(a: x, b: 3)
   loom.evaluateOnce();
 
   assert.equal(loom.getValue('result.out'), 13);
+});
+
+test('package registry flow: compile and runtime work with both node and metadata registries', () => {
+  const nodeRegistry = createNodeRegistry();
+  const metadataRegistry = createLibraryMetadataRegistry();
+
+  registerBuiltinNodes(nodeRegistry);
+  registerTrustedPackage(nodeRegistry, demoPackage, { metadataRegistry });
+
+  assert.equal(nodeRegistry.hasNodeType('demo.double'), true);
+  assert.equal(metadataRegistry.hasLibraryMetadata('demo'), true);
+
+  const graph = parseDSL(`
+import demo
+import math
+
+x = demo.offset(value: 5, amount: 2)
+result = math.add(a: x, b: 1)
+`, { nodeRegistry });
+
+  const loom = new Loom(graph, { nodeRegistry });
+  loom.evaluateOnce();
+
+  assert.equal(loom.getValue('result.out'), 8);
 });

@@ -5,6 +5,8 @@ This is a trusted local package example.
 It is not loaded from npm or a remote URL.
 It proves the runtime registration API can extend Loomlet with package nodes.
 
+The package also exports library metadata, making its nodes discoverable to editors and documentation tools.
+
 ## Usage
 
 Register the package with a node registry, then use its nodes in DSL:

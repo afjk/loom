@@ -33,6 +33,9 @@ Recommended order:
    - Trusted local packages now supported via `registerTrustedPackage()`
    - Compile/runtime can accept custom node registries
    - A demo package proves end-to-end compile/runtime flow with package nodes
+   - Package metadata registry added (`createLibraryMetadataRegistry`)
+   - Packages can register both runtime nodes and metadata
+   - Metadata is optional; runtime-only packages still work
    - Remote/npm package loading remains future work
 7. Clarify metadata as shared source for editor/docs/completion
 8. Improve compatibility between JS runtime and Unity runtime where practical

@@ -17,6 +17,18 @@ However, today the metadata is still **partially descriptive rather than prescri
 
 A future phase will promote metadata to be the primary source, with tests to ensure that implementation behavior matches the declared metadata at all boundaries.
 
+## Package metadata
+
+Trusted local packages may export library metadata following the same structure as built-in libraries. Package metadata enables editors, documentation tools, and AI authoring systems to discover package-provided nodes without requiring a separate manifest format.
+
+The schema is identical:
+
+- Libraries group functions by namespace
+- Functions define arguments, return types, targets, and examples
+- Function targets must be a subset of library targets
+
+For details, see `docs/labs/PACKAGE_SYSTEM.md`.
+
 ## Terminology
 
 ### Library
