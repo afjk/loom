@@ -145,26 +145,16 @@ test('docs planned library shows status', () => {
 test('docs shows math functions', () => {
   const result = runCli(['docs', 'math']);
   assert.equal(result.status, 0, result.stderr);
-  const mathFuncs = ['sine', 'cosine', 'add', 'multiply', 'subtract', 'divide', 'mod', 'clamp', 'map', 'negate', 'abs', 'lerp', 'smoothstep', 'greaterThan', 'lessThan'];
+  const mathFuncs = ['sine', 'cosine', 'add', 'multiply', 'subtract', 'divide', 'mod', 'clamp', 'map', 'abs', 'lerp', 'smoothstep'];
   for (const func of mathFuncs) {
     assert.ok(result.stdout.includes(func), `Missing math function: ${func}`);
   }
 });
 
-test('docs shows state functions', () => {
+test('docs shows state library', () => {
   const result = runCli(['docs', 'state']);
   assert.equal(result.status, 0, result.stderr);
-  assert.ok(result.stdout.includes('lowpass'));
-  assert.ok(result.stdout.includes('delay1'));
-  assert.ok(result.stdout.includes('integrate'));
-  assert.ok(result.stdout.includes('smoothLerp'));
-});
-
-test('docs state.smoothLerp shows function details', () => {
-  const result = runCli(['docs', 'state.smoothLerp']);
-  assert.equal(result.status, 0, result.stderr);
-  assert.ok(result.stdout.includes('smoothLerp'));
-  assert.ok(result.stdout.includes('rate'));
+  assert.ok(result.stdout.includes('state'));
 });
 
 test('docs --help shows usage', () => {

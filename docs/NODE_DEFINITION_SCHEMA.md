@@ -280,12 +280,25 @@ The following rules help preserve compatibility and gradual improvement:
 - Do not use metadata field order as runtime semantics unless explicitly documented.
 - Editor-only metadata should be clearly separated from semantic metadata in future versions.
 
+## Public metadata policy
+
+**Metadata-only public nodes are not allowed.** Every function advertised in `LIBRARY_METADATA` must have a corresponding executable implementation in `NODE_TYPES`.
+
+For experimental or future nodes:
+- Design and discuss in lab notes, design documents, or draft PRs
+- Do not add to public `LIBRARY_METADATA` until:
+  - Execution semantics are clearly defined
+  - A working implementation is ready
+  - Tests exist to prevent regression
+
+A metadata function without a runtime node will fail the metadata drift test in `test/runtime-metadata-drift.test.mjs` unless explicitly justified in that test.
+
 ## Known gaps
 
 The following gaps prevent using metadata as the single source of truth:
 
 - Some generated metadata entries (especially from `makeFunctionMetadata`) have empty `args` arrays because argument information is not yet available.
-- Metadata for `logic`, `list`, `random`, `debug`, and `output` functions is incomplete.
+- Metadata for `logic`, `list`, `random`, and `debug` functions is incomplete.
 - Metadata does not yet fully drive compiler validation. Some argument validation is hard-coded in the parser and compiler.
 - Runtime implementation and metadata can still drift (tracked by `test/runtime-metadata-drift.test.mjs`).
 - Node Editor port generation is not fully stabilized and does not yet use metadata as the authoritative source.

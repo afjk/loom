@@ -23,6 +23,7 @@ Recommended order:
    - Document runtime node registry in `docs/RUNTIME_NODE_REGISTRY.md`
    - Add runtime registry shape tests in `test/runtime-node-registry.test.mjs`
    - Add metadata/runtime drift tests in `test/runtime-metadata-drift.test.mjs`
+   - Remove metadata-only public nodes; experimental nodes should stay in design docs until executable
    - Runtime/metadata drift allowlists are now self-audited so stale entries fail tests
    - Do not yet make metadata the single runtime/compiler source of truth
 5. Clarify input vs param (✓ covered by `input-param-*` stabilization fixtures)
