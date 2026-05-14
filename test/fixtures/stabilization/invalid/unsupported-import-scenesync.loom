@@ -1,0 +1,4 @@
+# Stabilization fixture: unsupported import for scenesync target
+import fs
+
+value = fs.readText(path: "README.md")

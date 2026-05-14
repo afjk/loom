@@ -1,0 +1,4 @@
+# Stabilization fixture: unknown node type
+import math
+
+value = math.noSuchNode(a: 1)

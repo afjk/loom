@@ -1,0 +1,4 @@
+# Stabilization fixture: unknown import
+import madeup
+
+value = madeup.node()
