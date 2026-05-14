@@ -44,6 +44,14 @@ npm install -g @afjk/loomlet
 loomlet --help
 ```
 
+To load a trusted local package:
+
+```bash
+loomlet run ./file.loom --package ./examples/packages/demo/index.js --get x.out
+```
+
+See [Package System docs](docs/labs/PACKAGE_SYSTEM.md) for details.
+
 ## Library usage
 
 ```js

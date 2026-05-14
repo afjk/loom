@@ -245,7 +245,7 @@ The default CLI still shows builtin metadata until a package-loading UX is added
 
 ## CLI Usage with Trusted Local Packages
 
-The `loomlet` CLI can load trusted local packages using the `--package` flag (experimental):
+The `loomlet` CLI can load trusted local packages using the `--package` flag **(experimental)**:
 
 ```bash
 loomlet repl --package ./examples/packages/demo/index.js
@@ -257,23 +257,43 @@ loomlet docs demo --package ./examples/packages/demo/index.js
 loomlet docs demo.double --package ./examples/packages/demo/index.js
 ```
 
-### Package Resolution
+### Important Notes on Packages
 
+**Packages are executable JavaScript.** They must be trusted code. There is no sandboxing or permission system. Load packages only from sources you trust.
+
+### Package Resolution and Paths
+
+- Package paths must point to a JavaScript module file (e.g., `./examples/packages/demo/index.js`)
 - Local file paths are resolved relative to `process.cwd()`
 - Absolute paths are used as-is
-- No npm resolution
-- No remote URL loading
-- No directory package discovery (must specify the `.js` file)
+- **Directory discovery is not supported** — you must specify the `.js` file
+- **npm resolution is not supported**
+- **Remote URL loading is not supported**
 
-### Multiple Packages
+### Multiple Packages and Load Summaries
 
-Multiple packages can be loaded by repeating the `--package` flag:
+Multiple packages can be loaded by repeating the `--package` flag. When a host loads a package, the load summary reports **only the entries added by that package**, not the full registry state. This helps distinguish package contributions from builtin libraries.
+
+For example, after loading the demo package with builtins already present:
+
+```js
+const result = await loadTrustedLocalPackage('./demo/index.js', { 
+  nodeRegistry, 
+  metadataRegistry 
+});
+// result.libraries = ['demo']  (not including 'math', 'text', etc.)
+// result.nodeTypes = ['demo.double', 'demo.offset']
+```
+
+However, loading the same package twice will fail with a "Duplicate node type" error.
+
+### Loading Multiple Packages
+
+Load additional packages by repeating the `--package` flag:
 
 ```bash
 loomlet repl --package ./pkg-a/index.js --package ./pkg-b/index.js
 ```
-
-However, loading the same package twice will fail with a "Duplicate node type" error.
 
 ### REPL with Packages
 
@@ -303,14 +323,10 @@ Doubles a numeric value.
 Clear errors are provided for common issues:
 
 - **Package file not found**: Check the path and ensure the file exists
-- **Package fails to import**: Check for syntax errors in the package module
+- **Package fails to import**: Check for syntax errors in the package module or its dependencies
 - **Invalid package format**: Package must export `registerLoomletPackage` function
 - **Duplicate library metadata**: A library name is already registered
 - **Duplicate node type**: A node type is already registered
-
-### Security
-
-**Packages are executable JavaScript and must be trusted.** There is no sandboxing or permission system. Load packages only from sources you trust.
 
 ## Example
 
@@ -327,11 +343,6 @@ x = demo.double(value: 5)
 y = demo.offset(x, amount: 3)
 ```
 
-## Security Note
-
-**A trusted package is executable JavaScript.**
-
-Packages must be treated as trusted code. Do not load packages from untrusted sources without sandboxing and permission checks. Sandboxing and permission systems are future work.
 
 ## Future Work
 
