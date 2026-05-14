@@ -1,0 +1,7 @@
+# Stabilization fixture: logic-driven render bar
+import logic
+
+isWide = logic.greaterThan(value: 120, other: 100)
+width = logic.select(condition: isWide, whenTrue: 300, whenFalse: 80)
+
+render bar(width: width, color: "#80ed99", height: 48)

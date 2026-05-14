@@ -1,0 +1,5 @@
+# Stabilization fixture: logic select
+import logic
+
+isReady = logic.equals(value: 3, other: 3)
+label = logic.select(condition: isReady, whenTrue: "ready", whenFalse: "waiting")

@@ -220,3 +220,143 @@ test('scene-math-position: produces correct position effect', () => {
   assert.ok(positionEffect, 'Should have position effect');
   assert.deepEqual(positionEffect.position, [3, 6, 0], 'Position should be [3, 6, 0]');
 });
+
+test('logic-select: parses without errors', () => {
+  const source = fs.readFileSync(path.join(fixturesPath, 'logic-select.loom'), 'utf8');
+  const parsed = parseDSLToAST(source);
+  assert.equal(parsed.errors.length, 0, `Parse errors: ${JSON.stringify(parsed.errors)}`);
+});
+
+test('logic-select: compiles without errors', () => {
+  const source = fs.readFileSync(path.join(fixturesPath, 'logic-select.loom'), 'utf8');
+  const compiled = compileLoomSource(source, { target: 'cli' });
+  assert.equal(compiled.ok, true, `Compile errors: ${JSON.stringify(compiled.errors)}`);
+  assert.ok(compiled.graph, 'Graph should exist');
+});
+
+test('logic-select: has expected node structure', () => {
+  const source = fs.readFileSync(path.join(fixturesPath, 'logic-select.loom'), 'utf8');
+  const compiled = compileLoomSource(source, { target: 'cli' });
+  assert.equal(compiled.ok, true);
+
+  const graph = compiled.graph;
+  const isReadyNode = findNode(graph, 'isReady');
+  const labelNode = findNode(graph, 'label');
+
+  assert.ok(isReadyNode, 'Graph should have isReady node');
+  assert.equal(isReadyNode.type, 'logic.equals', 'isReady node should be logic.equals');
+
+  assert.ok(labelNode, 'Graph should have label node');
+  assert.equal(labelNode.type, 'logic.select', 'label node should be logic.select');
+});
+
+test('logic-select: runtime values are correct', () => {
+  const source = fs.readFileSync(path.join(fixturesPath, 'logic-select.loom'), 'utf8');
+  const run = runLoomSource(source, { target: 'cli' });
+  assert.equal(run.ok, true, `Runtime errors: ${JSON.stringify(run.errors)}`);
+
+  assert.equal(run.values['isReady.out'], true, 'isReady should be true');
+  assert.equal(run.values['label.out'], 'ready', 'label should be "ready"');
+});
+
+test('logic-render-bar: parses without errors', () => {
+  const source = fs.readFileSync(path.join(fixturesPath, 'logic-render-bar.loom'), 'utf8');
+  const parsed = parseDSLToAST(source);
+  assert.equal(parsed.errors.length, 0, `Parse errors: ${JSON.stringify(parsed.errors)}`);
+});
+
+test('logic-render-bar: compiles without errors', () => {
+  const source = fs.readFileSync(path.join(fixturesPath, 'logic-render-bar.loom'), 'utf8');
+  const compiled = compileLoomSource(source, { target: 'cli' });
+  assert.equal(compiled.ok, true, `Compile errors: ${JSON.stringify(compiled.errors)}`);
+  assert.ok(compiled.graph, 'Graph should exist');
+});
+
+test('logic-render-bar: has expected node structure', () => {
+  const source = fs.readFileSync(path.join(fixturesPath, 'logic-render-bar.loom'), 'utf8');
+  const compiled = compileLoomSource(source, { target: 'cli' });
+  assert.equal(compiled.ok, true);
+
+  const graph = compiled.graph;
+  const isWideNode = findNode(graph, 'isWide');
+  const widthNode = findNode(graph, 'width');
+
+  assert.ok(isWideNode, 'Graph should have isWide node');
+  assert.equal(isWideNode.type, 'logic.greaterThan', 'isWide node should be logic.greaterThan');
+
+  assert.ok(widthNode, 'Graph should have width node');
+  assert.equal(widthNode.type, 'logic.select', 'width node should be logic.select');
+});
+
+test('logic-render-bar: has expected render config', () => {
+  const source = fs.readFileSync(path.join(fixturesPath, 'logic-render-bar.loom'), 'utf8');
+  const compiled = compileLoomSource(source, { target: 'cli' });
+  assert.equal(compiled.ok, true);
+
+  const graph = compiled.graph;
+  assert.ok(graph.render, 'Graph should have render config');
+  assert.equal(graph.render.type, 'bar', 'Render type should be bar');
+});
+
+test('logic-render-bar: runtime values are correct', () => {
+  const source = fs.readFileSync(path.join(fixturesPath, 'logic-render-bar.loom'), 'utf8');
+  const run = runLoomSource(source, { target: 'cli' });
+  assert.equal(run.ok, true, `Runtime errors: ${JSON.stringify(run.errors)}`);
+
+  assert.equal(run.values['isWide.out'], true, 'isWide should be true (120 > 100)');
+  assert.equal(run.values['width.out'], 300, 'width should be 300 (selected from whenTrue)');
+});
+
+test('logic-scene-position: parses without errors', () => {
+  const source = fs.readFileSync(path.join(fixturesPath, 'logic-scene-position.loom'), 'utf8');
+  const parsed = parseDSLToAST(source);
+  assert.equal(parsed.errors.length, 0, `Parse errors: ${JSON.stringify(parsed.errors)}`);
+});
+
+test('logic-scene-position: compiles without errors', () => {
+  const source = fs.readFileSync(path.join(fixturesPath, 'logic-scene-position.loom'), 'utf8');
+  const compiled = compileLoomSource(source, { target: 'cli' });
+  assert.equal(compiled.ok, true, `Compile errors: ${JSON.stringify(compiled.errors)}`);
+  assert.ok(compiled.graph, 'Graph should exist');
+});
+
+test('logic-scene-position: has expected node structure', () => {
+  const source = fs.readFileSync(path.join(fixturesPath, 'logic-scene-position.loom'), 'utf8');
+  const compiled = compileLoomSource(source, { target: 'cli' });
+  assert.equal(compiled.ok, true);
+
+  const graph = compiled.graph;
+  const moveRightNode = findNode(graph, 'moveRight');
+  const xNode = findNode(graph, 'x');
+  const setPositionNode = findNodeByType(graph, 'scene.setPosition');
+
+  assert.ok(moveRightNode, 'Graph should have moveRight node');
+  assert.equal(moveRightNode.type, 'logic.lessThan', 'moveRight node should be logic.lessThan');
+
+  assert.ok(xNode, 'Graph should have x node');
+  assert.equal(xNode.type, 'logic.select', 'x node should be logic.select');
+
+  assert.ok(setPositionNode, 'Graph should have scene.setPosition node');
+});
+
+test('logic-scene-position: runtime values are correct', () => {
+  const source = fs.readFileSync(path.join(fixturesPath, 'logic-scene-position.loom'), 'utf8');
+  const run = runLoomSource(source, { target: 'cli' });
+  assert.equal(run.ok, true, `Runtime errors: ${JSON.stringify(run.errors)}`);
+
+  assert.equal(run.values['moveRight.out'], true, 'moveRight should be true (1 < 2)');
+  assert.equal(run.values['x.out'], 5, 'x should be 5 (selected from whenTrue)');
+});
+
+test('logic-scene-position: produces correct Scene Sync position effect', () => {
+  const source = fs.readFileSync(path.join(fixturesPath, 'logic-scene-position.loom'), 'utf8');
+  const run = runLoomSource(source, { target: 'cli' });
+  assert.equal(run.ok, true);
+
+  const effects = run.effects || [];
+  const positionEffect = findEffect(effects, 'scene.setPosition');
+
+  assert.ok(positionEffect, 'Should have position effect');
+  assert.equal(positionEffect.objectId, 'sample-cube', 'objectId should be sample-cube');
+  assert.deepEqual(positionEffect.position, [5, 0, 0], 'Position should be [5, 0, 0]');
+});

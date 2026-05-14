@@ -1,0 +1,8 @@
+# Stabilization fixture: logic-driven Scene Sync position
+import logic
+import scene
+
+moveRight = logic.lessThan(value: 1, other: 2)
+x = logic.select(condition: moveRight, whenTrue: 5, whenFalse: -5)
+
+scene.setPosition(objectId: "sample-cube", x: x, y: 0, z: 0)
