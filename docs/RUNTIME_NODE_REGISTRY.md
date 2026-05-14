@@ -113,7 +113,7 @@ Each node definition in `NODE_TYPES` should have this minimum shape:
 
 The following policy guides reconciliation between `NODE_TYPES` and `LIBRARY_METADATA`:
 
-- **Metadata functions should map to executable runtime nodes** unless explicitly marked otherwise (e.g., as planned/future work).
+- **Public metadata should only advertise executable runtime nodes.** Every function in `LIBRARY_METADATA` must have a corresponding implementation in `NODE_TYPES`. Experimental or future nodes should be designed in lab notes or PRs, not added to public metadata until execution semantics are clear and implementation is ready.
 
 - **Runtime node input/param names should not casually drift** from metadata argument names. If a metadata function documents argument `x`, the runtime node should also have an input or param named `x`.
 
@@ -137,7 +137,7 @@ The following are not yet complete but are tracked:
 
 - **Node Editor port generation is not yet fully driven by the registry.** Port completions are generated but don't yet auto-sync with runtime definitions.
 
-These gaps are documented in test allowlists (`KNOWN_METADATA_ONLY_NODE_TYPES`, `KNOWN_RUNTIME_ONLY_NODE_TYPES`) and will be addressed in future PRs as coverage improves.
+These gaps are documented in test allowlists (`KNOWN_RUNTIME_ONLY_NODE_TYPES`) and will be addressed in future PRs as coverage improves.
 
 ---
 

@@ -668,24 +668,6 @@ export const LIBRARY_METADATA = {
           'result = map(value: 0.5, inMin: 0, inMax: 1, outMin: 0, outMax: 10)'
         ]
       },
-      negate: {
-        name: 'negate',
-        signature: 'negate(a: 0)',
-        description: 'Negates a number.',
-        args: [
-          {
-            name: 'a',
-            type: 'number',
-            positional: false,
-            description: 'Number to negate.'
-          }
-        ],
-        returns: 'number',
-        targets: LIBRARY_COMPATIBILITY.math.targets,
-        examples: [
-          'result = negate(a: 5)'
-        ]
-      },
       abs: {
         name: 'abs',
         signature: 'math.abs(value: 0)',
@@ -764,181 +746,6 @@ export const LIBRARY_METADATA = {
           'result = smoothstep(x: 0.5, edge0: 0, edge1: 1)'
         ]
       },
-      greaterThan: {
-        name: 'greaterThan',
-        signature: 'greaterThan(a: 0, b: 0)',
-        description: 'Compares if a > b.',
-        args: [
-          {
-            name: 'a',
-            type: 'number',
-            positional: false,
-            description: 'First number.'
-          },
-          {
-            name: 'b',
-            type: 'number',
-            positional: false,
-            description: 'Second number.'
-          }
-        ],
-        returns: 'boolean',
-        targets: LIBRARY_COMPATIBILITY.math.targets,
-        examples: [
-          'result = greaterThan(a: 5, b: 3)'
-        ]
-      },
-      lessThan: {
-        name: 'lessThan',
-        signature: 'lessThan(a: 0, b: 0)',
-        description: 'Compares if a < b.',
-        args: [
-          {
-            name: 'a',
-            type: 'number',
-            positional: false,
-            description: 'First number.'
-          },
-          {
-            name: 'b',
-            type: 'number',
-            positional: false,
-            description: 'Second number.'
-          }
-        ],
-        returns: 'boolean',
-        targets: LIBRARY_COMPATIBILITY.math.targets,
-        examples: [
-          'result = lessThan(a: 3, b: 5)'
-        ]
-      }
-    }
-  },
-  state: {
-    name: 'state',
-    description: LIBRARY_COMPATIBILITY.state.description,
-    targets: LIBRARY_COMPATIBILITY.state.targets,
-    functions: {
-      lowpass: {
-        name: 'lowpass',
-        signature: 'lowpass(value: 0, tau: 0.2, initial: 0)',
-        description: 'Low-pass filter with exponential smoothing.',
-        args: [
-          {
-            name: 'value',
-            type: 'number',
-            positional: true,
-            description: 'Input value.'
-          },
-          {
-            name: 'tau',
-            type: 'number',
-            positional: false,
-            description: 'Time constant (larger = more smoothing).'
-          },
-          {
-            name: 'initial',
-            type: 'number',
-            positional: false,
-            description: 'Initial state value.'
-          }
-        ],
-        returns: 'number',
-        targets: LIBRARY_COMPATIBILITY.state.targets,
-        examples: [
-          'smoothed = lowpass(input, tau: 0.5)'
-        ]
-      },
-      delay1: {
-        name: 'delay1',
-        signature: 'delay1(value: 0, initial: 0)',
-        description: 'Delays a value by one sample.',
-        args: [
-          {
-            name: 'value',
-            type: 'number',
-            positional: true,
-            description: 'Input value.'
-          },
-          {
-            name: 'initial',
-            type: 'number',
-            positional: false,
-            description: 'Initial state value.'
-          }
-        ],
-        returns: 'number',
-        targets: LIBRARY_COMPATIBILITY.state.targets,
-        examples: [
-          'delayed = delay1(input)'
-        ]
-      },
-      integrate: {
-        name: 'integrate',
-        signature: 'integrate(value: 0, initial: 0, min: null, max: null)',
-        description: 'Integrates a value over time.',
-        args: [
-          {
-            name: 'value',
-            type: 'number',
-            positional: true,
-            description: 'Input value to integrate.'
-          },
-          {
-            name: 'initial',
-            type: 'number',
-            positional: false,
-            description: 'Initial state value.'
-          },
-          {
-            name: 'min',
-            type: 'number|null',
-            positional: false,
-            description: 'Minimum bound (optional).'
-          },
-          {
-            name: 'max',
-            type: 'number|null',
-            positional: false,
-            description: 'Maximum bound (optional).'
-          }
-        ],
-        returns: 'number',
-        targets: LIBRARY_COMPATIBILITY.state.targets,
-        examples: [
-          'integrated = integrate(velocity, initial: 0)'
-        ]
-      },
-      smoothLerp: {
-        name: 'smoothLerp',
-        signature: 'smoothLerp(value: 0, rate: 5, initial: 0)',
-        description: 'Exponentially smooths a value with a rate parameter.',
-        args: [
-          {
-            name: 'value',
-            type: 'number',
-            positional: true,
-            description: 'Input value.'
-          },
-          {
-            name: 'rate',
-            type: 'number',
-            positional: false,
-            description: 'Smoothing rate (higher = faster response).'
-          },
-          {
-            name: 'initial',
-            type: 'number',
-            positional: false,
-            description: 'Initial state value.'
-          }
-        ],
-        returns: 'number',
-        targets: LIBRARY_COMPATIBILITY.state.targets,
-        examples: [
-          'smoothed = smoothLerp(input, rate: 5)'
-        ]
-      }
     }
   },
   fs: {
@@ -1079,9 +886,7 @@ LIBRARY_METADATA.random = {
     ['value', ['random.value()', 'Returns Math.random() in [0, 1).', 'number', 'implemented']],
     ['range', ['random.range(min: 0, max: 1)', 'Returns a random float in [min, max).', 'number', 'implemented']],
     ['int', ['random.int(min: 1, max: 6)', 'Returns a random integer in inclusive [min, max].', 'number', 'implemented']],
-    ['choice', ['random.choice(list)', 'Returns a random item or null for an empty list.', 'any', 'implemented']],
-    ['seeded', ['random.seeded(seed: 1)', 'Planned seeded random generator.', 'any', 'planned']],
-    ['noise', ['random.noise(...)', 'Planned noise generator.', 'number', 'planned']]
+    ['choice', ['random.choice(list)', 'Returns a random item or null for an empty list.', 'any', 'implemented']]
   ].map(([name, [signature, description, returns, status]]) => [name, makeFunctionMetadata('random', name, signature, description, returns, status)]))
 };
 
@@ -1096,14 +901,6 @@ LIBRARY_METADATA.debug = {
   ].map(([name, [signature, description, returns]]) => [name, makeFunctionMetadata('debug', name, signature, description, returns)]))
 };
 
-LIBRARY_METADATA.output = {
-  name: 'output',
-  description: LIBRARY_COMPATIBILITY.output.description,
-  targets: LIBRARY_COMPATIBILITY.output.targets,
-  functions: Object.fromEntries([
-    ['log', ['log(value, label: "")', 'Logs a value to the Output panel and returns the value.', 'any']]
-  ].map(([name, [signature, description, returns]]) => [name, makeFunctionMetadata('output', name, signature, description, returns)]))
-};
 
 LIBRARY_METADATA.fs.functions = Object.fromEntries([
   ['readText', ['fs.readText(path: "file.txt")', 'CLI-only: reads UTF-8 text from the local filesystem.', 'string']],

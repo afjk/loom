@@ -4,18 +4,7 @@ import { NODE_TYPES } from '../src/loom.js';
 import { LIBRARY_METADATA } from '../src/toolchain/library-metadata.js';
 
 // Allowlists for known drift (entries that will be self-audited)
-const KNOWN_METADATA_ONLY_NODE_TYPES = new Set([
-  'math.negate',
-  'math.greaterThan',
-  'math.lessThan',
-  'output.log',
-  'random.noise',
-  'random.seeded',
-  'state.delay1',
-  'state.integrate',
-  'state.lowpass',
-  'state.smoothLerp'
-]);
+const KNOWN_METADATA_ONLY_NODE_TYPES = new Set([]);
 
 const KNOWN_ARG_NAME_MISMATCHES = new Set([]);
 
