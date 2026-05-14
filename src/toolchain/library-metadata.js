@@ -688,11 +688,11 @@ export const LIBRARY_METADATA = {
       },
       abs: {
         name: 'abs',
-        signature: 'abs(a: 0)',
+        signature: 'math.abs(value: 0)',
         description: 'Computes the absolute value of a number.',
         args: [
           {
-            name: 'a',
+            name: 'value',
             type: 'number',
             positional: false,
             description: 'Number.'
@@ -701,7 +701,7 @@ export const LIBRARY_METADATA = {
         returns: 'number',
         targets: LIBRARY_COMPATIBILITY.math.targets,
         examples: [
-          'result = abs(a: -5)'
+          'result = math.abs(value: -5)'
         ]
       },
       lerp: {
