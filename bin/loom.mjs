@@ -2083,8 +2083,23 @@ async function handleRepl(args) {
         return;
       }
       if (trimmed === ':libs' || trimmed.startsWith(':libs ')) {
-        const includePlanned = trimmed === ':libs --all';
-        print(session.listLibraries(includePlanned ? { includePlanned: true } : {}));
+        const parts = trimmed.split(/\s+/);
+        const args = parts.slice(1);
+
+        if (args.length === 0) {
+          print(session.listLibraries());
+          rl.prompt();
+          return;
+        }
+
+        if (args.length === 1 && args[0] === '--all') {
+          print(session.listLibraries({ includePlanned: true }));
+          rl.prompt();
+          return;
+        }
+
+        print(`Unknown :libs option: ${args.join(' ')}`);
+        print('Use :libs or :libs --all');
         rl.prompt();
         return;
       }
