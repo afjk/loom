@@ -8,19 +8,36 @@ export class HelpError extends Error {
   }
 }
 
-export function listLibraries() {
-  return getAllLibraries();
+function getMetadataObject(options = {}) {
+  if (options.metadataRegistry) {
+    return options.metadataRegistry.toObject();
+  }
+  if (options.metadata) {
+    return options.metadata;
+  }
+  return LIBRARY_METADATA;
 }
 
-export function getLibraryHelp(name) {
-  const lib = LIBRARY_METADATA[name];
+function getLibraryList(metadataObj) {
+  const libNames = Object.keys(metadataObj);
+  return libNames.sort();
+}
+
+export function listLibraries(options = {}) {
+  const metadataObj = getMetadataObject(options);
+  return getLibraryList(metadataObj);
+}
+
+export function getLibraryHelp(name, options = {}) {
+  const metadataObj = getMetadataObject(options);
+  const lib = metadataObj[name];
   if (!lib) {
     throw new HelpError('UNKNOWN_LIBRARY', `No Loomlet library named "${name}"`);
   }
   return lib;
 }
 
-export function getFunctionHelp(qualifiedName) {
+export function getFunctionHelp(qualifiedName, options = {}) {
   const parts = qualifiedName.split('.');
 
   if (parts.length !== 2 || !parts[0] || !parts[1]) {
@@ -29,7 +46,8 @@ export function getFunctionHelp(qualifiedName) {
 
   const [libName, funcName] = parts;
 
-  const lib = LIBRARY_METADATA[libName];
+  const metadataObj = getMetadataObject(options);
+  const lib = metadataObj[libName];
   if (!lib) {
     throw new HelpError('UNKNOWN_LIBRARY', `No Loomlet library named "${libName}"`);
   }
@@ -42,12 +60,13 @@ export function getFunctionHelp(qualifiedName) {
   return func;
 }
 
-export function formatLibrariesText() {
-  const libs = listLibraries();
+export function formatLibrariesText(options = {}) {
+  const metadataObj = getMetadataObject(options);
+  const libs = getLibraryList(metadataObj);
   const lines = ['Loomlet libraries:', ''];
 
   for (const libName of libs) {
-    const lib = LIBRARY_METADATA[libName];
+    const lib = metadataObj[libName];
     const status = lib.status ? ` (${lib.status})` : '';
     const funcCount = Object.keys(lib.functions).length;
     const funcInfo = funcCount > 0 ? ` - ${funcCount} function${funcCount !== 1 ? 's' : ''}` : '';
@@ -62,8 +81,8 @@ export function formatLibrariesText() {
   return lines.join('\n');
 }
 
-export function formatLibraryHelpText(name) {
-  const lib = getLibraryHelp(name);
+export function formatLibraryHelpText(name, options = {}) {
+  const lib = getLibraryHelp(name, options);
   const lines = [lib.name, '', lib.description, ''];
 
   if (lib.status) {
@@ -84,8 +103,8 @@ export function formatLibraryHelpText(name) {
   return lines.join('\n');
 }
 
-export function formatFunctionHelpText(qualifiedName) {
-  const func = getFunctionHelp(qualifiedName);
+export function formatFunctionHelpText(qualifiedName, options = {}) {
+  const func = getFunctionHelp(qualifiedName, options);
   const lines = [func.signature, '', func.description, ''];
 
   if (func.args && func.args.length > 0) {
@@ -123,13 +142,15 @@ export function formatFunctionHelpText(qualifiedName) {
   return lines.join('\n');
 }
 
-export function formatHelpJson(query) {
+export function formatHelpJson(query, options = {}) {
+  const metadataObj = getMetadataObject(options);
+
   if (!query) {
-    const libs = listLibraries();
+    const libs = getLibraryList(metadataObj);
     return {
       type: 'libraries',
       libraries: libs.map(name => {
-        const lib = LIBRARY_METADATA[name];
+        const lib = metadataObj[name];
         return {
           name: lib.name,
           description: lib.description,
@@ -144,7 +165,7 @@ export function formatHelpJson(query) {
   const parts = query.split('.');
 
   if (parts.length === 1) {
-    const lib = getLibraryHelp(parts[0]);
+    const lib = getLibraryHelp(parts[0], { metadata: metadataObj });
     return {
       type: 'library',
       library: {
@@ -165,7 +186,7 @@ export function formatHelpJson(query) {
   }
 
   if (parts.length === 2) {
-    const func = getFunctionHelp(query);
+    const func = getFunctionHelp(query, { metadata: metadataObj });
     return {
       type: 'function',
       function: {

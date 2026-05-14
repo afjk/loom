@@ -9,6 +9,16 @@ function isCliSafeSink(nodeTypeName) {
     || nodeTypeName === 'scene.setPosition' || nodeTypeName === 'scene.setRotation' || nodeTypeName === 'scene.setScale';
 }
 
+function getNodeTypes(options = {}) {
+  if (options.nodeRegistry && typeof options.nodeRegistry.toObject === 'function') {
+    return options.nodeRegistry.toObject();
+  }
+  if (options.nodeTypes && typeof options.nodeTypes === 'object') {
+    return options.nodeTypes;
+  }
+  return NODE_TYPES;
+}
+
 function getRefsToRead(graph, get) {
   if (Array.isArray(get)) {
     return get;
@@ -19,8 +29,8 @@ function getRefsToRead(graph, get) {
   return null;
 }
 
-function getDefaultOutputPort(node) {
-  const nodeType = NODE_TYPES[node.type];
+function getDefaultOutputPort(node, nodeTypes) {
+  const nodeType = nodeTypes[node.type];
   if (!nodeType || !Array.isArray(nodeType.outputs) || nodeType.outputs.length === 0) {
     return null;
   }
@@ -31,9 +41,9 @@ function getDefaultOutputPort(node) {
   return outPort ? outPort.name : nodeType.outputs[0].name;
 }
 
-function validateCliRunnableGraph(graph) {
+function validateCliRunnableGraph(graph, nodeTypes) {
   for (const node of graph.nodes) {
-    const nodeType = NODE_TYPES[node.type];
+    const nodeType = nodeTypes[node.type];
     if (!nodeType) {
       throw new LoomError('UNKNOWN_NODE_TYPE', `Unknown node type: ${node.type}`, { nodeId: node.id, type: node.type });
     }
@@ -47,12 +57,12 @@ function validateCliRunnableGraph(graph) {
   }
 }
 
-function collectRequestedValues(engine, graph, get) {
+function collectRequestedValues(engine, graph, get, nodeTypes) {
   const requestedRefs = getRefsToRead(graph, get);
   if (requestedRefs === null) {
     const values = {};
     for (const node of graph.nodes) {
-      const nodeType = NODE_TYPES[node.type];
+      const nodeType = nodeTypes[node.type];
       if (!nodeType || !Array.isArray(nodeType.outputs)) {
         continue;
       }
@@ -72,8 +82,12 @@ function collectRequestedValues(engine, graph, get) {
 
 export function runLoomGraph(graph, options = {}) {
   try {
-    validateCliRunnableGraph(graph);
-    const engine = new Loom(graph);
+    const nodeTypes = getNodeTypes(options);
+    validateCliRunnableGraph(graph, nodeTypes);
+    const engine = new Loom(graph, {
+      nodeRegistry: options.nodeRegistry,
+      nodeTypes: options.nodeTypes
+    });
     engine.evaluateOnce({
       time: Number.isFinite(options.time) ? options.time : 0,
       dt: Number.isFinite(options.dt) ? options.dt : 0
@@ -81,7 +95,7 @@ export function runLoomGraph(graph, options = {}) {
 
     return {
       ok: true,
-      values: collectRequestedValues(engine, graph, options.get),
+      values: collectRequestedValues(engine, graph, options.get, nodeTypes),
       effects: engine.getEffects(),
       graph,
       errors: []

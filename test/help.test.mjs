@@ -269,3 +269,206 @@ test('planned library has empty functions', () => {
   assert.equal(Object.keys(fsLib.functions).length, 0);
   assert.equal(fsLib.status, 'planned');
 });
+
+test('formatLibrariesText with metadata option includes custom metadata', () => {
+  const metadata = {
+    demo: {
+      name: 'demo',
+      description: 'Demo package nodes.',
+      targets: ['cli'],
+      status: 'implemented',
+      functions: {
+        double: {
+          name: 'double',
+          signature: 'demo.double(x)',
+          description: 'Doubles a number.',
+          args: [
+            {
+              name: 'x',
+              type: 'number',
+              positional: true,
+              description: 'Input value.'
+            }
+          ],
+          returns: 'number',
+          targets: ['cli'],
+          examples: ['y = demo.double(21)']
+        }
+      }
+    }
+  };
+
+  const text = formatLibrariesText({ metadata });
+  assert.ok(text.includes('demo'));
+  assert.ok(text.includes('Demo package nodes'));
+});
+
+test('formatLibraryHelpText with metadata option includes custom library', () => {
+  const metadata = {
+    demo: {
+      name: 'demo',
+      description: 'Demo package nodes.',
+      targets: ['cli'],
+      functions: {
+        double: {
+          name: 'double',
+          signature: 'demo.double(x)',
+          description: 'Doubles a number.',
+          args: [
+            {
+              name: 'x',
+              type: 'number',
+              positional: true,
+              description: 'Input value.'
+            }
+          ],
+          returns: 'number',
+          targets: ['cli'],
+          examples: ['y = demo.double(21)']
+        }
+      }
+    }
+  };
+
+  const text = formatLibraryHelpText('demo', { metadata });
+  assert.ok(text.includes('demo'));
+  assert.ok(text.includes('demo.double'));
+  assert.ok(text.includes('Demo package nodes'));
+});
+
+test('formatFunctionHelpText with metadata option includes custom function', () => {
+  const metadata = {
+    demo: {
+      name: 'demo',
+      description: 'Demo package nodes.',
+      targets: ['cli'],
+      functions: {
+        double: {
+          name: 'double',
+          signature: 'demo.double(x)',
+          description: 'Doubles a number.',
+          args: [
+            {
+              name: 'x',
+              type: 'number',
+              positional: true,
+              description: 'Input value.'
+            }
+          ],
+          returns: 'number',
+          targets: ['cli'],
+          examples: ['y = demo.double(21)']
+        }
+      }
+    }
+  };
+
+  const text = formatFunctionHelpText('demo.double', { metadata });
+  assert.ok(text.includes('demo.double(x)'));
+  assert.ok(text.includes('Doubles a number'));
+  assert.ok(text.includes('x: number'));
+  assert.ok(text.includes('Input value'));
+  assert.ok(text.includes('Returns:'));
+  assert.ok(text.includes('number'));
+  assert.ok(text.includes('Example:'));
+  assert.ok(text.includes('y = demo.double(21)'));
+});
+
+test('formatHelpJson with metadata option includes custom libraries', () => {
+  const metadata = {
+    demo: {
+      name: 'demo',
+      description: 'Demo package nodes.',
+      targets: ['cli'],
+      functions: {
+        double: {
+          name: 'double',
+          signature: 'demo.double(x)',
+          description: 'Doubles a number.',
+          args: [
+            {
+              name: 'x',
+              type: 'number',
+              positional: true,
+              description: 'Input value.'
+            }
+          ],
+          returns: 'number',
+          targets: ['cli'],
+          examples: ['y = demo.double(21)']
+        }
+      }
+    }
+  };
+
+  const json = formatHelpJson(null, { metadata });
+  assert.equal(json.type, 'libraries');
+  assert.ok(json.libraries.some(lib => lib.name === 'demo'));
+});
+
+test('formatHelpJson with metadata option and library query', () => {
+  const metadata = {
+    demo: {
+      name: 'demo',
+      description: 'Demo package nodes.',
+      targets: ['cli'],
+      functions: {
+        double: {
+          name: 'double',
+          signature: 'demo.double(x)',
+          description: 'Doubles a number.',
+          args: [
+            {
+              name: 'x',
+              type: 'number',
+              positional: true,
+              description: 'Input value.'
+            }
+          ],
+          returns: 'number',
+          targets: ['cli'],
+          examples: ['y = demo.double(21)']
+        }
+      }
+    }
+  };
+
+  const json = formatHelpJson('demo', { metadata });
+  assert.equal(json.type, 'library');
+  assert.equal(json.library.name, 'demo');
+  assert.ok(json.library.functions.some(f => f.name === 'double'));
+});
+
+test('formatHelpJson with metadata option and function query', () => {
+  const metadata = {
+    demo: {
+      name: 'demo',
+      description: 'Demo package nodes.',
+      targets: ['cli'],
+      functions: {
+        double: {
+          name: 'double',
+          signature: 'demo.double(x)',
+          description: 'Doubles a number.',
+          args: [
+            {
+              name: 'x',
+              type: 'number',
+              positional: true,
+              description: 'Input value.'
+            }
+          ],
+          returns: 'number',
+          targets: ['cli'],
+          examples: ['y = demo.double(21)']
+        }
+      }
+    }
+  };
+
+  const json = formatHelpJson('demo.double', { metadata });
+  assert.equal(json.type, 'function');
+  assert.equal(json.function.name, 'double');
+  assert.equal(json.function.signature, 'demo.double(x)');
+  assert.ok(json.function.args.some(a => a.name === 'x'));
+});

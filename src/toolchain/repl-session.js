@@ -1,6 +1,11 @@
 import { inspectLoomSource } from './inspect.js';
 import { runLoomSource } from './run.js';
 import { RUNTIME_TARGETS } from './runtime-targets.js';
+import {
+  formatLibrariesText,
+  formatLibraryHelpText,
+  formatFunctionHelpText
+} from './help.js';
 
 function createEmptySummary() {
   return {
@@ -60,6 +65,8 @@ export class LoomReplSession {
     this.target = options.target || 'cli';
     this.time = Number.isFinite(options.time) ? options.time : 0;
     this.dt = Number.isFinite(options.dt) ? options.dt : 0;
+    this.nodeRegistry = options.nodeRegistry || null;
+    this.metadataRegistry = options.metadataRegistry || null;
     this.sourceLines = [];
     this.source = '';
     this.graph = null;
@@ -89,7 +96,9 @@ export class LoomReplSession {
     const result = runLoomSource(nextSource, {
       target: this.target,
       time: this.time,
-      dt: this.dt
+      dt: this.dt,
+      nodeRegistry: this.nodeRegistry,
+      metadataRegistry: this.metadataRegistry
     });
 
     if (!result.ok) {
@@ -156,7 +165,11 @@ export class LoomReplSession {
         errors: []
       };
     }
-    return inspectLoomSource(this.source, { target: this.target });
+    return inspectLoomSource(this.source, {
+      target: this.target,
+      nodeRegistry: this.nodeRegistry,
+      metadataRegistry: this.metadataRegistry
+    });
   }
 
   getGraph() {
@@ -175,7 +188,9 @@ export class LoomReplSession {
     return runLoomSource(String(source ?? ''), {
       target: this.target,
       time: this.time,
-      dt: this.dt
+      dt: this.dt,
+      nodeRegistry: this.nodeRegistry,
+      metadataRegistry: this.metadataRegistry
     });
   }
 
@@ -189,5 +204,17 @@ export class LoomReplSession {
     }
     variables.sort((a, b) => a.name.localeCompare(b.name));
     return variables;
+  }
+
+  listLibraries() {
+    return formatLibrariesText({ metadataRegistry: this.metadataRegistry });
+  }
+
+  getLibraryHelp(name) {
+    return formatLibraryHelpText(name, { metadataRegistry: this.metadataRegistry });
+  }
+
+  getFunctionHelp(qualifiedName) {
+    return formatFunctionHelpText(qualifiedName, { metadataRegistry: this.metadataRegistry });
   }
 }
