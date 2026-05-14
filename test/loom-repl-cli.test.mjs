@@ -92,3 +92,45 @@ test('repl supports libs, help, vars, history, load, run, and reset', () => {
   assert.match(result.stdout, /session reset/);
   assert.match(result.stderr, /UNKNOWN_IDENTIFIER|Unknown|MISSING/i);
 });
+
+test('repl :libs hides planned empty libraries by default', () => {
+  const result = spawnSync(
+    process.execPath,
+    [cliPath, 'repl'],
+    {
+      cwd: projectRoot,
+      input: [
+        ':libs',
+        ':quit'
+      ].join('\n'),
+      encoding: 'utf8'
+    }
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /math/);
+  assert.match(result.stdout, /text/);
+  assert.ok(!result.stdout.includes('- dom'));
+  assert.ok(!result.stdout.includes('- canvas'));
+  assert.ok(!result.stdout.includes('- three'));
+});
+
+test('repl :libs --all shows planned libraries', () => {
+  const result = spawnSync(
+    process.execPath,
+    [cliPath, 'repl'],
+    {
+      cwd: projectRoot,
+      input: [
+        ':libs --all',
+        ':quit'
+      ].join('\n'),
+      encoding: 'utf8'
+    }
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /math/);
+  assert.match(result.stdout, /- dom/);
+  assert.match(result.stdout, /planned/);
+});

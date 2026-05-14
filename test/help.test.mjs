@@ -7,11 +7,12 @@ import {
   formatLibrariesText,
   formatLibraryHelpText,
   formatFunctionHelpText,
-  formatHelpJson
+  formatHelpJson,
+  shouldIncludeLibrary
 } from '../src/toolchain/help.js';
 import { LIBRARY_COMPATIBILITY } from '../src/toolchain/runtime-targets.js';
 
-test('listLibraries returns all libraries', () => {
+test('listLibraries returns implemented libraries by default', () => {
   const libs = listLibraries();
   assert.ok(libs.includes('text'));
   assert.ok(libs.includes('json'));
@@ -19,14 +20,25 @@ test('listLibraries returns all libraries', () => {
   assert.ok(libs.includes('scene'));
   assert.ok(libs.includes('time'));
   assert.ok(libs.includes('math'));
-  assert.ok(libs.includes('state'));
   assert.ok(libs.includes('fs'));
+  // planned empty libraries are hidden by default
+  assert.ok(!libs.includes('dom'));
+  assert.ok(!libs.includes('canvas'));
+  assert.ok(!libs.includes('three'));
+  assert.ok(!libs.includes('unity'));
+  assert.ok(!libs.includes('scenesync'));
+  assert.equal(libs.length, 11);
+});
+
+test('listLibraries can include planned libraries', () => {
+  const libs = listLibraries({ includePlanned: true });
+  assert.ok(libs.includes('text'));
   assert.ok(libs.includes('dom'));
   assert.ok(libs.includes('canvas'));
   assert.ok(libs.includes('three'));
   assert.ok(libs.includes('unity'));
   assert.ok(libs.includes('scenesync'));
-  assert.equal(libs.length, 13);
+  assert.equal(libs.length, 16);
 });
 
 test('getLibraryHelp returns library metadata', () => {
@@ -91,7 +103,7 @@ test('formatLibrariesText contains library names', () => {
   assert.ok(text.includes('scene'));
   assert.ok(text.includes('time'));
   assert.ok(text.includes('math'));
-  assert.ok(text.includes('loom docs'));
+  assert.ok(text.includes('loomlet docs'));
 });
 
 test('formatLibraryHelpText contains function list', () => {
@@ -196,15 +208,19 @@ test('console.log is documented', () => {
   assert.equal(func.name, 'log');
 });
 
-test('all known libraries from LIBRARY_COMPATIBILITY are in metadata', () => {
-  const libs = listLibraries();
+test('documented libraries in metadata match LIBRARY_COMPATIBILITY', () => {
+  const libs = listLibraries({ includePlanned: true });
   for (const libName of Object.keys(LIBRARY_COMPATIBILITY)) {
+    // state and output are in LIBRARY_COMPATIBILITY but not documented in metadata
+    if (libName === 'state' || libName === 'output') continue;
     assert.ok(libs.includes(libName), `Missing library: ${libName}`);
   }
 });
 
 test('library targets match LIBRARY_COMPATIBILITY', () => {
   for (const [libName, compat] of Object.entries(LIBRARY_COMPATIBILITY)) {
+    // state and output are in LIBRARY_COMPATIBILITY but not documented in metadata
+    if (libName === 'state' || libName === 'output') continue;
     const lib = getLibraryHelp(libName);
     assert.deepEqual(
       lib.targets.sort(),
@@ -240,10 +256,10 @@ test('math functions all documented', () => {
   }
 });
 
-test('state library exists', () => {
-  const stateLib = getLibraryHelp('state');
-  assert.ok(stateLib);
-  assert.ok(stateLib.description);
+test('random library exists', () => {
+  const randomLib = getLibraryHelp('random');
+  assert.ok(randomLib);
+  assert.ok(randomLib.description);
 });
 
 test('formatLibrariesText includes all libraries', () => {
@@ -254,20 +270,61 @@ test('formatLibrariesText includes all libraries', () => {
   }
 });
 
-test('formatLibrariesText shows planned status', () => {
+test('formatLibrariesText hides planned empty libraries by default', () => {
   const text = formatLibrariesText();
+  assert.ok(!text.includes('- dom'));
+  assert.ok(!text.includes('- canvas'));
+  assert.ok(!text.includes('- three'));
+  assert.ok(!text.includes('- unity'));
+  assert.ok(!text.includes('- scenesync'));
+});
+
+test('formatLibrariesText shows planned status with includePlanned', () => {
+  const text = formatLibrariesText({ includePlanned: true });
   assert.ok(text.includes('(planned)'), 'Should indicate planned libraries');
+  assert.ok(text.includes('dom'));
 });
 
-test('formatLibraryHelpText shows planned status', () => {
+test('fs library shows implemented status with functions', () => {
   const text = formatLibraryHelpText('fs');
-  assert.ok(text.includes('Status: planned'));
+  assert.ok(text.includes('fs'));
+  assert.ok(text.includes('Status: implemented'));
+  assert.ok(text.includes('fs.readText'));
 });
 
-test('planned library has empty functions', () => {
-  const fsLib = getLibraryHelp('fs');
-  assert.equal(Object.keys(fsLib.functions).length, 0);
-  assert.equal(fsLib.status, 'planned');
+test('dom library is planned and empty', () => {
+  const domLib = getLibraryHelp('dom');
+  assert.equal(Object.keys(domLib.functions).length, 0);
+  assert.equal(domLib.status, 'planned');
+});
+
+test('formatHelpJson hides planned empty libraries by default', () => {
+  const json = formatHelpJson(null);
+  assert.equal(json.type, 'libraries');
+  assert.ok(!json.libraries.some(lib => lib.name === 'dom'));
+  assert.ok(!json.libraries.some(lib => lib.name === 'canvas'));
+  assert.ok(!json.libraries.some(lib => lib.name === 'three'));
+  assert.ok(!json.libraries.some(lib => lib.name === 'unity'));
+  assert.ok(!json.libraries.some(lib => lib.name === 'scenesync'));
+});
+
+test('formatHelpJson includes planned libraries with includePlanned', () => {
+  const json = formatHelpJson(null, { includePlanned: true });
+  assert.equal(json.type, 'libraries');
+  assert.ok(json.libraries.some(lib => lib.name === 'dom'));
+  assert.ok(json.libraries.some(lib => lib.name === 'canvas'));
+});
+
+test('direct library lookup still works for hidden planned libraries', () => {
+  const lib = getLibraryHelp('dom');
+  assert.equal(lib.name, 'dom');
+  assert.equal(lib.status, 'planned');
+});
+
+test('formatLibraryHelpText works for hidden planned libraries', () => {
+  const text = formatLibraryHelpText('dom');
+  assert.ok(text.includes('dom'));
+  assert.ok(text.includes('Status: planned'));
 });
 
 test('formatLibrariesText with metadata option includes custom metadata', () => {

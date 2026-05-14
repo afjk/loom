@@ -15,7 +15,7 @@ function runCli(args) {
   };
 }
 
-test('docs lists all libraries', () => {
+test('docs lists implemented libraries by default', () => {
   const result = runCli(['docs']);
   assert.equal(result.status, 0, result.stderr);
   assert.ok(result.stdout.includes('Loom libraries'));
@@ -26,6 +26,12 @@ test('docs lists all libraries', () => {
   assert.ok(result.stdout.includes('time'));
   assert.ok(result.stdout.includes('math'));
   assert.ok(result.stdout.includes('state'));
+  // planned empty libraries are hidden
+  assert.ok(!result.stdout.includes('- dom'));
+  assert.ok(!result.stdout.includes('- canvas'));
+  assert.ok(!result.stdout.includes('- three'));
+  assert.ok(!result.stdout.includes('- unity'));
+  assert.ok(!result.stdout.includes('- scenesync'));
 });
 
 test('docs text shows text library functions', () => {
@@ -108,8 +114,8 @@ test('docs text.unknown-func exits with error', () => {
   assert.ok(result.stderr.includes('No Loom function'));
 });
 
-test('docs includes all libraries from LIBRARY_COMPATIBILITY', () => {
-  const result = runCli(['docs']);
+test('docs includes all libraries from LIBRARY_COMPATIBILITY with --include-planned', () => {
+  const result = runCli(['docs', '--include-planned']);
   assert.equal(result.status, 0);
   const knownLibs = listLibrariesForTarget('cli');
   for (const lib of knownLibs) {
@@ -140,6 +146,29 @@ test('docs planned library shows status', () => {
   const result = runCli(['docs', 'fs']);
   assert.equal(result.status, 0, result.stderr);
   assert.ok(result.stdout.includes('Status: planned'));
+});
+
+test('docs dom shows planned library info even when hidden from list', () => {
+  const result = runCli(['docs', 'dom']);
+  assert.equal(result.status, 0, result.stderr);
+  assert.ok(result.stdout.includes('dom'));
+  assert.ok(result.stdout.includes('Status: planned'));
+});
+
+test('docs --include-planned shows all libraries including planned', () => {
+  const result = runCli(['docs', '--include-planned']);
+  assert.equal(result.status, 0, result.stderr);
+  assert.ok(result.stdout.includes('- dom'));
+  assert.ok(result.stdout.includes('(planned)'));
+});
+
+test('docs --include-planned --json includes planned libraries', () => {
+  const result = runCli(['docs', '--include-planned', '--json']);
+  assert.equal(result.status, 0, result.stderr);
+  const json = JSON.parse(result.stdout);
+  assert.equal(json.type, 'libraries');
+  assert.ok(json.libraries.some(lib => lib.name === 'dom'));
+  assert.ok(json.libraries.some(lib => lib.name === 'canvas'));
 });
 
 test('docs shows math functions', () => {
