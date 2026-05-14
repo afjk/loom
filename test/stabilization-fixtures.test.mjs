@@ -23,55 +23,76 @@ function findNodeByType(graph, type) {
   return (graph.nodes ?? []).find((node) => node.type === type);
 }
 
-test('basic-math: parses without errors', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'basic-math.loom'), 'utf8');
+function readFixture(name) {
+  return fs.readFileSync(path.join(fixturesPath, name), 'utf8');
+}
+
+function parseFixture(name) {
+  const source = readFixture(name);
   const parsed = parseDSLToAST(source);
-  assert.equal(parsed.errors.length, 0, `Parse errors: ${JSON.stringify(parsed.errors)}`);
+  assert.equal(
+    parsed.errors.length,
+    0,
+    `Parse errors in ${name}: ${JSON.stringify(parsed.errors)}`
+  );
+  return { source, parsed };
+}
+
+function compileFixture(name, options = { target: 'cli' }) {
+  const { source } = parseFixture(name);
+  const compiled = compileLoomSource(source, options);
+  assert.equal(
+    compiled.ok,
+    true,
+    `Compile errors in ${name}: ${JSON.stringify(compiled.errors)}`
+  );
+  assert.ok(compiled.graph, `Graph should exist for ${name}`);
+  return { source, compiled, graph: compiled.graph };
+}
+
+function runFixture(name, options = { target: 'cli' }) {
+  const source = readFixture(name);
+  const run = runLoomSource(source, options);
+  assert.equal(
+    run.ok,
+    true,
+    `Runtime errors in ${name}: ${JSON.stringify(run.errors)}`
+  );
+  return run;
+}
+
+test('basic-math: parses without errors', () => {
+  parseFixture('basic-math.loom');
 });
 
 test('basic-math: compiles without errors', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'basic-math.loom'), 'utf8');
-  const compiled = compileLoomSource(source);
-  assert.equal(compiled.ok, true, `Compile errors: ${JSON.stringify(compiled.errors)}`);
-  assert.ok(compiled.graph, 'Graph should exist');
+  const { graph } = compileFixture('basic-math.loom');
+  assert.ok(graph.nodes.length > 0, 'Graph should have nodes');
 });
 
 test('basic-math: semantic expectations', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'basic-math.loom'), 'utf8');
-  const compiled = compileLoomSource(source, { target: 'cli' });
-  assert.equal(compiled.ok, true);
-
-  const graph = compiled.graph;
+  const { graph } = compileFixture('basic-math.loom');
   assert.ok(graph.nodes.length > 0, 'Graph should have nodes');
 
   const valueNode = findNode(graph, 'value');
   assert.ok(valueNode, 'Graph should have value node');
   assert.equal(valueNode.type, 'math.add', 'value node should be math.add');
 
-  const run = runLoomSource(source, { target: 'cli' });
-  assert.equal(run.ok, true);
+  const run = runFixture('basic-math.loom');
   assert.equal(run.values['value.out'], 3, 'value should be 3');
 });
 
 test('pipe-map-render: parses without errors', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'pipe-map-render.loom'), 'utf8');
-  const parsed = parseDSLToAST(source);
-  assert.equal(parsed.errors.length, 0, `Parse errors: ${JSON.stringify(parsed.errors)}`);
+  parseFixture('pipe-map-render.loom');
 });
 
 test('pipe-map-render: compiles without errors', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'pipe-map-render.loom'), 'utf8');
-  const compiled = compileLoomSource(source);
-  assert.equal(compiled.ok, true, `Compile errors: ${JSON.stringify(compiled.errors)}`);
-  assert.ok(compiled.graph, 'Graph should exist');
+  const { graph } = compileFixture('pipe-map-render.loom');
+  assert.ok(graph.render, 'Graph should have render config');
 });
 
 test('pipe-map-render: semantic expectations', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'pipe-map-render.loom'), 'utf8');
-  const compiled = compileLoomSource(source);
-  assert.equal(compiled.ok, true);
-
-  const graph = compiled.graph;
+  const { graph } = compileFixture('pipe-map-render.loom');
   assert.ok(graph.nodes.length > 0, 'Graph should have nodes');
   assert.ok(graph.render, 'Graph should have render config');
 
@@ -83,44 +104,28 @@ test('pipe-map-render: semantic expectations', () => {
 });
 
 test('function-capture: parses without errors', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'function-capture.loom'), 'utf8');
-  const parsed = parseDSLToAST(source);
-  assert.equal(parsed.errors.length, 0, `Parse errors: ${JSON.stringify(parsed.errors)}`);
+  parseFixture('function-capture.loom');
 });
 
 test('function-capture: compiles without errors', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'function-capture.loom'), 'utf8');
-  const compiled = compileLoomSource(source, { target: 'cli' });
-  assert.equal(compiled.ok, true, `Compile errors: ${JSON.stringify(compiled.errors)}`);
-  assert.ok(compiled.graph, 'Graph should exist');
+  compileFixture('function-capture.loom');
 });
 
 test('function-capture: semantic expectations', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'function-capture.loom'), 'utf8');
-  const run = runLoomSource(source, { target: 'cli' });
-  assert.equal(run.ok, true, `Runtime errors: ${JSON.stringify(run.errors)}`);
+  const run = runFixture('function-capture.loom');
   assert.equal(run.values['value.out'], 15, 'value should be 15 (base=10, addBase(5) = 10+5)');
 });
 
 test('scene-set-transform: parses without errors', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'scene-set-transform.loom'), 'utf8');
-  const parsed = parseDSLToAST(source);
-  assert.equal(parsed.errors.length, 0, `Parse errors: ${JSON.stringify(parsed.errors)}`);
+  parseFixture('scene-set-transform.loom');
 });
 
 test('scene-set-transform: compiles without errors', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'scene-set-transform.loom'), 'utf8');
-  const compiled = compileLoomSource(source);
-  assert.equal(compiled.ok, true, `Compile errors: ${JSON.stringify(compiled.errors)}`);
-  assert.ok(compiled.graph, 'Graph should exist');
+  compileFixture('scene-set-transform.loom');
 });
 
 test('scene-set-transform: has expected node types', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'scene-set-transform.loom'), 'utf8');
-  const compiled = compileLoomSource(source);
-  assert.equal(compiled.ok, true);
-
-  const graph = compiled.graph;
+  const { graph } = compileFixture('scene-set-transform.loom');
   const setPositionNode = findNodeByType(graph, 'scene.setPosition');
   const setRotationNode = findNodeByType(graph, 'scene.setRotation');
   const setScaleNode = findNodeByType(graph, 'scene.setScale');
@@ -131,10 +136,7 @@ test('scene-set-transform: has expected node types', () => {
 });
 
 test('scene-set-transform: runtime succeeds and produces effects', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'scene-set-transform.loom'), 'utf8');
-  const run = runLoomSource(source, { target: 'cli' });
-  assert.equal(run.ok, true, `Runtime errors: ${JSON.stringify(run.errors)}`);
-
+  const run = runFixture('scene-set-transform.loom');
   const effects = run.effects || [];
   assert.ok(effects.length >= 3, 'Should have at least 3 effects');
 
@@ -152,10 +154,7 @@ test('scene-set-transform: runtime succeeds and produces effects', () => {
 });
 
 test('scene-set-transform: effects are recognized as Scene Sync', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'scene-set-transform.loom'), 'utf8');
-  const run = runLoomSource(source, { target: 'cli' });
-  assert.equal(run.ok, true);
-
+  const run = runFixture('scene-set-transform.loom');
   const effects = run.effects || [];
   const sceneEffects = effects.filter(isSceneSyncEffect);
   assert.equal(sceneEffects.length, 3, 'All three effects should be Scene Sync effects');
@@ -169,24 +168,15 @@ test('scene-set-transform: effects are recognized as Scene Sync', () => {
 });
 
 test('scene-math-position: parses without errors', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'scene-math-position.loom'), 'utf8');
-  const parsed = parseDSLToAST(source);
-  assert.equal(parsed.errors.length, 0, `Parse errors: ${JSON.stringify(parsed.errors)}`);
+  parseFixture('scene-math-position.loom');
 });
 
 test('scene-math-position: compiles without errors', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'scene-math-position.loom'), 'utf8');
-  const compiled = compileLoomSource(source);
-  assert.equal(compiled.ok, true, `Compile errors: ${JSON.stringify(compiled.errors)}`);
-  assert.ok(compiled.graph, 'Graph should exist');
+  compileFixture('scene-math-position.loom');
 });
 
 test('scene-math-position: has expected node structure', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'scene-math-position.loom'), 'utf8');
-  const compiled = compileLoomSource(source);
-  assert.equal(compiled.ok, true);
-
-  const graph = compiled.graph;
+  const { graph } = compileFixture('scene-math-position.loom');
   const xNode = findNode(graph, 'x');
   const yNode = findNode(graph, 'y');
   const setPositionNode = findNodeByType(graph, 'scene.setPosition');
@@ -201,19 +191,13 @@ test('scene-math-position: has expected node structure', () => {
 });
 
 test('scene-math-position: runtime values are correct', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'scene-math-position.loom'), 'utf8');
-  const run = runLoomSource(source, { target: 'cli' });
-  assert.equal(run.ok, true, `Runtime errors: ${JSON.stringify(run.errors)}`);
-
+  const run = runFixture('scene-math-position.loom');
   assert.equal(run.values['x.out'], 3, 'x should be 3 (1+2)');
   assert.equal(run.values['y.out'], 6, 'y should be 6 (3*2)');
 });
 
 test('scene-math-position: produces correct position effect', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'scene-math-position.loom'), 'utf8');
-  const run = runLoomSource(source, { target: 'cli' });
-  assert.equal(run.ok, true);
-
+  const run = runFixture('scene-math-position.loom');
   const effects = run.effects || [];
   const positionEffect = findEffect(effects, 'scene.setPosition');
 
@@ -222,24 +206,15 @@ test('scene-math-position: produces correct position effect', () => {
 });
 
 test('logic-select: parses without errors', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'logic-select.loom'), 'utf8');
-  const parsed = parseDSLToAST(source);
-  assert.equal(parsed.errors.length, 0, `Parse errors: ${JSON.stringify(parsed.errors)}`);
+  parseFixture('logic-select.loom');
 });
 
 test('logic-select: compiles without errors', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'logic-select.loom'), 'utf8');
-  const compiled = compileLoomSource(source, { target: 'cli' });
-  assert.equal(compiled.ok, true, `Compile errors: ${JSON.stringify(compiled.errors)}`);
-  assert.ok(compiled.graph, 'Graph should exist');
+  compileFixture('logic-select.loom');
 });
 
 test('logic-select: has expected node structure', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'logic-select.loom'), 'utf8');
-  const compiled = compileLoomSource(source, { target: 'cli' });
-  assert.equal(compiled.ok, true);
-
-  const graph = compiled.graph;
+  const { graph } = compileFixture('logic-select.loom');
   const isReadyNode = findNode(graph, 'isReady');
   const labelNode = findNode(graph, 'label');
 
@@ -251,33 +226,21 @@ test('logic-select: has expected node structure', () => {
 });
 
 test('logic-select: runtime values are correct', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'logic-select.loom'), 'utf8');
-  const run = runLoomSource(source, { target: 'cli' });
-  assert.equal(run.ok, true, `Runtime errors: ${JSON.stringify(run.errors)}`);
-
+  const run = runFixture('logic-select.loom');
   assert.equal(run.values['isReady.out'], true, 'isReady should be true');
   assert.equal(run.values['label.out'], 'ready', 'label should be "ready"');
 });
 
 test('logic-render-bar: parses without errors', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'logic-render-bar.loom'), 'utf8');
-  const parsed = parseDSLToAST(source);
-  assert.equal(parsed.errors.length, 0, `Parse errors: ${JSON.stringify(parsed.errors)}`);
+  parseFixture('logic-render-bar.loom');
 });
 
 test('logic-render-bar: compiles without errors', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'logic-render-bar.loom'), 'utf8');
-  const compiled = compileLoomSource(source, { target: 'cli' });
-  assert.equal(compiled.ok, true, `Compile errors: ${JSON.stringify(compiled.errors)}`);
-  assert.ok(compiled.graph, 'Graph should exist');
+  compileFixture('logic-render-bar.loom');
 });
 
 test('logic-render-bar: has expected node structure', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'logic-render-bar.loom'), 'utf8');
-  const compiled = compileLoomSource(source, { target: 'cli' });
-  assert.equal(compiled.ok, true);
-
-  const graph = compiled.graph;
+  const { graph } = compileFixture('logic-render-bar.loom');
   const isWideNode = findNode(graph, 'isWide');
   const widthNode = findNode(graph, 'width');
 
@@ -289,43 +252,27 @@ test('logic-render-bar: has expected node structure', () => {
 });
 
 test('logic-render-bar: has expected render config', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'logic-render-bar.loom'), 'utf8');
-  const compiled = compileLoomSource(source, { target: 'cli' });
-  assert.equal(compiled.ok, true);
-
-  const graph = compiled.graph;
+  const { graph } = compileFixture('logic-render-bar.loom');
   assert.ok(graph.render, 'Graph should have render config');
   assert.equal(graph.render.type, 'bar', 'Render type should be bar');
 });
 
 test('logic-render-bar: runtime values are correct', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'logic-render-bar.loom'), 'utf8');
-  const run = runLoomSource(source, { target: 'cli' });
-  assert.equal(run.ok, true, `Runtime errors: ${JSON.stringify(run.errors)}`);
-
+  const run = runFixture('logic-render-bar.loom');
   assert.equal(run.values['isWide.out'], true, 'isWide should be true (120 > 100)');
   assert.equal(run.values['width.out'], 300, 'width should be 300 (selected from whenTrue)');
 });
 
 test('logic-scene-position: parses without errors', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'logic-scene-position.loom'), 'utf8');
-  const parsed = parseDSLToAST(source);
-  assert.equal(parsed.errors.length, 0, `Parse errors: ${JSON.stringify(parsed.errors)}`);
+  parseFixture('logic-scene-position.loom');
 });
 
 test('logic-scene-position: compiles without errors', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'logic-scene-position.loom'), 'utf8');
-  const compiled = compileLoomSource(source, { target: 'cli' });
-  assert.equal(compiled.ok, true, `Compile errors: ${JSON.stringify(compiled.errors)}`);
-  assert.ok(compiled.graph, 'Graph should exist');
+  compileFixture('logic-scene-position.loom');
 });
 
 test('logic-scene-position: has expected node structure', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'logic-scene-position.loom'), 'utf8');
-  const compiled = compileLoomSource(source, { target: 'cli' });
-  assert.equal(compiled.ok, true);
-
-  const graph = compiled.graph;
+  const { graph } = compileFixture('logic-scene-position.loom');
   const moveRightNode = findNode(graph, 'moveRight');
   const xNode = findNode(graph, 'x');
   const setPositionNode = findNodeByType(graph, 'scene.setPosition');
@@ -340,19 +287,13 @@ test('logic-scene-position: has expected node structure', () => {
 });
 
 test('logic-scene-position: runtime values are correct', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'logic-scene-position.loom'), 'utf8');
-  const run = runLoomSource(source, { target: 'cli' });
-  assert.equal(run.ok, true, `Runtime errors: ${JSON.stringify(run.errors)}`);
-
+  const run = runFixture('logic-scene-position.loom');
   assert.equal(run.values['moveRight.out'], true, 'moveRight should be true (1 < 2)');
   assert.equal(run.values['x.out'], 5, 'x should be 5 (selected from whenTrue)');
 });
 
 test('logic-scene-position: produces correct Scene Sync position effect', () => {
-  const source = fs.readFileSync(path.join(fixturesPath, 'logic-scene-position.loom'), 'utf8');
-  const run = runLoomSource(source, { target: 'cli' });
-  assert.equal(run.ok, true);
-
+  const run = runFixture('logic-scene-position.loom');
   const effects = run.effects || [];
   const positionEffect = findEffect(effects, 'scene.setPosition');
 
