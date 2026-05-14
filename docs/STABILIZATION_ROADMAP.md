@@ -29,6 +29,12 @@ Purpose: try ideas without destabilizing main.
 
 Candidate experiments:
 
+- [`labs/temporal-environment`](labs/temporal-environment.md)
+  - temporal environment facts for Scene Sync / Loomlet
+  - room clock and server time offset
+  - pending / confirmed interaction states
+  - hybrid Temporal Fact / State Sync / Local-only model
+  - LBE-oriented multiplayer and art experiments
 - `labs/value-model`
   - vec2 / vec3 / vec4 / record / list
   - `.x`, `.xy`, `.xz` component access / swizzle
