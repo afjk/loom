@@ -1,0 +1,4 @@
+# Stabilization fixture: invalid positional argument
+import logic
+
+isWide = logic.greaterThan(120, 100)

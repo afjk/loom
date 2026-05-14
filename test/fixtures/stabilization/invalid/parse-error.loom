@@ -1,0 +1,4 @@
+# Stabilization fixture: parse error
+import math
+
+value = math.add(a: 1,

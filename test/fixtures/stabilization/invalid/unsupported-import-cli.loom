@@ -1,0 +1,4 @@
+# Stabilization fixture: unsupported import for cli target
+import dom
+
+dom.setVar(selector: ":root", name: "--loomlet-test", value: "1")
