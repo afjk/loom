@@ -1,0 +1,7 @@
+# Stabilization fixture: Scene Sync effect mixes literal params and input edges
+import math
+import scene
+
+x = math.add(a: 1, b: 2)
+
+scene.setPosition(objectId: "sample-cube", x: x, y: 0, z: 0)

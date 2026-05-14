@@ -1,0 +1,7 @@
+# Stabilization fixture: render references point to node outputs
+import math
+
+x = math.add(a: 10, b: 5)
+y = math.multiply(a: x, b: 2)
+
+render point(x: x, y: y, color: "#00ffcc", trail: 0.05)

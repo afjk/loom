@@ -1,0 +1,5 @@
+# Stabilization fixture: identifier arguments compile to edges
+import math
+
+x = math.add(a: 1, b: 2)
+y = math.multiply(a: x, b: 10)

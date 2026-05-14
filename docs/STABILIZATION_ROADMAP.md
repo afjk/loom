@@ -21,7 +21,7 @@ Recommended order:
    - Document current node definition schema in `docs/NODE_DEFINITION_SCHEMA.md`
    - Add conservative metadata shape tests in `test/library-metadata-schema.test.mjs`
    - Do not yet make metadata the single runtime/compiler source of truth
-5. Clarify input vs param
+5. Clarify input vs param (✓ covered by `input-param-*` stabilization fixtures)
 6. Clarify runtime registration API
 7. Clarify metadata as shared source for editor/docs/completion
 8. Improve compatibility between JS runtime and Unity runtime where practical

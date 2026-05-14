@@ -1,0 +1,4 @@
+# Stabilization fixture: literal arguments compile to params
+import math
+
+value = math.add(a: 1, b: 2)

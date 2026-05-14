@@ -1,0 +1,4 @@
+# Stabilization fixture: nested call arguments compile through anonymous nodes
+import math
+
+value = math.multiply(a: math.add(a: 1, b: 2), b: 10)

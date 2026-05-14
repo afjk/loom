@@ -186,6 +186,8 @@ b.param = 10
 
 This is the key distinction: the metadata declares **argument slots**, but the compiled graph instance determines **how each slot is filled** (param, input, or default).
 
+The input/param distinction and graph edge behavior is covered by the `input-param-*` stabilization fixtures.
+
 ## Current metadata shape
 
 This section documents the current minimum metadata shape conservatively.

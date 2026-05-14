@@ -23,6 +23,33 @@ function findNodeByType(graph, type) {
   return (graph.nodes ?? []).find((node) => node.type === type);
 }
 
+function findEdge(graph, from, to) {
+  return (graph.edges ?? []).find((edge) => edge.from === from && edge.to === to);
+}
+
+function assertHasEdge(graph, from, to) {
+  assert.ok(
+    findEdge(graph, from, to),
+    `Expected edge ${from} -> ${to}, got ${JSON.stringify(graph.edges)}`
+  );
+}
+
+function assertNoEdgeTo(graph, to) {
+  assert.equal(
+    (graph.edges ?? []).some((edge) => edge.to === to),
+    false,
+    `Expected no edge to ${to}, got ${JSON.stringify(graph.edges)}`
+  );
+}
+
+function assertNoParam(node, name) {
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(node.params ?? {}, name),
+    false,
+    `Expected node ${node.id} to not have param ${name}`
+  );
+}
+
 function readFixture(name) {
   return fs.readFileSync(path.join(fixturesPath, name), 'utf8');
 }
@@ -403,4 +430,138 @@ test('multi-import-scene: produces expected Scene Sync position effect', () => {
   assert.equal(positionEffect.position[0], 3, 'Position x should be 3');
   assert.equal(positionEffect.position[1], 0, 'Position y should be 0');
   assert.equal(positionEffect.position[2], 0, 'Position z should be 0');
+});
+
+test('input-param-literals: parses without errors', () => {
+  parseFixture('input-param-literals.loom');
+});
+
+test('input-param-literals: compiles without errors', () => {
+  compileFixture('input-param-literals.loom');
+});
+
+test('input-param-literals: literal arguments are params', () => {
+  const { graph } = compileFixture('input-param-literals.loom');
+  const normalized = normalizeGraph(graph);
+  const value = findNode(normalized, 'value');
+
+  assert.equal(value.type, 'math.add', 'value node should be math.add');
+  assert.equal(value.params.a, 1, 'value.params.a should be 1');
+  assert.equal(value.params.b, 2, 'value.params.b should be 2');
+  assertNoEdgeTo(normalized, 'value.a');
+  assertNoEdgeTo(normalized, 'value.b');
+});
+
+test('input-param-references: parses without errors', () => {
+  parseFixture('input-param-references.loom');
+});
+
+test('input-param-references: compiles without errors', () => {
+  compileFixture('input-param-references.loom');
+});
+
+test('input-param-references: identifier arguments are edges', () => {
+  const { graph } = compileFixture('input-param-references.loom');
+  const normalized = normalizeGraph(graph);
+  const x = findNode(normalized, 'x');
+  const y = findNode(normalized, 'y');
+
+  assert.equal(x.type, 'math.add', 'x node should be math.add');
+  assert.equal(y.type, 'math.multiply', 'y node should be math.multiply');
+  assert.equal(x.params.a, 1, 'x.params.a should be 1');
+  assert.equal(x.params.b, 2, 'x.params.b should be 2');
+  assert.equal(y.params.b, 10, 'y.params.b should be 10');
+  assertHasEdge(normalized, 'x.out', 'y.a');
+  assertNoParam(y, 'a');
+});
+
+test('input-param-nested-call: parses without errors', () => {
+  parseFixture('input-param-nested-call.loom');
+});
+
+test('input-param-nested-call: compiles without errors', () => {
+  compileFixture('input-param-nested-call.loom');
+});
+
+test('input-param-nested-call: nested calls create anonymous nodes and edges', () => {
+  const { graph } = compileFixture('input-param-nested-call.loom');
+  const normalized = normalizeGraph(graph);
+  const value = findNode(normalized, 'value');
+
+  assert.equal(value.type, 'math.multiply', 'value node should be math.multiply');
+  assert.equal(value.params.b, 10, 'value.params.b should be 10');
+  assertNoParam(value, 'a');
+
+  const addNode = (normalized.nodes ?? []).find(
+    (node) => node.type === 'math.add' && node.id.startsWith('_anon_')
+  );
+  assert.ok(addNode, 'Should have anonymous math.add node');
+  assert.equal(addNode.params.a, 1, 'anonymous add.params.a should be 1');
+  assert.equal(addNode.params.b, 2, 'anonymous add.params.b should be 2');
+
+  assertHasEdge(normalized, `${addNode.id}.out`, 'value.a');
+});
+
+test('input-param-render-ref: parses without errors', () => {
+  parseFixture('input-param-render-ref.loom');
+});
+
+test('input-param-render-ref: compiles without errors', () => {
+  compileFixture('input-param-render-ref.loom');
+});
+
+test('input-param-render-ref: render references point to node outputs', () => {
+  const { graph } = compileFixture('input-param-render-ref.loom');
+  const normalized = normalizeGraph(graph);
+  const x = findNode(normalized, 'x');
+  const y = findNode(normalized, 'y');
+
+  assert.equal(x.params.a, 10, 'x.params.a should be 10');
+  assert.equal(x.params.b, 5, 'x.params.b should be 5');
+  assert.equal(y.params.b, 2, 'y.params.b should be 2');
+  assertHasEdge(normalized, 'x.out', 'y.a');
+
+  assert.ok(normalized.render, 'Normalized graph should have render');
+  assert.equal(normalized.render.type, 'point', 'render type should be point');
+  assert.equal(normalized.render.x, 'x.out', 'render.x should reference x.out');
+  assert.equal(normalized.render.y, 'y.out', 'render.y should reference y.out');
+  assert.equal(normalized.render.color, '#00ffcc', 'render.color should be #00ffcc');
+  assert.equal(normalized.render.trail, 0.05, 'render.trail should be 0.05');
+});
+
+test('input-param-scene-effect: parses without errors', () => {
+  parseFixture('input-param-scene-effect.loom');
+});
+
+test('input-param-scene-effect: compiles without errors', () => {
+  compileFixture('input-param-scene-effect.loom');
+});
+
+test('input-param-scene-effect: effect node has literal params and input edges', () => {
+  const { graph } = compileFixture('input-param-scene-effect.loom');
+  const normalized = normalizeGraph(graph);
+  const x = findNode(normalized, 'x');
+  const effect = findNodeByType(normalized, 'scene.setPosition');
+
+  assert.equal(x.type, 'math.add', 'x node should be math.add');
+  assert.equal(x.params.a, 1, 'x.params.a should be 1');
+  assert.equal(x.params.b, 2, 'x.params.b should be 2');
+
+  assert.ok(effect, 'Graph should have scene.setPosition effect node');
+  assert.equal(effect.params.objectId, 'sample-cube', 'effect.params.objectId should be sample-cube');
+  assert.equal(effect.params.y, 0, 'effect.params.y should be 0');
+  assert.equal(effect.params.z, 0, 'effect.params.z should be 0');
+
+  assertHasEdge(normalized, 'x.out', `${effect.id}.x`);
+  assertNoParam(effect, 'x');
+});
+
+test('input-param-scene-effect: runtime produces correct Scene Sync position', () => {
+  const run = runFixture('input-param-scene-effect.loom');
+  const effects = run.effects || [];
+  const positionEffect = findEffect(effects, 'scene.setPosition');
+
+  assert.ok(positionEffect, 'Should have position effect');
+  assert.equal(positionEffect.objectId, 'sample-cube', 'objectId should be sample-cube');
+  assert.deepEqual(positionEffect.position, [3, 0, 0], 'Position should be [3, 0, 0]');
 });
