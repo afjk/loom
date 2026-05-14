@@ -134,3 +134,60 @@ test('repl :libs --all shows planned libraries', () => {
   assert.match(result.stdout, /- dom/);
   assert.match(result.stdout, /planned/);
 });
+
+test('repl :libs with invalid option reports error and continues', () => {
+  const result = spawnSync(
+    process.execPath,
+    [cliPath, 'repl'],
+    {
+      cwd: projectRoot,
+      input: [
+        ':libs nope',
+        ':quit'
+      ].join('\n'),
+      encoding: 'utf8'
+    }
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Unknown :libs option: nope/);
+  assert.match(result.stdout, /Use :libs or :libs --all/);
+});
+
+test('repl :libs with extra arguments reports error', () => {
+  const result = spawnSync(
+    process.execPath,
+    [cliPath, 'repl'],
+    {
+      cwd: projectRoot,
+      input: [
+        ':libs --all extra',
+        ':quit'
+      ].join('\n'),
+      encoding: 'utf8'
+    }
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Unknown :libs option: --all extra/);
+  assert.match(result.stdout, /Use :libs or :libs --all/);
+});
+
+test('repl :libs with unknown flag reports error', () => {
+  const result = spawnSync(
+    process.execPath,
+    [cliPath, 'repl'],
+    {
+      cwd: projectRoot,
+      input: [
+        ':libs --planned',
+        ':quit'
+      ].join('\n'),
+      encoding: 'utf8'
+    }
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Unknown :libs option: --planned/);
+  assert.match(result.stdout, /Use :libs or :libs --all/);
+});
