@@ -455,7 +455,8 @@ function evaluateLegacyFunctionExpr(expr, env, ctx) {
       return env[expr.name].call(args, ctx);
     }
 
-    const nodeType = NODE_TYPES[expr.name];
+    const nodeTypes = ctx.nodeTypes ?? NODE_TYPES;
+    const nodeType = nodeTypes[expr.name];
     if (!nodeType) throw new LoomError('UNKNOWN_NODE_TYPE', `Unknown node type in function body: ${expr.name}`);
 
     const positionalArgs = expr.args.filter((arg) => !arg.named);
@@ -578,8 +579,21 @@ export {
 
 // ノード型レジストリ
 
+function resolveNodeTypesOption(options = {}) {
+  if (options.nodeRegistry && typeof options.nodeRegistry.toObject === 'function') {
+    return options.nodeRegistry.toObject();
+  }
+
+  if (options.nodeTypes && typeof options.nodeTypes === 'object') {
+    return options.nodeTypes;
+  }
+
+  return NODE_TYPES;
+}
+
 export class Loom {
-  constructor(graph) {
+  constructor(graph, options = {}) {
+    this._nodeTypes = resolveNodeTypesOption(options);
     this._currentGraph = null;
     this._pendingGraph = null;
     this._sortedNodeIds = [];
@@ -611,7 +625,7 @@ export class Loom {
 
     if (runLifecycle && this._currentGraph) {
       for (const node of this._currentGraph.nodes) {
-        const nodeType = NODE_TYPES[node.type];
+        const nodeType = this._nodeTypes[node.type];
         if (nodeType.onStop) {
           nodeType.onStop(node, this);
         }
@@ -625,7 +639,7 @@ export class Loom {
 
     if (runLifecycle && this._currentGraph) {
       for (const node of this._currentGraph.nodes) {
-        const nodeType = NODE_TYPES[node.type];
+        const nodeType = this._nodeTypes[node.type];
         if (nodeType.onStart) {
           nodeType.onStart(node, this);
         }
@@ -647,12 +661,13 @@ export class Loom {
       time,
       dt,
       engine: this,
+      nodeTypes: this._nodeTypes,
       nodePredicates: new Map()
     };
 
     // Step 3: 全 Event ポートを [] にリセット（this._values に直接書く）
     for (const node of this._currentGraph.nodes) {
-      const nodeType = NODE_TYPES[node.type];
+      const nodeType = this._nodeTypes[node.type];
       for (const output of nodeType.outputs) {
         if (output.kind === 'event') {
           this._values.set(`${node.id}.${output.name}`, []);
@@ -671,7 +686,7 @@ export class Loom {
     // Step 5: トポロジカルソート順に各ノードを評価
     for (const nodeId of this._sortedNodeIds) {
       const node = this._currentGraph.nodes.find(n => n.id === nodeId);
-      const nodeType = NODE_TYPES[node.type];
+      const nodeType = this._nodeTypes[node.type];
 
       // input カテゴリかつ全出力が Event のノード（pointerClick, keyDown, keyUp）は
       // Step 4 で this._values に設定済みなのでスキップ
@@ -793,7 +808,7 @@ export class Loom {
       throw new LoomError('UNKNOWN_NODE', `dispatchEvent references non-existent node: ${nodeId}`, { nodeId });
     }
 
-    const nodeType = NODE_TYPES[node.type];
+    const nodeType = this._nodeTypes[node.type];
     const outputPort = nodeType.outputs.find(o => o.name === portName);
     if (!outputPort) {
       throw new LoomError('UNKNOWN_PORT', `dispatchEvent references non-existent port: ${ref}`,
@@ -827,7 +842,7 @@ export class Loom {
     // 初回: 新グラフの onStart を呼ぶ
     if (this._currentGraph) {
       for (const node of this._currentGraph.nodes) {
-        const nodeType = NODE_TYPES[node.type];
+        const nodeType = this._nodeTypes[node.type];
         if (nodeType.onStart) {
           nodeType.onStart(node, this);
         }
@@ -853,7 +868,7 @@ export class Loom {
     // グラフのノードの onStop を呼ぶ
     if (this._currentGraph) {
       for (const node of this._currentGraph.nodes) {
-        const nodeType = NODE_TYPES[node.type];
+        const nodeType = this._nodeTypes[node.type];
         if (nodeType.onStop) {
           nodeType.onStop(node, this);
         }
@@ -875,7 +890,7 @@ export class Loom {
   _reconcileStateForGraph(graph) {
     const nextStateIds = new Set(
       graph.nodes
-        .filter(node => NODE_TYPES[node.type]?.category === 'state')
+        .filter(node => this._nodeTypes[node.type]?.category === 'state')
         .map(node => node.id)
     );
 
@@ -922,7 +937,7 @@ export class Loom {
 
     // 3. 各ノードの type が NODE_TYPES に存在するか
     for (const node of graph.nodes) {
-      if (!NODE_TYPES[node.type]) {
+      if (!this._nodeTypes[node.type]) {
         throw new LoomError('UNKNOWN_NODE_TYPE', `Unknown node type: ${node.type}`, { nodeId: node.id, type: node.type });
       }
     }
@@ -954,14 +969,14 @@ export class Loom {
       const toPortName = toParts[1];
 
       const fromNode = graph.nodes.find(n => n.id === fromNodeId);
-      const fromNodeType = NODE_TYPES[fromNode.type];
+      const fromNodeType = this._nodeTypes[fromNode.type];
       const fromPort = fromNodeType.outputs.find(o => o.name === fromPortName);
       if (!fromPort) {
         throw new LoomError('UNKNOWN_PORT', `Unknown port: ${fromNodeId}.${fromPortName}`, { nodeId: fromNodeId, port: fromPortName, side: 'output' });
       }
 
       const toNode = graph.nodes.find(n => n.id === toNodeId);
-      const toNodeType = NODE_TYPES[toNode.type];
+      const toNodeType = this._nodeTypes[toNode.type];
       const toPort = toNodeType.inputs.find(i => i.name === toPortName);
       if (!toPort) {
         throw new LoomError('UNKNOWN_PORT', `Unknown port: ${toNodeId}.${toPortName}`, { nodeId: toNodeId, port: toPortName, side: 'input' });

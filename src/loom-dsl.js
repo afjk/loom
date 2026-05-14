@@ -1,5 +1,17 @@
 import { NODE_TYPES, canUseTwoPositionalArgs } from './loom.js';
 
+function resolveNodeTypesOption(options = {}) {
+  if (options.nodeRegistry && typeof options.nodeRegistry.toObject === 'function') {
+    return options.nodeRegistry.toObject();
+  }
+
+  if (options.nodeTypes && typeof options.nodeTypes === 'object') {
+    return options.nodeTypes;
+  }
+
+  return NODE_TYPES;
+}
+
 export class LoomDSLError extends Error {
   constructor(message, line, column, code) {
     super(message);
@@ -219,20 +231,21 @@ export function parseDSLToAST(source) {
   }
 }
 
-function defaultOutputPort(nodeTypeName) {
+function defaultOutputPort(nodeTypeName, nodeTypes = NODE_TYPES) {
   if (nodeTypeName === 'clock') return 't';
   if (nodeTypeName === 'pointerPosition') return 'pos';
-  const def = NODE_TYPES[nodeTypeName];
+  const def = nodeTypes[nodeTypeName];
   if (!def || !def.outputs || def.outputs.length === 0) return 'out';
   if (def.outputs.length === 1) return def.outputs[0].name;
   return def.outputs.find(o => o.name === 'out') ? 'out' : def.outputs[0].name;
 }
 
-export function compileToGraph(ast) { /* bridge via existing shape */
+export function compileToGraph(ast, options = {}) { /* bridge via existing shape */
   const errors = []; if (!ast) return { graph: { nodes: [], edges: [] }, errors };
   try {
+    const nodeTypes = resolveNodeTypesOption(options);
     const textAst = astToLegacy(ast);
-    const graph = buildGraph(textAst.statements);
+    const graph = buildGraph(textAst.statements, { nodeTypes });
     if (textAst.imports.length > 0) {
       graph.imports = textAst.imports;
     }
@@ -289,15 +302,16 @@ function astToLegacy(program) {
   };
 }
 
-function buildGraph(stmts) { /* mostly original */
+function buildGraph(stmts, options = {}) { /* mostly original */
+  const nodeTypes = options.nodeTypes ?? NODE_TYPES;
   const nodes = []; const edges = []; let renderConfig = null; let anonCounter = 0; let effectCounter = 0; const scope = {};
   const anonId = () => `_anon_${++anonCounter}`;
-  const resolveIdent = (name, line, col) => { if (!(name in scope)) throw new LoomDSLError(`Undefined identifier: ${name}`, line, col, 'UNDEFINED_IDENTIFIER'); const node = nodes.find(n => n.id === scope[name]); return `${scope[name]}.${defaultOutputPort(node.type)}`; };
+  const resolveIdent = (name, line, col) => { if (!(name in scope)) throw new LoomDSLError(`Undefined identifier: ${name}`, line, col, 'UNDEFINED_IDENTIFIER'); const node = nodes.find(n => n.id === scope[name]); return `${scope[name]}.${defaultOutputPort(node.type, nodeTypes)}`; };
   const scopedRefs = () => {
     const refs = {};
     for (const [name, nodeId] of Object.entries(scope)) {
       const node = nodes.find(n => n.id === nodeId);
-      refs[name] = `${nodeId}.${defaultOutputPort(node.type)}`;
+      refs[name] = `${nodeId}.${defaultOutputPort(node.type, nodeTypes)}`;
     }
     return refs;
   };
@@ -323,10 +337,10 @@ function buildGraph(stmts) { /* mostly original */
   }
   function wireToNode(expr, id, port) {
     if (expr.type === 'ident') edges.push({ from: resolveIdent(expr.name, expr.line, expr.col), to: `${id}.${port}` });
-    else if (expr.type === 'call' || expr.type === 'pipe' || expr.type === 'fn') { const inId = buildExpr(expr, null, null); const inNode = nodes.find(n => n.id === inId); edges.push({ from: `${inId}.${defaultOutputPort(inNode.type)}`, to: `${id}.${port}` }); }
+    else if (expr.type === 'call' || expr.type === 'pipe' || expr.type === 'fn') { const inId = buildExpr(expr, null, null); const inNode = nodes.find(n => n.id === inId); edges.push({ from: `${inId}.${defaultOutputPort(inNode.type, nodeTypes)}`, to: `${id}.${port}` }); }
     else { const nodeObj = nodes.find(n => n.id === id); nodeObj.params ||= {}; nodeObj.params[port] = expr.value; }
   }
-  function buildNode(call, resultId, pipeFrom) { const fnName = call.name; if (!NODE_TYPES[fnName]) { if (scope[fnName]) return buildUserCall(call, resultId); throw new LoomDSLError(`Unknown node type: ${fnName}`, call.line, call.col, 'UNKNOWN_NODE_TYPE'); } const typeDef = NODE_TYPES[fnName]; const id = resultId || anonId(); const nodeObj = { id, type: fnName }; nodes.push(nodeObj); const inputNames = typeDef.inputs.map(i => i.name); const paramNames = (typeDef.params || []).map(p => p.name); const pos = call.args.filter(a => !a.named); const named = call.args.filter(a => a.named); const hasUnknownNamed = named.some(a => !inputNames.includes(a.name) && !paramNames.includes(a.name)); if (typeDef.commutative && pos.length && named.length && !hasUnknownNamed) throw new LoomDSLError(`Node '${fnName}' is commutative: arguments must be all positional or all named`, call.line, call.col, 'MISSING_ARGUMENT_NAME'); if (!canUseTwoPositionalArgs(fnName, typeDef) && pos.length > (pipeFrom ? 0 : 1)) throw new LoomDSLError(`Argument at position 2 for '${fnName}' requires a name`, call.line, call.col, 'MISSING_ARGUMENT_NAME'); let idx = 0;
+  function buildNode(call, resultId, pipeFrom) { const fnName = call.name; if (!nodeTypes[fnName]) { if (scope[fnName]) return buildUserCall(call, resultId); throw new LoomDSLError(`Unknown node type: ${fnName}`, call.line, call.col, 'UNKNOWN_NODE_TYPE'); } const typeDef = nodeTypes[fnName]; const id = resultId || anonId(); const nodeObj = { id, type: fnName }; nodes.push(nodeObj); const inputNames = typeDef.inputs.map(i => i.name); const paramNames = (typeDef.params || []).map(p => p.name); const pos = call.args.filter(a => !a.named); const named = call.args.filter(a => a.named); const hasUnknownNamed = named.some(a => !inputNames.includes(a.name) && !paramNames.includes(a.name)); if (typeDef.commutative && pos.length && named.length && !hasUnknownNamed) throw new LoomDSLError(`Node '${fnName}' is commutative: arguments must be all positional or all named`, call.line, call.col, 'MISSING_ARGUMENT_NAME'); if (!canUseTwoPositionalArgs(fnName, typeDef) && pos.length > (pipeFrom ? 0 : 1)) throw new LoomDSLError(`Argument at position 2 for '${fnName}' requires a name`, call.line, call.col, 'MISSING_ARGUMENT_NAME'); let idx = 0;
     const wire = (expr, port) => wireToNode(expr, id, port);
     if (pipeFrom) edges.push({ from: pipeFrom, to: `${id}.${inputNames[idx++]}` });
     for (const a of pos) wire(a.value, inputNames[idx++]);
@@ -419,10 +433,10 @@ export function formatDSL(ast, options = {}) {
   return `${sections.join('\n\n')}\n`;
 }
 
-export function parseDSL(text) {
+export function parseDSL(text, options = {}) {
   const { ast, errors: p } = parseDSLToAST(text);
   if (p.length) throw new LoomDSLError(p[0].message, p[0].span.start.line, p[0].span.start.column, p[0].code);
-  const { graph, errors: c } = compileToGraph(ast);
+  const { graph, errors: c } = compileToGraph(ast, options);
   if (c.length) throw new LoomDSLError(c[0].message, c[0].span?.start?.line || 1, c[0].span?.start?.column || 1, c[0].code);
   return graph;
 }

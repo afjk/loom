@@ -30,7 +30,10 @@ Recommended order:
 6. Clarify runtime registration API (✓ minimal `createNodeRegistry/registerNodeType` API added)
    - Minimal `createNodeRegistry()` and `registerNodeType()` API available
    - Built-in node types are constructed through the default registry
-   - Package loading remains future work
+   - Trusted local packages now supported via `registerTrustedPackage()`
+   - Compile/runtime can accept custom node registries
+   - A demo package proves end-to-end compile/runtime flow with package nodes
+   - Remote/npm package loading remains future work
 7. Clarify metadata as shared source for editor/docs/completion
 8. Improve compatibility between JS runtime and Unity runtime where practical
 
