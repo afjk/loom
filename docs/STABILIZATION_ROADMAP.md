@@ -46,6 +46,11 @@ Recommended order:
    - Generated VS Code metadata is freshness-tested against shared library metadata
    - manual overrides remain only for examples, aliases, render syntax, and preview-host-specific notes
 8. Improve compatibility between JS runtime and Unity runtime where practical
+   - Unity compatibility baseline documented in `docs/UNITY_RUNTIME_COMPATIBILITY.md`
+   - Compatibility levels defined: portable, host-adapter, js-only, future
+   - Current library baseline established with porting priorities
+   - Metadata/runtime target consistency for Unity is covered by tests in `test/unity-runtime-compatibility.test.mjs`
+   - Unity/C# runtime implementation remains future work
 
 ## Track B: Labs
 
