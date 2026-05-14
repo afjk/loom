@@ -1,5 +1,8 @@
 # Standard Library Plan (Category-Based)
 
+For the current generated function reference, see `docs/STANDARD_LIBRARY_REFERENCE.md`.
+This document remains a planning/status document for baseline decisions, gaps, and future candidates.
+
 Source of truth for **Current** sections: `loomlet docs` output as of this PR.
 
 ## core
