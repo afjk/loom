@@ -17,8 +17,13 @@ import {
   formatLibrariesText,
   formatLibraryHelpText,
   formatFunctionHelpText,
-  formatHelpJson
+  formatHelpJson,
+  loadTrustedLocalPackage,
+  createLibraryMetadataRegistry,
+  LIBRARY_METADATA
 } from '../src/toolchain/index.js';
+import { createNodeRegistry } from '../src/runtime/node-registry.js';
+import { registerBuiltinNodes } from '../src/nodes/index.js';
 import {
   DEFAULT_ENDPOINT as DEFAULT_SCENESYNC_ENDPOINT,
   SceneSyncClient,
@@ -90,6 +95,33 @@ function parseTarget(value) {
   return value;
 }
 
+function parsePackageArgs(args) {
+  const packages = [];
+  const rest = [];
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--package') {
+      const packagePath = args[index + 1];
+      if (!packagePath || packagePath.startsWith('-')) {
+        throw new Error('--package requires a file path');
+      }
+      packages.push(packagePath);
+      index += 1;
+    } else if (arg.startsWith('--package=')) {
+      const packagePath = arg.slice(10);
+      if (!packagePath) {
+        throw new Error('--package= requires a file path');
+      }
+      packages.push(packagePath);
+    } else {
+      rest.push(arg);
+    }
+  }
+
+  return { packages, rest };
+}
+
 function parseCommonCommandArgs(args) {
   let file = null;
   const rest = [];
@@ -140,12 +172,13 @@ Examples:
 
 function getCompileHelp() {
   return `Usage:
-  loomlet compile <file> [--out <file>] [--pretty false] [--target <target>]
+  loomlet compile <file> [--out <file>] [--pretty false] [--target <target>] [--package <path>]
 
 Options:
-  -o, --out <file>   Write GraphJSON to a file
-  --pretty false     Print compact JSON
-  --target <target>  Validate imports for a runtime target. Default: any`;
+  -o, --out <file>    Write GraphJSON to a file
+  --pretty false      Print compact JSON
+  --target <target>   Validate imports for a runtime target. Default: any
+  --package <path>    Load a trusted local package (repeatable)`;
 }
 
 function getFormatHelp() {
@@ -159,30 +192,35 @@ Options:
 
 function getInspectHelp() {
   return `Usage:
-  loomlet inspect <file> [--ast] [--graph] [--json] [--target <target>]
+  loomlet inspect <file> [--ast] [--graph] [--json] [--target <target>] [--package <path>]
 
 Options:
-  --ast    Print Source AST JSON
-  --graph  Print GraphJSON
-  --json   Print the full inspection result as JSON
-  --target <target>  Validate imports for a runtime target. Default: any`;
+  --ast               Print Source AST JSON
+  --graph             Print GraphJSON
+  --json              Print the full inspection result as JSON
+  --target <target>   Validate imports for a runtime target. Default: any
+  --package <path>    Load a trusted local package (repeatable)`;
 }
 
 function getRunHelp() {
   return `Usage:
-  loomlet run <file> --get <ref> [--time <number>] [--dt <number>] [--json] [--target <target>]
+  loomlet run <file> --get <ref> [--time <number>] [--dt <number>] [--json] [--target <target>] [--package <path>]
 
 Options:
   --get <ref>       Output reference to read. Repeatable.
   --time <number>   Evaluation time in seconds. Default: 0
   --dt <number>     Delta time in seconds. Default: 0
   --json            Print result values as JSON
-  --target <target> Only cli is supported by loomlet run in this version. Default: cli`;
+  --target <target> Only cli is supported by loomlet run in this version. Default: cli
+  --package <path>  Load a trusted local package (repeatable)`;
 }
 
 function getReplHelp() {
   return `Usage:
-  loomlet repl
+  loomlet repl [--package <path>]
+
+Options:
+  --package <path>   Load a trusted local package (repeatable)
 
 Commands:
   :help              Show REPL help
@@ -1648,28 +1686,30 @@ async function handleCompile(args) {
     throw new Error('compile requires <file>');
   }
 
+  const { packages, rest: rest2 } = parsePackageArgs(rest);
+
   let outputPath = null;
   let pretty = true;
   let target = 'any';
 
-  for (let index = 0; index < rest.length; index += 1) {
-    const arg = rest[index];
+  for (let index = 0; index < rest2.length; index += 1) {
+    const arg = rest2[index];
     if (arg === '-o' || arg === '--out') {
-      const next = rest[index + 1];
+      const next = rest2[index + 1];
       if (!next || next.startsWith('-')) {
         throw new Error(`${arg} requires a file path`);
       }
       outputPath = next;
       index += 1;
     } else if (arg === '--pretty') {
-      const next = rest[index + 1];
+      const next = rest2[index + 1];
       if (next === undefined || next.startsWith('-')) {
         throw new Error('--pretty requires true or false');
       }
       pretty = parseBoolean(next);
       index += 1;
     } else if (arg === '--target') {
-      target = parseTarget(rest[index + 1]);
+      target = parseTarget(rest2[index + 1]);
       index += 1;
     } else {
       throw new Error(`Unknown option: ${arg}`);
@@ -1677,7 +1717,13 @@ async function handleCompile(args) {
   }
 
   const source = await readSourceFile(file);
-  const result = compileLoomSource(source, { filename: file, target });
+  const registries = await createCliRegistries({ packages });
+  const result = compileLoomSource(source, {
+    filename: file,
+    target,
+    nodeRegistry: registries.nodeRegistry,
+    metadataRegistry: registries.metadataRegistry
+  });
   if (!result.ok) {
     printToolErrors(result.errors);
     return 1;
@@ -1751,13 +1797,15 @@ async function handleInspect(args) {
     throw new Error('inspect requires <file>');
   }
 
+  const { packages, rest: rest2 } = parsePackageArgs(rest);
+
   let showAst = false;
   let showGraph = false;
   let showJson = false;
   let target = 'any';
 
-  for (let index = 0; index < rest.length; index += 1) {
-    const arg = rest[index];
+  for (let index = 0; index < rest2.length; index += 1) {
+    const arg = rest2[index];
     if (arg === '--ast') {
       showAst = true;
     } else if (arg === '--graph') {
@@ -1765,7 +1813,7 @@ async function handleInspect(args) {
     } else if (arg === '--json') {
       showJson = true;
     } else if (arg === '--target') {
-      target = parseTarget(rest[index + 1]);
+      target = parseTarget(rest2[index + 1]);
       index += 1;
     } else {
       throw new Error(`Unknown option: ${arg}`);
@@ -1773,7 +1821,13 @@ async function handleInspect(args) {
   }
 
   const source = await readSourceFile(file);
-  const result = inspectLoomSource(source, { filename: file, target });
+  const registries = await createCliRegistries({ packages });
+  const result = inspectLoomSource(source, {
+    filename: file,
+    target,
+    nodeRegistry: registries.nodeRegistry,
+    metadataRegistry: registries.metadataRegistry
+  });
   if (!result.ok) {
     printToolErrors(result.errors);
     return 1;
@@ -1798,6 +1852,38 @@ async function handleInspect(args) {
   return 0;
 }
 
+async function createCliRegistries(options = {}) {
+  const { packages = [] } = options;
+
+  if (packages.length === 0) {
+    return {
+      nodeRegistry: undefined,
+      metadataRegistry: undefined
+    };
+  }
+
+  const nodeRegistry = createNodeRegistry();
+  const metadataRegistry = createLibraryMetadataRegistry(LIBRARY_METADATA);
+
+  registerBuiltinNodes(nodeRegistry);
+
+  for (const packagePath of packages) {
+    try {
+      await loadTrustedLocalPackage(packagePath, {
+        nodeRegistry,
+        metadataRegistry
+      });
+    } catch (error) {
+      throw new Error(`Failed to load package '${packagePath}': ${error.message}`);
+    }
+  }
+
+  return {
+    nodeRegistry,
+    metadataRegistry
+  };
+}
+
 async function handleRun(args) {
   if (args.includes('--help')) {
     print(getRunHelp());
@@ -1809,31 +1895,33 @@ async function handleRun(args) {
     throw new Error('run requires <file>');
   }
 
+  const { packages, rest: rest2 } = parsePackageArgs(rest);
+
   const get = [];
   let time = 0;
   let dt = 0;
   let json = false;
   let target = 'cli';
 
-  for (let index = 0; index < rest.length; index += 1) {
-    const arg = rest[index];
+  for (let index = 0; index < rest2.length; index += 1) {
+    const arg = rest2[index];
     if (arg === '--get') {
-      const ref = rest[index + 1];
+      const ref = rest2[index + 1];
       if (!ref) {
         throw new Error('--get requires a ref');
       }
       get.push(ref);
       index += 1;
     } else if (arg === '--time') {
-      time = parseNumber(rest[index + 1], '--time');
+      time = parseNumber(rest2[index + 1], '--time');
       index += 1;
     } else if (arg === '--dt') {
-      dt = parseNumber(rest[index + 1], '--dt');
+      dt = parseNumber(rest2[index + 1], '--dt');
       index += 1;
     } else if (arg === '--json') {
       json = true;
     } else if (arg === '--target') {
-      target = parseTarget(rest[index + 1]);
+      target = parseTarget(rest2[index + 1]);
       index += 1;
     } else {
       throw new Error(`Unknown option: ${arg}`);
@@ -1845,12 +1933,15 @@ async function handleRun(args) {
   }
 
   const source = await readSourceFile(file);
+  const registries = await createCliRegistries({ packages });
   const result = runLoomSource(source, {
     filename: file,
     target,
     get: get.length === 1 ? get[0] : get.length > 1 ? get : undefined,
     time,
-    dt
+    dt,
+    nodeRegistry: registries.nodeRegistry,
+    metadataRegistry: registries.metadataRegistry
   });
   if (!result.ok) {
     printToolErrors(result.errors);
@@ -1878,22 +1969,27 @@ async function handleDocs(args) {
       '',
       'Options:',
       '  --json                 Output as JSON',
+      '  --package <path>       Load a trusted local package (repeatable)',
       '',
       'Examples:',
       '  loomlet docs',
       '  loomlet docs text',
       '  loomlet docs text.upper',
-      '  loomlet docs text.upper --json'
+      '  loomlet docs text.upper --json',
+      '  loomlet docs --package ./examples/packages/demo/index.js',
+      '  loomlet docs demo --package ./examples/packages/demo/index.js'
     ];
     print(lines.join('\n'));
     return 0;
   }
 
+  const { packages, rest } = parsePackageArgs(args);
+
   let query = '';
   let outputJson = false;
   let positionalCount = 0;
 
-  for (const arg of args) {
+  for (const arg of rest) {
     if (arg === '--json') {
       outputJson = true;
     } else if (arg.startsWith('-')) {
@@ -1907,18 +2003,20 @@ async function handleDocs(args) {
     }
   }
 
+  const registries = await createCliRegistries({ packages });
+
   try {
     if (outputJson) {
-      const result = formatHelpJson(query);
+      const result = formatHelpJson(query, { metadataRegistry: registries.metadataRegistry });
       print(stringifyJson(result));
     } else {
       let output;
       if (!query) {
-        output = formatLibrariesText();
+        output = formatLibrariesText({ metadataRegistry: registries.metadataRegistry });
       } else if (query.includes('.')) {
-        output = formatFunctionHelpText(query);
+        output = formatFunctionHelpText(query, { metadataRegistry: registries.metadataRegistry });
       } else {
-        output = formatLibraryHelpText(query);
+        output = formatLibraryHelpText(query, { metadataRegistry: registries.metadataRegistry });
       }
       print(output);
     }
@@ -1938,7 +2036,20 @@ async function handleRepl(args) {
     return 0;
   }
 
-  const session = new LoomReplSession({ target: 'cli', time: 0, dt: 0 });
+  const { packages, rest } = parsePackageArgs(args);
+  if (rest.length > 0) {
+    throw new Error(`Unknown option: ${rest[0]}`);
+  }
+
+  const registries = await createCliRegistries({ packages });
+
+  const session = new LoomReplSession({
+    target: 'cli',
+    time: 0,
+    dt: 0,
+    nodeRegistry: registries.nodeRegistry,
+    metadataRegistry: registries.metadataRegistry
+  });
   print('Loomlet REPL');
   print('Type :help for commands, :quit to exit.');
 

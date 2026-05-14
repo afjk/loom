@@ -7,3 +7,6 @@ export * from './runtime-targets.js';
 export * from './repl-session.js';
 export * from './library-metadata.js';
 export * from './help.js';
+export * from './package-loader.js';
+export { createNodeRegistry } from '../runtime/node-registry.js';
+export { registerBuiltinNodes } from '../nodes/index.js';

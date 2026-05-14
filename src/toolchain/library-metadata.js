@@ -1,5 +1,7 @@
 import { LIBRARY_COMPATIBILITY } from './runtime-targets.js';
-import { createLibraryMetadataRegistry } from './metadata-registry.js';
+import { createLibraryMetadataRegistry as createLibraryMetadataRegistryInternal } from './metadata-registry.js';
+
+export const createLibraryMetadataRegistry = createLibraryMetadataRegistryInternal;
 
 export const LIBRARY_METADATA = {
   text: {
