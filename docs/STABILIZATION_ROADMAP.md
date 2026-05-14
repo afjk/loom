@@ -20,6 +20,9 @@ Recommended order:
 4. Stabilize node definition schema
    - Document current node definition schema in `docs/NODE_DEFINITION_SCHEMA.md`
    - Add conservative metadata shape tests in `test/library-metadata-schema.test.mjs`
+   - Document runtime node registry in `docs/RUNTIME_NODE_REGISTRY.md`
+   - Add runtime registry shape tests in `test/runtime-node-registry.test.mjs`
+   - Add metadata/runtime drift tests in `test/runtime-metadata-drift.test.mjs`
    - Do not yet make metadata the single runtime/compiler source of truth
 5. Clarify input vs param (✓ covered by `input-param-*` stabilization fixtures)
 6. Clarify runtime registration API
@@ -160,5 +163,8 @@ This is future work and should not be treated as stable yet.
 4. Add metadata schema tests to verify node definition shape.
    - Fixture tests cover behavior.
    - Metadata schema tests cover node definition shape.
-5. Later, stabilize `graphToCanonicalDSL`.
-6. Later, add editor round-trip tests.
+   - Runtime registry shape is covered by runtime-node-registry tests.
+   - Metadata/runtime drift is covered by runtime-metadata-drift tests.
+5. Next: evaluate whether to introduce a formal runtime registration API after registry/metadata drift tests are stable.
+6. Later, stabilize `graphToCanonicalDSL`.
+7. Later, add editor round-trip tests.
