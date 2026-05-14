@@ -1,0 +1,4 @@
+# Stabilization fixture: basic math assignment
+import math
+
+value = math.add(a: 1, b: 2)
