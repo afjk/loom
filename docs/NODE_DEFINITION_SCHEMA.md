@@ -287,7 +287,7 @@ The following gaps prevent using metadata as the single source of truth:
 - Some generated metadata entries (especially from `makeFunctionMetadata`) have empty `args` arrays because argument information is not yet available.
 - Metadata for `logic`, `list`, `random`, `debug`, and `output` functions is incomplete.
 - Metadata does not yet fully drive compiler validation. Some argument validation is hard-coded in the parser and compiler.
-- Runtime implementation and metadata can still drift. There are no drift-detection tests yet.
+- Runtime implementation and metadata can still drift (tracked by `test/runtime-metadata-drift.test.mjs`).
 - Node Editor port generation is not fully stabilized and does not yet use metadata as the authoritative source.
 - Canonical DSL generation and source-preserving edits are not yet part of the schema.
 - The schema does not yet capture all relevant type information (e.g., union types, optional arguments with semantic defaults).
@@ -295,7 +295,7 @@ The following gaps prevent using metadata as the single source of truth:
 Before treating metadata as the single source of truth:
 
 - Complete argument metadata for all implemented functions.
-- Add metadata-to-runtime drift tests to catch implementation-metadata mismatches.
+- Metadata-to-runtime drift is covered by `test/runtime-metadata-drift.test.mjs`.
 - Use metadata as the source for Node Editor port generation.
 - Use metadata for compiler argument validation and error messages.
 - Update `docs/SPEC.md` only after behavior is stable.
@@ -325,3 +325,7 @@ Before treating metadata as the single source of truth:
 
 - After behavior is stable and fully tested, promote key aspects to `docs/SPEC.md`.
 - Treat metadata as the single source of truth for all new features.
+
+## See also
+
+Runtime executable node definitions are currently documented in `docs/RUNTIME_NODE_REGISTRY.md`.
