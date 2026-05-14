@@ -19,7 +19,8 @@ import {
   formatFunctionHelpText,
   formatHelpJson,
   loadTrustedLocalPackage,
-  createLibraryMetadataRegistry
+  createLibraryMetadataRegistry,
+  LIBRARY_METADATA
 } from '../src/toolchain/index.js';
 import { createNodeRegistry } from '../src/runtime/node-registry.js';
 import { registerBuiltinNodes } from '../src/nodes/index.js';
@@ -171,12 +172,13 @@ Examples:
 
 function getCompileHelp() {
   return `Usage:
-  loomlet compile <file> [--out <file>] [--pretty false] [--target <target>]
+  loomlet compile <file> [--out <file>] [--pretty false] [--target <target>] [--package <path>]
 
 Options:
-  -o, --out <file>   Write GraphJSON to a file
-  --pretty false     Print compact JSON
-  --target <target>  Validate imports for a runtime target. Default: any`;
+  -o, --out <file>    Write GraphJSON to a file
+  --pretty false      Print compact JSON
+  --target <target>   Validate imports for a runtime target. Default: any
+  --package <path>    Load a trusted local package (repeatable)`;
 }
 
 function getFormatHelp() {
@@ -190,30 +192,35 @@ Options:
 
 function getInspectHelp() {
   return `Usage:
-  loomlet inspect <file> [--ast] [--graph] [--json] [--target <target>]
+  loomlet inspect <file> [--ast] [--graph] [--json] [--target <target>] [--package <path>]
 
 Options:
-  --ast    Print Source AST JSON
-  --graph  Print GraphJSON
-  --json   Print the full inspection result as JSON
-  --target <target>  Validate imports for a runtime target. Default: any`;
+  --ast               Print Source AST JSON
+  --graph             Print GraphJSON
+  --json              Print the full inspection result as JSON
+  --target <target>   Validate imports for a runtime target. Default: any
+  --package <path>    Load a trusted local package (repeatable)`;
 }
 
 function getRunHelp() {
   return `Usage:
-  loomlet run <file> --get <ref> [--time <number>] [--dt <number>] [--json] [--target <target>]
+  loomlet run <file> --get <ref> [--time <number>] [--dt <number>] [--json] [--target <target>] [--package <path>]
 
 Options:
   --get <ref>       Output reference to read. Repeatable.
   --time <number>   Evaluation time in seconds. Default: 0
   --dt <number>     Delta time in seconds. Default: 0
   --json            Print result values as JSON
-  --target <target> Only cli is supported by loomlet run in this version. Default: cli`;
+  --target <target> Only cli is supported by loomlet run in this version. Default: cli
+  --package <path>  Load a trusted local package (repeatable)`;
 }
 
 function getReplHelp() {
   return `Usage:
-  loomlet repl
+  loomlet repl [--package <path>]
+
+Options:
+  --package <path>   Load a trusted local package (repeatable)
 
 Commands:
   :help              Show REPL help
@@ -1848,8 +1855,15 @@ async function handleInspect(args) {
 async function createCliRegistries(options = {}) {
   const { packages = [] } = options;
 
+  if (packages.length === 0) {
+    return {
+      nodeRegistry: undefined,
+      metadataRegistry: undefined
+    };
+  }
+
   const nodeRegistry = createNodeRegistry();
-  const metadataRegistry = createLibraryMetadataRegistry();
+  const metadataRegistry = createLibraryMetadataRegistry(LIBRARY_METADATA);
 
   registerBuiltinNodes(nodeRegistry);
 
@@ -2022,7 +2036,11 @@ async function handleRepl(args) {
     return 0;
   }
 
-  const { packages } = parsePackageArgs(args);
+  const { packages, rest } = parsePackageArgs(args);
+  if (rest.length > 0) {
+    throw new Error(`Unknown option: ${rest[0]}`);
+  }
+
   const registries = await createCliRegistries({ packages });
 
   const session = new LoomReplSession({
