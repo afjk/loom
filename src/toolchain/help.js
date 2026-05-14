@@ -1,5 +1,18 @@
 import { LIBRARY_METADATA, getAllLibraries } from './library-metadata.js';
 
+export function shouldIncludeLibrary(lib, options = {}) {
+  if (options.includePlanned) return true;
+
+  const status = lib.status || 'implemented';
+  const functionCount = Object.keys(lib.functions || {}).length;
+
+  if (status === 'planned' && functionCount === 0) {
+    return false;
+  }
+
+  return true;
+}
+
 export class HelpError extends Error {
   constructor(code, message) {
     super(message);
@@ -18,14 +31,22 @@ function getMetadataObject(options = {}) {
   return LIBRARY_METADATA;
 }
 
-function getLibraryList(metadataObj) {
+function getLibraryList(metadataObj, options = {}) {
   const libNames = Object.keys(metadataObj);
-  return libNames.sort();
+  if (options.includePlanned) {
+    return libNames.sort();
+  }
+
+  const filtered = libNames.filter(name => {
+    const lib = metadataObj[name];
+    return shouldIncludeLibrary(lib, options);
+  });
+  return filtered.sort();
 }
 
 export function listLibraries(options = {}) {
   const metadataObj = getMetadataObject(options);
-  return getLibraryList(metadataObj);
+  return getLibraryList(metadataObj, options);
 }
 
 export function getLibraryHelp(name, options = {}) {
@@ -62,7 +83,7 @@ export function getFunctionHelp(qualifiedName, options = {}) {
 
 export function formatLibrariesText(options = {}) {
   const metadataObj = getMetadataObject(options);
-  const libs = getLibraryList(metadataObj);
+  const libs = getLibraryList(metadataObj, options);
   const lines = ['Loomlet libraries:', ''];
 
   for (const libName of libs) {
@@ -146,7 +167,7 @@ export function formatHelpJson(query, options = {}) {
   const metadataObj = getMetadataObject(options);
 
   if (!query) {
-    const libs = getLibraryList(metadataObj);
+    const libs = getLibraryList(metadataObj, options);
     return {
       type: 'libraries',
       libraries: libs.map(name => {

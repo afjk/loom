@@ -17,6 +17,7 @@ Package, metadata, documentation, and runtime compatibility groundwork.
 - Generated VS Code metadata and docs are freshness-tested
 - Unity runtime compatibility baseline documented
 - Portable runtime parity fixtures added for future runtime reuse
+- CLI/REPL library help now hides planned empty placeholder libraries by default; use `loom docs --include-planned` or REPL `:libs --all` to inspect them
 
 ## Notes
 

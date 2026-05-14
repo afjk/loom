@@ -206,15 +206,24 @@ export class LoomReplSession {
     return variables;
   }
 
-  listLibraries() {
-    return formatLibrariesText({ metadataRegistry: this.metadataRegistry });
+  listLibraries(options = {}) {
+    return formatLibrariesText({
+      metadataRegistry: this.metadataRegistry,
+      ...options
+    });
   }
 
-  getLibraryHelp(name) {
-    return formatLibraryHelpText(name, { metadataRegistry: this.metadataRegistry });
+  getLibraryHelp(name, options = {}) {
+    return formatLibraryHelpText(name, {
+      metadataRegistry: this.metadataRegistry,
+      ...options
+    });
   }
 
-  getFunctionHelp(qualifiedName) {
-    return formatFunctionHelpText(qualifiedName, { metadataRegistry: this.metadataRegistry });
+  getFunctionHelp(qualifiedName, options = {}) {
+    return formatFunctionHelpText(qualifiedName, {
+      metadataRegistry: this.metadataRegistry,
+      ...options
+    });
   }
 }

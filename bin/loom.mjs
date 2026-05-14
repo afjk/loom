@@ -1969,6 +1969,7 @@ async function handleDocs(args) {
       '',
       'Options:',
       '  --json                 Output as JSON',
+      '  --include-planned      Include planned libraries',
       '  --package <path>       Load a trusted local package (repeatable)',
       '',
       'Examples:',
@@ -1976,6 +1977,7 @@ async function handleDocs(args) {
       '  loomlet docs text',
       '  loomlet docs text.upper',
       '  loomlet docs text.upper --json',
+      '  loomlet docs --include-planned',
       '  loomlet docs --package ./examples/packages/demo/index.js',
       '  loomlet docs demo --package ./examples/packages/demo/index.js'
     ];
@@ -1987,11 +1989,14 @@ async function handleDocs(args) {
 
   let query = '';
   let outputJson = false;
+  let includePlanned = false;
   let positionalCount = 0;
 
   for (const arg of rest) {
     if (arg === '--json') {
       outputJson = true;
+    } else if (arg === '--include-planned') {
+      includePlanned = true;
     } else if (arg.startsWith('-')) {
       throw new Error(`Unknown option: ${arg}`);
     } else {
@@ -2004,19 +2009,23 @@ async function handleDocs(args) {
   }
 
   const registries = await createCliRegistries({ packages });
+  const helpOptions = { metadataRegistry: registries.metadataRegistry };
+  if (includePlanned) {
+    helpOptions.includePlanned = true;
+  }
 
   try {
     if (outputJson) {
-      const result = formatHelpJson(query, { metadataRegistry: registries.metadataRegistry });
+      const result = formatHelpJson(query, helpOptions);
       print(stringifyJson(result));
     } else {
       let output;
       if (!query) {
-        output = formatLibrariesText({ metadataRegistry: registries.metadataRegistry });
+        output = formatLibrariesText(helpOptions);
       } else if (query.includes('.')) {
-        output = formatFunctionHelpText(query, { metadataRegistry: registries.metadataRegistry });
+        output = formatFunctionHelpText(query, helpOptions);
       } else {
-        output = formatLibraryHelpText(query, { metadataRegistry: registries.metadataRegistry });
+        output = formatLibraryHelpText(query, helpOptions);
       }
       print(output);
     }
@@ -2073,8 +2082,9 @@ async function handleRepl(args) {
         rl.prompt();
         return;
       }
-      if (trimmed === ':libs') {
-        print(session.listLibraries());
+      if (trimmed === ':libs' || trimmed.startsWith(':libs ')) {
+        const includePlanned = trimmed === ':libs --all';
+        print(session.listLibraries(includePlanned ? { includePlanned: true } : {}));
         rl.prompt();
         return;
       }
