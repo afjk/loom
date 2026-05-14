@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Loom, NODE_TYPES } from '../src/loom.js';
 import { parseDSL, parseDSLToAST, compileToGraph } from '../src/loom-dsl.js';
+import { compileLoomSource } from '../src/toolchain/compile.js';
 import { createNodeRegistry } from '../src/runtime/node-registry.js';
 import { createLibraryMetadataRegistry } from '../src/toolchain/metadata-registry.js';
 import { registerBuiltinNodes } from '../src/nodes/index.js';
@@ -115,4 +116,28 @@ result = math.add(a: x, b: 1)
   loom.evaluateOnce();
 
   assert.equal(loom.getValue('result.out'), 8);
+});
+
+test('package registry flow: compileLoomSource compiles package node with registries', () => {
+  const nodeRegistry = createNodeRegistry();
+  const metadataRegistry = createLibraryMetadataRegistry();
+
+  registerBuiltinNodes(nodeRegistry);
+  registerTrustedPackage(nodeRegistry, demoPackage, { metadataRegistry });
+
+  const result = compileLoomSource(`
+import demo
+
+result = demo.double(value: 5)
+`, {
+    nodeRegistry,
+    metadataRegistry
+  });
+
+  assert.equal(result.ok, true);
+
+  const loom = new Loom(result.graph, { nodeRegistry });
+  loom.evaluateOnce();
+
+  assert.equal(loom.getValue('result.out'), 10);
 });

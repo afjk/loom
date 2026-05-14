@@ -106,6 +106,71 @@ The registry will:
 
 Runtime-only packages are still supported—metadata is optional.
 
+## Import Validation
+
+A package library becomes importable when:
+
+- Its metadata is registered in a metadata registry, or
+- Its runtime node types are registered in a node registry using the `library.function` prefix.
+
+Metadata is used for target compatibility validation during compilation. Runtime-only packages are currently allowed, but target compatibility is unknown until metadata or a manifest exists.
+
+### With Built-in Libraries
+
+Built-in libraries like `math` and `time` are validated against the static runtime-targets table:
+
+```js
+const result = compileLoomSource(`
+import math
+result = math.add(a: 1, b: 2)
+`, { target: 'cli' });
+
+assert.equal(result.ok, true);
+```
+
+### With Package Metadata
+
+Package imports are validated against metadata when a metadata registry is provided:
+
+```js
+const nodeRegistry = createNodeRegistry();
+const metadataRegistry = createLibraryMetadataRegistry();
+
+registerBuiltinNodes(nodeRegistry);
+registerTrustedPackage(nodeRegistry, demoPackage, { metadataRegistry });
+
+const result = compileLoomSource(`
+import demo
+result = demo.double(value: 5)
+`, {
+  target: 'web',
+  nodeRegistry,
+  metadataRegistry
+});
+
+assert.equal(result.ok, true);
+```
+
+### Runtime-Only Packages
+
+Packages without metadata are still allowed if their node types are registered in the node registry:
+
+```js
+const nodeRegistry = createNodeRegistry();
+registerTrustedPackage(nodeRegistry, runtimeOnlyPackage);
+
+const result = compileLoomSource(`
+import runtimeOnly
+result = runtimeOnly.value()
+`, {
+  nodeRegistry
+});
+
+assert.equal(result.ok, true);
+```
+
+Without registries, unknown imports are rejected with `UNKNOWN_IMPORT`.
+
 ## Runtime Flow
 
 ### Register a Package

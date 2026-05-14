@@ -14,23 +14,106 @@ function normalizeImportName(entry) {
   return typeof entry === 'string' ? entry : entry.name;
 }
 
+function resolveLibraryMetadataOption(options = {}) {
+  if (options.metadataRegistry && typeof options.metadataRegistry.toObject === 'function') {
+    return options.metadataRegistry.toObject();
+  }
+
+  if (options.libraryMetadata && typeof options.libraryMetadata === 'object') {
+    return options.libraryMetadata;
+  }
+
+  return {};
+}
+
+function resolveNodeTypesOption(options = {}) {
+  if (options.nodeRegistry && typeof options.nodeRegistry.toObject === 'function') {
+    return options.nodeRegistry.toObject();
+  }
+
+  if (options.nodeTypes && typeof options.nodeTypes === 'object') {
+    return options.nodeTypes;
+  }
+
+  return null;
+}
+
+function hasRuntimeLibrary(nodeTypes, libraryName) {
+  if (!nodeTypes) {
+    return false;
+  }
+
+  const prefix = `${libraryName}.`;
+  return Object.keys(nodeTypes).some((nodeType) => nodeType.startsWith(prefix));
+}
+
+function resolveImportLibraryInfo(libraryName, options = {}) {
+  if (isKnownLibrary(libraryName)) {
+    const compatibility = getLibraryCompatibility(libraryName);
+    return {
+      known: true,
+      source: 'builtin',
+      targets: compatibility?.targets ?? [],
+      hasTargetInfo: true
+    };
+  }
+
+  const metadata = resolveLibraryMetadataOption(options);
+  const metadataLibrary = metadata[libraryName];
+
+  if (metadataLibrary) {
+    return {
+      known: true,
+      source: 'metadata',
+      targets: metadataLibrary.targets ?? [],
+      hasTargetInfo: Array.isArray(metadataLibrary.targets) && metadataLibrary.targets.length > 0
+    };
+  }
+
+  const nodeTypes = resolveNodeTypesOption(options);
+
+  if (hasRuntimeLibrary(nodeTypes, libraryName)) {
+    return {
+      known: true,
+      source: 'nodeRegistry',
+      targets: [],
+      hasTargetInfo: false
+    };
+  }
+
+  return {
+    known: false,
+    source: null,
+    targets: [],
+    hasTargetInfo: false
+  };
+}
+
 export function getImportedLibraries(ast) {
   return (ast?.imports || []).map(normalizeImportName);
 }
 
-export function getCompatibleTargetsForImports(importNames) {
+export function getCompatibleTargetsForImports(importNames, options = {}) {
   if (!importNames || importNames.length === 0) {
     return [...DEFAULT_COMPATIBLE_TARGETS];
   }
 
   let compatibleTargets = [...DEFAULT_COMPATIBLE_TARGETS];
+
   for (const name of importNames) {
-    const info = getLibraryCompatibility(name);
-    if (!info) {
+    const info = resolveImportLibraryInfo(name, options);
+
+    if (!info.known) {
       return [];
     }
+
+    if (!info.hasTargetInfo) {
+      continue;
+    }
+
     compatibleTargets = compatibleTargets.filter((target) => info.targets.includes(target));
   }
+
   return compatibleTargets;
 }
 
@@ -50,10 +133,12 @@ function validateTarget(target) {
   return [];
 }
 
-function validateImports(ast, target) {
+function validateImports(ast, target, options = {}) {
   const errors = [];
   for (const entry of ast?.imports || []) {
-    if (!isKnownLibrary(entry.name)) {
+    const info = resolveImportLibraryInfo(entry.name, options);
+
+    if (!info.known) {
       errors.push({
         code: 'UNKNOWN_IMPORT',
         message: `Unknown import: ${entry.name}`,
@@ -63,7 +148,13 @@ function validateImports(ast, target) {
       });
       continue;
     }
-    if (target && target !== 'any' && !isLibraryAvailableInTarget(entry.name, target)) {
+
+    if (
+      target &&
+      target !== 'any' &&
+      info.hasTargetInfo &&
+      !info.targets.includes(target)
+    ) {
       errors.push({
         code: 'UNSUPPORTED_IMPORT',
         message: `Import '${entry.name}' is not available in target '${target}'`,
@@ -102,7 +193,7 @@ export function compileLoomSource(source, options = {}) {
       };
     }
 
-    const importErrors = validateImports(ast, options.target ?? 'any');
+    const importErrors = validateImports(ast, options.target ?? 'any', options);
     if (importErrors.length > 0) {
       return {
         ok: false,
@@ -112,7 +203,7 @@ export function compileLoomSource(source, options = {}) {
       };
     }
 
-    const compiled = compileToGraph(ast);
+    const compiled = compileToGraph(ast, options);
     if (compiled.errors.length > 0) {
       return {
         ok: false,

@@ -227,6 +227,30 @@ They remain intentionally separate:
 
 For details, see `docs/labs/PACKAGE_SYSTEM.md`.
 
+## Import validation with registries
+
+`compileLoomSource()` can receive the same node registry used by `Loom`.
+
+Package nodes should be compiled and run with the same registry:
+
+```js
+const nodeRegistry = createNodeRegistry();
+const metadataRegistry = createLibraryMetadataRegistry();
+
+registerBuiltinNodes(nodeRegistry);
+registerTrustedPackage(nodeRegistry, demoPackage, { metadataRegistry });
+
+const result = compileLoomSource(source, {
+  nodeRegistry,
+  metadataRegistry
+});
+
+const loom = new Loom(result.graph, { nodeRegistry });
+loom.evaluateOnce();
+```
+
+This ensures package imports are validated consistently between compile and runtime.
+
 ## Security note
 
 A package that registers executable nodes is trusted code.

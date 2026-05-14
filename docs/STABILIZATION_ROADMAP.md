@@ -36,6 +36,9 @@ Recommended order:
    - Package metadata registry added (`createLibraryMetadataRegistry`)
    - Packages can register both runtime nodes and metadata
    - Metadata is optional; runtime-only packages still work
+   - Package imports are now validated against custom node/metadata registries
+   - `compileLoomSource()` forwards registry options into graph compilation
+   - Package metadata provides target compatibility for package imports
    - Remote/npm package loading remains future work
 7. Clarify metadata as shared source for editor/docs/completion
 8. Improve compatibility between JS runtime and Unity runtime where practical
