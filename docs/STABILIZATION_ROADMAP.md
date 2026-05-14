@@ -39,6 +39,7 @@ Recommended order:
    - Package imports are now validated against custom node/metadata registries
    - `compileLoomSource()` forwards registry options into graph compilation
    - Package metadata provides target compatibility for package imports
+   - CLI/REPL can load trusted local packages explicitly with `--package`
    - Remote/npm package loading remains future work
 7. Clarify metadata as shared source for editor/docs/completion
    - VS Code completion, hover, and library reference now share generated library metadata as their default source
@@ -78,8 +79,9 @@ Candidate experiments:
   - implicit swizzle/get nodes
 - `labs/package`
   - package manifest
-  - local package loading
-  - future npm/catalog support
+  - package versioning
+  - npm/catalog support
+  - sandboxing and permissions
 - `labs/ui-graph`
   - UI values/events as Loomlet graph inputs/outputs
 - `labs/shader-graph`

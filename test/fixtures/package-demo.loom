@@ -1,0 +1,4 @@
+import demo
+
+x = demo.double(value: 21)
+y = demo.offset(21, amount: 10)

@@ -243,6 +243,75 @@ The default CLI still shows builtin metadata until a package-loading UX is added
 - `:help <library>` command
 - `:help <lib.func>` command
 
+## CLI Usage with Trusted Local Packages
+
+The `loomlet` CLI can load trusted local packages using the `--package` flag (experimental):
+
+```bash
+loomlet repl --package ./examples/packages/demo/index.js
+loomlet run ./examples/demo.loom --package ./examples/packages/demo/index.js
+loomlet inspect ./examples/demo.loom --package ./examples/packages/demo/index.js
+loomlet compile ./examples/demo.loom --package ./examples/packages/demo/index.js
+loomlet docs --package ./examples/packages/demo/index.js
+loomlet docs demo --package ./examples/packages/demo/index.js
+loomlet docs demo.double --package ./examples/packages/demo/index.js
+```
+
+### Package Resolution
+
+- Local file paths are resolved relative to `process.cwd()`
+- Absolute paths are used as-is
+- No npm resolution
+- No remote URL loading
+- No directory package discovery (must specify the `.js` file)
+
+### Multiple Packages
+
+Multiple packages can be loaded by repeating the `--package` flag:
+
+```bash
+loomlet repl --package ./pkg-a/index.js --package ./pkg-b/index.js
+```
+
+However, loading the same package twice will fail with a "Duplicate node type" error.
+
+### REPL with Packages
+
+Inside the REPL, packages loaded with `--package` are available for import:
+
+```
+$ loomlet repl --package ./examples/packages/demo/index.js
+Loomlet REPL
+Type :help for commands, :quit to exit.
+loomlet> import demo
+imported demo
+loomlet> x = demo.double(value: 21)
+loomlet> :vars
+x = 42
+loomlet> :help demo
+demo
+Demo package nodes for trusted local package tests.
+...
+loomlet> :help demo.double
+demo.double(value: 0)
+Doubles a numeric value.
+...
+```
+
+### Error Handling
+
+Clear errors are provided for common issues:
+
+- **Package file not found**: Check the path and ensure the file exists
+- **Package fails to import**: Check for syntax errors in the package module
+- **Invalid package format**: Package must export `registerLoomletPackage` function
+- **Duplicate library metadata**: A library name is already registered
+- **Duplicate node type**: A node type is already registered
+
+### Security
+
+**Packages are executable JavaScript and must be trusted.** There is no sandboxing or permission system. Load packages only from sources you trust.
+
 ## Example
 
 See `examples/packages/demo/` for a working example with two nodes:
@@ -279,3 +348,5 @@ The following are planned but not yet implemented:
 - **Generated documentation**: Docs from package metadata
 - **Package discovery**: Registry or catalog of available packages
 - **Package versioning**: Semver support and compatibility checks
+- **Package configuration files**: Load packages via manifest or config file
+- **Environment-based package loading**: Load packages based on environment variables
