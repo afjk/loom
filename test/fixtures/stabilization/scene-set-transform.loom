@@ -1,0 +1,6 @@
+# Stabilization fixture: direct Scene Sync transform effects
+import scene
+
+scene.setPosition(objectId: "sample-cube", x: 1, y: 2, z: 3)
+scene.setRotation(objectId: "sample-cube", x: 0, y: 0, z: 0, w: 1)
+scene.setScale(objectId: "sample-cube", x: 2, y: 2, z: 2)
