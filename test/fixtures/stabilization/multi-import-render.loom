@@ -1,0 +1,9 @@
+# Stabilization fixture: multi-import render path
+import math
+import logic
+
+base = math.add(a: 20, b: 10)
+isLarge = logic.greaterThan(value: base, other: 25)
+width = logic.select(condition: isLarge, whenTrue: 200, whenFalse: 80)
+
+render bar(width: width, color: "#00ffcc", height: 32)
