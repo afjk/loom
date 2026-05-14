@@ -1,5 +1,7 @@
 // Loom: ブラウザで動くステートレスなデータフロー実行エンジン
 
+import { createNodeRegistry } from './runtime/node-registry.js';
+
 export class LoomError extends Error {
   constructor(code, message, details = {}) {
     super(message);
@@ -553,7 +555,7 @@ function getNodePath() {
 
 
 // ノード型レジストリ
-export const NODE_TYPES = {
+const BUILTIN_NODE_TYPES = {
   // Phase 0 ノード
   clock: {
     category: 'source',
@@ -2229,3 +2231,11 @@ export class Loom {
     return Array.from(cycleNodes);
   }
 }
+
+export function createDefaultNodeRegistry() {
+  return createNodeRegistry(BUILTIN_NODE_TYPES);
+}
+
+export const DEFAULT_NODE_REGISTRY = createDefaultNodeRegistry();
+
+export const NODE_TYPES = DEFAULT_NODE_REGISTRY.toObject();

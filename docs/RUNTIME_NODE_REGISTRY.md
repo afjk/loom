@@ -121,7 +121,7 @@ The following policy guides reconciliation between `NODE_TYPES` and `LIBRARY_MET
 
 - **New public library nodes should be library-qualified.** Prefer `library.function` form for new additions.
 
-- **A future PR may introduce a formal `registerNodeType()` API,** but this PR does not implement it. For now, node types are defined in static `NODE_TYPES` object.
+- **A formal `registerNodeType()` API is now available** through `createNodeRegistry()` in `src/runtime/node-registry.js`. Built-in node types are registered through the default registry at startup, then exported as `NODE_TYPES` for backward compatibility.
 
 ## 6. Known gaps
 
@@ -143,7 +143,10 @@ These gaps are documented in test allowlists (`KNOWN_RUNTIME_ONLY_NODE_TYPES`) a
 
 ## See Also
 
-- `src/loom.js` — `NODE_TYPES` runtime registry definition
+- `src/loom.js` — `DEFAULT_NODE_REGISTRY` runtime registry instance and `NODE_TYPES` export
+- `src/runtime/node-registry.js` — Registry implementation
+- `docs/RUNTIME_NODE_REGISTRATION.md` — Registry API and usage guide
 - `src/toolchain/library-metadata.js` — `LIBRARY_METADATA` descriptive metadata
+- `test/node-registry.test.mjs` — Registry API tests
 - `test/runtime-node-registry.test.mjs` — Shape and stability tests for `NODE_TYPES`
 - `test/runtime-metadata-drift.test.mjs` — Drift detection between registry and metadata
