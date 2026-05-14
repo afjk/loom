@@ -50,6 +50,7 @@ Recommended order:
    - Compatibility levels defined: portable, host-adapter, js-only, future
    - Current library baseline established with porting priorities
    - Metadata/runtime target consistency for Unity is covered by tests in `test/unity-runtime-compatibility.test.mjs`
+   - Portable runtime parity fixtures added for JS runtime now and future Unity runtime reuse
    - Unity/C# runtime implementation remains future work
 
 ## Track B: Labs

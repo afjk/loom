@@ -1,0 +1,1557 @@
+{
+  "version": 1,
+  "description": "Portable runtime parity cases for Loomlet runtimes.",
+  "cases": [
+    {
+      "id": "math.add.basic",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.add",
+            "params": {
+              "a": 2,
+              "b": 3
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {
+        "time": 0,
+        "dt": 0
+      },
+      "get": "n.out",
+      "expected": 5
+    },
+    {
+      "id": "math.subtract.basic",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.subtract",
+            "params": {
+              "a": 5,
+              "b": 3
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 2
+    },
+    {
+      "id": "math.multiply.basic",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.multiply",
+            "params": {
+              "a": 4,
+              "b": 5
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 20
+    },
+    {
+      "id": "math.divide.basic",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.divide",
+            "params": {
+              "a": 10,
+              "b": 2
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 5
+    },
+    {
+      "id": "math.mod.basic",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.mod",
+            "params": {
+              "a": 10,
+              "b": 3
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 1
+    },
+    {
+      "id": "math.min.basic",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.min",
+            "params": {
+              "a": 5,
+              "b": 3
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 3
+    },
+    {
+      "id": "math.max.basic",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.max",
+            "params": {
+              "a": 5,
+              "b": 3
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 5
+    },
+    {
+      "id": "math.clamp.basic",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.clamp",
+            "params": {
+              "value": 5,
+              "min": 0,
+              "max": 3
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 3
+    },
+    {
+      "id": "math.clamp.under_min",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.clamp",
+            "params": {
+              "value": -2,
+              "min": 0,
+              "max": 3
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 0
+    },
+    {
+      "id": "math.map.basic",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.map",
+            "params": {
+              "value": 5,
+              "inMin": 0,
+              "inMax": 10,
+              "outMin": 0,
+              "outMax": 1
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 0.5
+    },
+    {
+      "id": "math.lerp.basic",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.lerp",
+            "params": {
+              "a": 0,
+              "b": 10,
+              "t": 0.25
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 2.5
+    },
+    {
+      "id": "math.floor.basic",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.floor",
+            "params": {
+              "value": 3.7
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 3
+    },
+    {
+      "id": "math.ceil.basic",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.ceil",
+            "params": {
+              "value": 3.2
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 4
+    },
+    {
+      "id": "math.round.basic",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.round",
+            "params": {
+              "value": 3.6
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 4
+    },
+    {
+      "id": "math.sqrt.basic",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.sqrt",
+            "params": {
+              "value": 9
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 3
+    },
+    {
+      "id": "math.pow.basic",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.pow",
+            "params": {
+              "value": 2,
+              "exponent": 3
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 8
+    },
+    {
+      "id": "math.sine.at_zero",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.sine",
+            "params": {
+              "t": 0,
+              "freq": 1,
+              "amplitude": 1,
+              "phase": 0,
+              "offset": 0
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 0,
+      "tolerance": 1e-9
+    },
+    {
+      "id": "math.cosine.at_zero",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.cosine",
+            "params": {
+              "t": 0,
+              "freq": 1,
+              "amplitude": 1,
+              "phase": 0,
+              "offset": 0
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 1,
+      "tolerance": 1e-9
+    },
+    {
+      "id": "logic.equals.true",
+      "library": "logic",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "logic.equals",
+            "params": {
+              "value": 1,
+              "other": 1
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": true
+    },
+    {
+      "id": "logic.equals.false",
+      "library": "logic",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "logic.equals",
+            "params": {
+              "value": 1,
+              "other": 2
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": false
+    },
+    {
+      "id": "logic.notEquals.true",
+      "library": "logic",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "logic.notEquals",
+            "params": {
+              "value": 1,
+              "other": 2
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": true
+    },
+    {
+      "id": "logic.notEquals.false",
+      "library": "logic",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "logic.notEquals",
+            "params": {
+              "value": 1,
+              "other": 1
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": false
+    },
+    {
+      "id": "logic.greaterThan.true",
+      "library": "logic",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "logic.greaterThan",
+            "params": {
+              "value": 5,
+              "other": 3
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": true
+    },
+    {
+      "id": "logic.greaterThan.false",
+      "library": "logic",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "logic.greaterThan",
+            "params": {
+              "value": 3,
+              "other": 5
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": false
+    },
+    {
+      "id": "logic.lessThan.true",
+      "library": "logic",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "logic.lessThan",
+            "params": {
+              "value": 3,
+              "other": 5
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": true
+    },
+    {
+      "id": "logic.lessThan.false",
+      "library": "logic",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "logic.lessThan",
+            "params": {
+              "value": 5,
+              "other": 3
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": false
+    },
+    {
+      "id": "logic.greaterOrEqual.true",
+      "library": "logic",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "logic.greaterOrEqual",
+            "params": {
+              "value": 5,
+              "other": 5
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": true
+    },
+    {
+      "id": "logic.greaterOrEqual.false",
+      "library": "logic",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "logic.greaterOrEqual",
+            "params": {
+              "value": 3,
+              "other": 5
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": false
+    },
+    {
+      "id": "logic.lessOrEqual.true",
+      "library": "logic",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "logic.lessOrEqual",
+            "params": {
+              "value": 5,
+              "other": 5
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": true
+    },
+    {
+      "id": "logic.lessOrEqual.false",
+      "library": "logic",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "logic.lessOrEqual",
+            "params": {
+              "value": 5,
+              "other": 3
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": false
+    },
+    {
+      "id": "logic.and.truthy_values",
+      "library": "logic",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "logic.and",
+            "params": {
+              "a": 1,
+              "b": "x"
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": true
+    },
+    {
+      "id": "logic.and.one_falsy",
+      "library": "logic",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "logic.and",
+            "params": {
+              "a": 0,
+              "b": 1
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": false
+    },
+    {
+      "id": "logic.or.one_truthy",
+      "library": "logic",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "logic.or",
+            "params": {
+              "a": 0,
+              "b": "x"
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": true
+    },
+    {
+      "id": "logic.or.both_falsy",
+      "library": "logic",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "logic.or",
+            "params": {
+              "a": 0,
+              "b": ""
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": false
+    },
+    {
+      "id": "logic.not.falsy_zero",
+      "library": "logic",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "logic.not",
+            "params": {
+              "value": 0
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": true
+    },
+    {
+      "id": "logic.not.truthy",
+      "library": "logic",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "logic.not",
+            "params": {
+              "value": 1
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": false
+    },
+    {
+      "id": "logic.select.when_true",
+      "library": "logic",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "logic.select",
+            "params": {
+              "condition": true,
+              "whenTrue": "yes",
+              "whenFalse": "no"
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": "yes"
+    },
+    {
+      "id": "logic.select.when_false",
+      "library": "logic",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "logic.select",
+            "params": {
+              "condition": false,
+              "whenTrue": "yes",
+              "whenFalse": "no"
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": "no"
+    },
+    {
+      "id": "logic.when.false_returns_null",
+      "library": "logic",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "logic.when",
+            "params": {
+              "condition": false,
+              "value": "hidden"
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": null
+    },
+    {
+      "id": "logic.when.true_returns_value",
+      "library": "logic",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "logic.when",
+            "params": {
+              "condition": true,
+              "value": "visible"
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": "visible"
+    },
+    {
+      "id": "list.range.forward",
+      "library": "list",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "list.range",
+            "params": {
+              "start": 1,
+              "end": 3
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": [1, 2, 3]
+    },
+    {
+      "id": "list.range.backward",
+      "library": "list",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "list.range",
+            "params": {
+              "start": 5,
+              "end": 3
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": [5, 4, 3]
+    },
+    {
+      "id": "list.length.basic",
+      "library": "list",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "list.length",
+            "params": {
+              "list": [1, 2, 3]
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 3
+    },
+    {
+      "id": "list.length.empty",
+      "library": "list",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "list.length",
+            "params": {
+              "list": []
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 0
+    },
+    {
+      "id": "list.first.basic",
+      "library": "list",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "list.first",
+            "params": {
+              "list": [10, 20, 30]
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 10
+    },
+    {
+      "id": "list.last.basic",
+      "library": "list",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "list.last",
+            "params": {
+              "list": [10, 20, 30]
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 30
+    },
+    {
+      "id": "list.at.positive_index",
+      "library": "list",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "list.at",
+            "params": {
+              "list": ["a", "b", "c"],
+              "index": 1
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": "b"
+    },
+    {
+      "id": "list.at.negative_index",
+      "library": "list",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "list.at",
+            "params": {
+              "list": ["a", "b", "c"],
+              "index": -1
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": "c"
+    },
+    {
+      "id": "list.join.basic",
+      "library": "list",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "list.join",
+            "params": {
+              "list": [1, 2, 3],
+              "separator": "-"
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": "1-2-3"
+    },
+    {
+      "id": "list.reverse.basic",
+      "library": "list",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "list.reverse",
+            "params": {
+              "list": [3, 1, 2]
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": [2, 1, 3]
+    },
+    {
+      "id": "list.sort.basic",
+      "library": "list",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "list.sort",
+            "params": {
+              "list": [3, 1, 2]
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": [1, 2, 3]
+    },
+    {
+      "id": "list.take.basic",
+      "library": "list",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "list.take",
+            "params": {
+              "list": [1, 2, 3],
+              "count": 2
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": [1, 2]
+    },
+    {
+      "id": "list.drop.basic",
+      "library": "list",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "list.drop",
+            "params": {
+              "list": [1, 2, 3],
+              "count": 2
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": [3]
+    },
+    {
+      "id": "list.concat.basic",
+      "library": "list",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "list.concat",
+            "params": {
+              "list1": [1, 2],
+              "list2": [3, 4]
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": [1, 2, 3, 4]
+    },
+    {
+      "id": "text.concat.basic",
+      "library": "text",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "text.concat",
+            "params": {
+              "value1": "hello",
+              "value2": " ",
+              "value3": "world"
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": "hello world"
+    },
+    {
+      "id": "text.split.basic",
+      "library": "text",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "text.split",
+            "params": {
+              "value": "a,b,c",
+              "separator": ","
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": ["a", "b", "c"]
+    },
+    {
+      "id": "text.join.basic",
+      "library": "text",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "text.join",
+            "params": {
+              "list": ["a", "b", "c"],
+              "separator": ":"
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": "a:b:c"
+    },
+    {
+      "id": "text.includes.found",
+      "library": "text",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "text.includes",
+            "params": {
+              "value": "loomlet",
+              "search": "loom"
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": true
+    },
+    {
+      "id": "text.includes.not_found",
+      "library": "text",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "text.includes",
+            "params": {
+              "value": "loomlet",
+              "search": "xyz"
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": false
+    },
+    {
+      "id": "text.startsWith.true",
+      "library": "text",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "text.startsWith",
+            "params": {
+              "value": "loomlet",
+              "search": "loom"
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": true
+    },
+    {
+      "id": "text.startsWith.false",
+      "library": "text",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "text.startsWith",
+            "params": {
+              "value": "loomlet",
+              "search": "let"
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": false
+    },
+    {
+      "id": "text.endsWith.true",
+      "library": "text",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "text.endsWith",
+            "params": {
+              "value": "loomlet",
+              "search": "let"
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": true
+    },
+    {
+      "id": "text.endsWith.false",
+      "library": "text",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "text.endsWith",
+            "params": {
+              "value": "loomlet",
+              "search": "loom"
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": false
+    },
+    {
+      "id": "text.length.basic",
+      "library": "text",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "text.length",
+            "params": {
+              "value": "hello"
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 5
+    },
+    {
+      "id": "text.isEmpty.true",
+      "library": "text",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "text.isEmpty",
+            "params": {
+              "value": ""
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": true
+    },
+    {
+      "id": "text.isEmpty.false",
+      "library": "text",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "text.isEmpty",
+            "params": {
+              "value": "x"
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": false
+    },
+    {
+      "id": "text.stringify.number",
+      "library": "text",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "text.stringify",
+            "params": {
+              "value": 42
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": "42"
+    },
+    {
+      "id": "text.stringify.string",
+      "library": "text",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "text.stringify",
+            "params": {
+              "value": "hello"
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": "hello"
+    },
+    {
+      "id": "text.stringify.array",
+      "library": "text",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "text.stringify",
+            "params": {
+              "value": [1, 2, 3]
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": "[1,2,3]"
+    },
+    {
+      "id": "text.stringify.object",
+      "library": "text",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "text.stringify",
+            "params": {
+              "value": {"a": 1}
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": "{\"a\":1}"
+    },
+    {
+      "id": "json.stringify.object",
+      "library": "json",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "json.stringify",
+            "params": {
+              "value": {"x": 1, "y": 2}
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": "{\"x\":1,\"y\":2}"
+    },
+    {
+      "id": "json.stringify.array",
+      "library": "json",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "json.stringify",
+            "params": {
+              "value": [1, 2, 3]
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": "[1,2,3]"
+    },
+    {
+      "id": "json.parse.object",
+      "library": "json",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "json.parse",
+            "params": {
+              "value": "{\"a\":1,\"b\":2}"
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": {"a": 1, "b": 2}
+    },
+    {
+      "id": "json.parse.array",
+      "library": "json",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "json.parse",
+            "params": {
+              "value": "[1,2,3]"
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": [1, 2, 3]
+    }
+  ]
+}

@@ -6,6 +6,8 @@ This document defines the current compatibility baseline between the JavaScript 
 
 It defines which node semantics should be preserved when Unity support is implemented. This baseline makes future Unity implementation decisions explicit, enables early metadata consistency testing, and guides porting priorities.
 
+See [Runtime Parity Fixtures](RUNTIME_PARITY_FIXTURES.md) for data-driven test cases that verify portable node behavior across runtimes.
+
 ## Compatibility levels
 
 - **portable**
