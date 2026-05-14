@@ -1,16 +1,11 @@
-const metadata = require('../generated/library-metadata.json');
+const { buildLibraryModel } = require('./library-metadata-model.js');
 
 function getIncludePlanned(configGetter) {
   return Boolean(configGetter?.('loomlet.completion.includePlanned'));
 }
 
 function buildCompletionModel(includePlanned = false) {
-  const libraries = (metadata.libraries || [])
-    .filter((lib) => includePlanned || lib.status === 'implemented');
-  return libraries.map((lib) => ({
-    ...lib,
-    functions: (lib.functions || []).filter((fn) => includePlanned || fn.status === 'implemented')
-  }));
+  return buildLibraryModel(includePlanned);
 }
 
 function inferPlaceholder(arg) {
