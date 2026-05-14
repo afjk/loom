@@ -431,6 +431,41 @@
               "description": "Z scale."
             }
           ]
+        },
+        {
+          "name": "offsetPosition",
+          "fullName": "scene.offsetPosition",
+          "status": "implemented",
+          "signature": "scene.offsetPosition(objectId: \"...\", x: 0, y: 0, z: 0)",
+          "description": "Offsets the position of a scene object relative to its starting position.",
+          "returns": "void",
+          "allowsTwoPositionalArgs": false,
+          "inputs": [
+            {
+              "name": "objectId",
+              "type": "string",
+              "positional": true,
+              "description": "ID of the object."
+            },
+            {
+              "name": "x",
+              "type": "number",
+              "positional": false,
+              "description": "X offset."
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "positional": false,
+              "description": "Y offset."
+            },
+            {
+              "name": "z",
+              "type": "number",
+              "positional": false,
+              "description": "Z offset."
+            }
+          ]
         }
       ]
     },
@@ -736,33 +771,16 @@
           ]
         },
         {
-          "name": "negate",
-          "fullName": "math.negate",
-          "status": "implemented",
-          "signature": "negate(a: 0)",
-          "description": "Negates a number.",
-          "returns": "number",
-          "allowsTwoPositionalArgs": false,
-          "inputs": [
-            {
-              "name": "a",
-              "type": "number",
-              "positional": false,
-              "description": "Number to negate."
-            }
-          ]
-        },
-        {
           "name": "abs",
           "fullName": "math.abs",
           "status": "implemented",
-          "signature": "abs(a: 0)",
+          "signature": "math.abs(value: 0)",
           "description": "Computes the absolute value of a number.",
           "returns": "number",
           "allowsTwoPositionalArgs": false,
           "inputs": [
             {
-              "name": "a",
+              "name": "value",
               "type": "number",
               "positional": false,
               "description": "Number."
@@ -824,52 +842,6 @@
               "type": "number",
               "positional": false,
               "description": "Upper edge."
-            }
-          ]
-        },
-        {
-          "name": "greaterThan",
-          "fullName": "math.greaterThan",
-          "status": "implemented",
-          "signature": "greaterThan(a: 0, b: 0)",
-          "description": "Compares if a > b.",
-          "returns": "boolean",
-          "allowsTwoPositionalArgs": false,
-          "inputs": [
-            {
-              "name": "a",
-              "type": "number",
-              "positional": false,
-              "description": "First number."
-            },
-            {
-              "name": "b",
-              "type": "number",
-              "positional": false,
-              "description": "Second number."
-            }
-          ]
-        },
-        {
-          "name": "lessThan",
-          "fullName": "math.lessThan",
-          "status": "implemented",
-          "signature": "lessThan(a: 0, b: 0)",
-          "description": "Compares if a < b.",
-          "returns": "boolean",
-          "allowsTwoPositionalArgs": false,
-          "inputs": [
-            {
-              "name": "a",
-              "type": "number",
-              "positional": false,
-              "description": "First number."
-            },
-            {
-              "name": "b",
-              "type": "number",
-              "positional": false,
-              "description": "Second number."
             }
           ]
         },
@@ -952,135 +924,6 @@
           "returns": "number",
           "allowsTwoPositionalArgs": false,
           "inputs": []
-        }
-      ]
-    },
-    {
-      "name": "state",
-      "status": "implemented",
-      "description": "Explicit time-based state nodes",
-      "targets": [
-        "cli",
-        "web",
-        "scenesync",
-        "unity"
-      ],
-      "functions": [
-        {
-          "name": "lowpass",
-          "fullName": "state.lowpass",
-          "status": "implemented",
-          "signature": "lowpass(value: 0, tau: 0.2, initial: 0)",
-          "description": "Low-pass filter with exponential smoothing.",
-          "returns": "number",
-          "allowsTwoPositionalArgs": false,
-          "inputs": [
-            {
-              "name": "value",
-              "type": "number",
-              "positional": true,
-              "description": "Input value."
-            },
-            {
-              "name": "tau",
-              "type": "number",
-              "positional": false,
-              "description": "Time constant (larger = more smoothing)."
-            },
-            {
-              "name": "initial",
-              "type": "number",
-              "positional": false,
-              "description": "Initial state value."
-            }
-          ]
-        },
-        {
-          "name": "delay1",
-          "fullName": "state.delay1",
-          "status": "implemented",
-          "signature": "delay1(value: 0, initial: 0)",
-          "description": "Delays a value by one sample.",
-          "returns": "number",
-          "allowsTwoPositionalArgs": false,
-          "inputs": [
-            {
-              "name": "value",
-              "type": "number",
-              "positional": true,
-              "description": "Input value."
-            },
-            {
-              "name": "initial",
-              "type": "number",
-              "positional": false,
-              "description": "Initial state value."
-            }
-          ]
-        },
-        {
-          "name": "integrate",
-          "fullName": "state.integrate",
-          "status": "implemented",
-          "signature": "integrate(value: 0, initial: 0, min: null, max: null)",
-          "description": "Integrates a value over time.",
-          "returns": "number",
-          "allowsTwoPositionalArgs": false,
-          "inputs": [
-            {
-              "name": "value",
-              "type": "number",
-              "positional": true,
-              "description": "Input value to integrate."
-            },
-            {
-              "name": "initial",
-              "type": "number",
-              "positional": false,
-              "description": "Initial state value."
-            },
-            {
-              "name": "min",
-              "type": "number|null",
-              "positional": false,
-              "description": "Minimum bound (optional)."
-            },
-            {
-              "name": "max",
-              "type": "number|null",
-              "positional": false,
-              "description": "Maximum bound (optional)."
-            }
-          ]
-        },
-        {
-          "name": "smoothLerp",
-          "fullName": "state.smoothLerp",
-          "status": "implemented",
-          "signature": "smoothLerp(value: 0, rate: 5, initial: 0)",
-          "description": "Exponentially smooths a value with a rate parameter.",
-          "returns": "number",
-          "allowsTwoPositionalArgs": false,
-          "inputs": [
-            {
-              "name": "value",
-              "type": "number",
-              "positional": true,
-              "description": "Input value."
-            },
-            {
-              "name": "rate",
-              "type": "number",
-              "positional": false,
-              "description": "Smoothing rate (higher = faster response)."
-            },
-            {
-              "name": "initial",
-              "type": "number",
-              "positional": false,
-              "description": "Initial state value."
-            }
-          ]
         }
       ]
     },
@@ -1513,26 +1356,6 @@
           "signature": "random.choice(list)",
           "description": "Returns a random item or null for an empty list.",
           "returns": "any",
-          "allowsTwoPositionalArgs": false,
-          "inputs": []
-        },
-        {
-          "name": "seeded",
-          "fullName": "random.seeded",
-          "status": "planned",
-          "signature": "random.seeded(seed: 1)",
-          "description": "Planned seeded random generator.",
-          "returns": "any",
-          "allowsTwoPositionalArgs": false,
-          "inputs": []
-        },
-        {
-          "name": "noise",
-          "fullName": "random.noise",
-          "status": "planned",
-          "signature": "random.noise(...)",
-          "description": "Planned noise generator.",
-          "returns": "number",
           "allowsTwoPositionalArgs": false,
           "inputs": []
         }
