@@ -41,6 +41,8 @@ Recommended order:
    - Package metadata provides target compatibility for package imports
    - Remote/npm package loading remains future work
 7. Clarify metadata as shared source for editor/docs/completion
+   - VS Code completion, hover, and library reference now share generated library metadata as their default source
+   - manual overrides remain only for examples, aliases, render syntax, and preview-host-specific notes
 8. Improve compatibility between JS runtime and Unity runtime where practical
 
 ## Track B: Labs
