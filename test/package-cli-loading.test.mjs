@@ -48,6 +48,53 @@ test('loadTrustedLocalPackage loads demo package', async () => {
   assert.ok(metadataRegistry.hasLibraryMetadata('demo'));
 });
 
+test('loadTrustedLocalPackage summary includes only package-added entries', async () => {
+  const nodeRegistry = createNodeRegistry();
+  const metadataRegistry = createLibraryMetadataRegistry();
+
+  registerBuiltinNodes(nodeRegistry);
+
+  const result = await loadTrustedLocalPackage(DEMO_PACKAGE_PATH, {
+    nodeRegistry,
+    metadataRegistry
+  });
+
+  // Summary should contain only demo, not builtin libraries like math, text, etc.
+  assert.deepEqual(result.libraries, ['demo']);
+  assert.deepEqual(result.nodeTypes, ['demo.double', 'demo.offset']);
+
+  // But the full registry should still have builtins
+  assert.ok(nodeRegistry.hasNodeType('math.add'), 'Builtin math.add should still be in registry');
+  // Package metadata is registered, but not builtin metadata (since we didn't register them)
+  assert.ok(metadataRegistry.hasLibraryMetadata('demo'), 'Package demo should be in metadata');
+});
+
+test('loadTrustedLocalPackage summary filters out builtin libraries', async () => {
+  const nodeRegistry = createNodeRegistry();
+  const metadataRegistry = createLibraryMetadataRegistry();
+
+  // Register builtins first
+  registerBuiltinNodes(nodeRegistry);
+
+  // Verify builtins are there before loading package
+  const beforeLoad = nodeRegistry.toObject();
+  assert.ok(Object.keys(beforeLoad).some((key) => key.startsWith('math.')), 'Builtins should be registered');
+
+  // Load package
+  const result = await loadTrustedLocalPackage(DEMO_PACKAGE_PATH, {
+    nodeRegistry,
+    metadataRegistry
+  });
+
+  // Result should only contain demo entries
+  assert.deepEqual(result.libraries, ['demo']);
+  assert.deepEqual(result.nodeTypes, ['demo.double', 'demo.offset']);
+
+  // No builtin libraries in summary
+  assert.ok(!result.libraries.includes('math'), 'math should not be in summary');
+  assert.ok(!result.libraries.includes('text'), 'text should not be in summary');
+});
+
 test('loadTrustedLocalPackage registers both nodes and metadata', async () => {
   const nodeRegistry = createNodeRegistry();
   const metadataRegistry = createLibraryMetadataRegistry();
@@ -122,12 +169,42 @@ test('loom docs --package shows loaded package metadata', () => {
   assert.ok(result.stdout.includes('demo'), 'Output should include demo library');
 });
 
+test('loom docs --package=<path> form works', () => {
+  const result = runCli(['docs', `--package=${DEMO_PACKAGE_PATH}`]);
+
+  assert.strictEqual(result.status, 0, `CLI should succeed. stderr: ${result.stderr}`);
+  assert.ok(result.stdout.includes('demo'), 'Output should include demo library');
+});
+
+test('loom docs --package <path> form works', () => {
+  const result = runCli(['docs', '--package', DEMO_PACKAGE_PATH]);
+
+  assert.strictEqual(result.status, 0, `CLI should succeed. stderr: ${result.stderr}`);
+  assert.ok(result.stdout.includes('demo'), 'Output should include demo library');
+});
+
+test('loom docs with package shows both builtin and package libraries', () => {
+  const result = runCli(['docs', `--package=${DEMO_PACKAGE_PATH}`]);
+
+  assert.strictEqual(result.status, 0, `CLI should succeed. stderr: ${result.stderr}`);
+  assert.ok(result.stdout.includes('demo'), 'Output should include demo library');
+  assert.ok(result.stdout.includes('math'), 'Output should include builtin math library');
+});
+
 test('loom docs <library> --package shows library help', () => {
   const result = runCli(['docs', 'demo', `--package=${DEMO_PACKAGE_PATH}`]);
 
   assert.strictEqual(result.status, 0, `CLI should succeed. stderr: ${result.stderr}`);
   assert.ok(result.stdout.includes('demo'), 'Output should include demo library name');
   assert.ok(result.stdout.includes('double'), 'Output should include double function');
+});
+
+test('loom docs math --package still shows builtin library help', () => {
+  const result = runCli(['docs', 'math', `--package=${DEMO_PACKAGE_PATH}`]);
+
+  assert.strictEqual(result.status, 0, `CLI should succeed. stderr: ${result.stderr}`);
+  assert.ok(result.stdout.includes('math'), 'Output should include math library name');
+  assert.ok(result.stdout.includes('add') || result.stdout.includes('subtract'), 'Output should include math functions');
 });
 
 test('loom docs <lib.func> --package shows function help', () => {
