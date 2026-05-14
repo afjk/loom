@@ -86,6 +86,12 @@ Search for `Loomlet` in the VS Code Marketplace.
 - [設計ノート（日本語）](docs/concepts.ja.md)
 - [Scene Sync integration](docs/scene-sync.md)
 - [Release and maintainer notes](docs/RELEASE.md)
+- [Standard library reference](docs/STANDARD_LIBRARY_REFERENCE.md)
+- [Runtime node registration](docs/RUNTIME_NODE_REGISTRATION.md)
+- [Runtime parity fixtures](docs/RUNTIME_PARITY_FIXTURES.md)
+- [Unity runtime compatibility](docs/UNITY_RUNTIME_COMPATIBILITY.md)
+
+Generated metadata and reference docs can be refreshed with `npm run generate:metadata`.
 
 ## License
 
