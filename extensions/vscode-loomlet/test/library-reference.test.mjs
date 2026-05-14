@@ -85,14 +85,70 @@ test('getLibraryReference works for math.sine with alias', () => {
   assert.equal(refFull, refAlias, 'both names should resolve to the same entry');
 });
 
+test('manual-only entry: clock is available', () => {
+  const ref = getLibraryReference('clock');
+  assert.ok(ref, 'clock should have a reference');
+  assert.equal(ref.label, 'clock', 'clock label should be clock');
+  assert.equal(ref.signature, 'clock() -> number', 'clock should have correct signature');
+  assert.ok(ref.example, 'clock should have an example');
+});
+
+test('manual-only entry: input.mouseX is available', () => {
+  const ref = getLibraryReference('input.mouseX');
+  assert.ok(ref, 'input.mouseX should have a reference');
+  assert.equal(ref.label, 'input.mouseX', 'label should be input.mouseX');
+  assert.ok(ref.example, 'should have an example');
+});
+
+test('manual-only entry: mouseX alias works', () => {
+  const refFull = getLibraryReference('input.mouseX');
+  const refAlias = getLibraryReference('mouseX');
+  assert.ok(refFull && refAlias, 'both should resolve');
+  assert.equal(refFull, refAlias, 'both names should resolve to the same entry');
+});
+
+test('manual-only entry: input.mouseY is available', () => {
+  const ref = getLibraryReference('input.mouseY');
+  assert.ok(ref, 'input.mouseY should have a reference');
+});
+
+test('manual-only entry: mouseY alias works', () => {
+  const refFull = getLibraryReference('input.mouseY');
+  const refAlias = getLibraryReference('mouseY');
+  assert.ok(refFull && refAlias, 'both should resolve');
+  assert.equal(refFull, refAlias, 'both names should resolve to the same entry');
+});
+
+test('manual-only entry: input.mouseDown is available', () => {
+  const ref = getLibraryReference('input.mouseDown');
+  assert.ok(ref, 'input.mouseDown should have a reference');
+});
+
+test('manual-only entry: mouseDown alias works', () => {
+  const refFull = getLibraryReference('input.mouseDown');
+  const refAlias = getLibraryReference('mouseDown');
+  assert.ok(refFull && refAlias, 'both should resolve');
+  assert.equal(refFull, refAlias, 'both names should resolve to the same entry');
+});
+
+test('manual-only entry: input.key is available', () => {
+  const ref = getLibraryReference('input.key');
+  assert.ok(ref, 'input.key should have a reference');
+});
+
+test('manual-only entry: key alias works', () => {
+  const refFull = getLibraryReference('input.key');
+  const refAlias = getLibraryReference('key');
+  assert.ok(refFull && refAlias, 'both should resolve');
+  assert.equal(refFull, refAlias, 'both names should resolve to the same entry');
+});
+
 test('planned functions are excluded by default', () => {
   const generatedDefault = buildFunctionReferenceEntries(false);
   const generatedPlanned = buildFunctionReferenceEntries(true);
 
-  // Check that includePlanned produces at least as many entries
   assert.ok(generatedPlanned.length >= generatedDefault.length, 'includePlanned should include at least as many items');
 
-  // Check for a known implemented library exists in both
   const hasTextDefault = generatedDefault.some(e => e.names.some(n => n.includes('text.')));
   const hasTextPlanned = generatedPlanned.some(e => e.names.some(n => n.includes('text.')));
   assert.ok(hasTextDefault && hasTextPlanned, 'implemented libraries should appear in both');

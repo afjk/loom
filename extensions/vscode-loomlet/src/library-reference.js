@@ -2,15 +2,7 @@ const { buildFunctionReferenceEntries } = require('./library-metadata-model.js')
 
 const PREVIEW_HOST_NOTE = 'Currently supported by the VS Code Runtime Preview host. Other hosts may ignore or reject this until the capability is promoted into the shared runtime contract.';
 
-const MANUAL_OVERRIDES = [
-  {
-    names: ['clock'],
-    label: 'clock',
-    override: {
-      description: 'A time source. In the VS Code Runtime Preview, it advances with the preview animation time.',
-      example: 't = clock()'
-    }
-  },
+const METADATA_OVERRIDES = [
   {
     names: ['sine', 'math.sine'],
     label: 'sine',
@@ -38,42 +30,45 @@ const MANUAL_OVERRIDES = [
     override: {
       example: 'console.log(width)'
     }
-  },
-  {
-    names: ['input.mouseX', 'mouseX'],
-    label: 'input.mouseX',
-    override: {
-      description: `Returns the current mouse X coordinate in the VS Code Runtime Preview canvas. ${PREVIEW_HOST_NOTE}`,
-      example: 'import input\nx = input.mouseX()\nrender point(x: x, y: 120, radius: 7)'
-    }
-  },
-  {
-    names: ['input.mouseY', 'mouseY'],
-    label: 'input.mouseY',
-    override: {
-      description: `Returns the current mouse Y coordinate in the VS Code Runtime Preview canvas. ${PREVIEW_HOST_NOTE}`,
-      example: 'import input\ny = input.mouseY()\nrender point(x: 120, y: y, radius: 7)'
-    }
-  },
-  {
-    names: ['input.mouseDown', 'mouseDown'],
-    label: 'input.mouseDown',
-    override: {
-      description: `Returns true while the primary mouse button is pressed in the VS Code Runtime Preview. Use it with render point enabled to make simple drawing tools. ${PREVIEW_HOST_NOTE}`,
-      example: 'import input\nx = input.mouseX()\ny = input.mouseY()\ndown = input.mouseDown()\nrender point(x: x, y: y, enabled: down, trail: 0)'
-    }
-  },
-  {
-    names: ['input.key', 'key'],
-    label: 'input.key',
-    override: {
-      description: `Returns true while a key is pressed in the VS Code Runtime Preview. Use KeyboardEvent.code values such as "Space", "ArrowLeft", "ArrowRight", "ArrowUp", and "ArrowDown". ${PREVIEW_HOST_NOTE}`,
-      example: 'import input\nspace = input.key("Space")\nconsole.log(space)'
-    }
   }
 ];
 
 const EXTRA_ENTRIES = [
+  {
+    names: ['clock'],
+    label: 'clock',
+    signature: 'clock() -> number',
+    description: 'A time source. In the VS Code Runtime Preview, it advances with the preview animation time.',
+    example: 't = clock()'
+  },
+  {
+    names: ['input.mouseX', 'mouseX'],
+    label: 'input.mouseX',
+    signature: 'input.mouseX() -> number',
+    description: `Returns the current mouse X coordinate in the VS Code Runtime Preview canvas. ${PREVIEW_HOST_NOTE}`,
+    example: 'import input\nx = input.mouseX()\nrender point(x: x, y: 120, radius: 7)'
+  },
+  {
+    names: ['input.mouseY', 'mouseY'],
+    label: 'input.mouseY',
+    signature: 'input.mouseY() -> number',
+    description: `Returns the current mouse Y coordinate in the VS Code Runtime Preview canvas. ${PREVIEW_HOST_NOTE}`,
+    example: 'import input\ny = input.mouseY()\nrender point(x: 120, y: y, radius: 7)'
+  },
+  {
+    names: ['input.mouseDown', 'mouseDown'],
+    label: 'input.mouseDown',
+    signature: 'input.mouseDown() -> boolean',
+    description: `Returns true while the primary mouse button is pressed in the VS Code Runtime Preview. Use it with render point enabled to make simple drawing tools. ${PREVIEW_HOST_NOTE}`,
+    example: 'import input\nx = input.mouseX()\ny = input.mouseY()\ndown = input.mouseDown()\nrender point(x: x, y: y, enabled: down, trail: 0)'
+  },
+  {
+    names: ['input.key', 'key'],
+    label: 'input.key',
+    signature: 'input.key(code: string) -> boolean',
+    description: `Returns true while a key is pressed in the VS Code Runtime Preview. Use KeyboardEvent.code values such as "Space", "ArrowLeft", "ArrowRight", "ArrowUp", and "ArrowDown". ${PREVIEW_HOST_NOTE}`,
+    example: 'import input\nspace = input.key("Space")\nconsole.log(space)'
+  },
   {
     names: ['render bar', 'bar'],
     label: 'render bar',
@@ -101,7 +96,7 @@ function buildLibraryReference() {
   const generatedEntries = buildFunctionReferenceEntries(false);
 
   const overrideMap = new Map();
-  for (const override of MANUAL_OVERRIDES) {
+  for (const override of METADATA_OVERRIDES) {
     for (const name of override.names) {
       overrideMap.set(name, override);
     }
@@ -109,6 +104,16 @@ function buildLibraryReference() {
 
   const entries = [];
   const seenNames = new Set();
+
+  function addEntry(entry) {
+    for (const name of entry.names) {
+      if (seenNames.has(name)) {
+        throw new Error(`Duplicate name in library reference: ${name}`);
+      }
+      seenNames.add(name);
+    }
+    entries.push(entry);
+  }
 
   for (const entry of generatedEntries) {
     const primaryName = entry.names[0];
@@ -127,18 +132,11 @@ function buildLibraryReference() {
       finalEntry = entry;
     }
 
-    entries.push(finalEntry);
-
-    for (const name of finalEntry.names) {
-      seenNames.add(name);
-    }
+    addEntry(finalEntry);
   }
 
   for (const extraEntry of EXTRA_ENTRIES) {
-    entries.push(extraEntry);
-    for (const name of extraEntry.names) {
-      seenNames.add(name);
-    }
+    addEntry(extraEntry);
   }
 
   return entries;
