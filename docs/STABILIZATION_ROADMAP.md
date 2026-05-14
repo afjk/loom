@@ -131,6 +131,8 @@ A normalized graph output is compared against an expected snapshot.
 
 Normalization should avoid unstable fields such as editor positions, generated IDs where possible, timestamps, and visual-only metadata.
 
+Test helpers like `test/helpers/normalize-graph.mjs` provide reusable normalization for semantic snapshots. See stabilization fixture tests for examples.
+
 #### Level 4: Canonical DSL round-trip
 
 Compile a graph to canonical DSL, parse it again, compile it again, and compare semantic graph equivalence.
