@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { LIBRARY_METADATA } from '../src/toolchain/library-metadata.js';
+// Importing the renderer must be side-effect free; this test compares committed docs to expected generated output.
 import { renderStandardLibraryReferenceMarkdown } from '../scripts/generate-library-reference-docs.mjs';
 
 const docsPath = resolve('docs/STANDARD_LIBRARY_REFERENCE.md');

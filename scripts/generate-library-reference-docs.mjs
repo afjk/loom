@@ -1,3 +1,4 @@
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { LIBRARY_METADATA } from '../src/toolchain/library-metadata.js';
@@ -65,4 +66,11 @@ export async function writeStandardLibraryReferenceDocs() {
   console.log(`Wrote ${outPath}`);
 }
 
-await writeStandardLibraryReferenceDocs();
+function isDirectExecution() {
+  if (!process.argv[1]) return false;
+  return import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+}
+
+if (isDirectExecution()) {
+  await writeStandardLibraryReferenceDocs();
+}
