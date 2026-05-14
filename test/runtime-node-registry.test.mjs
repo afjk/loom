@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { NODE_TYPES } from '../src/loom.js';
+import {
+  NODE_TYPES,
+  DEFAULT_NODE_REGISTRY,
+  createDefaultNodeRegistry
+} from '../src/loom.js';
 
 function assertNonEmptyString(value, label) {
   assert.equal(typeof value, 'string', `${label} should be a string`);
@@ -114,4 +118,41 @@ test('runtime registry: scene.setPosition shape is stable', () => {
   assert.deepEqual(setPosition.params.map((param) => param.name), ['objectId', 'x', 'y', 'z']);
   assert.deepEqual(setPosition.outputs.map((output) => output.name), []);
   assert.equal(typeof setPosition.evaluate, 'function');
+});
+
+test('runtime registry: default registry matches NODE_TYPES export', () => {
+  assert.deepEqual(
+    DEFAULT_NODE_REGISTRY.listNodeTypes(),
+    Object.keys(NODE_TYPES).sort()
+  );
+});
+
+test('runtime registry: DEFAULT_NODE_REGISTRY exposes all node types from NODE_TYPES', () => {
+  const registryNodeTypes = DEFAULT_NODE_REGISTRY.toObject();
+  assert.deepEqual(registryNodeTypes, NODE_TYPES);
+});
+
+test('runtime registry: createDefaultNodeRegistry returns fresh registry', () => {
+  const a = createDefaultNodeRegistry();
+  const b = createDefaultNodeRegistry();
+
+  assert.notEqual(a, b);
+  assert.deepEqual(a.listNodeTypes(), b.listNodeTypes());
+});
+
+test('runtime registry: createDefaultNodeRegistry has correct node types', () => {
+  const registry = createDefaultNodeRegistry();
+  assert.ok(registry.hasNodeType('math.add'));
+  assert.ok(registry.hasNodeType('logic.select'));
+  assert.ok(registry.hasNodeType('constant'));
+});
+
+test('runtime registry: registry preserves node definitions', () => {
+  const mathAdd = DEFAULT_NODE_REGISTRY.getNodeType('math.add');
+  assert.ok(mathAdd);
+  assert.equal(mathAdd.category, 'transform');
+  assert.equal(typeof mathAdd.evaluate, 'function');
+  assert.ok(Array.isArray(mathAdd.inputs));
+  assert.ok(Array.isArray(mathAdd.params));
+  assert.ok(Array.isArray(mathAdd.outputs));
 });

@@ -27,7 +27,10 @@ Recommended order:
    - Runtime/metadata drift allowlists are now self-audited so stale entries fail tests
    - Do not yet make metadata the single runtime/compiler source of truth
 5. Clarify input vs param (✓ covered by `input-param-*` stabilization fixtures)
-6. Clarify runtime registration API
+6. Clarify runtime registration API (✓ minimal `createNodeRegistry/registerNodeType` API added)
+   - Minimal `createNodeRegistry()` and `registerNodeType()` API available
+   - Built-in node types are constructed through the default registry
+   - Package loading remains future work
 7. Clarify metadata as shared source for editor/docs/completion
 8. Improve compatibility between JS runtime and Unity runtime where practical
 
