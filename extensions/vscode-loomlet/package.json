@@ -2,7 +2,7 @@
   "name": "loomlet-vscode",
   "displayName": "Loomlet",
   "description": "VS Code support for Loomlet language files and Scene Sync workflows",
-  "version": "0.0.1",
+  "version": "0.1.2",
   "publisher": "afjk",
   "license": "MIT",
   "repository": {
@@ -120,7 +120,7 @@
     "build": "npm run build:webview"
   },
   "dependencies": {
-    "@afjk/loomlet": "^0.1.0"
+    "@afjk/loomlet": "^0.1.2"
   },
   "devDependencies": {
     "esbuild": "^0.21.0",
