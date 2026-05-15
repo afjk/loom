@@ -5,6 +5,10 @@ on:
     types: [published]
   workflow_dispatch:
 
+permissions:
+  contents: write
+  id-token: write
+
 jobs:
   build-release-artifacts:
     runs-on: ubuntu-latest
@@ -27,11 +31,37 @@ jobs:
             npm install
           fi
 
+      - name: Validate root package version (release events)
+        if: github.event_name == 'release'
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          TAG_NAME="${GITHUB_REF_NAME}"
+
+          if [ "$TAG_NAME" != "v$PACKAGE_VERSION" ]; then
+            echo "Release tag ($TAG_NAME) does not match package.json version (v$PACKAGE_VERSION)"
+            exit 1
+          fi
+
+      - name: Validate VS Code extension version (release events)
+        if: github.event_name == 'release'
+        run: |
+          ROOT_VERSION=$(node -p "require('./package.json').version")
+          EXT_VERSION=$(node -p "require('./extensions/vscode-loomlet/package.json').version")
+
+          if [ "$ROOT_VERSION" != "$EXT_VERSION" ]; then
+            echo "VS Code extension version ($EXT_VERSION) does not match root package version ($ROOT_VERSION)"
+            exit 1
+          fi
+
+      - name: Generate metadata
+        run: npm run generate:metadata
+
+      - name: Verify generated files are committed (release events)
+        if: github.event_name == 'release'
+        run: git diff --exit-code
+
       - name: Run unit tests
         run: npm test
-
-      - name: Generate VS Code metadata
-        run: npm run generate:vscode-metadata
 
       - name: Build CLI npm tarball
         run: npm pack
@@ -46,13 +76,14 @@ jobs:
           fi
 
       - name: Install packed core package into extension
-        working-directory: extensions/vscode-loomlet
         run: |
-          # Find the generated tarball and install it (--no-save to avoid modifying package-lock.json)
-          cd ../../
           TARBALL=$(ls -t afjk-loomlet-*.tgz | head -1)
           cd extensions/vscode-loomlet
           npm install --no-save "../../${TARBALL}"
+
+      - name: Run VS Code extension tests
+        working-directory: extensions/vscode-loomlet
+        run: npm test
 
       - name: Build VS Code extension VSIX
         working-directory: extensions/vscode-loomlet
@@ -73,3 +104,82 @@ jobs:
         env:
           TAG_NAME: ${{ github.event.release.tag_name }}
         run: gh release upload "$TAG_NAME" *.tgz extensions/vscode-loomlet/*.vsix --clobber
+
+  publish-npm:
+    needs: build-release-artifacts
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js with npm registry
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      - name: Install root dependencies
+        run: |
+          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Publish to npm
+        run: npm publish --provenance --access public
+
+  publish-vscode-marketplace:
+    needs: build-release-artifacts
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install root dependencies
+        run: |
+          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Generate metadata
+        run: npm run generate:metadata
+
+      - name: Build CLI npm tarball
+        run: npm pack
+
+      - name: Install VS Code extension dependencies
+        working-directory: extensions/vscode-loomlet
+        run: |
+          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Install packed core package into extension
+        run: |
+          TARBALL=$(ls -t afjk-loomlet-*.tgz | head -1)
+          cd extensions/vscode-loomlet
+          npm install --no-save "../../${TARBALL}"
+
+      - name: Build VS Code extension VSIX
+        working-directory: extensions/vscode-loomlet
+        run: npx @vscode/vsce package
+
+      - name: Publish to Visual Studio Marketplace
+        working-directory: extensions/vscode-loomlet
+        run: |
+          VSIX=$(ls -t *.vsix | head -1)
+          npx @vscode/vsce publish --packagePath "$VSIX" -p "$VSCE_PAT"
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
