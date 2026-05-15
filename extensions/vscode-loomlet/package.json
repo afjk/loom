@@ -120,7 +120,7 @@
     "build": "npm run build:webview"
   },
   "dependencies": {
-    "@afjk/loomlet": "^0.1.2"
+    "@afjk/loomlet": "^0.1.0"
   },
   "devDependencies": {
     "esbuild": "^0.21.0",
