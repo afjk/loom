@@ -22,15 +22,13 @@ Before cutting a release:
    npm run pack:dry-run
    ```
 
-4. Optionally build the VS Code extension package.
+4. Ensure root `package.json` version is bumped.
 
-   ```bash
-   npm run pack:vscode
-   ```
+5. Ensure `extensions/vscode-loomlet/package.json` version matches root version.
 
-5. Review release notes draft.
+6. Review release notes.
 
-6. Bump versions only in the release PR.
+7. Create a GitHub Release with a tag like `v0.1.2`.
 
 ## Generated files
 
@@ -47,21 +45,55 @@ npm run generate:metadata
 
 Freshness tests fail if these files are stale.
 
-## Release artifacts and build workflows
+## GitHub Pages deployment
 
-GitHub release/build workflows:
+GitHub Pages is deployed automatically on pushes to `main` via:
 
-- `.github/workflows/release-artifacts.yml`
-  - builds Loomlet npm package tarball (`*.tgz`)
-  - builds Loomlet VS Code extension VSIX (`*.vsix`)
-  - runs on release publish and manual dispatch
-  - does not publish to npm
-  - does not publish to Visual Studio Marketplace
+```
+.github/workflows/deploy-pages.yml
+```
 
-- `.github/workflows/publish-vscode-extension.yml`
-  - manually publishes only `extensions/vscode-loomlet` to Visual Studio Marketplace
-  - uses repository secret `VSCE_PAT`
+This workflow builds the Node Editor and publishes the simple editor, node editor, examples, and source code.
 
-Related docs:
+## GitHub Release automation
 
-- [VS Code extension publish instructions](../extensions/vscode-loomlet/README.md#publishing-the-vs-code-extension)
+Publishing a GitHub Release automatically triggers the full release distribution flow via `.github/workflows/release-artifacts.yml`:
+
+1. **Validates** root package version against the release tag
+2. **Validates** VS Code extension version against root package version
+3. **Generates** metadata and docs via `npm run generate:metadata`
+4. **Fails** if generated files are stale (not committed)
+5. **Runs** unit tests
+6. **Builds** npm tarball
+7. **Runs** VS Code extension tests
+8. **Builds** VSIX
+9. **Uploads** artifacts (`*.tgz` and `*.vsix`) to GitHub Release
+10. **Publishes** `@afjk/loomlet` to npm via trusted publishing
+11. **Publishes** the VS Code extension to Visual Studio Marketplace
+
+## Required configuration
+
+### npm publishing
+
+The `@afjk/loomlet` package is published to npm using npm Trusted Publishing.
+
+Trusted Publishing does not require an `NPM_TOKEN` repository secret. Configure this GitHub repository and release workflow as a trusted publisher in the npm package settings.
+
+If token-based publishing is used instead, configure `NODE_AUTH_TOKEN` explicitly and update the workflow accordingly.
+
+### Visual Studio Marketplace publishing
+
+VS Code extension publishing requires the `VSCE_PAT` repository secret, which is a Personal Access Token with Marketplace publishing permissions.
+
+## Manual workflows
+
+### Manual VS Code extension publish
+
+The `.github/workflows/publish-vscode-extension.yml` workflow is available as a fallback for emergency republishes or extension-only fixes:
+
+```
+.github/workflows/publish-vscode-extension.yml
+  - manually triggered via workflow_dispatch
+  - publishes only extensions/vscode-loomlet to Visual Studio Marketplace
+  - requires VSCE_PAT secret
+```
