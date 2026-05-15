@@ -89,6 +89,13 @@ jobs:
         working-directory: extensions/vscode-loomlet
         run: npx @vscode/vsce package
 
+      - name: Upload VSIX workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vscode-extension-vsix
+          path: extensions/vscode-loomlet/*.vsix
+          if-no-files-found: error
+
       - name: Upload workflow artifacts (manual dispatch)
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
@@ -131,50 +138,22 @@ jobs:
         run: npm publish --provenance --access public
 
   publish-vscode-marketplace:
-    needs: build-release-artifacts
+    needs:
+      - build-release-artifacts
+      - publish-npm
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install root dependencies
-        run: |
-          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
-            npm ci
-          else
-            npm install
-          fi
-
-      - name: Generate metadata
-        run: npm run generate:metadata
-
-      - name: Build CLI npm tarball
-        run: npm pack
-
-      - name: Install VS Code extension dependencies
-        working-directory: extensions/vscode-loomlet
-        run: |
-          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
-            npm ci
-          else
-            npm install
-          fi
-
-      - name: Install packed core package into extension
-        run: |
-          TARBALL=$(ls -t afjk-loomlet-*.tgz | head -1)
-          cd extensions/vscode-loomlet
-          npm install --no-save "../../${TARBALL}"
-
-      - name: Build VS Code extension VSIX
-        working-directory: extensions/vscode-loomlet
-        run: npx @vscode/vsce package
+      - name: Download VSIX artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: vscode-extension-vsix
+          path: extensions/vscode-loomlet
 
       - name: Publish to Visual Studio Marketplace
         working-directory: extensions/vscode-loomlet

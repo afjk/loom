@@ -75,14 +75,11 @@ Publishing a GitHub Release automatically triggers the full release distribution
 
 ### npm publishing
 
-The `@afjk/loomlet` package is published to npm using [npm Trusted Publishing](https://docs.npmjs.com/creating-and-viewing-access-tokens#creating-a-server-automation-token).
+The `@afjk/loomlet` package is published to npm using npm Trusted Publishing.
 
-The GitHub repository must be configured with a trusted publishing setup for `@afjk/loomlet` on npm. This requires:
+Trusted Publishing does not require an `NPM_TOKEN` repository secret. Configure this GitHub repository and release workflow as a trusted publisher in the npm package settings.
 
-1. An npm access token configured in the npm account with automation permissions
-2. The GitHub repository linked in the npm account's trusted publishers settings
-
-Alternatively, if using token-based publishing, the `npm_token` repository secret must be configured.
+If token-based publishing is used instead, configure `NODE_AUTH_TOKEN` explicitly and update the workflow accordingly.
 
 ### Visual Studio Marketplace publishing
 
