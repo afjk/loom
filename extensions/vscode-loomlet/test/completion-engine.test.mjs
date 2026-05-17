@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { getCompletionContext } = require('../src/completion-context.js');
 const { buildCompletions } = require('../src/completion-engine.js');
+const metadata = require('../generated/library-metadata.json');
 
 function labels(source) {
   const ctx = getCompletionContext(source, source.length);
@@ -43,11 +44,14 @@ test('argument completion excludes already-used names', () => {
 });
 
 test('planned items excluded by default and shown when enabled', () => {
-  const defaultItems = buildCompletions(getCompletionContext('random.', 'random.'.length), false).map((i) => i.label);
-  assert.ok(!defaultItems.includes('seeded'));
+  const plannedLib = metadata.libraries.find((lib) => lib.status === 'planned');
+  assert.ok(plannedLib, 'should have at least one planned library');
 
-  const plannedItems = buildCompletions(getCompletionContext('random.', 'random.'.length), true).map((i) => i.label);
-  assert.ok(plannedItems.includes('seeded'));
+  const defaultItems = buildCompletions(getCompletionContext('import ', 'import '.length), false).map((i) => i.label);
+  assert.ok(!defaultItems.includes(plannedLib.name), `${plannedLib.name} should be excluded by default`);
+
+  const plannedItems = buildCompletions(getCompletionContext('import ', 'import '.length), true).map((i) => i.label);
+  assert.ok(plannedItems.includes(plannedLib.name), `${plannedLib.name} should be included when includePlanned=true`);
 });
 
 test('binary operator snippets use two positional args', () => {
