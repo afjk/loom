@@ -8,6 +8,120 @@ This roadmap keeps core Loomlet behavior stable while still allowing focused exp
 
 When the two documents overlap, treat `docs/SPEC.md` as the source for stable semantics and this roadmap as the source for execution order. Lab ideas should remain here or in linked design notes until they are mature enough to be promoted into `docs/SPEC.md`.
 
+## Next Release Planning Draft
+
+The next release should focus on making Loomlet usable as a host-integrated behavior system without making exported Scene Sync scenes depend on afjk.jp infrastructure.
+
+### Core release theme
+
+```text
+Scene Sync / Loomlet shared time and event foundation
+```
+
+This release should connect Loomlet, Scene Sync, the Node Editor, packages, and export workflows through a smaller set of stable boundaries:
+
+- Loomlet evaluates graphs against a host-provided environment.
+- Scene Sync provides synchronized time and committed events when running live multi-client rooms.
+- Scene Sync Export provides local playback time so exported scenes can run without afjk.jp presence servers.
+- Node Editor and DSL workflows stabilize around semantic round-trips before attempting complete source-preserving round-trips.
+
+### P0: release foundations
+
+These items should be prioritized before larger authoring features.
+
+1. Host-provided time / Scene Sync server time sync
+   - Loomlet must not own the clock or call afjk.jp directly.
+   - Loomlet should evaluate against `env.time`, `env.deltaTime`, and related host-provided time values.
+   - Scene Sync live rooms may provide server-synchronized time as the host clock.
+   - Scene Sync Export / standalone playback must be able to provide a local playback clock instead.
+   - Self-hosted Scene Sync should be able to provide its own synchronized clock.
+
+2. Event envelope v0
+   - Define a minimal event envelope for committed environment events.
+   - The envelope should cover `id`, `channel`, `timestamp`, `source`, `target`, and `payload` where applicable.
+   - Event order and timestamp semantics should be explicit enough for Scene Sync, replay, timer, and `OnStart` behavior.
+   - Local feedback and committed shared events should remain separate concepts.
+
+3. Canonical DSL round-trip v1
+   - Stabilize semantic equivalence for `Graph -> Canonical DSL -> Graph`.
+   - Generated DSL must be parseable and compile back to a semantically equivalent graph.
+   - Do not require exact preservation of original formatting, comments, pipe style, import order, or named-vs-positional style.
+   - Treat this as a semantic round-trip, not a complete source-preserving editor round-trip.
+
+4. Scene Sync Export v0 compatibility
+   - Exported scenes should not require the afjk.jp presence server.
+   - Export should preserve scene data, object transforms, assets, behavior graphs, runtime/animation state, and playback clock configuration where practical.
+   - Export playback should use a host-provided local clock by default.
+   - Live Scene Sync, self-hosted Scene Sync, and exported standalone playback should differ by host environment, not by Loomlet graph semantics.
+
+### P1: high-value next-release items
+
+These are valuable if the P0 foundations are clear enough.
+
+1. Scene Sync graph attach / clear / run workflow
+   - Clarify scene-level vs object-level graph attachment.
+   - Keep graph evaluation separate from host mutation.
+   - Ensure attach/clear operations are easy to test from CLI, REPL, VS Code, and Scene Sync.
+
+2. Swizzle / component access / virtual node foundation
+   - Define value-model rules for vectors, records, and component access.
+   - Support DSL expressions such as `.x`, `.xy`, `.xz`, or equivalent component access syntax only when they can lower into explicit graph nodes.
+   - Treat Node Editor virtual ports and implicit get/swizzle nodes as editor affordances, not hidden runtime behavior.
+
+3. Package extension foundation stabilization
+   - Current scope remains trusted local packages.
+   - Stabilize package manifests, target compatibility, metadata usage, and generated docs before npm/remote loading.
+   - Package nodes should become usable by CLI/REPL/docs first, then VS Code and Node Editor.
+
+4. Output conflict / single-writer warnings
+   - Warn when multiple graphs or sources attempt to write the same object property.
+   - Prefer a single-writer rule for deterministic behavior.
+   - Route cross-object effects through events, commands, or scene-level graphs rather than direct object mutation.
+
+5. Portable runtime subset for Scene Sync / Unity
+   - Clarify which nodes are portable across JS and future Unity/C# runtimes.
+   - Keep host-adapter nodes separate from portable pure nodes.
+   - Use runtime parity fixtures to avoid Scene Sync behavior diverging by host.
+
+### P2: stretch goals / later stabilization
+
+These are important, but should not block the next release if P0/P1 work is not stable yet.
+
+- Function definition as subgraph
+  - DSL functions should eventually lower to reusable subgraphs.
+  - Function calls should become subgraph references or expanded graph fragments.
+  - Node Editor should represent functions as collapsible groups or reusable graph units.
+  - This should come after canonical DSL round-trip v1 is stable enough.
+- Full DSL <-> Node Editor source-preserving round-trip
+  - Preserve comments, formatting, pipe syntax, import order, editor layout metadata, and source patches only after semantic round-trip behavior is stable.
+- npm / remote package loading
+  - Defer until trusted local packages, manifests, target compatibility, and security model are stable.
+- Package sandboxing and permissions
+  - Required before untrusted package loading.
+- Package-aware Node Editor UI
+  - Useful after package metadata and target compatibility are stable.
+
+### Release wording guidance
+
+Avoid describing the next release as a complete DSL <-> Node Graph round-trip release unless source-preserving behavior is actually guaranteed.
+
+Prefer:
+
+```text
+Canonical DSL round-trip v1
+DSL / Node Editor semantic round-trip foundation
+Package extension foundation stabilization
+Host-provided time and event foundation
+```
+
+Avoid:
+
+```text
+Complete DSL <-> Node Graph round-trip
+General-purpose package ecosystem
+Server-time-dependent Loomlet runtime
+```
+
 ## Track A: Stabilization
 
 Purpose: make the core reliable and easier to extend.
@@ -77,6 +191,11 @@ Candidate experiments:
 - `labs/node-editor-virtual-ports`
   - collapsible virtual component ports
   - implicit swizzle/get nodes
+- `labs/function-subgraph`
+  - DSL function definitions as reusable subgraphs
+  - function calls as subgraph references or graph expansion
+  - function inputs/outputs as node ports
+  - Node Editor representation for collapsible function groups
 - `labs/package`
   - package manifest
   - package versioning
@@ -183,14 +302,12 @@ This is future work and should not be treated as stable yet.
 
 ### Recommended next steps
 
-1. Add a small set of parse/compile fixtures.
-2. Define graph normalization rules for tests.
-3. Add semantic graph snapshot tests.
-4. Add metadata schema tests to verify node definition shape.
-   - Fixture tests cover behavior.
-   - Metadata schema tests cover node definition shape.
-   - Runtime registry shape is covered by runtime-node-registry tests.
-   - Metadata/runtime drift is covered by runtime-metadata-drift tests.
-5. Next: evaluate whether to introduce a formal runtime registration API after registry/metadata drift tests are stable.
-6. Later, stabilize `graphToCanonicalDSL`.
-7. Later, add editor round-trip tests.
+1. Define host-provided time requirements and update `docs/SPEC.md` if needed.
+2. Define Event envelope v0 and timestamp/order semantics.
+3. Add or update Scene Sync design notes for server-synchronized time and export-local playback clock compatibility.
+4. Define graph normalization rules for semantic round-trip tests.
+5. Add Canonical DSL round-trip v1 tests.
+6. Add fixtures for Scene Sync graph attach / clear / run workflows where practical.
+7. Define value-model and swizzle lowering rules before exposing swizzle broadly in DSL or Node Editor.
+8. Define function-as-subgraph semantics in labs before promoting it into main.
+9. Continue stabilizing package manifests, metadata, and target compatibility before npm/remote package loading.
