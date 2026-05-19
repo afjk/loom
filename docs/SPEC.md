@@ -2128,7 +2128,7 @@ Three.js Object3D の表示・非表示を切り替えます。`visible = !!inpu
 
 ## 7. 公開 API
 
-Loomlet の評価モデルは「指定された時刻のグラフ状態を計算する」ことを中核とします。エンジン本体は時刻を内部で進めるのではなく、外部から `evaluateAt(time)` を呼ぶことで、その時刻におけるすべてのノード出力を確定させます。`start()` / `stop()` は `requestAnimationFrame` を使って `evaluateAt` を毎フレーム呼ぶ便利ラッパーであり、テストや決定論的再生では `evaluateAt` を直接呼ぶ運用が想定されています。
+Loomlet の評価モデルは「指定された時刻のグラフ状態を計算する」ことを中核とします。エンジン本体は時刻を内部で進めるのではなく、外部から `evaluateAt({ time, deltaTime, tick })` を呼ぶことで、その時刻におけるすべてのノード出力を確定させます。`start()` / `stop()` は `requestAnimationFrame` を使って `evaluateAt` を毎フレーム呼ぶ便利ラッパーであり、テストや決定論的再生では `evaluateAt` を直接呼ぶ運用が想定されています。
 
 ### Loom クラス
 
@@ -2153,14 +2153,17 @@ const graph = { nodes: [...], edges: [...] };
 const engine = new Loom(graph);
 ```
 
-#### `engine.evaluateAt(time)`
+#### `engine.evaluateAt(env)`
 
 ```javascript
-engine.evaluateAt(time);
+engine.evaluateAt({ time, deltaTime, tick });
 ```
 
 **引数：**
-- `time`（数値）：評価する時刻（秒、エンジン起動を 0 とする想定）
+- `env`（オブジェクト）：評価環境
+  - `time`（数値）：評価する時刻（秒、エンジン起動を 0 とする想定）
+  - `deltaTime`（数値、省略可）：前回評価からの経過秒
+  - `tick`（数値、省略可）：ホスト側で管理する評価カウンタ
 
 **説明：**
 
@@ -2173,9 +2176,9 @@ engine.evaluateAt(time);
 **例：**
 ```javascript
 const engine = new Loom(graph);
-engine.evaluateAt(0);
+engine.evaluateAt({ time: 0 });
 console.log(engine.getValue("wave.out"));
-engine.evaluateAt(0.5);
+engine.evaluateAt({ time: 0.5 });
 console.log(engine.getValue("wave.out"));
 ```
 
@@ -2254,7 +2257,7 @@ engine.load(graph);
 
 1. **即時バリデーション**：渡されたグラフをただちに検証し、サイクルや構造エラーがあればこの時点でエラーをスローします。スローされた場合、現在のグラフはそのまま維持されます。
 2. **保留状態として保持**：検証に成功したグラフは「保留中（pending）」として内部に保持されます。この時点ではまだ切り替えは行われていません。
-3. **次の `evaluateAt` 呼び出し開始時に切り替え**：次に `evaluateAt(time)` が呼ばれた瞬間、保留中のグラフが新しい現行グラフになり、評価はそのグラフに対して行われます。
+3. **次の `evaluateAt` 呼び出し開始時に切り替え**：次に `evaluateAt({ time, ... })` が呼ばれた瞬間、保留中のグラフが新しい現行グラフになり、評価はそのグラフに対して行われます。
 4. **状態ノードの内部状態は ID ベースで再利用**：同じ `id` の state ノードが新グラフにも残っていれば、その `prevOut` は引き継がれます。消えた `id` の state は破棄されます。新規 `id` の state は `params.initial` から始まります。
 
 評価ループ実行中に呼ばれた場合も、フレーム途中でグラフがすり替わることはありません。同一フレーム内で `load()` 直後に `getValue()` を呼ぶと、古いグラフの値が返ります。
@@ -2263,21 +2266,23 @@ engine.load(graph);
 ```javascript
 engine.load(newGraph);
 console.log(engine.getValue("wave.out")); // 古いグラフの値
-engine.evaluateAt(1.0);                   // ここで切り替え
+engine.evaluateAt({ time: 1.0 });         // ここで切り替え
 console.log(engine.getValue("wave.out")); // 新しいグラフの値
 ```
 
-#### `engine.start()`
+#### `engine.start({ getEnv })`
 
 ```javascript
-engine.start();
+engine.start({
+  getEnv: ({ elapsed }) => ({ time: elapsed })
+});
 ```
 
 **説明：**
 
-リアルタイム評価ループを開始します。これは便利機能であり、内部では `requestAnimationFrame` を使い、毎フレーム `evaluateAt(t)` を呼び出しているだけです（`t` はエンジン起動からの経過秒）。
+リアルタイム評価ループを開始します。これは便利機能であり、内部では `requestAnimationFrame` を使い、毎フレーム `getEnv()` の戻り値を `evaluateAt(env)` に渡します。
 
-開始時には `dt` 計算用の前回タイムスタンプをリセットするため、再開直後の最初のフレームは `dt=0` になります。state ノードの内部状態そのものは保持されます。
+`clock` を使うグラフでは、host-provided time を返す `getEnv` が必須です。開始時には `deltaTime` 計算用の前回タイムスタンプをリセットするため、再開直後の最初のフレームは `deltaTime=0` になります。state ノードの内部状態そのものは保持されます。
 
 リアルタイム実行を必要としない場合（テスト、サーバサイド、手動制御）は、`evaluateAt()` を直接呼び出すことを推奨します。
 
@@ -2285,7 +2290,9 @@ engine.start();
 
 **例：**
 ```javascript
-engine.start();
+engine.start({
+  getEnv: ({ elapsed }) => ({ time: elapsed })
+});
 ```
 
 #### `engine.stop()`
@@ -2349,23 +2356,25 @@ const engine = new Loom(graph);
 
 毎フレーム、以下の情報をコンテキストとして保持します：
 
-- `time`：エンジン起動からの経過秒数（秒単位、小数含む）
-- `dt`：前フレームからの経過秒数。初回は `0`、上限は `0.1`
+- `time`：評価環境 `env.time`
+- `dt`：`env.deltaTime` があればその値、なければ前フレームからの経過秒数。初回は `0`
+- `deltaTime`：`dt` の別名
+- `tick`：評価環境 `env.tick`（指定された場合）
 - `prevOut`：state ノードのみ。前フレームに保存された内部状態。未初期化時は `params.initial`
 
-このコンテキストは、ノード評価時に参照されます（例：`clock` ノードが `time` を出力し、state ノードが `dt` と `prevOut` を参照する）。
+このコンテキストは、ノード評価時に参照されます（例：`clock` ノードが `time` を出力し、state ノードが `dt` / `deltaTime` と `prevOut` を参照する）。
 
 ### フレームごとの評価
 
 毎フレーム、以下の処理が行われます：
 
 1. 保留中のグラフ（`engine.load()` で渡されたもの）があれば、現行グラフに切り替え
-2. `time` を `evaluateAt(time)` の引数で更新し、前回フレームとの差から `dt` を計算する（最大 `0.1` 秒にクランプ）
+2. `time` を `evaluateAt({ time, ... })` の引数で更新し、前回フレームとの差から `dt` / `deltaTime` を計算する（host が `env.deltaTime` を与えればその値を優先）
 3. `dispatchEvent` で積まれた保留イベントを、対応する入力ノードの出力に反映する
 4. ソース側からシンク側へ向けて、**トポロジカルソートされた順序** に従い、各ノードを順次評価
    - Behavior 型入力：エッジ → params → デフォルトの3段階で値を決定
    - Event 型入力：上流からイベントが届いていればその配列、届いていなければ「発生していない」
-   - state ノード：`evaluate(inputs, params, { time, dt, prevOut, engine, ... })` を呼ぶ。戻り値に `_newState` があればそれを、なければ `out` を次フレーム用の内部状態として保存する
+   - state ノード：`evaluate(inputs, params, { time, dt, deltaTime, tick, prevOut, engine, ... })` を呼ぶ。戻り値に `_newState` があればそれを、なければ `out` を次フレーム用の内部状態として保存する
    - state ノードで例外が発生した場合はエラーログを出し、内部状態は更新しない
    - 計算結果を Behavior 型出力ポートに書く（毎フレーム）
    - 必要なら Event 型出力ポートにイベントを書く（発生フレームのみ）
@@ -2375,7 +2384,7 @@ const engine = new Loom(graph);
 
 - `inputs.value` に `NaN` / `Infinity` が入った場合は `0` として扱う
 - `prevOut` や計算結果が `NaN` / `Infinity` になった場合は `params.initial` に戻す
-- `dt` はエンジン側でクランプし、各 state ノードでは個別にクランプしない
+- `dt` / `deltaTime` はエンジン側で非負に正規化されるが、上限クランプは行わない
 
 ### 未接続ポートの扱い
 
@@ -2403,7 +2412,9 @@ ES Module（ESM）形式の単一 JavaScript ファイルとして配布され�
 <script type="module">
   import { Loom } from './src/loom.js';
   const engine = new Loom(graph);
-  engine.start();
+  engine.start({
+    getEnv: ({ elapsed }) => ({ time: elapsed })
+  });
 </script>
 ```
 
@@ -2464,7 +2475,7 @@ Loomlet がスローするエラーは、以下の構造を持つ `Error` オブ
 
 - `new Loom(graph)`：コンストラクタ呼び出し時にグラフを検証し、問題があれば即座にスローする
 - `engine.load(graph)`：呼び出し時にグラフを検証し、問題があれば即座にスローする。スローした場合、保留中のグラフ切り替えは発生しない
-- `engine.evaluateAt(time)`：実行時のエラーは原則発生しない（未接続ポートはデフォルト値で処理されるため）
+- `engine.evaluateAt({ time, ... })`：実行時のエラーは原則発生しないが、`clock` を使うグラフで `env.time` が欠けている場合は `MISSING_ENV_TIME` が発生する
 
 ## 12. クロスプラットフォーム評価セマンティクス
 
@@ -2475,7 +2486,7 @@ Loomlet は単一の JSON グラフ表現を真の単一ソースとし、複数
 ステートレスなノードのみで構成されたグラフは、以下を入力として与えれば全環境で同一結果を返す：
 
 - グラフ JSON 定義
-- `evaluateAt(time)` に渡す `time`
+- `evaluateAt({ time, deltaTime, tick })` に渡す評価環境
 - 各 Event ポートに対する `dispatchEvent` 呼び出し列（順序とペイロード）
 
 ステートを持つノード（将来追加される `accum`、`smooth` 等）はノード自身に状態保持責任があり、状態の初期値・更新規則は当該ノード仕様で定義する。
@@ -2500,7 +2511,7 @@ Loomlet は単一の JSON グラフ表現を真の単一ソースとし、複数
 
 ### 12.5 SceneSync 連携時の時刻同期
 
-複数クライアントで結果を揃えるには、共有された時刻ソースが必要となる。これは `serverClock` ノード（SceneSync アダプタの `src/loom-scenesync.js` で実装済み）で実現する。`evaluateAt(time)` の `time` を全クライアントで揃えれば、ステートレスグラフの結果は揃う。
+複数クライアントで結果を揃えるには、共有された時刻ソースが必要となる。これは `serverClock` ノード（SceneSync アダプタの `src/loom-scenesync.js` で実装済み）で実現する。`evaluateAt({ time, ... })` の `time` を全クライアントで揃えれば、ステートレスグラフの結果は揃う。
 
 ## 13. ロードマップ
 
@@ -2605,7 +2616,7 @@ JavaScript 版 Loomlet と同じ JSON グラフ形式を、Unity C# ランタイ
 
 - Unity C# ランタイムは JSON グラフ評価のみを対象とする
 - グラフ DSL は将来の人間向け表現であり、Unity 側は JSON 中間表現を評価する
-- JavaScript 版の `evaluateAt(time)` に相当する `EvaluateAt(double time)` を毎フレーム呼び出す
+- JavaScript 版の `evaluateAt({ time, ... })` に相当する `EvaluateAt(double time)` を毎フレーム呼び出す
 - `Load(graph)` は JS 版同様、次の `EvaluateAt()` まで切り替えを保留する
 
 ### filter.predicate
@@ -2655,9 +2666,9 @@ Loomlet の通常ノードはステートレスな純粋関数であり、`evalu
 
 ### エンジン契約
 
-- `dt` は秒単位で、フレーム間のタイムスタンプ差から算出される。
-- `dt` の上限は 0.1 秒にクランプされる(タブ非アクティブ時の暴走を防ぐため)。
-- state ノードの evaluate は `evaluate(inputs, params, { prevOut, dt })` の形で呼ばれる。
+- `dt` は秒単位で、`env.deltaTime` があればそれを使い、なければフレーム間のタイムスタンプ差から算出される。
+- `dt` / `deltaTime` に上限クランプは適用されない。必要なら host 側で `env.deltaTime` をクランプして渡す。
+- state ノードの evaluate は `evaluate(inputs, params, { prevOut, dt, deltaTime, tick })` の形で呼ばれる。
 - 評価後の出力は engine 側で id ごとに保持され、次フレームの `prevOut` として渡される。
 - `engine.load(newGraph)` では、同じ id の state ノードは prevOut を保持し、異なる id は `params.initial` から開始する。
 - NaN / Infinity が出た場合は `prevOut` を更新せず、必要に応じて `initial` にリセットする。

@@ -592,10 +592,6 @@ function resolveNodeTypesOption(options = {}) {
 }
 
 function normalizeTimeEnvironment(value) {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return { time: value };
-  }
-
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return {};
   }
@@ -670,7 +666,7 @@ export class Loom {
     }
   }
 
-  evaluateAt(timeOrEnv, frameTimestamp) {
+  evaluateAt(env, frameTimestamp) {
     this._activatePendingGraph(true);
 
     // グラフが設定されていなければ何もしない
@@ -678,20 +674,20 @@ export class Loom {
 
     this._effects = [];
 
-    const env = normalizeTimeEnvironment(timeOrEnv);
-    const resolvedTime = Number.isFinite(env.time) ? env.time : undefined;
+    const resolvedEnvInput = normalizeTimeEnvironment(env);
+    const resolvedTime = Number.isFinite(resolvedEnvInput.time) ? resolvedEnvInput.time : undefined;
     const resolvedFrameTimestamp = Number.isFinite(frameTimestamp)
       ? frameTimestamp
       : Number.isFinite(resolvedTime)
         ? resolvedTime * 1000
         : undefined;
-    const explicitDt = Number.isFinite(env.deltaTime) ? env.deltaTime : undefined;
+    const explicitDt = Number.isFinite(resolvedEnvInput.deltaTime) ? resolvedEnvInput.deltaTime : undefined;
     const dt = explicitDt !== undefined ? explicitDt : this._computeDeltaTime(resolvedFrameTimestamp);
     if (explicitDt !== undefined && Number.isFinite(resolvedFrameTimestamp)) {
       this._lastTimestamp = resolvedFrameTimestamp;
     }
     const resolvedEnv = {
-      ...env,
+      ...resolvedEnvInput,
       ...(Number.isFinite(dt) ? { deltaTime: dt } : {})
     };
 
@@ -699,6 +695,8 @@ export class Loom {
       env: resolvedEnv,
       time: resolvedTime,
       dt,
+      deltaTime: dt,
+      tick: resolvedEnv.tick,
       engine: this,
       nodeTypes: this._nodeTypes,
       nodePredicates: new Map()
@@ -808,12 +806,8 @@ export class Loom {
     }
   }
 
-  evaluateOnce({ env, time, dt } = {}) {
-    const resolvedEnv = {
-      ...normalizeTimeEnvironment(env),
-      ...(Number.isFinite(time) ? { time } : {}),
-      ...(Number.isFinite(dt) ? { deltaTime: Math.max(0, dt) } : {})
-    };
+  evaluateOnce({ env } = {}) {
+    const resolvedEnv = normalizeTimeEnvironment(env);
     const frameTimestamp = Number.isFinite(resolvedEnv.time) ? resolvedEnv.time * 1000 : undefined;
 
     this._activatePendingGraph(false);
@@ -944,7 +938,7 @@ export class Loom {
 
     const dt = Math.max(0, (frameTimestamp - this._lastTimestamp) / 1000);
     this._lastTimestamp = frameTimestamp;
-    return Math.min(dt, 0.1);
+    return dt;
   }
 
   _graphUsesNodeType(type, graph = this._currentGraph) {

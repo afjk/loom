@@ -141,6 +141,55 @@ test('clock reads host-provided env.time deterministically', () => {
   assert.notEqual(first.value, later.value);
 });
 
+test('derived deltaTime is not clamped by core runtime', () => {
+  const graph = {
+    nodes: [
+      { id: 'input', type: 'constant', params: { value: 1 } },
+      { id: 'integrator', type: 'integrate' }
+    ],
+    edges: [
+      { from: 'input.out', to: 'integrator.value' }
+    ]
+  };
+
+  const engine = new Loom(graph);
+  engine.evaluateAt({ time: 0 }, 0);
+  engine.evaluateAt({ time: 1 }, 1000);
+
+  assert.equal(engine.getValue('integrator.out'), 1);
+});
+
+test('node context exposes deltaTime and tick aliases', () => {
+  const nodeTypes = {
+    ...NODE_TYPES,
+    'test.captureContext': {
+      category: 'source',
+      inputs: [],
+      outputs: [
+        { name: 'time', type: 'number', kind: 'behavior' },
+        { name: 'dt', type: 'number', kind: 'behavior' },
+        { name: 'deltaTime', type: 'number', kind: 'behavior' },
+        { name: 'tick', type: 'number', kind: 'behavior' }
+      ],
+      params: [],
+      evaluate: (inputs, params, ctx) => ({
+        time: ctx.time,
+        dt: ctx.dt,
+        deltaTime: ctx.deltaTime,
+        tick: ctx.tick
+      })
+    }
+  };
+
+  const engine = new Loom({ nodes: [{ id: 'ctx', type: 'test.captureContext' }], edges: [] }, { nodeTypes });
+  engine.evaluateOnce({ env: { time: 1.5, deltaTime: 0.25, tick: 7 } });
+
+  assert.equal(engine.getValue('ctx.time'), 1.5);
+  assert.equal(engine.getValue('ctx.dt'), 0.25);
+  assert.equal(engine.getValue('ctx.deltaTime'), 0.25);
+  assert.equal(engine.getValue('ctx.tick'), 7);
+});
+
 test('clock requires env.time when evaluated', () => {
   const graph = {
     nodes: [{ id: 'timer', type: 'clock' }],

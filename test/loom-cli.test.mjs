@@ -489,7 +489,7 @@ test('evaluateOnce supports Node-safe one-shot evaluation', async () => {
   };
 
   const engine = new Loom(graph);
-  engine.evaluateOnce({ time: 0.25, dt: 0 });
+  engine.evaluateOnce({ env: { time: 0.25, deltaTime: 0 } });
   const value = engine.getValue('wave.out');
 
   assert.equal(Number.isFinite(value), true);

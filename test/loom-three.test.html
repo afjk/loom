@@ -68,7 +68,7 @@
       };
 
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
 
       assertEqual(cube.position.x, 2, 'position.x should be 2');
       assertEqual(cube.position.y, 2, 'position.y should be 2');
@@ -94,7 +94,7 @@
       };
 
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
 
       assertEqual(cube.rotation.x, 1.57, 'rotation.x should be 1.57');
       assertEqual(cube.rotation.y, 3.14, 'rotation.y should be 3.14');
@@ -119,7 +119,7 @@
       };
 
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
 
       assertEqual(cube.scale.x, 2, 'scale.x should be 2');
       assertEqual(cube.scale.y, 2, 'scale.y should be 2');
@@ -146,7 +146,7 @@
       };
 
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
 
       assertEqual(cube.material.color.r, 1, 'color.r should be 1');
       assertEqual(cube.material.color.g, 0.5, 'color.g should be 0.5');
@@ -177,7 +177,7 @@
       };
 
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
 
       assertEqual(cube.material[0].color.r, 0.3, 'first material color.r should be 0.3');
       assertEqual(cube.material[0].color.g, 0.4, 'first material color.g should be 0.4');
@@ -201,7 +201,7 @@
       };
 
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
 
       assert(cube.visible === false, 'visible should be false when input is 0');
     });
@@ -223,7 +223,7 @@
       };
 
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
 
       assert(cube.visible === true, 'visible should be true when input is 1');
     });
@@ -245,7 +245,7 @@
 
       const engine = new Loom(graph);
       // エラーをスローしないことを確認
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
 
       // cube は変更されていないはず
       assertEqual(cube.position.x, 0, 'cube position should not be changed');
@@ -270,7 +270,7 @@
       };
 
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
 
       assertEqual(cubeB.position.x, 3, 'cubeB should be updated');
       assertEqual(cubeA.position.x, 0, 'cubeA should not be updated');

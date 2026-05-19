@@ -81,7 +81,7 @@
     }
     function runTimes(engine, times) {
       for (const time of times) {
-        engine.evaluateAt(time);
+        engine.evaluateAt({ time: time });
       }
     }
 
@@ -92,7 +92,7 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(1.5);
+      engine.evaluateAt({ time: 1.5 });
       assertEqual(engine.getValue("timer.t"), 1.5);
     });
 
@@ -102,7 +102,7 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("const.out"), 42);
     });
 
@@ -115,7 +115,7 @@
         edges: [{ from: "timer.t", to: "wave.t" }]
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("wave.out"), 0, "sine(0) should be 0");
     });
 
@@ -128,7 +128,7 @@
         edges: [{ from: "timer.t", to: "wave.t" }]
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0.25);
+      engine.evaluateAt({ time: 0.25 });
       assertEqual(engine.getValue("wave.out"), 1, "sine(0.25 * 2π) should be 1");
     });
 
@@ -138,7 +138,7 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("adder.out"), 7);
     });
 
@@ -148,7 +148,7 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("multiplier.out"), 12);
     });
 
@@ -159,7 +159,7 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("subtracter.out"), 7);
     });
 
@@ -169,7 +169,7 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("divider.out"), 4);
     });
 
@@ -179,7 +179,7 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("divider.out"), 0);
     });
 
@@ -189,7 +189,7 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("modder.out"), 1);
     });
 
@@ -199,7 +199,7 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("modder.out"), 2);
     });
 
@@ -209,7 +209,7 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("negater.out"), -5);
     });
 
@@ -219,7 +219,7 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("abser.out"), 7);
     });
 
@@ -230,7 +230,7 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("clamper.out"), 0.5);
     });
 
@@ -240,7 +240,7 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("clamper.out"), 0);
     });
 
@@ -250,7 +250,7 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("clamper.out"), 1);
     });
 
@@ -260,7 +260,7 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("lerper.out"), 5);
     });
 
@@ -270,7 +270,7 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("smoother.out"), 0);
     });
 
@@ -280,7 +280,7 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("mapper.out"), 10);
     });
 
@@ -290,7 +290,7 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("mapper.out"), 20);
     });
 
@@ -300,7 +300,7 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("mapper.out"), 10);
     });
 
@@ -310,7 +310,7 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("cosiner.out"), 1);
     });
 
@@ -324,7 +324,7 @@
         edges: [{ from: "a.out", to: "b.a" }]
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("b.out"), 15, "edge value (10) should override params (100)");
     });
 
@@ -334,7 +334,7 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("adder.out"), 30);
     });
 
@@ -344,7 +344,7 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("adder.out"), 0, "add defaults are 0, 0");
     });
 
@@ -357,7 +357,7 @@
         edges: [{ from: "const5.out", to: "adder.a" }]
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("adder.out"), 15);
     });
 
@@ -371,7 +371,7 @@
         edges: [{ from: "timer.t", to: "wave.t" }]
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0.25);
+      engine.evaluateAt({ time: 0.25 });
       const expected = Math.sin(0.25 * 2 * Math.PI);
       assertEqual(engine.getValue("wave.out"), expected);
     });
@@ -391,7 +391,7 @@
         ]
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(5);
+      engine.evaluateAt({ time: 5 });
       // 10 + 5 = 15, 15 * 2 = 30
       assertEqual(engine.getValue("doubler.out"), 30);
     });
@@ -494,7 +494,7 @@
         edges: []
       };
       const engine = new Loom(graph1);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("const1.out"), 10);
 
       engine.load(graph2);
@@ -511,9 +511,9 @@
         edges: []
       };
       const engine = new Loom(graph1);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       engine.load(graph2);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("const2.out"), 20);
     });
 
@@ -533,7 +533,7 @@
         ]
       };
       const engine = new Loom(graph1);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertThrows(() => engine.load(graph2), 'CYCLE');
       // 保留中グラフが更新されていないことを確認
       assertEqual(engine.getValue("const1.out"), 10);
@@ -650,7 +650,7 @@
         nodes: [{ id: "acc", type: "integrate", params: { value: 1, initial: 999 } }],
         edges: []
       });
-      engine.evaluateAt(0.15);
+      engine.evaluateAt({ time: 0.15 });
 
       assertApprox(engine.getValue("acc.out"), 0.15, 1e-9);
     });
@@ -666,22 +666,22 @@
         nodes: [{ id: "fresh", type: "integrate", params: { value: 1, initial: 5 } }],
         edges: []
       });
-      engine.evaluateAt(0.15);
+      engine.evaluateAt({ time: 0.15 });
 
       assertApprox(engine.getValue("fresh.out"), 5.05, 1e-9);
       assert(engine._prevOuts.has("fresh"), "fresh state should be tracked");
       assert(!engine._prevOuts.has("acc"), "removed node state should be dropped");
     });
 
-    test("state: 巨大な dt は 0.1 秒にクランプされる", () => {
+    test("state: 巨大な dt は host が与えない限りそのまま使われる", () => {
       const engine = new Loom({
         nodes: [{ id: "acc", type: "integrate", params: { value: 1, initial: 0 } }],
         edges: []
       });
 
-      engine.evaluateAt(0);
-      engine.evaluateAt(1);
-      assertApprox(engine.getValue("acc.out"), 0.1, 1e-9);
+      engine.evaluateAt({ time: 0 });
+      engine.evaluateAt({ time: 1 });
+      assertApprox(engine.getValue("acc.out"), 1, 1e-9);
     });
 
     test("state: smoothLerp は 60fps と 30fps でほぼ同じ最終値になる", () => {
@@ -692,14 +692,14 @@
       const engine60 = new Loom(graph);
       const engine30 = new Loom(graph);
 
-      engine60.evaluateAt(0);
+      engine60.evaluateAt({ time: 0 });
       for (let i = 1; i <= 60; i++) {
-        engine60.evaluateAt(i / 60);
+        engine60.evaluateAt({ time: i / 60 });
       }
 
-      engine30.evaluateAt(0);
+      engine30.evaluateAt({ time: 0 });
       for (let i = 1; i <= 30; i++) {
-        engine30.evaluateAt(i / 30);
+        engine30.evaluateAt({ time: i / 30 });
       }
 
       const v60 = engine60.getValue("smooth.out");
@@ -714,7 +714,7 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assert(engine.getValue("nonexistent.out") === undefined);
     });
 
@@ -724,7 +724,7 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assert(engine.getValue("const1.nonexistent") === undefined);
     });
 
@@ -738,7 +738,7 @@
         edges: [{ from: "timer.t", to: "wave.t" }]
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0.25);
+      engine.evaluateAt({ time: 0.25 });
       assertEqual(engine.getValue("wave.out"), 2);
     });
 
@@ -751,7 +751,7 @@
         edges: [{ from: "timer.t", to: "wave.t" }]
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("wave.out"), 5);
     });
 
@@ -764,7 +764,7 @@
         edges: [{ from: "timer.t", to: "wave.t" }]
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("wave.out"), 1, "sin(π/2) = 1");
     });
 
@@ -819,9 +819,9 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       engine.dispatchEvent("kd.event", "a");
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       const val = engine.getValue("kd.event");
       assert(Array.isArray(val) && val.length === 1 && val[0] === "a");
     });
@@ -832,10 +832,10 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       engine.dispatchEvent("kd.event", "a");
       engine.dispatchEvent("kd.event", "b");
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       const val = engine.getValue("kd.event");
       assert(Array.isArray(val) && val.length === 2 && val[0] === "a" && val[1] === "b");
     });
@@ -846,12 +846,12 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       engine.dispatchEvent("kd.event", "a");
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       const v1 = engine.getValue("kd.event");
       assert(Array.isArray(v1) && v1.length === 1 && v1[0] === "a");
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       const v2 = engine.getValue("kd.event");
       assert(Array.isArray(v2) && v2.length === 0);
     });
@@ -893,10 +893,10 @@
         edges: [{ from: "kd.event", to: "f.event" }]
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       engine.dispatchEvent("kd.event", 5);
       engine.dispatchEvent("kd.event", -3);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       const val = engine.getValue("f.event");
       assert(Array.isArray(val) && val.length === 1 && val[0] === 5);
     });
@@ -921,10 +921,10 @@
         edges: [{ from: "kd.event", to: "f.event" }]
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       engine.dispatchEvent("kd.event", "Enter");
       engine.dispatchEvent("kd.event", "a");
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       const val = engine.getValue("f.event");
       assert(Array.isArray(val) && val.length === 1 && val[0] === "Enter");
     });
@@ -943,9 +943,9 @@
         ]
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       engine.dispatchEvent("kd.event", "Space");
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       const val = engine.getValue("samp.event");
       assert(Array.isArray(val) && val.length === 1 && val[0] === 42);
     });
@@ -963,9 +963,9 @@
         ]
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       // dispatchEvent しない
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       const val = engine.getValue("samp.event");
       assert(Array.isArray(val) && val.length === 0);
     });
@@ -984,10 +984,10 @@
         ]
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       engine.dispatchEvent("kd1.event", "a");
       engine.dispatchEvent("kd2.event", "b");
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       const val = engine.getValue("m.event");
       assert(Array.isArray(val) && val.length === 2 && val[0] === "a" && val[1] === "b");
     });
@@ -999,7 +999,7 @@
         edges: []
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       const pos = engine.getValue("pp.pos");
       assert(pos && pos.x === 0 && pos.y === 0);
     });
@@ -1015,12 +1015,12 @@
         edges: []
       };
       const engine = new Loom(graph1);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       engine.load(graph2);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       // graph2 に切り替わって dispatchEvent できることを確認
       engine.dispatchEvent("kd.event", "x");
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       const val = engine.getValue("kd.event");
       assert(Array.isArray(val) && val[0] === "x");
     });
@@ -1043,11 +1043,11 @@
         ]
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       engine.dispatchEvent("kd1.event", "a");
       engine.dispatchEvent("kd1.event", "x");
       engine.dispatchEvent("kd2.event", "b");
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       const val = engine.getValue("m.event");
       // f1 が "a" のみ通し、f2 が "b" を通し、merge で "a", "b" 順
       assert(Array.isArray(val) && val.length === 2 && val[0] === "a" && val[1] === "b");
@@ -1069,7 +1069,7 @@
           ]
         };
         const engine = new Loom(graph);
-        engine.evaluateAt(0);
+        engine.evaluateAt({ time: 0 });
         assert(div.textContent === "Hello", `expected "Hello", got "${div.textContent}"`);
       } finally {
         document.body.removeChild(div);
@@ -1091,7 +1091,7 @@
           ]
         };
         const engine = new Loom(graph);
-        engine.evaluateAt(0);
+        engine.evaluateAt({ time: 0 });
         assert(div.style.width === "50px", `expected "50px", got "${div.style.width}"`);
       } finally {
         document.body.removeChild(div);
@@ -1113,7 +1113,7 @@
           ]
         };
         const engine = new Loom(graph);
-        engine.evaluateAt(0);
+        engine.evaluateAt({ time: 0 });
         assert(div.getAttribute("data-test") === "my-value", `expected "my-value", got "${div.getAttribute("data-test")}"`);
       } finally {
         document.body.removeChild(div);
@@ -1131,7 +1131,7 @@
         ]
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       // エラーが発生しなければ成功
       assert(true);
     });
@@ -1148,7 +1148,7 @@
           edges: [{ from: "flag.out", to: "sink.enabled" }]
         };
         const engine = new Loom(graph);
-        engine.evaluateAt(0);
+        engine.evaluateAt({ time: 0 });
         assert(div.classList.contains("is-hot"), "class should be added");
 
         engine.load({
@@ -1158,7 +1158,7 @@
           ],
           edges: [{ from: "flag.out", to: "sink.enabled" }]
         });
-        engine.evaluateAt(0);
+        engine.evaluateAt({ time: 0 });
         assert(!div.classList.contains("is-hot"), "class should be removed");
 
         const engine2 = new Loom({
@@ -1168,7 +1168,7 @@
           ],
           edges: [{ from: "flag.out", to: "sink.enabled" }]
         });
-        engine2.evaluateAt(0);
+        engine2.evaluateAt({ time: 0 });
         assert(true);
       } finally {
         document.body.removeChild(div);
@@ -1186,7 +1186,7 @@
           ],
           edges: [{ from: "v.out", to: "sink.value" }]
         });
-        engine.evaluateAt(0);
+        engine.evaluateAt({ time: 0 });
         assertEqual(div.style.getPropertyValue("--x"), "10px");
 
         const engine2 = new Loom({
@@ -1196,7 +1196,7 @@
           ],
           edges: [{ from: "v.out", to: "sink.value" }]
         });
-        engine2.evaluateAt(0);
+        engine2.evaluateAt({ time: 0 });
         assertEqual(div.style.getPropertyValue("--x"), "20px");
 
         const engine3 = new Loom({
@@ -1206,7 +1206,7 @@
           ],
           edges: [{ from: "v.out", to: "sink.value" }]
         });
-        engine3.evaluateAt(0);
+        engine3.evaluateAt({ time: 0 });
         assert(true);
       } finally {
         document.body.removeChild(div);
@@ -1232,7 +1232,7 @@
             { from: "r.out", to: "sink.rotate" }
           ]
         });
-        engine.evaluateAt(0);
+        engine.evaluateAt({ time: 0 });
         assertEqual(div.style.transform, "translate(10px, 20px) scale(1.5) rotate(45deg)");
 
         const engine2 = new Loom({
@@ -1242,14 +1242,14 @@
           ],
           edges: [{ from: "x.out", to: "sink.x" }]
         });
-        engine2.evaluateAt(0);
+        engine2.evaluateAt({ time: 0 });
         assertEqual(div.style.transform, "translate(8px, 0px) scale(1) rotate(0deg)");
 
         const engine3 = new Loom({
           nodes: [{ id: "sink", type: "setTransform2D", params: { target: "#no-such-target" } }],
           edges: []
         });
-        engine3.evaluateAt(0);
+        engine3.evaluateAt({ time: 0 });
         assert(true);
       } finally {
         document.body.removeChild(div);
@@ -1271,7 +1271,7 @@
           { from: "th.out", to: "gtEdge.threshold" }
         ]
       });
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("gt1.out"), true);
       assertEqual(engine.getValue("gt2.out"), false);
       assertEqual(engine.getValue("lt1.out"), true);
@@ -1300,7 +1300,7 @@
           ]
         };
         const engine = new Loom(graph);
-        engine.evaluateAt(0);
+        engine.evaluateAt({ time: 0 });
         assert(div1.textContent === "first", `expected "first", got "${div1.textContent}"`);
         assert(div2.textContent === "second", `expected "second", got "${div2.textContent}"`);
       } finally {
@@ -1358,7 +1358,7 @@ sink = setCssVar(v, target: "#demo-card", nope: "x")
         ]
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       assertEqual(engine.getValue("logger.value"), 42);
     });
 
@@ -1373,7 +1373,7 @@ sink = setCssVar(v, target: "#demo-card", nope: "x")
         ]
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       const effects = engine.getEffects();
       assert(effects.length > 0, "expected at least one effect");
       const logEffect = effects.find(e => e.type === "log");
@@ -1393,7 +1393,7 @@ sink = setCssVar(v, target: "#demo-card", nope: "x")
         ]
       };
       const engine = new Loom(graph);
-      engine.evaluateAt(0);
+      engine.evaluateAt({ time: 0 });
       const effects = engine.getEffects();
       const logEffect = effects.find(e => e.type === "log");
       assert(logEffect, "expected log effect");

@@ -15582,9 +15582,6 @@ var LoomletPreview = (() => {
     return NODE_TYPES;
   }
   function normalizeTimeEnvironment(value) {
-    if (typeof value === "number" && Number.isFinite(value)) {
-      return { time: value };
-    }
     if (!value || typeof value !== "object" || Array.isArray(value)) {
       return {};
     }
@@ -15649,26 +15646,28 @@ var LoomletPreview = (() => {
         }
       }
     }
-    evaluateAt(timeOrEnv, frameTimestamp) {
+    evaluateAt(env, frameTimestamp) {
       this._activatePendingGraph(true);
       if (!this._currentGraph) return;
       this._effects = [];
-      const env = normalizeTimeEnvironment(timeOrEnv);
-      const resolvedTime = Number.isFinite(env.time) ? env.time : void 0;
+      const resolvedEnvInput = normalizeTimeEnvironment(env);
+      const resolvedTime = Number.isFinite(resolvedEnvInput.time) ? resolvedEnvInput.time : void 0;
       const resolvedFrameTimestamp = Number.isFinite(frameTimestamp) ? frameTimestamp : Number.isFinite(resolvedTime) ? resolvedTime * 1e3 : void 0;
-      const explicitDt = Number.isFinite(env.deltaTime) ? env.deltaTime : void 0;
+      const explicitDt = Number.isFinite(resolvedEnvInput.deltaTime) ? resolvedEnvInput.deltaTime : void 0;
       const dt2 = explicitDt !== void 0 ? explicitDt : this._computeDeltaTime(resolvedFrameTimestamp);
       if (explicitDt !== void 0 && Number.isFinite(resolvedFrameTimestamp)) {
         this._lastTimestamp = resolvedFrameTimestamp;
       }
       const resolvedEnv = {
-        ...env,
+        ...resolvedEnvInput,
         ...Number.isFinite(dt2) ? { deltaTime: dt2 } : {}
       };
       const ctx = {
         env: resolvedEnv,
         time: resolvedTime,
         dt: dt2,
+        deltaTime: dt2,
+        tick: resolvedEnv.tick,
         engine: this,
         nodeTypes: this._nodeTypes,
         nodePredicates: /* @__PURE__ */ new Map()
@@ -15754,12 +15753,8 @@ var LoomletPreview = (() => {
         }
       }
     }
-    evaluateOnce({ env, time, dt: dt2 } = {}) {
-      const resolvedEnv = {
-        ...normalizeTimeEnvironment(env),
-        ...Number.isFinite(time) ? { time } : {},
-        ...Number.isFinite(dt2) ? { deltaTime: Math.max(0, dt2) } : {}
-      };
+    evaluateOnce({ env } = {}) {
+      const resolvedEnv = normalizeTimeEnvironment(env);
       const frameTimestamp = Number.isFinite(resolvedEnv.time) ? resolvedEnv.time * 1e3 : void 0;
       this._activatePendingGraph(false);
       this.evaluateAt(resolvedEnv, frameTimestamp);
@@ -15867,7 +15862,7 @@ var LoomletPreview = (() => {
       }
       const dt2 = Math.max(0, (frameTimestamp - this._lastTimestamp) / 1e3);
       this._lastTimestamp = frameTimestamp;
-      return Math.min(dt2, 0.1);
+      return dt2;
     }
     _graphUsesNodeType(type, graph = this._currentGraph) {
       return Array.isArray(graph?.nodes) && graph.nodes.some((node2) => node2?.type === type);
