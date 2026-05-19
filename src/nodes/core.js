@@ -13,6 +13,18 @@ export function registerCoreNodes(registry) {
       return { t: ctx.env.time };
     }
   });
+  registry.registerNodeType('onEvent', {
+    category: 'source',
+    inputs: [],
+    outputs: [{ name: 'event', type: 'event<any>', kind: 'event' }],
+    params: [{ name: 'channel', type: 'string', default: '' }],
+    evaluate: (inputs, params, ctx) => {
+      const events = Array.isArray(ctx.env?.events) ? ctx.env.events : [];
+      return {
+        event: events.filter((event) => event.channel === params.channel)
+      };
+    }
+  });
   registry.registerNodeType('console.error', {
     category: 'sink',
     inputs: [{ name: 'value', type: 'any', default: undefined, kind: 'behavior' }],

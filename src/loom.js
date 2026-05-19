@@ -593,7 +593,7 @@ function resolveNodeTypesOption(options = {}) {
 
 function normalizeTimeEnvironment(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return {};
+    return { events: [] };
   }
 
   const env = {};
@@ -605,6 +605,37 @@ function normalizeTimeEnvironment(value) {
   }
   if (Number.isFinite(value.tick)) {
     env.tick = value.tick;
+  }
+  if (value.events === undefined) {
+    env.events = [];
+  } else {
+    if (!Array.isArray(value.events)) {
+      throw new LoomError('INVALID_ENV_EVENTS', 'env.events must be an array when provided', {
+        reason: 'env.events'
+      });
+    }
+
+    env.events = value.events.map((event, index) => {
+      if (!event || typeof event !== 'object' || Array.isArray(event)) {
+        throw new LoomError('INVALID_ENV_EVENTS', `env.events[${index}] must be an object`, {
+          reason: 'env.events',
+          index
+        });
+      }
+      if (typeof event.channel !== 'string') {
+        throw new LoomError('INVALID_ENV_EVENTS', `env.events[${index}].channel must be a string`, {
+          reason: 'env.events.channel',
+          index
+        });
+      }
+      if (!Number.isFinite(event.timestamp)) {
+        throw new LoomError('INVALID_ENV_EVENTS', `env.events[${index}].timestamp must be a finite number`, {
+          reason: 'env.events.timestamp',
+          index
+        });
+      }
+      return event;
+    });
   }
   return env;
 }

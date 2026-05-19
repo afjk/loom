@@ -72,6 +72,27 @@ if (compileErrors.length) {
 console.log(graph);
 ```
 
+### Host events with `OnEvent`
+
+```js
+import { Loom } from "@afjk/loomlet/runtime";
+
+const graph = {
+  nodes: [{ id: "flash", type: "onEvent", params: { channel: "custom.flash" } }],
+  edges: []
+};
+
+const engine = new Loom(graph);
+engine.evaluateOnce({
+  env: {
+    time: 1.5,
+    events: [{ channel: "custom.flash", timestamp: 1.2, payload: { intensity: 0.8 } }]
+  }
+});
+
+console.log(engine.getValue("flash.event"));
+```
+
 ## VS Code extension
 
 The Loomlet VS Code extension provides:
