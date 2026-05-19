@@ -26,6 +26,12 @@ function evalGraph(nodes, edges, ref) {
   return { value: ref ? engine.getValue(ref) : undefined, effects: engine.getEffects() };
 }
 
+function evalGraphAt(nodes, edges, ref, evalOptions) {
+  const engine = new Loom({ nodes, edges });
+  engine.evaluateOnce(evalOptions);
+  return { value: ref ? engine.getValue(ref) : undefined, effects: engine.getEffects() };
+}
+
 test('logic baseline nodes', () => {
   assert.equal(evalNode('logic.equals', { value: 1, other: 1 }), true);
   assert.equal(evalNode('logic.equals', { value: 1, other: 2 }), false);
@@ -114,6 +120,41 @@ test('debug baseline nodes', () => {
   assert.deepEqual(traced.effects[0], { type: 'debug.trace', label: 'seven', value: 7, nodeId: 'trace' });
   assert.equal(evalNode('debug.assert', { condition: true, message: 'ok' }), true);
   assert.throws(() => evalNode('debug.assert', { condition: false, message: 'bad' }), (error) => error instanceof LoomError && error.code === 'ASSERTION_FAILED' && /bad/.test(error.message));
+});
+
+test('clock reads host-provided env.time deterministically', () => {
+  const graph = {
+    nodes: [
+      { id: 'timer', type: 'clock' },
+      { id: 'wave', type: 'sine', params: { freq: 0.5 } }
+    ],
+    edges: [
+      { from: 'timer.t', to: 'wave.t' }
+    ]
+  };
+
+  const first = evalGraphAt(graph.nodes, graph.edges, 'wave.out', { env: { time: 0.25 } });
+  const second = evalGraphAt(graph.nodes, graph.edges, 'wave.out', { env: { time: 0.25 } });
+  const later = evalGraphAt(graph.nodes, graph.edges, 'wave.out', { env: { time: 0.75 } });
+
+  assert.equal(first.value, second.value);
+  assert.notEqual(first.value, later.value);
+});
+
+test('clock requires env.time when evaluated', () => {
+  const graph = {
+    nodes: [{ id: 'timer', type: 'clock' }],
+    edges: []
+  };
+
+  assert.throws(
+    () => new Loom(graph).evaluateOnce(),
+    (error) => error instanceof LoomError && error.code === 'MISSING_ENV_TIME' && /env\.time/.test(error.message)
+  );
+
+  const result = runLoomSource('t = clock()', { target: 'cli', get: 't.out' });
+  assert.equal(result.ok, false);
+  assert.equal(result.errors[0]?.code, 'MISSING_ENV_TIME');
 });
 
 test('console.table records table effect', () => {

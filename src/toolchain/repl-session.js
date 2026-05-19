@@ -63,8 +63,8 @@ function appendSnippetToSource(currentSource, snippet) {
 export class LoomReplSession {
   constructor(options = {}) {
     this.target = options.target || 'cli';
-    this.time = Number.isFinite(options.time) ? options.time : 0;
-    this.dt = Number.isFinite(options.dt) ? options.dt : 0;
+    this.time = Number.isFinite(options.time) ? options.time : null;
+    this.dt = Number.isFinite(options.dt) ? options.dt : null;
     this.nodeRegistry = options.nodeRegistry || null;
     this.metadataRegistry = options.metadataRegistry || null;
     this.sourceLines = [];

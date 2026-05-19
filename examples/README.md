@@ -18,6 +18,12 @@ Run from the repository root:
 node bin/loomlet.mjs compile examples/cli-basic.loom
 ```
 
+For `loomlet run`, graphs that use `clock()` must receive host time explicitly:
+
+```bash
+node bin/loomlet.mjs run examples/cli-basic.loom --get x.out --time 0.25
+```
+
 Or with the published package:
 
 ```bash

@@ -412,7 +412,7 @@
 
         if (!engine) {
           engine = new Loom(graphForLoom);
-          engine.start();
+          engine.start({ getEnv: ({ elapsed }) => ({ time: elapsed }) });
         } else {
           engine.load(graphForLoom);
         }

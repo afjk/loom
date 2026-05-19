@@ -90,7 +90,7 @@
     };
 
     const engine = new Loom(graph);
-    engine.start();
+    engine.start({ getEnv: ({ elapsed }) => ({ time: elapsed }) });
 
     const rateNode = graph.nodes.find(node => node.id === "rate");
     const readout = document.getElementById("readout");

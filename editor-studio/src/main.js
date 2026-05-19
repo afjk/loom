@@ -1794,7 +1794,7 @@ function runPreview(graph) {
     };
 
     engine = new Loom(graphForLoom);
-    engine.start();
+    engine.start({ getEnv: ({ elapsed }) => ({ time: elapsed }) });
 
     animationFrameId = requestAnimationFrame(() => {
       tick(engine, graph);

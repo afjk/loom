@@ -6,7 +6,12 @@ export function registerCoreNodes(registry) {
     inputs: [],
     outputs: [{ name: 't', type: 'number', kind: 'behavior' }],
     params: [],
-    evaluate: (inputs, params, ctx) => ({ t: ctx.time })
+    evaluate: (inputs, params, ctx) => {
+      if (!Number.isFinite(ctx.env?.time)) {
+        throw new LoomError('MISSING_ENV_TIME', 'clock requires env.time in the evaluation environment', { reason: 'env.time' });
+      }
+      return { t: ctx.env.time };
+    }
   });
   registry.registerNodeType('console.error', {
     category: 'sink',

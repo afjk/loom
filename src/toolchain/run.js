@@ -19,6 +19,24 @@ function getNodeTypes(options = {}) {
   return NODE_TYPES;
 }
 
+function resolveEvaluationEnv(options = {}) {
+  const env = options.env && typeof options.env === 'object' && !Array.isArray(options.env)
+    ? { ...options.env }
+    : {};
+
+  if (!Number.isFinite(env.time) && Number.isFinite(options.time)) {
+    env.time = options.time;
+  }
+  if (!Number.isFinite(env.deltaTime) && Number.isFinite(options.dt)) {
+    env.deltaTime = Math.max(0, options.dt);
+  }
+  if (!Number.isFinite(env.tick) && Number.isFinite(options.tick)) {
+    env.tick = options.tick;
+  }
+
+  return env;
+}
+
 function getRefsToRead(graph, get) {
   if (Array.isArray(get)) {
     return get;
@@ -89,8 +107,7 @@ export function runLoomGraph(graph, options = {}) {
       nodeTypes: options.nodeTypes
     });
     engine.evaluateOnce({
-      time: Number.isFinite(options.time) ? options.time : 0,
-      dt: Number.isFinite(options.dt) ? options.dt : 0
+      env: resolveEvaluationEnv(options)
     });
 
     return {

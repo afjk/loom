@@ -77,7 +77,7 @@
     };
 
     const engine = new Loom(graph);
-    engine.start();
+    engine.start({ getEnv: ({ elapsed }) => ({ time: elapsed }) });
 
     const rawXNode = graph.nodes.find(node => node.id === "rawX");
     const rawYNode = graph.nodes.find(node => node.id === "rawY");

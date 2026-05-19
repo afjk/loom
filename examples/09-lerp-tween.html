@@ -58,7 +58,7 @@
     };
 
     const engine = new Loom(graph);
-    engine.start();
+    engine.start({ getEnv: ({ elapsed }) => ({ time: elapsed }) });
 
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");

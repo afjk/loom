@@ -591,6 +591,28 @@ function resolveNodeTypesOption(options = {}) {
   return NODE_TYPES;
 }
 
+function normalizeTimeEnvironment(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return { time: value };
+  }
+
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+
+  const env = {};
+  if (Number.isFinite(value.time)) {
+    env.time = value.time;
+  }
+  if (Number.isFinite(value.deltaTime)) {
+    env.deltaTime = Math.max(0, value.deltaTime);
+  }
+  if (Number.isFinite(value.tick)) {
+    env.tick = value.tick;
+  }
+  return env;
+}
+
 export class Loom {
   constructor(graph, options = {}) {
     this._nodeTypes = resolveNodeTypesOption(options);
@@ -603,6 +625,7 @@ export class Loom {
     this._rafId = null;
     this._startTime = null;
     this._lastTimestamp = null;
+    this._envProvider = null;
     this._inputStates = {};
     this._effects = [];
 
@@ -647,7 +670,7 @@ export class Loom {
     }
   }
 
-  evaluateAt(time, frameTimestamp = time * 1000) {
+  evaluateAt(timeOrEnv, frameTimestamp) {
     this._activatePendingGraph(true);
 
     // グラフが設定されていなければ何もしない
@@ -655,10 +678,26 @@ export class Loom {
 
     this._effects = [];
 
-    const dt = this._computeDeltaTime(frameTimestamp);
+    const env = normalizeTimeEnvironment(timeOrEnv);
+    const resolvedTime = Number.isFinite(env.time) ? env.time : undefined;
+    const resolvedFrameTimestamp = Number.isFinite(frameTimestamp)
+      ? frameTimestamp
+      : Number.isFinite(resolvedTime)
+        ? resolvedTime * 1000
+        : undefined;
+    const explicitDt = Number.isFinite(env.deltaTime) ? env.deltaTime : undefined;
+    const dt = explicitDt !== undefined ? explicitDt : this._computeDeltaTime(resolvedFrameTimestamp);
+    if (explicitDt !== undefined && Number.isFinite(resolvedFrameTimestamp)) {
+      this._lastTimestamp = resolvedFrameTimestamp;
+    }
+    const resolvedEnv = {
+      ...env,
+      ...(Number.isFinite(dt) ? { deltaTime: dt } : {})
+    };
 
     const ctx = {
-      time,
+      env: resolvedEnv,
+      time: resolvedTime,
       dt,
       engine: this,
       nodeTypes: this._nodeTypes,
@@ -769,14 +808,16 @@ export class Loom {
     }
   }
 
-  evaluateOnce({ time = 0, dt = 0 } = {}) {
-    const safeTime = Number.isFinite(time) ? time : 0;
-    const safeDt = Number.isFinite(dt) ? Math.max(0, dt) : 0;
-    const frameTimestamp = safeTime * 1000;
+  evaluateOnce({ env, time, dt } = {}) {
+    const resolvedEnv = {
+      ...normalizeTimeEnvironment(env),
+      ...(Number.isFinite(time) ? { time } : {}),
+      ...(Number.isFinite(dt) ? { deltaTime: Math.max(0, dt) } : {})
+    };
+    const frameTimestamp = Number.isFinite(resolvedEnv.time) ? resolvedEnv.time * 1000 : undefined;
 
     this._activatePendingGraph(false);
-    this._lastTimestamp = frameTimestamp - (safeDt * 1000);
-    this.evaluateAt(safeTime, frameTimestamp);
+    this.evaluateAt(resolvedEnv, frameTimestamp);
   }
 
   getValue(ref) {
@@ -828,6 +869,10 @@ export class Loom {
     // グラフを検証（エラーなら LoomError をスロー）
     this._validateGraph(graph);
 
+    if (this._rafId !== null && !this._envProvider && this._graphUsesNodeType('clock', graph)) {
+      throw new LoomError('MISSING_ENV_TIME', 'load() requires options.getEnv for graphs that use clock while the runtime is started', { reason: 'env.time' });
+    }
+
     // トポロジカルソートを実行（サイクルチェック含む）
     const sortedNodeIds = this._topologicalSort(graph);
 
@@ -836,8 +881,15 @@ export class Loom {
     this._pendingNodeIds = sortedNodeIds;
   }
 
-  start() {
+  start(options = {}) {
     if (this._rafId !== null) return; // 既に実行中なら何もしない
+
+    const getEnv = typeof options.getEnv === 'function' ? options.getEnv : null;
+    const nextGraph = this._pendingGraph || this._currentGraph;
+    if (!getEnv && this._graphUsesNodeType('clock', nextGraph)) {
+      throw new LoomError('MISSING_ENV_TIME', 'start() requires options.getEnv when graph uses clock', { reason: 'env.time' });
+    }
+    this._envProvider = getEnv;
 
     // 初回: 新グラフの onStart を呼ぶ
     if (this._currentGraph) {
@@ -853,7 +905,10 @@ export class Loom {
     this._startTime = performance.now() / 1000;
     const tick = (timestamp) => {
       const elapsed = (timestamp / 1000) - this._startTime;
-      this.evaluateAt(elapsed, timestamp);
+      const env = this._envProvider
+        ? normalizeTimeEnvironment(this._envProvider({ elapsed, timestamp, engine: this }))
+        : {};
+      this.evaluateAt(env, timestamp);
       this._rafId = requestAnimationFrame(tick);
     };
     this._rafId = requestAnimationFrame(tick);
@@ -864,6 +919,7 @@ export class Loom {
       cancelAnimationFrame(this._rafId);
       this._rafId = null;
     }
+    this._envProvider = null;
 
     // グラフのノードの onStop を呼ぶ
     if (this._currentGraph) {
@@ -877,6 +933,10 @@ export class Loom {
   }
 
   _computeDeltaTime(frameTimestamp) {
+    if (!Number.isFinite(frameTimestamp)) {
+      return 0;
+    }
+
     if (this._lastTimestamp === null) {
       this._lastTimestamp = frameTimestamp;
       return 0;
@@ -885,6 +945,10 @@ export class Loom {
     const dt = Math.max(0, (frameTimestamp - this._lastTimestamp) / 1000);
     this._lastTimestamp = frameTimestamp;
     return Math.min(dt, 0.1);
+  }
+
+  _graphUsesNodeType(type, graph = this._currentGraph) {
+    return Array.isArray(graph?.nodes) && graph.nodes.some((node) => node?.type === type);
   }
 
   _reconcileStateForGraph(graph) {
