@@ -206,6 +206,140 @@ test('clock requires env.time when evaluated', () => {
   assert.equal(result.errors[0]?.code, 'MISSING_ENV_TIME');
 });
 
+test('onEvent emits matching events from env.events', () => {
+  const graph = {
+    nodes: [{ id: 'listener', type: 'onEvent', params: { channel: 'key.down' } }],
+    edges: []
+  };
+
+  const engine = new Loom(graph);
+  const keyDown = { channel: 'key.down', timestamp: 1.2, payload: { key: 'Space' } };
+  const pointer = { channel: 'pointer.click', timestamp: 1.3, payload: { x: 10, y: 20 } };
+
+  engine.evaluateOnce({ env: { time: 1.5, events: [keyDown, pointer] } });
+
+  assert.deepEqual(engine.getValue('listener.event'), [keyDown]);
+});
+
+test('onEvent ignores non-matching channels', () => {
+  const graph = {
+    nodes: [{ id: 'listener', type: 'onEvent', params: { channel: 'scene.start' } }],
+    edges: []
+  };
+
+  const engine = new Loom(graph);
+  engine.evaluateOnce({
+    env: {
+      time: 2,
+      events: [{ channel: 'key.down', timestamp: 1.9, payload: { key: 'Enter' } }]
+    }
+  });
+
+  assert.deepEqual(engine.getValue('listener.event'), []);
+});
+
+test('onEvent supports custom channels', () => {
+  const graph = {
+    nodes: [{ id: 'flash', type: 'onEvent', params: { channel: 'custom.flash' } }],
+    edges: []
+  };
+
+  const engine = new Loom(graph);
+  const customEvent = { channel: 'custom.flash', timestamp: 1.2, payload: { intensity: 0.8 } };
+  engine.evaluateOnce({
+    env: {
+      time: 1.5,
+      events: [
+        customEvent,
+        { channel: 'key.down', timestamp: 1.3, payload: { key: 'Space' } }
+      ]
+    }
+  });
+
+  assert.deepEqual(engine.getValue('flash.event'), [customEvent]);
+});
+
+test('onEvent preserves env.events order for matching events', () => {
+  const graph = {
+    nodes: [{ id: 'listener', type: 'onEvent', params: { channel: 'app.score.changed' } }],
+    edges: []
+  };
+
+  const engine = new Loom(graph);
+  engine.evaluateOnce({
+    env: {
+      time: 3,
+      events: [
+        { channel: 'app.score.changed', timestamp: 2.1, payload: { score: 10 }, id: 'first' },
+        { channel: 'key.down', timestamp: 2.2, payload: { key: 'A' } },
+        { channel: 'app.score.changed', timestamp: 2.3, payload: { score: 20 }, id: 'second' },
+        { channel: 'app.score.changed', timestamp: 2.4, payload: { score: 30 }, id: 'third' }
+      ]
+    }
+  });
+
+  assert.deepEqual(
+    engine.getValue('listener.event').map((event) => event.id),
+    ['first', 'second', 'third']
+  );
+});
+
+test('env.events omitted behaves as empty array', () => {
+  const graph = {
+    nodes: [{ id: 'listener', type: 'onEvent', params: { channel: 'custom.flash' } }],
+    edges: []
+  };
+
+  const engine = new Loom(graph);
+  engine.evaluateOnce({ env: { time: 1 } });
+
+  assert.deepEqual(engine.getValue('listener.event'), []);
+});
+
+test('invalid env.events shape fails clearly', () => {
+  const graph = {
+    nodes: [{ id: 'listener', type: 'onEvent', params: { channel: 'custom.flash' } }],
+    edges: []
+  };
+  const engine = new Loom(graph);
+
+  assert.throws(
+    () => engine.evaluateOnce({ env: { time: 1, events: { channel: 'custom.flash', timestamp: 1 } } }),
+    (error) => error instanceof LoomError && error.code === 'INVALID_ENV_EVENTS' && /env\.events must be an array/.test(error.message)
+  );
+});
+
+test('invalid event missing channel fails clearly', () => {
+  const graph = {
+    nodes: [{ id: 'listener', type: 'onEvent', params: { channel: 'custom.flash' } }],
+    edges: []
+  };
+  const engine = new Loom(graph);
+
+  assert.throws(
+    () => engine.evaluateOnce({ env: { time: 1, events: [{ timestamp: 1.2, payload: {} }] } }),
+    (error) => error instanceof LoomError && error.code === 'INVALID_ENV_EVENTS' && /channel must be a string/.test(error.message)
+  );
+});
+
+test('invalid event timestamp fails clearly', () => {
+  const graph = {
+    nodes: [{ id: 'listener', type: 'onEvent', params: { channel: 'custom.flash' } }],
+    edges: []
+  };
+  const engine = new Loom(graph);
+
+  assert.throws(
+    () => engine.evaluateOnce({ env: { time: 1, events: [{ channel: 'custom.flash' }] } }),
+    (error) => error instanceof LoomError && error.code === 'INVALID_ENV_EVENTS' && /timestamp must be a finite number/.test(error.message)
+  );
+
+  assert.throws(
+    () => engine.evaluateOnce({ env: { time: 1, events: [{ channel: 'custom.flash', timestamp: Number.NaN }] } }),
+    (error) => error instanceof LoomError && error.code === 'INVALID_ENV_EVENTS' && /timestamp must be a finite number/.test(error.message)
+  );
+});
+
 test('console.table records table effect', () => {
   const { effects } = evalGraph([{ id: 'table', type: 'console.table', params: { value: [{ a: 1 }] } }], [], null);
   assert.equal(effects[0].type, 'console.table');
