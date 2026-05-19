@@ -70,10 +70,9 @@
       };
 
       adapter.handleMessage({ type: 'scene-graph-set', scope: 'scene', graph });
-      adapter.start();
 
       serverTime.value = 0.5;
-      adapter._sceneGraph.evaluateAt(0.5);
+      adapter._sceneGraph.evaluateAt({ time: 0.5 });
 
       assert(objects.target1.position.x !== 0, 'position should be updated');
     });
@@ -114,8 +113,8 @@
       adapter.handleMessage({ type: 'scene-graph-set', scope: { object: 'cube1' }, graph: graph1 });
       adapter.handleMessage({ type: 'scene-graph-set', scope: { object: 'cube2' }, graph: graph2 });
 
-      adapter._objectGraphs.get('cube1').evaluateAt(0);
-      adapter._objectGraphs.get('cube2').evaluateAt(0);
+      adapter._objectGraphs.get('cube1').evaluateAt({ time: 0 });
+      adapter._objectGraphs.get('cube2').evaluateAt({ time: 0 });
 
       assertEqual(objects.cube1.position.x, 5, 'cube1 position should be 5');
       assertEqual(objects.cube2.position.x, 10, 'cube2 position should be 10');
@@ -144,11 +143,11 @@
       };
 
       adapter.handleMessage({ type: 'scene-graph-set', scope: { object: 'cube' }, graph: graph1 });
-      adapter._objectGraphs.get('cube').evaluateAt(0);
+      adapter._objectGraphs.get('cube').evaluateAt({ time: 0 });
       assertEqual(objects.cube.position.x, 5, 'should be 5 initially');
 
       adapter.handleMessage({ type: 'scene-graph-set', scope: { object: 'cube' }, graph: graph2 });
-      adapter._objectGraphs.get('cube').evaluateAt(0);
+      adapter._objectGraphs.get('cube').evaluateAt({ time: 0 });
       assertEqual(objects.cube.position.x, 15, 'should be updated to 15');
     });
 
@@ -170,12 +169,12 @@
       };
 
       adapter.handleMessage({ type: 'scene-graph-set', scope: 'scene', graph });
-      adapter._sceneGraph.evaluateAt(0);
+      adapter._sceneGraph.evaluateAt({ time: 0 });
       assertEqual(objects.target.position.x, 5, 'should be 5');
 
       adapter.handleMessage({ type: 'scene-graph-clear', scope: 'scene' });
       objects.target.position.x = 0;
-      adapter._sceneGraph.evaluateAt(0);
+      adapter._sceneGraph.evaluateAt({ time: 0 });
       assertEqual(objects.target.position.x, 0, 'should remain 0 after clear');
     });
 
@@ -234,7 +233,7 @@
       };
 
       adapter.handleMessage({ type: 'scene-graph-set', scope: 'scene', graph });
-      adapter._sceneGraph.evaluateAt(0);
+      adapter._sceneGraph.evaluateAt({ time: 0 });
       assert(true, 'no error thrown');
     });
 
@@ -257,7 +256,7 @@
       };
 
       adapter.handleMessage({ type: 'scene-graph-set', scope: 'scene', graph });
-      adapter._sceneGraph.evaluateAt(0);
+      adapter._sceneGraph.evaluateAt({ time: 0 });
 
       const t = adapter._sceneGraph.getValue('clock.t');
       assertEqual(t, 42.5, 'serverClock.t should match getServerTime()');
@@ -288,7 +287,7 @@
       };
 
       adapter.handleMessage({ type: 'scene-graph-set', scope: 'scene', graph });
-      adapter._sceneGraph.evaluateAt(0);
+      adapter._sceneGraph.evaluateAt({ time: 0 });
 
       assertEqual(obj.position.x, 1);
       assertEqual(obj.position.y, 2);
@@ -320,7 +319,7 @@
       };
 
       adapter.handleMessage({ type: 'scene-graph-set', scope: 'scene', graph });
-      adapter._sceneGraph.evaluateAt(0);
+      adapter._sceneGraph.evaluateAt({ time: 0 });
 
       assertEqual(obj.rotation.x, 0.5);
       assertEqual(obj.rotation.y, 1.0);
@@ -352,7 +351,7 @@
       };
 
       adapter.handleMessage({ type: 'scene-graph-set', scope: 'scene', graph });
-      adapter._sceneGraph.evaluateAt(0);
+      adapter._sceneGraph.evaluateAt({ time: 0 });
 
       assertEqual(obj.scale.x, 2);
       assertEqual(obj.scale.y, 3);
@@ -384,7 +383,7 @@
       };
 
       adapter.handleMessage({ type: 'scene-graph-set', scope: 'scene', graph });
-      adapter._sceneGraph.evaluateAt(0);
+      adapter._sceneGraph.evaluateAt({ time: 0 });
 
       assertEqual(obj.material.color.r, 0.5);
       assertEqual(obj.material.color.g, 0.6);
@@ -412,7 +411,7 @@
       };
 
       adapter.handleMessage({ type: 'scene-graph-set', scope: 'scene', graph });
-      adapter._sceneGraph.evaluateAt(0);
+      adapter._sceneGraph.evaluateAt({ time: 0 });
 
       assert(obj.visible === false, 'visible should be false');
     });
@@ -449,7 +448,7 @@
       };
 
       adapter.handleMessage({ type: 'scene-graph-patch', scope: 'scene', graph });
-      adapter._sceneGraph.evaluateAt(0);
+      adapter._sceneGraph.evaluateAt({ time: 0 });
 
       assertEqual(obj.position.x, 5, 'patch should work like set');
     });
@@ -551,8 +550,8 @@
       adapter1.handleMessage({ type: 'scene-graph-set', scope: 'scene', graph: graph1 });
       adapter2.handleMessage({ type: 'scene-graph-set', scope: 'scene', graph: graph2 });
 
-      adapter1._sceneGraph.evaluateAt(0);
-      adapter2._sceneGraph.evaluateAt(0);
+      adapter1._sceneGraph.evaluateAt({ time: 0 });
+      adapter2._sceneGraph.evaluateAt({ time: 0 });
 
       const t1 = adapter1._sceneGraph.getValue('clock.t');
       const t2 = adapter2._sceneGraph.getValue('clock.t');

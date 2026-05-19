@@ -208,8 +208,8 @@ function getRunHelp() {
 
 Options:
   --get <ref>       Output reference to read. Repeatable.
-  --time <number>   Evaluation time in seconds. Default: 0
-  --dt <number>     Delta time in seconds. Default: 0
+  --time <number>   Evaluation env.time in seconds. Required for graphs that use clock.
+  --dt <number>     Evaluation env.deltaTime in seconds.
   --json            Print result values as JSON
   --target <target> Only cli is supported by loomlet run in this version. Default: cli
   --package <path>  Load a trusted local package (repeatable)`;
@@ -1898,8 +1898,8 @@ async function handleRun(args) {
   const { packages, rest: rest2 } = parsePackageArgs(rest);
 
   const get = [];
-  let time = 0;
-  let dt = 0;
+  let time;
+  let dt;
   let json = false;
   let target = 'cli';
 

@@ -64,7 +64,7 @@
     };
 
     const engine = new Loom(graph);
-    engine.start();
+    engine.start({ getEnv: ({ elapsed }) => ({ time: elapsed }) });
 
     const targetXNode = graph.nodes.find(node => node.id === "targetX");
     const targetYNode = graph.nodes.find(node => node.id === "targetY");

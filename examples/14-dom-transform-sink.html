@@ -49,7 +49,7 @@
       ]
     };
 
-    new Loom(graph).start();
+    new Loom(graph).start({ getEnv: ({ elapsed }) => ({ time: elapsed }) });
   </script>
 </body>
 </html>

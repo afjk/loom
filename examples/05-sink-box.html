@@ -55,7 +55,7 @@
     };
 
     const engine = new Loom(graph);
-    engine.start();
+    engine.start({ getEnv: ({ elapsed }) => ({ time: elapsed }) });
   </script>
 </body>
 </html>

@@ -86,8 +86,8 @@
     };
 
     const engine = new Loom(graph);
-    engine.evaluateAt(0);
-    engine.start();
+    engine.evaluateAt({ time: 0 }, 0);
+    engine.start({ getEnv: ({ elapsed }) => ({ time: elapsed }) });
 
     const boxes = [
       document.getElementById("box0"),

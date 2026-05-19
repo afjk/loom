@@ -2,7 +2,7 @@
 # Goal: Build a continuous sine signal from clock time.
 # Status: runnable
 # Run:
-#   loomlet run examples/tour/signals/02-sine-wave.loom
+#   loomlet run examples/tour/signals/02-sine-wave.loom --time 0.25
 # Requires:
 #   - clock
 #   - sine

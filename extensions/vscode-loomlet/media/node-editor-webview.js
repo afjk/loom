@@ -13824,6 +13824,1272 @@ var LoomletPreview = (() => {
     }]);
   }(Scope);
 
+  // ../../src/runtime/node-registry.js
+  function createNodeRegistry(initialNodeTypes = {}) {
+    const nodeTypes = /* @__PURE__ */ new Map();
+    if (initialNodeTypes && typeof initialNodeTypes === "object") {
+      for (const [nodeType, definition] of Object.entries(initialNodeTypes)) {
+        const normalized = normalizeNodeTypeDefinition(definition);
+        validateNodeTypeName(nodeType);
+        validateNodeTypeDefinition(nodeType, normalized);
+        nodeTypes.set(nodeType, normalized);
+      }
+    }
+    return {
+      registerNodeType(nodeType, definition) {
+        validateNodeTypeName(nodeType);
+        const normalized = normalizeNodeTypeDefinition(definition);
+        validateNodeTypeDefinition(nodeType, normalized);
+        if (nodeTypes.has(nodeType)) {
+          throw new Error(`Duplicate node type: ${nodeType}`);
+        }
+        nodeTypes.set(nodeType, normalized);
+        return normalized;
+      },
+      getNodeType(nodeType) {
+        return nodeTypes.get(nodeType);
+      },
+      hasNodeType(nodeType) {
+        return nodeTypes.has(nodeType);
+      },
+      listNodeTypes() {
+        return Array.from(nodeTypes.keys()).sort();
+      },
+      toObject() {
+        const result = {};
+        for (const [nodeType, definition] of nodeTypes) {
+          result[nodeType] = definition;
+        }
+        return result;
+      },
+      get size() {
+        return nodeTypes.size;
+      }
+    };
+  }
+  function validateNodeTypeName(nodeType) {
+    if (typeof nodeType !== "string") {
+      throw new TypeError(`Node type name must be a string, got ${typeof nodeType}`);
+    }
+    if (nodeType.length === 0) {
+      throw new TypeError("Node type name must not be empty");
+    }
+    if (/^\s+$/.test(nodeType)) {
+      throw new TypeError("Node type name must not be whitespace-only");
+    }
+    if (/\s/.test(nodeType)) {
+      throw new TypeError(`Node type name must not contain whitespace: ${nodeType}`);
+    }
+    if (nodeType.startsWith(".")) {
+      throw new TypeError(`Node type name must not start with a dot: ${nodeType}`);
+    }
+    if (nodeType.endsWith(".")) {
+      throw new TypeError(`Node type name must not end with a dot: ${nodeType}`);
+    }
+  }
+  function validateNodeTypeDefinition(nodeType, definition) {
+    if (!definition || typeof definition !== "object") {
+      throw new TypeError(`Invalid node type ${nodeType}: definition must be an object`);
+    }
+    if (typeof definition.category !== "string" || definition.category.length === 0) {
+      throw new TypeError(`Invalid node type ${nodeType}: category must be a non-empty string`);
+    }
+    if (typeof definition.evaluate !== "function") {
+      throw new TypeError(`Invalid node type ${nodeType}: evaluate must be a function`);
+    }
+    const inputs = definition.inputs ?? [];
+    const params = definition.params ?? [];
+    const outputs = definition.outputs ?? [];
+    if (!Array.isArray(inputs)) {
+      throw new TypeError(`Invalid node type ${nodeType}: inputs must be an array`);
+    }
+    if (!Array.isArray(params)) {
+      throw new TypeError(`Invalid node type ${nodeType}: params must be an array`);
+    }
+    if (!Array.isArray(outputs)) {
+      throw new TypeError(`Invalid node type ${nodeType}: outputs must be an array`);
+    }
+    validatePortArray(nodeType, "input", inputs);
+    validatePortArray(nodeType, "param", params);
+    validatePortArray(nodeType, "output", outputs);
+  }
+  function validatePortArray(nodeType, portCategory, ports) {
+    const names = /* @__PURE__ */ new Set();
+    for (const port of ports) {
+      if (!port || typeof port !== "object") {
+        throw new TypeError(
+          `Invalid node type ${nodeType}: ${portCategory} must be an object`
+        );
+      }
+      if (typeof port.name !== "string" || port.name.length === 0) {
+        throw new TypeError(
+          `Invalid node type ${nodeType}: ${portCategory} name must be a non-empty string`
+        );
+      }
+      if (typeof port.type !== "string" || port.type.length === 0) {
+        throw new TypeError(
+          `Invalid node type ${nodeType}: ${portCategory} type must be a non-empty string`
+        );
+      }
+      if ("kind" in port) {
+        if (typeof port.kind !== "string" || port.kind.length === 0) {
+          throw new TypeError(
+            `Invalid node type ${nodeType}: ${portCategory} kind must be a non-empty string`
+          );
+        }
+      }
+      if (names.has(port.name)) {
+        throw new TypeError(
+          `Invalid node type ${nodeType}: duplicate ${portCategory} name "${port.name}"`
+        );
+      }
+      names.add(port.name);
+    }
+  }
+  function normalizeNodeTypeDefinition(definition) {
+    return {
+      ...definition,
+      inputs: definition.inputs ?? [],
+      params: definition.params ?? [],
+      outputs: definition.outputs ?? []
+    };
+  }
+
+  // ../../src/nodes/core.js
+  function registerCoreNodes(registry) {
+    registry.registerNodeType("clock", {
+      category: "source",
+      inputs: [],
+      outputs: [{ name: "t", type: "number", kind: "behavior" }],
+      params: [],
+      evaluate: (inputs, params, ctx) => {
+        if (!Number.isFinite(ctx.env?.time)) {
+          throw new LoomError("MISSING_ENV_TIME", "clock requires env.time in the evaluation environment", { reason: "env.time" });
+        }
+        return { t: ctx.env.time };
+      }
+    });
+    registry.registerNodeType("console.error", {
+      category: "sink",
+      inputs: [{ name: "value", type: "any", default: void 0, kind: "behavior" }],
+      outputs: [],
+      params: [],
+      evaluate: (inputs, params, ctx) => {
+        ctx.engine?._recordEffect({ type: "console.error", level: "error", value: inputs.value, nodeId: ctx.currentNodeId });
+        return {};
+      }
+    });
+    registry.registerNodeType("console.log", {
+      category: "sink",
+      inputs: [{ name: "value", type: "any", default: void 0, kind: "behavior" }],
+      outputs: [],
+      params: [],
+      evaluate: (inputs, params, ctx) => {
+        ctx.engine?._recordEffect({ type: "console.log", level: "log", value: inputs.value, nodeId: ctx.currentNodeId });
+        return {};
+      }
+    });
+    registry.registerNodeType("console.table", {
+      category: "sink",
+      inputs: [{ name: "value", type: "any", default: void 0, kind: "behavior" }],
+      outputs: [],
+      params: [],
+      evaluate: (inputs, params, ctx) => {
+        ctx.engine?._recordEffect({ type: "console.table", level: "table", value: inputs.value, nodeId: ctx.currentNodeId });
+        if (typeof console.table === "function" && ctx.emitConsole === true) console.table(inputs.value);
+        return {};
+      }
+    });
+    registry.registerNodeType("console.warn", {
+      category: "sink",
+      inputs: [{ name: "value", type: "any", default: void 0, kind: "behavior" }],
+      outputs: [],
+      params: [],
+      evaluate: (inputs, params, ctx) => {
+        ctx.engine?._recordEffect({ type: "console.warn", level: "warn", value: inputs.value, nodeId: ctx.currentNodeId });
+        return {};
+      }
+    });
+    registry.registerNodeType("constant", {
+      category: "source",
+      inputs: [],
+      outputs: [{ name: "out", type: "any", kind: "behavior" }],
+      params: [{ name: "value", type: "any", default: 0 }],
+      evaluate: (inputs, params, ctx) => ({ out: params.value })
+    });
+    registry.registerNodeType("debug.assert", { category: "transform", inputs: [{ name: "condition", type: "any", default: false, kind: "behavior" }, { name: "message", type: "string", default: "Assertion failed", kind: "behavior" }], outputs: [{ name: "out", type: "boolean", kind: "behavior" }], params: [{ name: "condition", type: "any", default: false }, { name: "message", type: "string", default: "Assertion failed" }], evaluate: (inputs) => {
+      if (!inputs.condition) throw new LoomError("ASSERTION_FAILED", stringifyTextValue(inputs.message) || "Assertion failed");
+      return { out: true };
+    } });
+    registry.registerNodeType("debug.inspect", { category: "transform", inputs: [{ name: "value", type: "any", default: null, kind: "behavior" }], outputs: [{ name: "out", type: "string", kind: "behavior" }], params: [{ name: "value", type: "any", default: null }], evaluate: (inputs) => ({ out: inspectValue(inputs.value) }) });
+    registry.registerNodeType("debug.trace", { category: "transform", inputs: [{ name: "value", type: "any", default: null, kind: "behavior" }, { name: "label", type: "string", default: "trace", kind: "behavior" }], outputs: [{ name: "out", type: "any", kind: "behavior" }], params: [{ name: "value", type: "any", default: null }, { name: "label", type: "string", default: "trace" }], evaluate: (inputs, params, ctx) => {
+      ctx.engine?._recordEffect({ type: "debug.trace", label: inputs.label, value: inputs.value, nodeId: ctx.currentNodeId });
+      return { out: inputs.value };
+    } });
+    registry.registerNodeType("delay1", {
+      category: "state",
+      inputs: [
+        { name: "value", type: "number", default: 0, kind: "behavior" }
+      ],
+      outputs: [{ name: "out", type: "number", kind: "behavior" }],
+      params: [
+        { name: "value", type: "number", default: 0 },
+        { name: "initial", type: "number", default: 0 }
+      ],
+      evaluate: (inputs, params, ctx) => {
+        const prevOut = sanitizeStateValue(ctx.prevOut, params.initial);
+        const value = resolveStateInputValue(inputs.value, params.initial);
+        return { out: prevOut, _newState: value };
+      }
+    });
+    registry.registerNodeType("filter", {
+      category: "transform",
+      inputs: [{ name: "event", type: "event<any>", kind: "event" }],
+      outputs: [{ name: "event", type: "event<any>", kind: "event" }],
+      params: [{ name: "predicate", type: "string", default: "true" }],
+      evaluate: (inputs, params, ctx) => {
+        const eventPayloads = inputs.event || [];
+        if (!Array.isArray(eventPayloads)) {
+          return { event: [] };
+        }
+        if (!ctx.nodePredicates) ctx.nodePredicates = /* @__PURE__ */ new Map();
+        const cacheKey = params.predicate;
+        let evaluator = ctx.nodePredicates.get(cacheKey);
+        if (!evaluator) {
+          try {
+            const dslEval = new RestrictedDSLEvaluator(params.predicate);
+            evaluator = dslEval.evaluate();
+            ctx.nodePredicates.set(cacheKey, evaluator);
+          } catch (e) {
+            throw e;
+          }
+        }
+        const filtered = eventPayloads.filter((payload) => {
+          try {
+            return evaluator(payload);
+          } catch (e) {
+            return false;
+          }
+        });
+        return { event: filtered };
+      }
+    });
+    registry.registerNodeType("fs.exists", { category: "source", inputs: [{ name: "path", type: "string", default: "", kind: "behavior" }], outputs: [{ name: "out", type: "boolean", kind: "behavior" }], params: [{ name: "path", type: "string", default: "" }], evaluate: (inputs) => ({ out: getNodeFs().existsSync(String(inputs.path)) }) });
+    registry.registerNodeType("fs.list", { category: "source", inputs: [{ name: "path", type: "string", default: ".", kind: "behavior" }], outputs: [{ name: "out", type: "array", kind: "behavior" }], params: [{ name: "path", type: "string", default: "." }], evaluate: (inputs) => ({ out: getNodeFs().readdirSync(String(inputs.path)) }) });
+    registry.registerNodeType("fs.readText", { category: "source", inputs: [{ name: "path", type: "string", default: "", kind: "behavior" }], outputs: [{ name: "out", type: "string", kind: "behavior" }], params: [{ name: "path", type: "string", default: "" }], evaluate: (inputs) => ({ out: getNodeFs().readFileSync(String(inputs.path), "utf8") }) });
+    registry.registerNodeType("fs.writeText", { category: "sink", inputs: [{ name: "path", type: "string", default: "", kind: "behavior" }, { name: "value", type: "any", default: "", kind: "behavior" }], outputs: [], params: [{ name: "path", type: "string", default: "" }, { name: "value", type: "any", default: "" }], evaluate: (inputs) => {
+      const fs = getNodeFs();
+      const path = getNodePath();
+      fs.mkdirSync(path.dirname(String(inputs.path)), { recursive: true });
+      fs.writeFileSync(String(inputs.path), stringifyTextValue(inputs.value), "utf8");
+      return {};
+    } });
+    registry.registerNodeType("integrate", {
+      category: "state",
+      inputs: [
+        { name: "value", type: "number", default: 0, kind: "behavior" }
+      ],
+      outputs: [{ name: "out", type: "number", kind: "behavior" }],
+      params: [
+        { name: "value", type: "number", default: 0 },
+        { name: "initial", type: "number", default: 0 },
+        { name: "min", type: "number|null", default: null },
+        { name: "max", type: "number|null", default: null }
+      ],
+      evaluate: (inputs, params, ctx) => {
+        const prevOut = sanitizeStateValue(ctx.prevOut, params.initial);
+        const value = resolveStateInputValue(inputs.value, 0);
+        const min3 = params.min === null ? null : coerceFiniteNumber(params.min, null);
+        const max3 = params.max === null ? null : coerceFiniteNumber(params.max, null);
+        let out = prevOut + value * ctx.dt;
+        if (min3 !== null && out < min3) out = min3;
+        if (max3 !== null && out > max3) out = max3;
+        return { out };
+      }
+    });
+    registry.registerNodeType("json.parse", {
+      category: "transform",
+      inputs: [{ name: "value", type: "any", default: "", kind: "behavior" }],
+      outputs: [{ name: "out", type: "any", kind: "behavior" }],
+      params: [{ name: "value", type: "any", default: "" }],
+      evaluate: (inputs) => {
+        try {
+          return { out: JSON.parse(String(inputs.value ?? "")) };
+        } catch (error) {
+          throw new LoomError("INVALID_JSON", `JSON parse failed: ${error.message}`);
+        }
+      }
+    });
+    registry.registerNodeType("json.stringify", {
+      category: "transform",
+      inputs: [{ name: "value", type: "any", default: null, kind: "behavior" }],
+      outputs: [{ name: "out", type: "string", kind: "behavior" }],
+      params: [
+        { name: "value", type: "any", default: null },
+        { name: "pretty", type: "boolean", default: false }
+      ],
+      evaluate: (inputs, params) => ({ out: stringifyJsonValue(inputs.value, params.pretty === true) })
+    });
+    registry.registerNodeType("log", {
+      category: "output",
+      inputs: [
+        { name: "value", type: "any", default: void 0, kind: "behavior" }
+      ],
+      outputs: [
+        { name: "value", type: "any", kind: "behavior" }
+      ],
+      params: [
+        { name: "label", type: "string", default: "" }
+      ],
+      evaluate: (inputs, params, ctx) => {
+        const label = params.label ?? "";
+        const message = label ? `${label}: ${inspectValue(inputs.value)}` : inspectValue(inputs.value);
+        ctx.engine?._recordEffect({ type: "log", message, nodeId: ctx.currentNodeId });
+        return { value: inputs.value };
+      }
+    });
+    registry.registerNodeType("lowpass", {
+      category: "state",
+      inputs: [
+        { name: "value", type: "number", default: 0, kind: "behavior" }
+      ],
+      outputs: [{ name: "out", type: "number", kind: "behavior" }],
+      params: [
+        { name: "value", type: "number", default: 0 },
+        { name: "tau", type: "number", default: 0.2 },
+        { name: "initial", type: "number", default: 0 }
+      ],
+      evaluate: (inputs, params, ctx) => {
+        const prevOut = sanitizeStateValue(ctx.prevOut, params.initial);
+        const value = resolveStateInputValue(inputs.value, params.initial);
+        const tau = coerceFiniteNumber(params.tau, 0.2);
+        const factor = tau <= 0 ? 1 : ctx.dt / (tau + ctx.dt);
+        return { out: prevOut + (value - prevOut) * factor };
+      }
+    });
+    registry.registerNodeType("merge", {
+      category: "transform",
+      inputs: [
+        { name: "a", type: "event<any>", kind: "event" },
+        { name: "b", type: "event<any>", kind: "event" }
+      ],
+      outputs: [{ name: "event", type: "event<any>", kind: "event" }],
+      params: [],
+      evaluate: (inputs, params, ctx) => {
+        const aPayloads = inputs.a || [];
+        const bPayloads = inputs.b || [];
+        const merged = [
+          ...Array.isArray(aPayloads) ? aPayloads : [],
+          ...Array.isArray(bPayloads) ? bPayloads : []
+        ];
+        return { event: merged };
+      }
+    });
+    registry.registerNodeType("random.choice", { category: "transform", inputs: [{ name: "list", type: "array", default: [], kind: "behavior" }], outputs: [{ name: "out", type: "any", kind: "behavior" }], params: [{ name: "list", type: "array", default: [] }], evaluate: (inputs) => {
+      const list = toArray(inputs.list);
+      return { out: list.length ? list[Math.floor(Math.random() * list.length)] : null };
+    } });
+    registry.registerNodeType("random.int", { category: "transform", inputs: [{ name: "min", type: "number", default: 0, kind: "behavior" }, { name: "max", type: "number", default: 1, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "min", type: "number", default: 0 }, { name: "max", type: "number", default: 1 }], evaluate: (inputs) => {
+      const min3 = Math.ceil(Math.min(inputs.min, inputs.max));
+      const max3 = Math.floor(Math.max(inputs.min, inputs.max));
+      return { out: Math.floor(Math.random() * (max3 - min3 + 1)) + min3 };
+    } });
+    registry.registerNodeType("random.range", { category: "transform", inputs: [{ name: "min", type: "number", default: 0, kind: "behavior" }, { name: "max", type: "number", default: 1, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "min", type: "number", default: 0 }, { name: "max", type: "number", default: 1 }], evaluate: (inputs) => ({ out: inputs.min + Math.random() * (inputs.max - inputs.min) }) });
+    registry.registerNodeType("random.value", { category: "source", inputs: [], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [], evaluate: () => ({ out: Math.random() }) });
+    registry.registerNodeType("sample", {
+      category: "transform",
+      inputs: [
+        { name: "trigger", type: "event<void>", kind: "event" },
+        { name: "value", type: "number", default: 0, kind: "behavior" }
+      ],
+      outputs: [{ name: "event", type: "event<number>", kind: "event" }],
+      params: [],
+      evaluate: (inputs, params, ctx) => {
+        const triggers = inputs.trigger || [];
+        const value = inputs.value;
+        if (!Array.isArray(triggers)) {
+          return { event: [] };
+        }
+        const sampled = triggers.map(() => value);
+        return { event: sampled };
+      }
+    });
+    registry.registerNodeType("time.serverClock", {
+      category: "source",
+      inputs: [],
+      outputs: [{ name: "t", type: "number", kind: "behavior" }],
+      params: [],
+      evaluate: (inputs, params, ctx) => ({ t: ctx.time })
+    });
+  }
+
+  // ../../src/nodes/function.js
+  function registerFunctionNodes(registry) {
+    registry.registerNodeType("function.call", {
+      category: "transform",
+      inputs: [
+        { name: "fn", type: "function", default: null, kind: "behavior" },
+        ...Array.from({ length: 8 }, (_, i2) => ({ name: `arg${i2 + 1}`, type: "any", default: void 0, kind: "behavior" }))
+      ],
+      outputs: [{ name: "out", type: "any", kind: "behavior" }],
+      params: [],
+      evaluate: (inputs, params, ctx) => {
+        const fn = assertLoomletCallable(inputs.fn, "function.call");
+        return { out: fn.call(collectInputs(inputs, Array.from({ length: 8 }, (_, i2) => `arg${i2 + 1}`)), ctx) };
+      }
+    });
+    registry.registerNodeType("function.literal", {
+      category: "source",
+      inputs: [],
+      outputs: [{ name: "out", type: "function", kind: "behavior" }],
+      params: [
+        { name: "params", type: "array", default: [] },
+        { name: "body", type: "any", default: null },
+        { name: "closureRefs", type: "object", default: {} }
+      ],
+      evaluate: (inputs, params, ctx) => ({ out: createLoomletFunction(params.params || [], params.body, params.closureRefs, ctx) })
+    });
+  }
+
+  // ../../src/nodes/math.js
+  function registerMathNodes(registry) {
+    registry.registerNodeType("abs", {
+      category: "transform",
+      inputs: [
+        { name: "a", type: "number", default: 0, kind: "behavior" }
+      ],
+      outputs: [{ name: "out", type: "number", kind: "behavior" }],
+      params: [
+        { name: "a", type: "number", default: 0 }
+      ],
+      evaluate: (inputs, params, ctx) => ({ out: Math.abs(inputs.a) })
+    });
+    registry.registerNodeType("add", {
+      category: "transform",
+      commutative: true,
+      inputs: [
+        { name: "a", type: "number", default: 0, kind: "behavior" },
+        { name: "b", type: "number", default: 0, kind: "behavior" }
+      ],
+      outputs: [{ name: "out", type: "number", kind: "behavior" }],
+      params: [
+        { name: "a", type: "number", default: 0 },
+        { name: "b", type: "number", default: 0 }
+      ],
+      evaluate: (inputs, params, ctx) => ({ out: inputs.a + inputs.b })
+    });
+    registry.registerNodeType("clamp", {
+      category: "transform",
+      inputs: [
+        { name: "value", type: "number", default: 0, kind: "behavior" },
+        { name: "min", type: "number", default: 0, kind: "behavior" },
+        { name: "max", type: "number", default: 1, kind: "behavior" }
+      ],
+      outputs: [{ name: "out", type: "number", kind: "behavior" }],
+      params: [
+        { name: "value", type: "number", default: 0 },
+        { name: "min", type: "number", default: 0 },
+        { name: "max", type: "number", default: 1 }
+      ],
+      evaluate: (inputs, params, ctx) => ({
+        out: inputs.min > inputs.max ? inputs.min : Math.max(inputs.min, Math.min(inputs.max, inputs.value))
+      })
+    });
+    registry.registerNodeType("cosine", {
+      category: "transform",
+      inputs: [
+        { name: "t", type: "number", default: 0, kind: "behavior" },
+        { name: "freq", type: "number", default: 1, kind: "behavior" },
+        { name: "amplitude", type: "number", default: 1, kind: "behavior" },
+        { name: "phase", type: "number", default: 0, kind: "behavior" },
+        { name: "offset", type: "number", default: 0, kind: "behavior" }
+      ],
+      outputs: [{ name: "out", type: "number", kind: "behavior" }],
+      params: [
+        { name: "freq", type: "number", default: 1 },
+        { name: "amplitude", type: "number", default: 1 },
+        { name: "phase", type: "number", default: 0 },
+        { name: "offset", type: "number", default: 0 }
+      ],
+      evaluate: (inputs, params, ctx) => {
+        const t2 = inputs.t;
+        const freq = inputs.freq;
+        const amplitude = inputs.amplitude;
+        const phase = inputs.phase;
+        const offset = inputs.offset;
+        return { out: Math.cos(t2 * freq * 2 * Math.PI + phase) * amplitude + offset };
+      }
+    });
+    registry.registerNodeType("divide", {
+      category: "transform",
+      inputs: [
+        { name: "a", type: "number", default: 0, kind: "behavior" },
+        { name: "b", type: "number", default: 1, kind: "behavior" }
+      ],
+      outputs: [{ name: "out", type: "number", kind: "behavior" }],
+      params: [
+        { name: "a", type: "number", default: 0 },
+        { name: "b", type: "number", default: 1 }
+      ],
+      evaluate: (inputs, params, ctx) => ({ out: inputs.b === 0 ? 0 : inputs.a / inputs.b })
+    });
+    registry.registerNodeType("greaterThan", {
+      category: "transform",
+      inputs: [
+        { name: "value", type: "number", default: 0, kind: "behavior" },
+        { name: "threshold", type: "number", default: 0, kind: "behavior" }
+      ],
+      outputs: [{ name: "out", type: "boolean", kind: "behavior" }],
+      params: [
+        { name: "value", type: "number", default: 0 },
+        { name: "threshold", type: "number", default: 0 }
+      ],
+      evaluate: (inputs, params, ctx) => ({ out: inputs.value > inputs.threshold })
+    });
+    registry.registerNodeType("lerp", {
+      category: "transform",
+      inputs: [
+        { name: "a", type: "number", default: 0, kind: "behavior" },
+        { name: "b", type: "number", default: 1, kind: "behavior" },
+        { name: "t", type: "number", default: 0, kind: "behavior" }
+      ],
+      outputs: [{ name: "out", type: "number", kind: "behavior" }],
+      params: [
+        { name: "a", type: "number", default: 0 },
+        { name: "b", type: "number", default: 1 },
+        { name: "t", type: "number", default: 0 }
+      ],
+      evaluate: (inputs, params, ctx) => ({ out: inputs.a + (inputs.b - inputs.a) * inputs.t })
+    });
+    registry.registerNodeType("lessThan", {
+      category: "transform",
+      inputs: [
+        { name: "value", type: "number", default: 0, kind: "behavior" },
+        { name: "threshold", type: "number", default: 0, kind: "behavior" }
+      ],
+      outputs: [{ name: "out", type: "boolean", kind: "behavior" }],
+      params: [
+        { name: "value", type: "number", default: 0 },
+        { name: "threshold", type: "number", default: 0 }
+      ],
+      evaluate: (inputs, params, ctx) => ({ out: inputs.value < inputs.threshold })
+    });
+    registry.registerNodeType("map", {
+      category: "transform",
+      inputs: [
+        { name: "value", type: "number", default: 0, kind: "behavior" },
+        { name: "inMin", type: "number", default: 0, kind: "behavior" },
+        { name: "inMax", type: "number", default: 1, kind: "behavior" },
+        { name: "outMin", type: "number", default: 0, kind: "behavior" },
+        { name: "outMax", type: "number", default: 1, kind: "behavior" }
+      ],
+      outputs: [{ name: "out", type: "number", kind: "behavior" }],
+      params: [
+        { name: "value", type: "number", default: 0 },
+        { name: "inMin", type: "number", default: 0 },
+        { name: "inMax", type: "number", default: 1 },
+        { name: "outMin", type: "number", default: 0 },
+        { name: "outMax", type: "number", default: 1 },
+        { name: "clamp", type: "boolean", default: false }
+      ],
+      evaluate: (inputs, params, ctx) => {
+        const { value, inMin, inMax, outMin, outMax } = inputs;
+        if (inMax === inMin) {
+          return { out: outMin };
+        }
+        let t2 = (value - inMin) / (inMax - inMin);
+        if (params.clamp === true) {
+          t2 = Math.max(0, Math.min(1, t2));
+        }
+        return { out: outMin + (outMax - outMin) * t2 };
+      }
+    });
+    registry.registerNodeType("math.abs", { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }], evaluate: (inputs) => ({ out: Math.abs(inputs.value) }) });
+    registry.registerNodeType("math.add", { category: "transform", commutative: true, inputs: [{ name: "a", type: "number", default: 0, kind: "behavior" }, { name: "b", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "a", type: "number", default: 0 }, { name: "b", type: "number", default: 0 }], evaluate: (inputs) => ({ out: inputs.a + inputs.b }) });
+    registry.registerNodeType("math.ceil", { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }], evaluate: (inputs) => ({ out: Math.ceil(inputs.value) }) });
+    registry.registerNodeType("math.clamp", { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }, { name: "min", type: "number", default: 0, kind: "behavior" }, { name: "max", type: "number", default: 1, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }, { name: "min", type: "number", default: 0 }, { name: "max", type: "number", default: 1 }], evaluate: (inputs) => ({ out: inputs.min > inputs.max ? inputs.min : Math.max(inputs.min, Math.min(inputs.max, inputs.value)) }) });
+    registry.registerNodeType("math.cosine", { category: "transform", inputs: [{ name: "t", type: "number", default: 0, kind: "behavior" }, { name: "freq", type: "number", default: 1, kind: "behavior" }, { name: "amplitude", type: "number", default: 1, kind: "behavior" }, { name: "phase", type: "number", default: 0, kind: "behavior" }, { name: "offset", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "freq", type: "number", default: 1 }, { name: "amplitude", type: "number", default: 1 }, { name: "phase", type: "number", default: 0 }, { name: "offset", type: "number", default: 0 }], evaluate: (inputs) => ({ out: Math.cos(inputs.t * inputs.freq * 2 * Math.PI + inputs.phase) * inputs.amplitude + inputs.offset }) });
+    registry.registerNodeType("math.divide", { category: "transform", inputs: [{ name: "a", type: "number", default: 0, kind: "behavior" }, { name: "b", type: "number", default: 1, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "a", type: "number", default: 0 }, { name: "b", type: "number", default: 1 }], evaluate: (inputs) => ({ out: inputs.b === 0 ? 0 : inputs.a / inputs.b }) });
+    registry.registerNodeType("math.floor", { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }], evaluate: (inputs) => ({ out: Math.floor(inputs.value) }) });
+    registry.registerNodeType("math.lerp", { category: "transform", inputs: [{ name: "a", type: "number", default: 0, kind: "behavior" }, { name: "b", type: "number", default: 1, kind: "behavior" }, { name: "t", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "a", type: "number", default: 0 }, { name: "b", type: "number", default: 1 }, { name: "t", type: "number", default: 0 }], evaluate: (inputs) => ({ out: inputs.a + (inputs.b - inputs.a) * inputs.t }) });
+    registry.registerNodeType("math.map", { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }, { name: "inMin", type: "number", default: 0, kind: "behavior" }, { name: "inMax", type: "number", default: 1, kind: "behavior" }, { name: "outMin", type: "number", default: 0, kind: "behavior" }, { name: "outMax", type: "number", default: 1, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }, { name: "inMin", type: "number", default: 0 }, { name: "inMax", type: "number", default: 1 }, { name: "outMin", type: "number", default: 0 }, { name: "outMax", type: "number", default: 1 }, { name: "clamp", type: "boolean", default: false }], evaluate: (inputs, params) => {
+      if (inputs.inMax === inputs.inMin) return { out: inputs.outMin };
+      let t2 = (inputs.value - inputs.inMin) / (inputs.inMax - inputs.inMin);
+      if (params.clamp === true) t2 = Math.max(0, Math.min(1, t2));
+      return { out: inputs.outMin + (inputs.outMax - inputs.outMin) * t2 };
+    } });
+    registry.registerNodeType("math.max", { category: "transform", commutative: true, inputs: [{ name: "a", type: "number", default: 0, kind: "behavior" }, { name: "b", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "a", type: "number", default: 0 }, { name: "b", type: "number", default: 0 }], evaluate: (inputs) => ({ out: Math.max(inputs.a, inputs.b) }) });
+    registry.registerNodeType("math.min", { category: "transform", commutative: true, inputs: [{ name: "a", type: "number", default: 0, kind: "behavior" }, { name: "b", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "a", type: "number", default: 0 }, { name: "b", type: "number", default: 0 }], evaluate: (inputs) => ({ out: Math.min(inputs.a, inputs.b) }) });
+    registry.registerNodeType("math.mod", { category: "transform", inputs: [{ name: "a", type: "number", default: 0, kind: "behavior" }, { name: "b", type: "number", default: 1, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "a", type: "number", default: 0 }, { name: "b", type: "number", default: 1 }], evaluate: (inputs) => ({ out: inputs.b === 0 ? 0 : (inputs.a % inputs.b + inputs.b) % inputs.b }) });
+    registry.registerNodeType("math.multiply", { category: "transform", commutative: true, inputs: [{ name: "a", type: "number", default: 1, kind: "behavior" }, { name: "b", type: "number", default: 1, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "a", type: "number", default: 1 }, { name: "b", type: "number", default: 1 }], evaluate: (inputs) => ({ out: inputs.a * inputs.b }) });
+    registry.registerNodeType("math.pow", { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }, { name: "exponent", type: "number", default: 1, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }, { name: "exponent", type: "number", default: 1 }], evaluate: (inputs) => ({ out: Math.pow(inputs.value, inputs.exponent) }) });
+    registry.registerNodeType("math.round", { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }], evaluate: (inputs) => ({ out: Math.round(inputs.value) }) });
+    registry.registerNodeType("math.sine", {
+      category: "transform",
+      inputs: [
+        { name: "t", type: "number", default: 0, kind: "behavior" },
+        { name: "freq", type: "number", default: 1, kind: "behavior" },
+        { name: "amplitude", type: "number", default: 1, kind: "behavior" },
+        { name: "offset", type: "number", default: 0, kind: "behavior" }
+      ],
+      outputs: [{ name: "out", type: "number", kind: "behavior" }],
+      params: [
+        { name: "freq", type: "number", default: 1 },
+        { name: "amplitude", type: "number", default: 1 },
+        { name: "offset", type: "number", default: 0 }
+      ],
+      evaluate: (inputs, params, ctx) => {
+        const t2 = inputs.t;
+        const freq = inputs.freq;
+        const amplitude = inputs.amplitude;
+        const offset = inputs.offset;
+        return { out: Math.sin(t2 * freq * 2 * Math.PI) * amplitude + offset };
+      }
+    });
+    registry.registerNodeType("math.smoothstep", { category: "transform", inputs: [{ name: "x", type: "number", default: 0, kind: "behavior" }, { name: "edge0", type: "number", default: 0, kind: "behavior" }, { name: "edge1", type: "number", default: 1, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "x", type: "number", default: 0 }, { name: "edge0", type: "number", default: 0 }, { name: "edge1", type: "number", default: 1 }], evaluate: (inputs) => {
+      if (inputs.edge0 === inputs.edge1) return { out: inputs.x < inputs.edge0 ? 0 : 1 };
+      let t2 = (inputs.x - inputs.edge0) / (inputs.edge1 - inputs.edge0);
+      t2 = Math.max(0, Math.min(1, t2));
+      return { out: t2 * t2 * (3 - 2 * t2) };
+    } });
+    registry.registerNodeType("math.sqrt", { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }], evaluate: (inputs) => ({ out: Math.sqrt(inputs.value) }) });
+    registry.registerNodeType("math.subtract", { category: "transform", inputs: [{ name: "a", type: "number", default: 0, kind: "behavior" }, { name: "b", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "a", type: "number", default: 0 }, { name: "b", type: "number", default: 0 }], evaluate: (inputs) => ({ out: inputs.a - inputs.b }) });
+    registry.registerNodeType("math.tan", { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }], evaluate: (inputs) => ({ out: Math.tan(inputs.value) }) });
+    registry.registerNodeType("mod", {
+      category: "transform",
+      inputs: [
+        { name: "a", type: "number", default: 0, kind: "behavior" },
+        { name: "b", type: "number", default: 1, kind: "behavior" }
+      ],
+      outputs: [{ name: "out", type: "number", kind: "behavior" }],
+      params: [
+        { name: "a", type: "number", default: 0 },
+        { name: "b", type: "number", default: 1 }
+      ],
+      evaluate: (inputs, params, ctx) => ({ out: inputs.b === 0 ? 0 : (inputs.a % inputs.b + inputs.b) % inputs.b })
+    });
+    registry.registerNodeType("multiply", {
+      category: "transform",
+      commutative: true,
+      inputs: [
+        { name: "a", type: "number", default: 1, kind: "behavior" },
+        { name: "b", type: "number", default: 1, kind: "behavior" }
+      ],
+      outputs: [{ name: "out", type: "number", kind: "behavior" }],
+      params: [
+        { name: "a", type: "number", default: 1 },
+        { name: "b", type: "number", default: 1 }
+      ],
+      evaluate: (inputs, params, ctx) => ({ out: inputs.a * inputs.b })
+    });
+    registry.registerNodeType("negate", {
+      category: "transform",
+      inputs: [
+        { name: "a", type: "number", default: 0, kind: "behavior" }
+      ],
+      outputs: [{ name: "out", type: "number", kind: "behavior" }],
+      params: [
+        { name: "a", type: "number", default: 0 }
+      ],
+      evaluate: (inputs, params, ctx) => ({ out: -inputs.a })
+    });
+    registry.registerNodeType("sine", {
+      category: "transform",
+      inputs: [
+        { name: "t", type: "number", default: 0, kind: "behavior" },
+        { name: "freq", type: "number", default: 1, kind: "behavior" },
+        { name: "amplitude", type: "number", default: 1, kind: "behavior" },
+        { name: "phase", type: "number", default: 0, kind: "behavior" },
+        { name: "offset", type: "number", default: 0, kind: "behavior" }
+      ],
+      outputs: [{ name: "out", type: "number", kind: "behavior" }],
+      params: [
+        { name: "freq", type: "number", default: 1 },
+        { name: "amplitude", type: "number", default: 1 },
+        { name: "phase", type: "number", default: 0 },
+        { name: "offset", type: "number", default: 0 }
+      ],
+      evaluate: (inputs, params, ctx) => {
+        const t2 = inputs.t;
+        const freq = inputs.freq;
+        const amplitude = inputs.amplitude;
+        const phase = inputs.phase;
+        const offset = inputs.offset;
+        return { out: Math.sin(t2 * freq * 2 * Math.PI + phase) * amplitude + offset };
+      }
+    });
+    registry.registerNodeType("smoothLerp", {
+      category: "state",
+      inputs: [
+        { name: "value", type: "number", default: 0, kind: "behavior" }
+      ],
+      outputs: [{ name: "out", type: "number", kind: "behavior" }],
+      params: [
+        { name: "value", type: "number", default: 0 },
+        { name: "rate", type: "number", default: 5 },
+        { name: "initial", type: "number", default: 0 }
+      ],
+      evaluate: (inputs, params, ctx) => {
+        const prevOut = sanitizeStateValue(ctx.prevOut, params.initial);
+        const value = resolveStateInputValue(inputs.value, params.initial);
+        const rate = coerceFiniteNumber(params.rate, 5);
+        const factor = 1 - Math.exp(-rate * ctx.dt);
+        return { out: prevOut + (value - prevOut) * factor };
+      }
+    });
+    registry.registerNodeType("smoothstep", {
+      category: "transform",
+      inputs: [
+        { name: "x", type: "number", default: 0, kind: "behavior" },
+        { name: "edge0", type: "number", default: 0, kind: "behavior" },
+        { name: "edge1", type: "number", default: 1, kind: "behavior" }
+      ],
+      outputs: [{ name: "out", type: "number", kind: "behavior" }],
+      params: [
+        { name: "x", type: "number", default: 0 },
+        { name: "edge0", type: "number", default: 0 },
+        { name: "edge1", type: "number", default: 1 }
+      ],
+      evaluate: (inputs, params, ctx) => {
+        const { x: x2, edge0, edge1 } = inputs;
+        if (edge0 === edge1) {
+          return { out: x2 < edge0 ? 0 : 1 };
+        }
+        let t2 = (x2 - edge0) / (edge1 - edge0);
+        t2 = Math.max(0, Math.min(1, t2));
+        return { out: t2 * t2 * (3 - 2 * t2) };
+      }
+    });
+    registry.registerNodeType("subtract", {
+      category: "transform",
+      inputs: [
+        { name: "a", type: "number", default: 0, kind: "behavior" },
+        { name: "b", type: "number", default: 0, kind: "behavior" }
+      ],
+      outputs: [{ name: "out", type: "number", kind: "behavior" }],
+      params: [
+        { name: "a", type: "number", default: 0 },
+        { name: "b", type: "number", default: 0 }
+      ],
+      evaluate: (inputs, params, ctx) => ({ out: inputs.a - inputs.b })
+    });
+  }
+
+  // ../../src/nodes/logic.js
+  function registerLogicNodes(registry) {
+    registry.registerNodeType("logic.and", { category: "transform", commutative: true, inputs: [{ name: "a", type: "any", default: false, kind: "behavior" }, { name: "b", type: "any", default: false, kind: "behavior" }], outputs: [{ name: "out", type: "boolean", kind: "behavior" }], params: [{ name: "a", type: "any", default: false }, { name: "b", type: "any", default: false }], evaluate: (inputs) => ({ out: Boolean(inputs.a && inputs.b) }) });
+    registry.registerNodeType("logic.equals", { category: "transform", inputs: [{ name: "value", type: "any", default: null, kind: "behavior" }, { name: "other", type: "any", default: null, kind: "behavior" }], outputs: [{ name: "out", type: "boolean", kind: "behavior" }], params: [{ name: "value", type: "any", default: null }, { name: "other", type: "any", default: null }], evaluate: (inputs) => ({ out: Object.is(inputs.value, inputs.other) }) });
+    registry.registerNodeType("logic.greaterOrEqual", { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }, { name: "other", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "boolean", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }, { name: "other", type: "number", default: 0 }], evaluate: (inputs) => ({ out: inputs.value >= inputs.other }) });
+    registry.registerNodeType("logic.greaterThan", { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }, { name: "other", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "boolean", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }, { name: "other", type: "number", default: 0 }], evaluate: (inputs) => ({ out: inputs.value > inputs.other }) });
+    registry.registerNodeType("logic.lessOrEqual", { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }, { name: "other", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "boolean", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }, { name: "other", type: "number", default: 0 }], evaluate: (inputs) => ({ out: inputs.value <= inputs.other }) });
+    registry.registerNodeType("logic.lessThan", { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }, { name: "other", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "boolean", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }, { name: "other", type: "number", default: 0 }], evaluate: (inputs) => ({ out: inputs.value < inputs.other }) });
+    registry.registerNodeType("logic.not", { category: "transform", inputs: [{ name: "value", type: "any", default: false, kind: "behavior" }], outputs: [{ name: "out", type: "boolean", kind: "behavior" }], params: [{ name: "value", type: "any", default: false }], evaluate: (inputs) => ({ out: !inputs.value }) });
+    registry.registerNodeType("logic.notEquals", { category: "transform", inputs: [{ name: "value", type: "any", default: null, kind: "behavior" }, { name: "other", type: "any", default: null, kind: "behavior" }], outputs: [{ name: "out", type: "boolean", kind: "behavior" }], params: [{ name: "value", type: "any", default: null }, { name: "other", type: "any", default: null }], evaluate: (inputs) => ({ out: !Object.is(inputs.value, inputs.other) }) });
+    registry.registerNodeType("logic.or", { category: "transform", commutative: true, inputs: [{ name: "a", type: "any", default: false, kind: "behavior" }, { name: "b", type: "any", default: false, kind: "behavior" }], outputs: [{ name: "out", type: "boolean", kind: "behavior" }], params: [{ name: "a", type: "any", default: false }, { name: "b", type: "any", default: false }], evaluate: (inputs) => ({ out: Boolean(inputs.a || inputs.b) }) });
+    registry.registerNodeType("logic.select", { category: "transform", inputs: [{ name: "condition", type: "any", default: false, kind: "behavior" }, { name: "whenTrue", type: "any", default: null, kind: "behavior" }, { name: "whenFalse", type: "any", default: null, kind: "behavior" }], outputs: [{ name: "out", type: "any", kind: "behavior" }], params: [{ name: "condition", type: "any", default: false }, { name: "whenTrue", type: "any", default: null }, { name: "whenFalse", type: "any", default: null }], evaluate: (inputs) => ({ out: inputs.condition ? inputs.whenTrue : inputs.whenFalse }) });
+    registry.registerNodeType("logic.when", { category: "transform", inputs: [{ name: "condition", type: "any", default: false, kind: "behavior" }, { name: "value", type: "any", default: null, kind: "behavior" }], outputs: [{ name: "out", type: "any", kind: "behavior" }], params: [{ name: "condition", type: "any", default: false }, { name: "value", type: "any", default: null }], evaluate: (inputs) => ({ out: inputs.condition ? inputs.value : null }) });
+  }
+
+  // ../../src/nodes/text.js
+  function registerTextNodes(registry) {
+    registry.registerNodeType("text.concat", {
+      category: "transform",
+      inputs: Array.from({ length: 8 }, (_, i2) => ({ name: `value${i2 + 1}`, type: "any", default: void 0, kind: "behavior" })),
+      outputs: [{ name: "out", type: "string", kind: "behavior" }],
+      params: Array.from({ length: 8 }, (_, i2) => ({ name: `value${i2 + 1}`, type: "any", default: void 0 })),
+      evaluate: (inputs) => ({ out: collectInputs(inputs, Array.from({ length: 8 }, (_, i2) => `value${i2 + 1}`)).map((value) => stringifyTextValue(value)).join("") })
+    });
+    registry.registerNodeType("text.endsWith", {
+      category: "transform",
+      inputs: [{ name: "value", type: "any", default: "", kind: "behavior" }, { name: "search", type: "any", default: "", kind: "behavior" }],
+      outputs: [{ name: "out", type: "boolean", kind: "behavior" }],
+      params: [{ name: "value", type: "any", default: "" }, { name: "search", type: "any", default: "" }],
+      evaluate: (inputs) => ({ out: stringifyTextValue(inputs.value).endsWith(stringifyTextValue(inputs.search)) })
+    });
+    registry.registerNodeType("text.includes", {
+      category: "transform",
+      inputs: [{ name: "value", type: "any", default: "", kind: "behavior" }, { name: "search", type: "any", default: "", kind: "behavior" }],
+      outputs: [{ name: "out", type: "boolean", kind: "behavior" }],
+      params: [{ name: "value", type: "any", default: "" }, { name: "search", type: "any", default: "" }],
+      evaluate: (inputs) => ({ out: stringifyTextValue(inputs.value).includes(stringifyTextValue(inputs.search)) })
+    });
+    registry.registerNodeType("text.isEmpty", {
+      category: "transform",
+      inputs: [{ name: "value", type: "any", default: "", kind: "behavior" }],
+      outputs: [{ name: "out", type: "boolean", kind: "behavior" }],
+      params: [{ name: "value", type: "any", default: "" }],
+      evaluate: (inputs) => ({ out: stringifyTextValue(inputs.value).length === 0 })
+    });
+    registry.registerNodeType("text.join", {
+      category: "transform",
+      inputs: [
+        { name: "list", type: "array", default: [], kind: "behavior" },
+        { name: "separator", type: "any", default: ",", kind: "behavior" }
+      ],
+      outputs: [{ name: "out", type: "string", kind: "behavior" }],
+      params: [{ name: "list", type: "array", default: [] }, { name: "separator", type: "any", default: "," }],
+      evaluate: (inputs) => ({ out: toArray(inputs.list).map((value) => stringifyTextValue(value)).join(stringifyTextValue(inputs.separator)) })
+    });
+    registry.registerNodeType("text.length", {
+      category: "transform",
+      inputs: [{ name: "value", type: "any", default: "", kind: "behavior" }],
+      outputs: [{ name: "out", type: "number", kind: "behavior" }],
+      params: [{ name: "value", type: "any", default: "" }],
+      evaluate: (inputs) => ({ out: stringifyTextValue(inputs.value).length })
+    });
+    registry.registerNodeType("text.lower", {
+      category: "transform",
+      inputs: [{ name: "value", type: "any", default: "", kind: "behavior" }],
+      outputs: [{ name: "out", type: "string", kind: "behavior" }],
+      params: [{ name: "value", type: "any", default: "" }],
+      evaluate: (inputs) => ({ out: String(inputs.value ?? "").toLowerCase() })
+    });
+    registry.registerNodeType("text.replace", {
+      category: "transform",
+      inputs: [
+        { name: "value", type: "any", default: "", kind: "behavior" },
+        { name: "search", type: "any", default: "", kind: "behavior" },
+        { name: "replacement", type: "any", default: "", kind: "behavior" }
+      ],
+      outputs: [{ name: "out", type: "string", kind: "behavior" }],
+      params: [
+        { name: "value", type: "any", default: "" },
+        { name: "search", type: "any", default: "" },
+        { name: "replacement", type: "any", default: "" }
+      ],
+      evaluate: (inputs) => ({
+        out: String(inputs.value ?? "").replaceAll(String(inputs.search ?? ""), String(inputs.replacement ?? ""))
+      })
+    });
+    registry.registerNodeType("text.split", {
+      category: "transform",
+      inputs: [
+        { name: "value", type: "any", default: "", kind: "behavior" },
+        { name: "separator", type: "any", default: ",", kind: "behavior" }
+      ],
+      outputs: [{ name: "out", type: "array", kind: "behavior" }],
+      params: [{ name: "value", type: "any", default: "" }, { name: "separator", type: "any", default: "," }],
+      evaluate: (inputs) => ({ out: stringifyTextValue(inputs.value).split(stringifyTextValue(inputs.separator)) })
+    });
+    registry.registerNodeType("text.startsWith", {
+      category: "transform",
+      inputs: [{ name: "value", type: "any", default: "", kind: "behavior" }, { name: "search", type: "any", default: "", kind: "behavior" }],
+      outputs: [{ name: "out", type: "boolean", kind: "behavior" }],
+      params: [{ name: "value", type: "any", default: "" }, { name: "search", type: "any", default: "" }],
+      evaluate: (inputs) => ({ out: stringifyTextValue(inputs.value).startsWith(stringifyTextValue(inputs.search)) })
+    });
+    registry.registerNodeType("text.stringify", {
+      category: "transform",
+      inputs: [{ name: "value", type: "any", default: null, kind: "behavior" }],
+      outputs: [{ name: "out", type: "string", kind: "behavior" }],
+      params: [{ name: "value", type: "any", default: null }],
+      evaluate: (inputs) => ({ out: stringifyTextValue(inputs.value) })
+    });
+    registry.registerNodeType("text.trim", {
+      category: "transform",
+      inputs: [{ name: "value", type: "any", default: "", kind: "behavior" }],
+      outputs: [{ name: "out", type: "string", kind: "behavior" }],
+      params: [{ name: "value", type: "any", default: "" }],
+      evaluate: (inputs) => ({ out: String(inputs.value ?? "").trim() })
+    });
+    registry.registerNodeType("text.upper", {
+      category: "transform",
+      inputs: [{ name: "value", type: "any", default: "", kind: "behavior" }],
+      outputs: [{ name: "out", type: "string", kind: "behavior" }],
+      params: [{ name: "value", type: "any", default: "" }],
+      evaluate: (inputs) => ({ out: String(inputs.value ?? "").toUpperCase() })
+    });
+  }
+
+  // ../../src/nodes/list.js
+  function registerListNodes(registry) {
+    registry.registerNodeType("list.at", { category: "transform", inputs: [{ name: "list", type: "array", default: [], kind: "behavior" }, { name: "index", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "any", kind: "behavior" }], params: [{ name: "list", type: "array", default: [] }, { name: "index", type: "number", default: 0 }], evaluate: (inputs) => {
+      const list = toArray(inputs.list);
+      const raw = Math.trunc(inputs.index);
+      const index4 = raw < 0 ? list.length + raw : raw;
+      return { out: index4 >= 0 && index4 < list.length ? list[index4] : null };
+    } });
+    registry.registerNodeType("list.concat", { category: "transform", inputs: Array.from({ length: 4 }, (_, i2) => ({ name: `list${i2 + 1}`, type: "array", default: void 0, kind: "behavior" })), outputs: [{ name: "out", type: "array", kind: "behavior" }], params: Array.from({ length: 4 }, (_, i2) => ({ name: `list${i2 + 1}`, type: "array", default: void 0 })), evaluate: (inputs) => ({ out: collectInputs(inputs, Array.from({ length: 4 }, (_, i2) => `list${i2 + 1}`)).flatMap((value) => toArray(value)) }) });
+    registry.registerNodeType("list.drop", { category: "transform", inputs: [{ name: "list", type: "array", default: [], kind: "behavior" }, { name: "count", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "array", kind: "behavior" }], params: [{ name: "list", type: "array", default: [] }, { name: "count", type: "number", default: 0 }], evaluate: (inputs) => ({ out: toArray(inputs.list).slice(Math.max(0, Math.trunc(inputs.count))) }) });
+    registry.registerNodeType("list.filter", mapFunctionValueNode("list.filter", (list, fn, initial, ctx) => ({ out: list.filter((item) => isLoomletTruthy(fn.call([item], ctx))) })));
+    registry.registerNodeType("list.first", { category: "transform", inputs: [{ name: "list", type: "array", default: [], kind: "behavior" }], outputs: [{ name: "out", type: "any", kind: "behavior" }], params: [{ name: "list", type: "array", default: [] }], evaluate: (inputs) => ({ out: toArray(inputs.list)[0] ?? null }) });
+    registry.registerNodeType("list.join", { category: "transform", inputs: [{ name: "list", type: "array", default: [], kind: "behavior" }, { name: "separator", type: "any", default: ",", kind: "behavior" }], outputs: [{ name: "out", type: "string", kind: "behavior" }], params: [{ name: "list", type: "array", default: [] }, { name: "separator", type: "any", default: "," }], evaluate: (inputs) => ({ out: toArray(inputs.list).map((value) => stringifyTextValue(value)).join(stringifyTextValue(inputs.separator)) }) });
+    registry.registerNodeType("list.last", { category: "transform", inputs: [{ name: "list", type: "array", default: [], kind: "behavior" }], outputs: [{ name: "out", type: "any", kind: "behavior" }], params: [{ name: "list", type: "array", default: [] }], evaluate: (inputs) => {
+      const list = toArray(inputs.list);
+      return { out: list.length ? list[list.length - 1] : null };
+    } });
+    registry.registerNodeType("list.length", { category: "transform", inputs: [{ name: "list", type: "array", default: [], kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "list", type: "array", default: [] }], evaluate: (inputs) => ({ out: toArray(inputs.list).length }) });
+    registry.registerNodeType("list.map", mapFunctionValueNode("list.map", (list, fn, initial, ctx) => ({ out: list.map((item) => fn.call([item], ctx)) })));
+    registry.registerNodeType("list.of", { category: "transform", inputs: Array.from({ length: 8 }, (_, i2) => ({ name: `value${i2 + 1}`, type: "any", default: void 0, kind: "behavior" })), outputs: [{ name: "out", type: "array", kind: "behavior" }], params: Array.from({ length: 8 }, (_, i2) => ({ name: `value${i2 + 1}`, type: "any", default: void 0 })), evaluate: (inputs) => ({ out: collectInputs(inputs, Array.from({ length: 8 }, (_, i2) => `value${i2 + 1}`)) }) });
+    registry.registerNodeType("list.range", { category: "transform", inputs: [{ name: "start", type: "number", default: 0, kind: "behavior" }, { name: "end", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "array", kind: "behavior" }], params: [{ name: "start", type: "number", default: 0 }, { name: "end", type: "number", default: 0 }], evaluate: (inputs) => {
+      const start = Math.trunc(inputs.start);
+      const end = Math.trunc(inputs.end);
+      const step = start <= end ? 1 : -1;
+      const out = [];
+      for (let n2 = start; step > 0 ? n2 <= end : n2 >= end; n2 += step) out.push(n2);
+      return { out };
+    } });
+    registry.registerNodeType("list.reduce", mapFunctionValueNode("list.reduce", (list, fn, initial, ctx) => ({ out: list.reduce((acc, item) => fn.call([acc, item], ctx), initial) })));
+    registry.registerNodeType("list.reverse", { category: "transform", inputs: [{ name: "list", type: "array", default: [], kind: "behavior" }], outputs: [{ name: "out", type: "array", kind: "behavior" }], params: [{ name: "list", type: "array", default: [] }], evaluate: (inputs) => ({ out: [...toArray(inputs.list)].reverse() }) });
+    registry.registerNodeType("list.sort", { category: "transform", inputs: [{ name: "list", type: "array", default: [], kind: "behavior" }], outputs: [{ name: "out", type: "array", kind: "behavior" }], params: [{ name: "list", type: "array", default: [] }], evaluate: (inputs) => {
+      const list = [...toArray(inputs.list)];
+      if (list.every((value) => typeof value === "number")) list.sort((a2, b2) => a2 - b2);
+      else list.sort((a2, b2) => String(a2).localeCompare(String(b2)));
+      return { out: list };
+    } });
+    registry.registerNodeType("list.take", { category: "transform", inputs: [{ name: "list", type: "array", default: [], kind: "behavior" }, { name: "count", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "array", kind: "behavior" }], params: [{ name: "list", type: "array", default: [] }, { name: "count", type: "number", default: 0 }], evaluate: (inputs) => ({ out: toArray(inputs.list).slice(0, Math.max(0, Math.trunc(inputs.count))) }) });
+  }
+
+  // ../../src/nodes/scene.js
+  function registerSceneNodes(registry) {
+    registry.registerNodeType("scene.offsetPosition", {
+      category: "sink",
+      inputs: [
+        { name: "objectId", type: "string", default: "", kind: "behavior" },
+        { name: "x", type: "number", default: 0, kind: "behavior" },
+        { name: "y", type: "number", default: 0, kind: "behavior" },
+        { name: "z", type: "number", default: 0, kind: "behavior" }
+      ],
+      outputs: [],
+      params: [
+        { name: "objectId", type: "string", default: "" },
+        { name: "x", type: "number", default: 0 },
+        { name: "y", type: "number", default: 0 },
+        { name: "z", type: "number", default: 0 }
+      ],
+      evaluate: (inputs, params, ctx) => {
+        ctx.engine?._recordEffect({
+          type: "scene.offsetPosition",
+          objectId: inputs.objectId,
+          offset: [inputs.x, inputs.y, inputs.z],
+          target: "scenesync",
+          nodeId: ctx.currentNodeId
+        });
+        return {};
+      }
+    });
+    registry.registerNodeType("scene.setPosition", {
+      category: "sink",
+      inputs: [
+        { name: "objectId", type: "string", default: "", kind: "behavior" },
+        { name: "x", type: "number", default: 0, kind: "behavior" },
+        { name: "y", type: "number", default: 0, kind: "behavior" },
+        { name: "z", type: "number", default: 0, kind: "behavior" }
+      ],
+      outputs: [],
+      params: [
+        { name: "objectId", type: "string", default: "" },
+        { name: "x", type: "number", default: 0 },
+        { name: "y", type: "number", default: 0 },
+        { name: "z", type: "number", default: 0 }
+      ],
+      evaluate: (inputs, params, ctx) => {
+        ctx.engine?._recordEffect({
+          type: "scene.setPosition",
+          objectId: inputs.objectId,
+          position: [inputs.x, inputs.y, inputs.z],
+          target: "scenesync",
+          nodeId: ctx.currentNodeId
+        });
+        return {};
+      }
+    });
+    registry.registerNodeType("scene.setRotation", {
+      category: "sink",
+      inputs: [
+        { name: "objectId", type: "string", default: "", kind: "behavior" },
+        { name: "x", type: "number", default: 0, kind: "behavior" },
+        { name: "y", type: "number", default: 0, kind: "behavior" },
+        { name: "z", type: "number", default: 0, kind: "behavior" },
+        { name: "w", type: "number", default: 1, kind: "behavior" }
+      ],
+      outputs: [],
+      params: [
+        { name: "objectId", type: "string", default: "" },
+        { name: "x", type: "number", default: 0 },
+        { name: "y", type: "number", default: 0 },
+        { name: "z", type: "number", default: 0 },
+        { name: "w", type: "number", default: 1 }
+      ],
+      evaluate: (inputs, params, ctx) => {
+        ctx.engine?._recordEffect({
+          type: "scene.setRotation",
+          objectId: inputs.objectId,
+          rotation: [inputs.x, inputs.y, inputs.z, inputs.w],
+          target: "scenesync",
+          nodeId: ctx.currentNodeId
+        });
+        return {};
+      }
+    });
+    registry.registerNodeType("scene.setScale", {
+      category: "sink",
+      inputs: [
+        { name: "objectId", type: "string", default: "", kind: "behavior" },
+        { name: "x", type: "number", default: 1, kind: "behavior" },
+        { name: "y", type: "number", default: 1, kind: "behavior" },
+        { name: "z", type: "number", default: 1, kind: "behavior" }
+      ],
+      outputs: [],
+      params: [
+        { name: "objectId", type: "string", default: "" },
+        { name: "x", type: "number", default: 1 },
+        { name: "y", type: "number", default: 1 },
+        { name: "z", type: "number", default: 1 }
+      ],
+      evaluate: (inputs, params, ctx) => {
+        ctx.engine?._recordEffect({
+          type: "scene.setScale",
+          objectId: inputs.objectId,
+          scale: [inputs.x, inputs.y, inputs.z],
+          target: "scenesync",
+          nodeId: ctx.currentNodeId
+        });
+        return {};
+      }
+    });
+  }
+
+  // ../../src/nodes/dom.js
+  function registerDomNodes(registry) {
+    registry.registerNodeType("keyDown", {
+      category: "input",
+      inputs: [],
+      outputs: [{ name: "event", type: "event<string>", kind: "event" }],
+      params: [{ name: "key", type: "string", default: null }],
+      evaluate: (inputs, params, ctx) => {
+        return { event: [] };
+      },
+      onStart: (node2, engine) => {
+        const filterKey = node2.params?.key || null;
+        const handler = (e) => {
+          if (!filterKey || e.key === filterKey) {
+            engine.dispatchEvent(node2.id + ".event", e.key);
+          }
+        };
+        window.addEventListener("keydown", handler);
+        node2._eventHandler = handler;
+      },
+      onStop: (node2, engine) => {
+        if (node2._eventHandler) {
+          window.removeEventListener("keydown", node2._eventHandler);
+          delete node2._eventHandler;
+        }
+      }
+    });
+    registry.registerNodeType("keyUp", {
+      category: "input",
+      inputs: [],
+      outputs: [{ name: "event", type: "event<string>", kind: "event" }],
+      params: [{ name: "key", type: "string", default: null }],
+      evaluate: (inputs, params, ctx) => {
+        return { event: [] };
+      },
+      onStart: (node2, engine) => {
+        const filterKey = node2.params?.key || null;
+        const handler = (e) => {
+          if (!filterKey || e.key === filterKey) {
+            engine.dispatchEvent(node2.id + ".event", e.key);
+          }
+        };
+        window.addEventListener("keyup", handler);
+        node2._eventHandler = handler;
+      },
+      onStop: (node2, engine) => {
+        if (node2._eventHandler) {
+          window.removeEventListener("keyup", node2._eventHandler);
+          delete node2._eventHandler;
+        }
+      }
+    });
+    registry.registerNodeType("pointerClick", {
+      category: "input",
+      inputs: [],
+      outputs: [{ name: "event", type: "event<vec2>", kind: "event" }],
+      params: [{ name: "target", type: "string", default: "window" }],
+      evaluate: (inputs, params, ctx) => {
+        return { event: [] };
+      },
+      onStart: (node2, engine) => {
+        const targetSelector = node2.params?.target || "window";
+        const target = targetSelector === "window" ? window : document.querySelector(targetSelector);
+        if (!target) return;
+        const handler = (e) => {
+          engine.dispatchEvent(node2.id + ".event", { x: e.clientX, y: e.clientY });
+        };
+        target.addEventListener("pointerdown", handler);
+        node2._eventHandler = handler;
+        node2._eventTarget = target;
+      },
+      onStop: (node2, engine) => {
+        if (node2._eventTarget && node2._eventHandler) {
+          node2._eventTarget.removeEventListener("pointerdown", node2._eventHandler);
+          delete node2._eventHandler;
+          delete node2._eventTarget;
+        }
+      }
+    });
+    registry.registerNodeType("pointerPosition", {
+      category: "input",
+      inputs: [],
+      outputs: [{ name: "pos", type: "vec2", kind: "behavior" }],
+      params: [{ name: "target", type: "string", default: "window" }],
+      evaluate: (inputs, params, ctx) => {
+        if (!ctx.engine || !ctx.engine._inputStates) {
+          ctx.engine._inputStates = {};
+        }
+        const lastPos = ctx.engine._inputStates.lastPos || { x: 0, y: 0 };
+        return { pos: lastPos };
+      },
+      onStart: (node2, engine) => {
+        const targetSelector = node2.params?.target || "window";
+        const target = targetSelector === "window" ? window : document.querySelector(targetSelector);
+        if (!target) return;
+        if (!engine._inputStates) {
+          engine._inputStates = {};
+        }
+        const handler = (e) => {
+          engine._inputStates.lastPos = { x: e.clientX, y: e.clientY };
+        };
+        target.addEventListener("pointermove", handler);
+        node2._eventHandler = handler;
+        node2._eventTarget = target;
+      },
+      onStop: (node2, engine) => {
+        if (node2._eventTarget && node2._eventHandler) {
+          node2._eventTarget.removeEventListener("pointermove", node2._eventHandler);
+          delete node2._eventHandler;
+          delete node2._eventTarget;
+        }
+      }
+    });
+    registry.registerNodeType("setAttr", {
+      category: "sink",
+      inputs: [
+        { name: "value", type: "any", default: "", kind: "behavior" }
+      ],
+      outputs: [],
+      params: [
+        { name: "target", type: "string", default: "" },
+        { name: "name", type: "string", default: "" }
+      ],
+      evaluate: (inputs, params, ctx) => {
+        if (!params.target || !params.name) return {};
+        const el = document.querySelector(params.target);
+        if (el) el.setAttribute(params.name, String(inputs.value));
+        return {};
+      }
+    });
+    registry.registerNodeType("setClass", {
+      category: "sink",
+      inputs: [
+        { name: "enabled", type: "boolean", default: true, kind: "behavior" }
+      ],
+      outputs: [],
+      params: [
+        { name: "target", type: "string", default: "" },
+        { name: "className", type: "string", default: "" }
+      ],
+      evaluate: (inputs, params, ctx) => {
+        if (!params.target || !params.className) return {};
+        const el = document.querySelector(params.target);
+        if (!el) return {};
+        el.classList.toggle(params.className, Boolean(inputs.enabled));
+        return {};
+      }
+    });
+    registry.registerNodeType("setCssVar", {
+      category: "sink",
+      inputs: [
+        { name: "value", type: "any", default: 0, kind: "behavior" }
+      ],
+      outputs: [],
+      params: [
+        { name: "target", type: "string", default: "" },
+        { name: "name", type: "string", default: "" },
+        { name: "unit", type: "string", default: "" }
+      ],
+      evaluate: (inputs, params, ctx) => {
+        if (!params.target || !params.name) return {};
+        if (inputs.value === null || inputs.value === void 0) return {};
+        const el = document.querySelector(params.target);
+        if (!el) return {};
+        const cssVarName = params.name.startsWith("--") ? params.name : `--${params.name}`;
+        el.style.setProperty(cssVarName, String(inputs.value) + params.unit);
+        return {};
+      }
+    });
+    registry.registerNodeType("setStyle", {
+      category: "sink",
+      inputs: [
+        { name: "value", type: "any", default: "", kind: "behavior" }
+      ],
+      outputs: [],
+      params: [
+        { name: "target", type: "string", default: "" },
+        { name: "property", type: "string", default: "" },
+        { name: "unit", type: "string", default: "" }
+      ],
+      evaluate: (inputs, params, ctx) => {
+        if (!params.target || !params.property) return {};
+        const el = document.querySelector(params.target);
+        if (el) el.style[params.property] = String(inputs.value) + params.unit;
+        return {};
+      }
+    });
+    registry.registerNodeType("setText", {
+      category: "sink",
+      inputs: [
+        { name: "value", type: "any", default: "", kind: "behavior" }
+      ],
+      outputs: [],
+      params: [
+        { name: "target", type: "string", default: "" }
+      ],
+      evaluate: (inputs, params, ctx) => {
+        if (!params.target) return {};
+        const el = document.querySelector(params.target);
+        if (el) el.textContent = String(inputs.value);
+        return {};
+      }
+    });
+    registry.registerNodeType("setTransform2D", {
+      category: "sink",
+      inputs: [
+        { name: "x", type: "number", default: 0, kind: "behavior" },
+        { name: "y", type: "number", default: 0, kind: "behavior" },
+        { name: "scale", type: "number", default: 1, kind: "behavior" },
+        { name: "rotate", type: "number", default: 0, kind: "behavior" }
+      ],
+      outputs: [],
+      params: [
+        { name: "target", type: "string", default: "" },
+        { name: "unit", type: "string", default: "px" },
+        { name: "rotateUnit", type: "string", default: "deg" }
+      ],
+      evaluate: (inputs, params, ctx) => {
+        if (!params.target) return {};
+        const el = document.querySelector(params.target);
+        if (!el) return {};
+        el.style.transform = `translate(${inputs.x}${params.unit}, ${inputs.y}${params.unit}) scale(${inputs.scale}) rotate(${inputs.rotate}${params.rotateUnit})`;
+        return {};
+      }
+    });
+  }
+
+  // ../../src/nodes/index.js
+  function registerBuiltinNodes(registry) {
+    registerCoreNodes(registry);
+    registerFunctionNodes(registry);
+    registerMathNodes(registry);
+    registerLogicNodes(registry);
+    registerTextNodes(registry);
+    registerListNodes(registry);
+    registerSceneNodes(registry);
+    registerDomNodes(registry);
+    return registry;
+  }
+
   // ../../src/loom.js
   var LoomError = class extends Error {
     constructor(code, message, details = {}) {
@@ -13833,7 +15099,7 @@ var LoomletPreview = (() => {
       this.details = details;
     }
   };
-  var RestrictedDSLEvaluator = class {
+  var RestrictedDSLEvaluator2 = class {
     constructor(dslString, nodeId) {
       this.input = dslString;
       this.pos = 0;
@@ -14216,7 +15482,8 @@ var LoomletPreview = (() => {
         });
         return env[expr.name].call(args, ctx);
       }
-      const nodeType = NODE_TYPES[expr.name];
+      const nodeTypes = ctx.nodeTypes ?? NODE_TYPES;
+      const nodeType = nodeTypes[expr.name];
       if (!nodeType) throw new LoomError("UNKNOWN_NODE_TYPE", `Unknown node type in function body: ${expr.name}`);
       const positionalArgs = expr.args.filter((arg) => !arg.named);
       const namedArgs = expr.args.filter((arg) => arg.named);
@@ -14305,1076 +15572,34 @@ var LoomletPreview = (() => {
   function getNodePath() {
     return globalThis.process.getBuiltinModule("path");
   }
-  var NODE_TYPES = {
-    // Phase 0 ノード
-    clock: {
-      category: "source",
-      inputs: [],
-      outputs: [{ name: "t", type: "number", kind: "behavior" }],
-      params: [],
-      evaluate: (inputs, params, ctx) => ({ t: ctx.time })
-    },
-    "function.literal": {
-      category: "source",
-      inputs: [],
-      outputs: [{ name: "out", type: "function", kind: "behavior" }],
-      params: [
-        { name: "params", type: "array", default: [] },
-        { name: "body", type: "any", default: null },
-        { name: "closureRefs", type: "object", default: {} }
-      ],
-      evaluate: (inputs, params, ctx) => ({ out: createLoomletFunction(params.params || [], params.body, params.closureRefs, ctx) })
-    },
-    "function.call": {
-      category: "transform",
-      inputs: [
-        { name: "fn", type: "function", default: null, kind: "behavior" },
-        ...Array.from({ length: 8 }, (_, i2) => ({ name: `arg${i2 + 1}`, type: "any", default: void 0, kind: "behavior" }))
-      ],
-      outputs: [{ name: "out", type: "any", kind: "behavior" }],
-      params: [],
-      evaluate: (inputs, params, ctx) => {
-        const fn = assertLoomletCallable(inputs.fn, "function.call");
-        return { out: fn.call(collectInputs(inputs, Array.from({ length: 8 }, (_, i2) => `arg${i2 + 1}`)), ctx) };
-      }
-    },
-    constant: {
-      category: "source",
-      inputs: [],
-      outputs: [{ name: "out", type: "any", kind: "behavior" }],
-      params: [{ name: "value", type: "any", default: 0 }],
-      evaluate: (inputs, params, ctx) => ({ out: params.value })
-    },
-    sine: {
-      category: "transform",
-      inputs: [
-        { name: "t", type: "number", default: 0, kind: "behavior" },
-        { name: "freq", type: "number", default: 1, kind: "behavior" },
-        { name: "amplitude", type: "number", default: 1, kind: "behavior" },
-        { name: "phase", type: "number", default: 0, kind: "behavior" },
-        { name: "offset", type: "number", default: 0, kind: "behavior" }
-      ],
-      outputs: [{ name: "out", type: "number", kind: "behavior" }],
-      params: [
-        { name: "freq", type: "number", default: 1 },
-        { name: "amplitude", type: "number", default: 1 },
-        { name: "phase", type: "number", default: 0 },
-        { name: "offset", type: "number", default: 0 }
-      ],
-      evaluate: (inputs, params, ctx) => {
-        const t2 = inputs.t;
-        const freq = inputs.freq;
-        const amplitude = inputs.amplitude;
-        const phase = inputs.phase;
-        const offset = inputs.offset;
-        return { out: Math.sin(t2 * freq * 2 * Math.PI + phase) * amplitude + offset };
-      }
-    },
-    add: {
-      category: "transform",
-      commutative: true,
-      inputs: [
-        { name: "a", type: "number", default: 0, kind: "behavior" },
-        { name: "b", type: "number", default: 0, kind: "behavior" }
-      ],
-      outputs: [{ name: "out", type: "number", kind: "behavior" }],
-      params: [
-        { name: "a", type: "number", default: 0 },
-        { name: "b", type: "number", default: 0 }
-      ],
-      evaluate: (inputs, params, ctx) => ({ out: inputs.a + inputs.b })
-    },
-    multiply: {
-      category: "transform",
-      commutative: true,
-      inputs: [
-        { name: "a", type: "number", default: 1, kind: "behavior" },
-        { name: "b", type: "number", default: 1, kind: "behavior" }
-      ],
-      outputs: [{ name: "out", type: "number", kind: "behavior" }],
-      params: [
-        { name: "a", type: "number", default: 1 },
-        { name: "b", type: "number", default: 1 }
-      ],
-      evaluate: (inputs, params, ctx) => ({ out: inputs.a * inputs.b })
-    },
-    // 第1陣: 基本演算系
-    subtract: {
-      category: "transform",
-      inputs: [
-        { name: "a", type: "number", default: 0, kind: "behavior" },
-        { name: "b", type: "number", default: 0, kind: "behavior" }
-      ],
-      outputs: [{ name: "out", type: "number", kind: "behavior" }],
-      params: [
-        { name: "a", type: "number", default: 0 },
-        { name: "b", type: "number", default: 0 }
-      ],
-      evaluate: (inputs, params, ctx) => ({ out: inputs.a - inputs.b })
-    },
-    divide: {
-      category: "transform",
-      inputs: [
-        { name: "a", type: "number", default: 0, kind: "behavior" },
-        { name: "b", type: "number", default: 1, kind: "behavior" }
-      ],
-      outputs: [{ name: "out", type: "number", kind: "behavior" }],
-      params: [
-        { name: "a", type: "number", default: 0 },
-        { name: "b", type: "number", default: 1 }
-      ],
-      evaluate: (inputs, params, ctx) => ({ out: inputs.b === 0 ? 0 : inputs.a / inputs.b })
-    },
-    mod: {
-      category: "transform",
-      inputs: [
-        { name: "a", type: "number", default: 0, kind: "behavior" },
-        { name: "b", type: "number", default: 1, kind: "behavior" }
-      ],
-      outputs: [{ name: "out", type: "number", kind: "behavior" }],
-      params: [
-        { name: "a", type: "number", default: 0 },
-        { name: "b", type: "number", default: 1 }
-      ],
-      evaluate: (inputs, params, ctx) => ({ out: inputs.b === 0 ? 0 : (inputs.a % inputs.b + inputs.b) % inputs.b })
-    },
-    negate: {
-      category: "transform",
-      inputs: [
-        { name: "a", type: "number", default: 0, kind: "behavior" }
-      ],
-      outputs: [{ name: "out", type: "number", kind: "behavior" }],
-      params: [
-        { name: "a", type: "number", default: 0 }
-      ],
-      evaluate: (inputs, params, ctx) => ({ out: -inputs.a })
-    },
-    abs: {
-      category: "transform",
-      inputs: [
-        { name: "a", type: "number", default: 0, kind: "behavior" }
-      ],
-      outputs: [{ name: "out", type: "number", kind: "behavior" }],
-      params: [
-        { name: "a", type: "number", default: 0 }
-      ],
-      evaluate: (inputs, params, ctx) => ({ out: Math.abs(inputs.a) })
-    },
-    // 第2陣: 範囲操作系＋コサイン
-    clamp: {
-      category: "transform",
-      inputs: [
-        { name: "value", type: "number", default: 0, kind: "behavior" },
-        { name: "min", type: "number", default: 0, kind: "behavior" },
-        { name: "max", type: "number", default: 1, kind: "behavior" }
-      ],
-      outputs: [{ name: "out", type: "number", kind: "behavior" }],
-      params: [
-        { name: "value", type: "number", default: 0 },
-        { name: "min", type: "number", default: 0 },
-        { name: "max", type: "number", default: 1 }
-      ],
-      evaluate: (inputs, params, ctx) => ({
-        out: inputs.min > inputs.max ? inputs.min : Math.max(inputs.min, Math.min(inputs.max, inputs.value))
-      })
-    },
-    lerp: {
-      category: "transform",
-      inputs: [
-        { name: "a", type: "number", default: 0, kind: "behavior" },
-        { name: "b", type: "number", default: 1, kind: "behavior" },
-        { name: "t", type: "number", default: 0, kind: "behavior" }
-      ],
-      outputs: [{ name: "out", type: "number", kind: "behavior" }],
-      params: [
-        { name: "a", type: "number", default: 0 },
-        { name: "b", type: "number", default: 1 },
-        { name: "t", type: "number", default: 0 }
-      ],
-      evaluate: (inputs, params, ctx) => ({ out: inputs.a + (inputs.b - inputs.a) * inputs.t })
-    },
-    smoothstep: {
-      category: "transform",
-      inputs: [
-        { name: "x", type: "number", default: 0, kind: "behavior" },
-        { name: "edge0", type: "number", default: 0, kind: "behavior" },
-        { name: "edge1", type: "number", default: 1, kind: "behavior" }
-      ],
-      outputs: [{ name: "out", type: "number", kind: "behavior" }],
-      params: [
-        { name: "x", type: "number", default: 0 },
-        { name: "edge0", type: "number", default: 0 },
-        { name: "edge1", type: "number", default: 1 }
-      ],
-      evaluate: (inputs, params, ctx) => {
-        const { x: x2, edge0, edge1 } = inputs;
-        if (edge0 === edge1) {
-          return { out: x2 < edge0 ? 0 : 1 };
-        }
-        let t2 = (x2 - edge0) / (edge1 - edge0);
-        t2 = Math.max(0, Math.min(1, t2));
-        return { out: t2 * t2 * (3 - 2 * t2) };
-      }
-    },
-    map: {
-      category: "transform",
-      inputs: [
-        { name: "value", type: "number", default: 0, kind: "behavior" },
-        { name: "inMin", type: "number", default: 0, kind: "behavior" },
-        { name: "inMax", type: "number", default: 1, kind: "behavior" },
-        { name: "outMin", type: "number", default: 0, kind: "behavior" },
-        { name: "outMax", type: "number", default: 1, kind: "behavior" }
-      ],
-      outputs: [{ name: "out", type: "number", kind: "behavior" }],
-      params: [
-        { name: "value", type: "number", default: 0 },
-        { name: "inMin", type: "number", default: 0 },
-        { name: "inMax", type: "number", default: 1 },
-        { name: "outMin", type: "number", default: 0 },
-        { name: "outMax", type: "number", default: 1 },
-        { name: "clamp", type: "boolean", default: false }
-      ],
-      evaluate: (inputs, params, ctx) => {
-        const { value, inMin, inMax, outMin, outMax } = inputs;
-        if (inMax === inMin) {
-          return { out: outMin };
-        }
-        let t2 = (value - inMin) / (inMax - inMin);
-        if (params.clamp === true) {
-          t2 = Math.max(0, Math.min(1, t2));
-        }
-        return { out: outMin + (outMax - outMin) * t2 };
-      }
-    },
-    cosine: {
-      category: "transform",
-      inputs: [
-        { name: "t", type: "number", default: 0, kind: "behavior" },
-        { name: "freq", type: "number", default: 1, kind: "behavior" },
-        { name: "amplitude", type: "number", default: 1, kind: "behavior" },
-        { name: "phase", type: "number", default: 0, kind: "behavior" },
-        { name: "offset", type: "number", default: 0, kind: "behavior" }
-      ],
-      outputs: [{ name: "out", type: "number", kind: "behavior" }],
-      params: [
-        { name: "freq", type: "number", default: 1 },
-        { name: "amplitude", type: "number", default: 1 },
-        { name: "phase", type: "number", default: 0 },
-        { name: "offset", type: "number", default: 0 }
-      ],
-      evaluate: (inputs, params, ctx) => {
-        const t2 = inputs.t;
-        const freq = inputs.freq;
-        const amplitude = inputs.amplitude;
-        const phase = inputs.phase;
-        const offset = inputs.offset;
-        return { out: Math.cos(t2 * freq * 2 * Math.PI + phase) * amplitude + offset };
-      }
-    },
-    greaterThan: {
-      category: "transform",
-      inputs: [
-        { name: "value", type: "number", default: 0, kind: "behavior" },
-        { name: "threshold", type: "number", default: 0, kind: "behavior" }
-      ],
-      outputs: [{ name: "out", type: "boolean", kind: "behavior" }],
-      params: [
-        { name: "value", type: "number", default: 0 },
-        { name: "threshold", type: "number", default: 0 }
-      ],
-      evaluate: (inputs, params, ctx) => ({ out: inputs.value > inputs.threshold })
-    },
-    lessThan: {
-      category: "transform",
-      inputs: [
-        { name: "value", type: "number", default: 0, kind: "behavior" },
-        { name: "threshold", type: "number", default: 0, kind: "behavior" }
-      ],
-      outputs: [{ name: "out", type: "boolean", kind: "behavior" }],
-      params: [
-        { name: "value", type: "number", default: 0 },
-        { name: "threshold", type: "number", default: 0 }
-      ],
-      evaluate: (inputs, params, ctx) => ({ out: inputs.value < inputs.threshold })
-    },
-    smoothLerp: {
-      category: "state",
-      inputs: [
-        { name: "value", type: "number", default: 0, kind: "behavior" }
-      ],
-      outputs: [{ name: "out", type: "number", kind: "behavior" }],
-      params: [
-        { name: "value", type: "number", default: 0 },
-        { name: "rate", type: "number", default: 5 },
-        { name: "initial", type: "number", default: 0 }
-      ],
-      evaluate: (inputs, params, ctx) => {
-        const prevOut = sanitizeStateValue(ctx.prevOut, params.initial);
-        const value = resolveStateInputValue(inputs.value, params.initial);
-        const rate = coerceFiniteNumber(params.rate, 5);
-        const factor = 1 - Math.exp(-rate * ctx.dt);
-        return { out: prevOut + (value - prevOut) * factor };
-      }
-    },
-    lowpass: {
-      category: "state",
-      inputs: [
-        { name: "value", type: "number", default: 0, kind: "behavior" }
-      ],
-      outputs: [{ name: "out", type: "number", kind: "behavior" }],
-      params: [
-        { name: "value", type: "number", default: 0 },
-        { name: "tau", type: "number", default: 0.2 },
-        { name: "initial", type: "number", default: 0 }
-      ],
-      evaluate: (inputs, params, ctx) => {
-        const prevOut = sanitizeStateValue(ctx.prevOut, params.initial);
-        const value = resolveStateInputValue(inputs.value, params.initial);
-        const tau = coerceFiniteNumber(params.tau, 0.2);
-        const factor = tau <= 0 ? 1 : ctx.dt / (tau + ctx.dt);
-        return { out: prevOut + (value - prevOut) * factor };
-      }
-    },
-    delay1: {
-      category: "state",
-      inputs: [
-        { name: "value", type: "number", default: 0, kind: "behavior" }
-      ],
-      outputs: [{ name: "out", type: "number", kind: "behavior" }],
-      params: [
-        { name: "value", type: "number", default: 0 },
-        { name: "initial", type: "number", default: 0 }
-      ],
-      evaluate: (inputs, params, ctx) => {
-        const prevOut = sanitizeStateValue(ctx.prevOut, params.initial);
-        const value = resolveStateInputValue(inputs.value, params.initial);
-        return { out: prevOut, _newState: value };
-      }
-    },
-    integrate: {
-      category: "state",
-      inputs: [
-        { name: "value", type: "number", default: 0, kind: "behavior" }
-      ],
-      outputs: [{ name: "out", type: "number", kind: "behavior" }],
-      params: [
-        { name: "value", type: "number", default: 0 },
-        { name: "initial", type: "number", default: 0 },
-        { name: "min", type: "number|null", default: null },
-        { name: "max", type: "number|null", default: null }
-      ],
-      evaluate: (inputs, params, ctx) => {
-        const prevOut = sanitizeStateValue(ctx.prevOut, params.initial);
-        const value = resolveStateInputValue(inputs.value, 0);
-        const min3 = params.min === null ? null : coerceFiniteNumber(params.min, null);
-        const max3 = params.max === null ? null : coerceFiniteNumber(params.max, null);
-        let out = prevOut + value * ctx.dt;
-        if (min3 !== null && out < min3) out = min3;
-        if (max3 !== null && out > max3) out = max3;
-        return { out };
-      }
-    },
-    // Phase 1 入力ノード
-    pointerClick: {
-      category: "input",
-      inputs: [],
-      outputs: [{ name: "event", type: "event<vec2>", kind: "event" }],
-      params: [{ name: "target", type: "string", default: "window" }],
-      evaluate: (inputs, params, ctx) => {
-        return { event: [] };
-      },
-      onStart: (node2, engine) => {
-        const targetSelector = node2.params?.target || "window";
-        const target = targetSelector === "window" ? window : document.querySelector(targetSelector);
-        if (!target) return;
-        const handler = (e) => {
-          engine.dispatchEvent(node2.id + ".event", { x: e.clientX, y: e.clientY });
-        };
-        target.addEventListener("pointerdown", handler);
-        node2._eventHandler = handler;
-        node2._eventTarget = target;
-      },
-      onStop: (node2, engine) => {
-        if (node2._eventTarget && node2._eventHandler) {
-          node2._eventTarget.removeEventListener("pointerdown", node2._eventHandler);
-          delete node2._eventHandler;
-          delete node2._eventTarget;
-        }
-      }
-    },
-    pointerPosition: {
-      category: "input",
-      inputs: [],
-      outputs: [{ name: "pos", type: "vec2", kind: "behavior" }],
-      params: [{ name: "target", type: "string", default: "window" }],
-      evaluate: (inputs, params, ctx) => {
-        if (!ctx.engine || !ctx.engine._inputStates) {
-          ctx.engine._inputStates = {};
-        }
-        const lastPos = ctx.engine._inputStates.lastPos || { x: 0, y: 0 };
-        return { pos: lastPos };
-      },
-      onStart: (node2, engine) => {
-        const targetSelector = node2.params?.target || "window";
-        const target = targetSelector === "window" ? window : document.querySelector(targetSelector);
-        if (!target) return;
-        if (!engine._inputStates) {
-          engine._inputStates = {};
-        }
-        const handler = (e) => {
-          engine._inputStates.lastPos = { x: e.clientX, y: e.clientY };
-        };
-        target.addEventListener("pointermove", handler);
-        node2._eventHandler = handler;
-        node2._eventTarget = target;
-      },
-      onStop: (node2, engine) => {
-        if (node2._eventTarget && node2._eventHandler) {
-          node2._eventTarget.removeEventListener("pointermove", node2._eventHandler);
-          delete node2._eventHandler;
-          delete node2._eventTarget;
-        }
-      }
-    },
-    keyDown: {
-      category: "input",
-      inputs: [],
-      outputs: [{ name: "event", type: "event<string>", kind: "event" }],
-      params: [{ name: "key", type: "string", default: null }],
-      evaluate: (inputs, params, ctx) => {
-        return { event: [] };
-      },
-      onStart: (node2, engine) => {
-        const filterKey = node2.params?.key || null;
-        const handler = (e) => {
-          if (!filterKey || e.key === filterKey) {
-            engine.dispatchEvent(node2.id + ".event", e.key);
-          }
-        };
-        window.addEventListener("keydown", handler);
-        node2._eventHandler = handler;
-      },
-      onStop: (node2, engine) => {
-        if (node2._eventHandler) {
-          window.removeEventListener("keydown", node2._eventHandler);
-          delete node2._eventHandler;
-        }
-      }
-    },
-    keyUp: {
-      category: "input",
-      inputs: [],
-      outputs: [{ name: "event", type: "event<string>", kind: "event" }],
-      params: [{ name: "key", type: "string", default: null }],
-      evaluate: (inputs, params, ctx) => {
-        return { event: [] };
-      },
-      onStart: (node2, engine) => {
-        const filterKey = node2.params?.key || null;
-        const handler = (e) => {
-          if (!filterKey || e.key === filterKey) {
-            engine.dispatchEvent(node2.id + ".event", e.key);
-          }
-        };
-        window.addEventListener("keyup", handler);
-        node2._eventHandler = handler;
-      },
-      onStop: (node2, engine) => {
-        if (node2._eventHandler) {
-          window.removeEventListener("keyup", node2._eventHandler);
-          delete node2._eventHandler;
-        }
-      }
-    },
-    // Phase 1 イベント変換ノード
-    filter: {
-      category: "transform",
-      inputs: [{ name: "event", type: "event<any>", kind: "event" }],
-      outputs: [{ name: "event", type: "event<any>", kind: "event" }],
-      params: [{ name: "predicate", type: "string", default: "true" }],
-      evaluate: (inputs, params, ctx) => {
-        const eventPayloads = inputs.event || [];
-        if (!Array.isArray(eventPayloads)) {
-          return { event: [] };
-        }
-        if (!ctx.nodePredicates) ctx.nodePredicates = /* @__PURE__ */ new Map();
-        const cacheKey = params.predicate;
-        let evaluator = ctx.nodePredicates.get(cacheKey);
-        if (!evaluator) {
-          try {
-            const dslEval = new RestrictedDSLEvaluator(params.predicate);
-            evaluator = dslEval.evaluate();
-            ctx.nodePredicates.set(cacheKey, evaluator);
-          } catch (e) {
-            throw e;
-          }
-        }
-        const filtered = eventPayloads.filter((payload) => {
-          try {
-            return evaluator(payload);
-          } catch (e) {
-            return false;
-          }
-        });
-        return { event: filtered };
-      }
-    },
-    sample: {
-      category: "transform",
-      inputs: [
-        { name: "trigger", type: "event<void>", kind: "event" },
-        { name: "value", type: "number", default: 0, kind: "behavior" }
-      ],
-      outputs: [{ name: "event", type: "event<number>", kind: "event" }],
-      params: [],
-      evaluate: (inputs, params, ctx) => {
-        const triggers = inputs.trigger || [];
-        const value = inputs.value;
-        if (!Array.isArray(triggers)) {
-          return { event: [] };
-        }
-        const sampled = triggers.map(() => value);
-        return { event: sampled };
-      }
-    },
-    merge: {
-      category: "transform",
-      inputs: [
-        { name: "a", type: "event<any>", kind: "event" },
-        { name: "b", type: "event<any>", kind: "event" }
-      ],
-      outputs: [{ name: "event", type: "event<any>", kind: "event" }],
-      params: [],
-      evaluate: (inputs, params, ctx) => {
-        const aPayloads = inputs.a || [];
-        const bPayloads = inputs.b || [];
-        const merged = [
-          ...Array.isArray(aPayloads) ? aPayloads : [],
-          ...Array.isArray(bPayloads) ? bPayloads : []
-        ];
-        return { event: merged };
-      }
-    },
-    "text.upper": {
-      category: "transform",
-      inputs: [{ name: "value", type: "any", default: "", kind: "behavior" }],
-      outputs: [{ name: "out", type: "string", kind: "behavior" }],
-      params: [{ name: "value", type: "any", default: "" }],
-      evaluate: (inputs) => ({ out: String(inputs.value ?? "").toUpperCase() })
-    },
-    "text.lower": {
-      category: "transform",
-      inputs: [{ name: "value", type: "any", default: "", kind: "behavior" }],
-      outputs: [{ name: "out", type: "string", kind: "behavior" }],
-      params: [{ name: "value", type: "any", default: "" }],
-      evaluate: (inputs) => ({ out: String(inputs.value ?? "").toLowerCase() })
-    },
-    "text.trim": {
-      category: "transform",
-      inputs: [{ name: "value", type: "any", default: "", kind: "behavior" }],
-      outputs: [{ name: "out", type: "string", kind: "behavior" }],
-      params: [{ name: "value", type: "any", default: "" }],
-      evaluate: (inputs) => ({ out: String(inputs.value ?? "").trim() })
-    },
-    "text.replace": {
-      category: "transform",
-      inputs: [
-        { name: "value", type: "any", default: "", kind: "behavior" },
-        { name: "search", type: "any", default: "", kind: "behavior" },
-        { name: "replacement", type: "any", default: "", kind: "behavior" }
-      ],
-      outputs: [{ name: "out", type: "string", kind: "behavior" }],
-      params: [
-        { name: "value", type: "any", default: "" },
-        { name: "search", type: "any", default: "" },
-        { name: "replacement", type: "any", default: "" }
-      ],
-      evaluate: (inputs) => ({
-        out: String(inputs.value ?? "").replaceAll(String(inputs.search ?? ""), String(inputs.replacement ?? ""))
-      })
-    },
-    "text.concat": {
-      category: "transform",
-      inputs: Array.from({ length: 8 }, (_, i2) => ({ name: `value${i2 + 1}`, type: "any", default: void 0, kind: "behavior" })),
-      outputs: [{ name: "out", type: "string", kind: "behavior" }],
-      params: Array.from({ length: 8 }, (_, i2) => ({ name: `value${i2 + 1}`, type: "any", default: void 0 })),
-      evaluate: (inputs) => ({ out: collectInputs(inputs, Array.from({ length: 8 }, (_, i2) => `value${i2 + 1}`)).map((value) => stringifyTextValue(value)).join("") })
-    },
-    "text.split": {
-      category: "transform",
-      inputs: [
-        { name: "value", type: "any", default: "", kind: "behavior" },
-        { name: "separator", type: "any", default: ",", kind: "behavior" }
-      ],
-      outputs: [{ name: "out", type: "array", kind: "behavior" }],
-      params: [{ name: "value", type: "any", default: "" }, { name: "separator", type: "any", default: "," }],
-      evaluate: (inputs) => ({ out: stringifyTextValue(inputs.value).split(stringifyTextValue(inputs.separator)) })
-    },
-    "text.join": {
-      category: "transform",
-      inputs: [
-        { name: "list", type: "array", default: [], kind: "behavior" },
-        { name: "separator", type: "any", default: ",", kind: "behavior" }
-      ],
-      outputs: [{ name: "out", type: "string", kind: "behavior" }],
-      params: [{ name: "list", type: "array", default: [] }, { name: "separator", type: "any", default: "," }],
-      evaluate: (inputs) => ({ out: toArray(inputs.list).map((value) => stringifyTextValue(value)).join(stringifyTextValue(inputs.separator)) })
-    },
-    "text.includes": {
-      category: "transform",
-      inputs: [{ name: "value", type: "any", default: "", kind: "behavior" }, { name: "search", type: "any", default: "", kind: "behavior" }],
-      outputs: [{ name: "out", type: "boolean", kind: "behavior" }],
-      params: [{ name: "value", type: "any", default: "" }, { name: "search", type: "any", default: "" }],
-      evaluate: (inputs) => ({ out: stringifyTextValue(inputs.value).includes(stringifyTextValue(inputs.search)) })
-    },
-    "text.startsWith": {
-      category: "transform",
-      inputs: [{ name: "value", type: "any", default: "", kind: "behavior" }, { name: "search", type: "any", default: "", kind: "behavior" }],
-      outputs: [{ name: "out", type: "boolean", kind: "behavior" }],
-      params: [{ name: "value", type: "any", default: "" }, { name: "search", type: "any", default: "" }],
-      evaluate: (inputs) => ({ out: stringifyTextValue(inputs.value).startsWith(stringifyTextValue(inputs.search)) })
-    },
-    "text.endsWith": {
-      category: "transform",
-      inputs: [{ name: "value", type: "any", default: "", kind: "behavior" }, { name: "search", type: "any", default: "", kind: "behavior" }],
-      outputs: [{ name: "out", type: "boolean", kind: "behavior" }],
-      params: [{ name: "value", type: "any", default: "" }, { name: "search", type: "any", default: "" }],
-      evaluate: (inputs) => ({ out: stringifyTextValue(inputs.value).endsWith(stringifyTextValue(inputs.search)) })
-    },
-    "text.length": {
-      category: "transform",
-      inputs: [{ name: "value", type: "any", default: "", kind: "behavior" }],
-      outputs: [{ name: "out", type: "number", kind: "behavior" }],
-      params: [{ name: "value", type: "any", default: "" }],
-      evaluate: (inputs) => ({ out: stringifyTextValue(inputs.value).length })
-    },
-    "text.isEmpty": {
-      category: "transform",
-      inputs: [{ name: "value", type: "any", default: "", kind: "behavior" }],
-      outputs: [{ name: "out", type: "boolean", kind: "behavior" }],
-      params: [{ name: "value", type: "any", default: "" }],
-      evaluate: (inputs) => ({ out: stringifyTextValue(inputs.value).length === 0 })
-    },
-    "text.stringify": {
-      category: "transform",
-      inputs: [{ name: "value", type: "any", default: null, kind: "behavior" }],
-      outputs: [{ name: "out", type: "string", kind: "behavior" }],
-      params: [{ name: "value", type: "any", default: null }],
-      evaluate: (inputs) => ({ out: stringifyTextValue(inputs.value) })
-    },
-    "json.parse": {
-      category: "transform",
-      inputs: [{ name: "value", type: "any", default: "", kind: "behavior" }],
-      outputs: [{ name: "out", type: "any", kind: "behavior" }],
-      params: [{ name: "value", type: "any", default: "" }],
-      evaluate: (inputs) => {
-        try {
-          return { out: JSON.parse(String(inputs.value ?? "")) };
-        } catch (error) {
-          throw new LoomError("INVALID_JSON", `JSON parse failed: ${error.message}`);
-        }
-      }
-    },
-    "json.stringify": {
-      category: "transform",
-      inputs: [{ name: "value", type: "any", default: null, kind: "behavior" }],
-      outputs: [{ name: "out", type: "string", kind: "behavior" }],
-      params: [
-        { name: "value", type: "any", default: null },
-        { name: "pretty", type: "boolean", default: false }
-      ],
-      evaluate: (inputs, params) => ({ out: stringifyJsonValue(inputs.value, params.pretty === true) })
-    },
-    "console.log": {
-      category: "sink",
-      inputs: [{ name: "value", type: "any", default: void 0, kind: "behavior" }],
-      outputs: [],
-      params: [],
-      evaluate: (inputs, params, ctx) => {
-        ctx.engine?._recordEffect({ type: "console.log", level: "log", value: inputs.value, nodeId: ctx.currentNodeId });
-        return {};
-      }
-    },
-    "console.warn": {
-      category: "sink",
-      inputs: [{ name: "value", type: "any", default: void 0, kind: "behavior" }],
-      outputs: [],
-      params: [],
-      evaluate: (inputs, params, ctx) => {
-        ctx.engine?._recordEffect({ type: "console.warn", level: "warn", value: inputs.value, nodeId: ctx.currentNodeId });
-        return {};
-      }
-    },
-    "console.error": {
-      category: "sink",
-      inputs: [{ name: "value", type: "any", default: void 0, kind: "behavior" }],
-      outputs: [],
-      params: [],
-      evaluate: (inputs, params, ctx) => {
-        ctx.engine?._recordEffect({ type: "console.error", level: "error", value: inputs.value, nodeId: ctx.currentNodeId });
-        return {};
-      }
-    },
-    "console.table": {
-      category: "sink",
-      inputs: [{ name: "value", type: "any", default: void 0, kind: "behavior" }],
-      outputs: [],
-      params: [],
-      evaluate: (inputs, params, ctx) => {
-        ctx.engine?._recordEffect({ type: "console.table", level: "table", value: inputs.value, nodeId: ctx.currentNodeId });
-        if (typeof console.table === "function" && ctx.emitConsole === true) console.table(inputs.value);
-        return {};
-      }
-    },
-    "logic.not": { category: "transform", inputs: [{ name: "value", type: "any", default: false, kind: "behavior" }], outputs: [{ name: "out", type: "boolean", kind: "behavior" }], params: [{ name: "value", type: "any", default: false }], evaluate: (inputs) => ({ out: !inputs.value }) },
-    "logic.and": { category: "transform", commutative: true, inputs: [{ name: "a", type: "any", default: false, kind: "behavior" }, { name: "b", type: "any", default: false, kind: "behavior" }], outputs: [{ name: "out", type: "boolean", kind: "behavior" }], params: [{ name: "a", type: "any", default: false }, { name: "b", type: "any", default: false }], evaluate: (inputs) => ({ out: Boolean(inputs.a && inputs.b) }) },
-    "logic.or": { category: "transform", commutative: true, inputs: [{ name: "a", type: "any", default: false, kind: "behavior" }, { name: "b", type: "any", default: false, kind: "behavior" }], outputs: [{ name: "out", type: "boolean", kind: "behavior" }], params: [{ name: "a", type: "any", default: false }, { name: "b", type: "any", default: false }], evaluate: (inputs) => ({ out: Boolean(inputs.a || inputs.b) }) },
-    "logic.equals": { category: "transform", inputs: [{ name: "value", type: "any", default: null, kind: "behavior" }, { name: "other", type: "any", default: null, kind: "behavior" }], outputs: [{ name: "out", type: "boolean", kind: "behavior" }], params: [{ name: "value", type: "any", default: null }, { name: "other", type: "any", default: null }], evaluate: (inputs) => ({ out: Object.is(inputs.value, inputs.other) }) },
-    "logic.notEquals": { category: "transform", inputs: [{ name: "value", type: "any", default: null, kind: "behavior" }, { name: "other", type: "any", default: null, kind: "behavior" }], outputs: [{ name: "out", type: "boolean", kind: "behavior" }], params: [{ name: "value", type: "any", default: null }, { name: "other", type: "any", default: null }], evaluate: (inputs) => ({ out: !Object.is(inputs.value, inputs.other) }) },
-    "logic.greaterThan": { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }, { name: "other", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "boolean", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }, { name: "other", type: "number", default: 0 }], evaluate: (inputs) => ({ out: inputs.value > inputs.other }) },
-    "logic.lessThan": { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }, { name: "other", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "boolean", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }, { name: "other", type: "number", default: 0 }], evaluate: (inputs) => ({ out: inputs.value < inputs.other }) },
-    "logic.greaterOrEqual": { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }, { name: "other", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "boolean", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }, { name: "other", type: "number", default: 0 }], evaluate: (inputs) => ({ out: inputs.value >= inputs.other }) },
-    "logic.lessOrEqual": { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }, { name: "other", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "boolean", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }, { name: "other", type: "number", default: 0 }], evaluate: (inputs) => ({ out: inputs.value <= inputs.other }) },
-    "logic.select": { category: "transform", inputs: [{ name: "condition", type: "any", default: false, kind: "behavior" }, { name: "whenTrue", type: "any", default: null, kind: "behavior" }, { name: "whenFalse", type: "any", default: null, kind: "behavior" }], outputs: [{ name: "out", type: "any", kind: "behavior" }], params: [{ name: "condition", type: "any", default: false }, { name: "whenTrue", type: "any", default: null }, { name: "whenFalse", type: "any", default: null }], evaluate: (inputs) => ({ out: inputs.condition ? inputs.whenTrue : inputs.whenFalse }) },
-    "logic.when": { category: "transform", inputs: [{ name: "condition", type: "any", default: false, kind: "behavior" }, { name: "value", type: "any", default: null, kind: "behavior" }], outputs: [{ name: "out", type: "any", kind: "behavior" }], params: [{ name: "condition", type: "any", default: false }, { name: "value", type: "any", default: null }], evaluate: (inputs) => ({ out: inputs.condition ? inputs.value : null }) },
-    "list.of": { category: "transform", inputs: Array.from({ length: 8 }, (_, i2) => ({ name: `value${i2 + 1}`, type: "any", default: void 0, kind: "behavior" })), outputs: [{ name: "out", type: "array", kind: "behavior" }], params: Array.from({ length: 8 }, (_, i2) => ({ name: `value${i2 + 1}`, type: "any", default: void 0 })), evaluate: (inputs) => ({ out: collectInputs(inputs, Array.from({ length: 8 }, (_, i2) => `value${i2 + 1}`)) }) },
-    "list.range": { category: "transform", inputs: [{ name: "start", type: "number", default: 0, kind: "behavior" }, { name: "end", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "array", kind: "behavior" }], params: [{ name: "start", type: "number", default: 0 }, { name: "end", type: "number", default: 0 }], evaluate: (inputs) => {
-      const start = Math.trunc(inputs.start);
-      const end = Math.trunc(inputs.end);
-      const step = start <= end ? 1 : -1;
-      const out = [];
-      for (let n2 = start; step > 0 ? n2 <= end : n2 >= end; n2 += step) out.push(n2);
-      return { out };
-    } },
-    "list.length": { category: "transform", inputs: [{ name: "list", type: "array", default: [], kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "list", type: "array", default: [] }], evaluate: (inputs) => ({ out: toArray(inputs.list).length }) },
-    "list.at": { category: "transform", inputs: [{ name: "list", type: "array", default: [], kind: "behavior" }, { name: "index", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "any", kind: "behavior" }], params: [{ name: "list", type: "array", default: [] }, { name: "index", type: "number", default: 0 }], evaluate: (inputs) => {
-      const list = toArray(inputs.list);
-      const raw = Math.trunc(inputs.index);
-      const index4 = raw < 0 ? list.length + raw : raw;
-      return { out: index4 >= 0 && index4 < list.length ? list[index4] : null };
-    } },
-    "list.first": { category: "transform", inputs: [{ name: "list", type: "array", default: [], kind: "behavior" }], outputs: [{ name: "out", type: "any", kind: "behavior" }], params: [{ name: "list", type: "array", default: [] }], evaluate: (inputs) => ({ out: toArray(inputs.list)[0] ?? null }) },
-    "list.last": { category: "transform", inputs: [{ name: "list", type: "array", default: [], kind: "behavior" }], outputs: [{ name: "out", type: "any", kind: "behavior" }], params: [{ name: "list", type: "array", default: [] }], evaluate: (inputs) => {
-      const list = toArray(inputs.list);
-      return { out: list.length ? list[list.length - 1] : null };
-    } },
-    "list.map": mapFunctionValueNode("list.map", (list, fn, initial, ctx) => ({ out: list.map((item) => fn.call([item], ctx)) })),
-    "list.filter": mapFunctionValueNode("list.filter", (list, fn, initial, ctx) => ({ out: list.filter((item) => isLoomletTruthy(fn.call([item], ctx))) })),
-    "list.reduce": mapFunctionValueNode("list.reduce", (list, fn, initial, ctx) => ({ out: list.reduce((acc, item) => fn.call([acc, item], ctx), initial) })),
-    "list.join": { category: "transform", inputs: [{ name: "list", type: "array", default: [], kind: "behavior" }, { name: "separator", type: "any", default: ",", kind: "behavior" }], outputs: [{ name: "out", type: "string", kind: "behavior" }], params: [{ name: "list", type: "array", default: [] }, { name: "separator", type: "any", default: "," }], evaluate: (inputs) => ({ out: toArray(inputs.list).map((value) => stringifyTextValue(value)).join(stringifyTextValue(inputs.separator)) }) },
-    "list.reverse": { category: "transform", inputs: [{ name: "list", type: "array", default: [], kind: "behavior" }], outputs: [{ name: "out", type: "array", kind: "behavior" }], params: [{ name: "list", type: "array", default: [] }], evaluate: (inputs) => ({ out: [...toArray(inputs.list)].reverse() }) },
-    "list.sort": { category: "transform", inputs: [{ name: "list", type: "array", default: [], kind: "behavior" }], outputs: [{ name: "out", type: "array", kind: "behavior" }], params: [{ name: "list", type: "array", default: [] }], evaluate: (inputs) => {
-      const list = [...toArray(inputs.list)];
-      if (list.every((value) => typeof value === "number")) list.sort((a2, b2) => a2 - b2);
-      else list.sort((a2, b2) => String(a2).localeCompare(String(b2)));
-      return { out: list };
-    } },
-    "list.take": { category: "transform", inputs: [{ name: "list", type: "array", default: [], kind: "behavior" }, { name: "count", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "array", kind: "behavior" }], params: [{ name: "list", type: "array", default: [] }, { name: "count", type: "number", default: 0 }], evaluate: (inputs) => ({ out: toArray(inputs.list).slice(0, Math.max(0, Math.trunc(inputs.count))) }) },
-    "list.drop": { category: "transform", inputs: [{ name: "list", type: "array", default: [], kind: "behavior" }, { name: "count", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "array", kind: "behavior" }], params: [{ name: "list", type: "array", default: [] }, { name: "count", type: "number", default: 0 }], evaluate: (inputs) => ({ out: toArray(inputs.list).slice(Math.max(0, Math.trunc(inputs.count))) }) },
-    "list.concat": { category: "transform", inputs: Array.from({ length: 4 }, (_, i2) => ({ name: `list${i2 + 1}`, type: "array", default: void 0, kind: "behavior" })), outputs: [{ name: "out", type: "array", kind: "behavior" }], params: Array.from({ length: 4 }, (_, i2) => ({ name: `list${i2 + 1}`, type: "array", default: void 0 })), evaluate: (inputs) => ({ out: collectInputs(inputs, Array.from({ length: 4 }, (_, i2) => `list${i2 + 1}`)).flatMap((value) => toArray(value)) }) },
-    "math.add": { category: "transform", commutative: true, inputs: [{ name: "a", type: "number", default: 0, kind: "behavior" }, { name: "b", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "a", type: "number", default: 0 }, { name: "b", type: "number", default: 0 }], evaluate: (inputs) => ({ out: inputs.a + inputs.b }) },
-    "math.subtract": { category: "transform", inputs: [{ name: "a", type: "number", default: 0, kind: "behavior" }, { name: "b", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "a", type: "number", default: 0 }, { name: "b", type: "number", default: 0 }], evaluate: (inputs) => ({ out: inputs.a - inputs.b }) },
-    "math.multiply": { category: "transform", commutative: true, inputs: [{ name: "a", type: "number", default: 1, kind: "behavior" }, { name: "b", type: "number", default: 1, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "a", type: "number", default: 1 }, { name: "b", type: "number", default: 1 }], evaluate: (inputs) => ({ out: inputs.a * inputs.b }) },
-    "math.divide": { category: "transform", inputs: [{ name: "a", type: "number", default: 0, kind: "behavior" }, { name: "b", type: "number", default: 1, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "a", type: "number", default: 0 }, { name: "b", type: "number", default: 1 }], evaluate: (inputs) => ({ out: inputs.b === 0 ? 0 : inputs.a / inputs.b }) },
-    "math.mod": { category: "transform", inputs: [{ name: "a", type: "number", default: 0, kind: "behavior" }, { name: "b", type: "number", default: 1, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "a", type: "number", default: 0 }, { name: "b", type: "number", default: 1 }], evaluate: (inputs) => ({ out: inputs.b === 0 ? 0 : (inputs.a % inputs.b + inputs.b) % inputs.b }) },
-    "math.abs": { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }], evaluate: (inputs) => ({ out: Math.abs(inputs.value) }) },
-    "math.clamp": { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }, { name: "min", type: "number", default: 0, kind: "behavior" }, { name: "max", type: "number", default: 1, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }, { name: "min", type: "number", default: 0 }, { name: "max", type: "number", default: 1 }], evaluate: (inputs) => ({ out: inputs.min > inputs.max ? inputs.min : Math.max(inputs.min, Math.min(inputs.max, inputs.value)) }) },
-    "math.map": { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }, { name: "inMin", type: "number", default: 0, kind: "behavior" }, { name: "inMax", type: "number", default: 1, kind: "behavior" }, { name: "outMin", type: "number", default: 0, kind: "behavior" }, { name: "outMax", type: "number", default: 1, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }, { name: "inMin", type: "number", default: 0 }, { name: "inMax", type: "number", default: 1 }, { name: "outMin", type: "number", default: 0 }, { name: "outMax", type: "number", default: 1 }, { name: "clamp", type: "boolean", default: false }], evaluate: (inputs, params) => {
-      if (inputs.inMax === inputs.inMin) return { out: inputs.outMin };
-      let t2 = (inputs.value - inputs.inMin) / (inputs.inMax - inputs.inMin);
-      if (params.clamp === true) t2 = Math.max(0, Math.min(1, t2));
-      return { out: inputs.outMin + (inputs.outMax - inputs.outMin) * t2 };
-    } },
-    "math.lerp": { category: "transform", inputs: [{ name: "a", type: "number", default: 0, kind: "behavior" }, { name: "b", type: "number", default: 1, kind: "behavior" }, { name: "t", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "a", type: "number", default: 0 }, { name: "b", type: "number", default: 1 }, { name: "t", type: "number", default: 0 }], evaluate: (inputs) => ({ out: inputs.a + (inputs.b - inputs.a) * inputs.t }) },
-    "math.smoothstep": { category: "transform", inputs: [{ name: "x", type: "number", default: 0, kind: "behavior" }, { name: "edge0", type: "number", default: 0, kind: "behavior" }, { name: "edge1", type: "number", default: 1, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "x", type: "number", default: 0 }, { name: "edge0", type: "number", default: 0 }, { name: "edge1", type: "number", default: 1 }], evaluate: (inputs) => {
-      if (inputs.edge0 === inputs.edge1) return { out: inputs.x < inputs.edge0 ? 0 : 1 };
-      let t2 = (inputs.x - inputs.edge0) / (inputs.edge1 - inputs.edge0);
-      t2 = Math.max(0, Math.min(1, t2));
-      return { out: t2 * t2 * (3 - 2 * t2) };
-    } },
-    "math.cosine": { category: "transform", inputs: [{ name: "t", type: "number", default: 0, kind: "behavior" }, { name: "freq", type: "number", default: 1, kind: "behavior" }, { name: "amplitude", type: "number", default: 1, kind: "behavior" }, { name: "phase", type: "number", default: 0, kind: "behavior" }, { name: "offset", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "freq", type: "number", default: 1 }, { name: "amplitude", type: "number", default: 1 }, { name: "phase", type: "number", default: 0 }, { name: "offset", type: "number", default: 0 }], evaluate: (inputs) => ({ out: Math.cos(inputs.t * inputs.freq * 2 * Math.PI + inputs.phase) * inputs.amplitude + inputs.offset }) },
-    "math.floor": { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }], evaluate: (inputs) => ({ out: Math.floor(inputs.value) }) },
-    "math.ceil": { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }], evaluate: (inputs) => ({ out: Math.ceil(inputs.value) }) },
-    "math.round": { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }], evaluate: (inputs) => ({ out: Math.round(inputs.value) }) },
-    "math.min": { category: "transform", commutative: true, inputs: [{ name: "a", type: "number", default: 0, kind: "behavior" }, { name: "b", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "a", type: "number", default: 0 }, { name: "b", type: "number", default: 0 }], evaluate: (inputs) => ({ out: Math.min(inputs.a, inputs.b) }) },
-    "math.max": { category: "transform", commutative: true, inputs: [{ name: "a", type: "number", default: 0, kind: "behavior" }, { name: "b", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "a", type: "number", default: 0 }, { name: "b", type: "number", default: 0 }], evaluate: (inputs) => ({ out: Math.max(inputs.a, inputs.b) }) },
-    "math.tan": { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }], evaluate: (inputs) => ({ out: Math.tan(inputs.value) }) },
-    "math.sqrt": { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }], evaluate: (inputs) => ({ out: Math.sqrt(inputs.value) }) },
-    "math.pow": { category: "transform", inputs: [{ name: "value", type: "number", default: 0, kind: "behavior" }, { name: "exponent", type: "number", default: 1, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "value", type: "number", default: 0 }, { name: "exponent", type: "number", default: 1 }], evaluate: (inputs) => ({ out: Math.pow(inputs.value, inputs.exponent) }) },
-    "random.value": { category: "source", inputs: [], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [], evaluate: () => ({ out: Math.random() }) },
-    "random.range": { category: "transform", inputs: [{ name: "min", type: "number", default: 0, kind: "behavior" }, { name: "max", type: "number", default: 1, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "min", type: "number", default: 0 }, { name: "max", type: "number", default: 1 }], evaluate: (inputs) => ({ out: inputs.min + Math.random() * (inputs.max - inputs.min) }) },
-    "random.int": { category: "transform", inputs: [{ name: "min", type: "number", default: 0, kind: "behavior" }, { name: "max", type: "number", default: 1, kind: "behavior" }], outputs: [{ name: "out", type: "number", kind: "behavior" }], params: [{ name: "min", type: "number", default: 0 }, { name: "max", type: "number", default: 1 }], evaluate: (inputs) => {
-      const min3 = Math.ceil(Math.min(inputs.min, inputs.max));
-      const max3 = Math.floor(Math.max(inputs.min, inputs.max));
-      return { out: Math.floor(Math.random() * (max3 - min3 + 1)) + min3 };
-    } },
-    "random.choice": { category: "transform", inputs: [{ name: "list", type: "array", default: [], kind: "behavior" }], outputs: [{ name: "out", type: "any", kind: "behavior" }], params: [{ name: "list", type: "array", default: [] }], evaluate: (inputs) => {
-      const list = toArray(inputs.list);
-      return { out: list.length ? list[Math.floor(Math.random() * list.length)] : null };
-    } },
-    "debug.inspect": { category: "transform", inputs: [{ name: "value", type: "any", default: null, kind: "behavior" }], outputs: [{ name: "out", type: "string", kind: "behavior" }], params: [{ name: "value", type: "any", default: null }], evaluate: (inputs) => ({ out: inspectValue(inputs.value) }) },
-    "debug.trace": { category: "transform", inputs: [{ name: "value", type: "any", default: null, kind: "behavior" }, { name: "label", type: "string", default: "trace", kind: "behavior" }], outputs: [{ name: "out", type: "any", kind: "behavior" }], params: [{ name: "value", type: "any", default: null }, { name: "label", type: "string", default: "trace" }], evaluate: (inputs, params, ctx) => {
-      ctx.engine?._recordEffect({ type: "debug.trace", label: inputs.label, value: inputs.value, nodeId: ctx.currentNodeId });
-      return { out: inputs.value };
-    } },
-    "debug.assert": { category: "transform", inputs: [{ name: "condition", type: "any", default: false, kind: "behavior" }, { name: "message", type: "string", default: "Assertion failed", kind: "behavior" }], outputs: [{ name: "out", type: "boolean", kind: "behavior" }], params: [{ name: "condition", type: "any", default: false }, { name: "message", type: "string", default: "Assertion failed" }], evaluate: (inputs) => {
-      if (!inputs.condition) throw new LoomError("ASSERTION_FAILED", stringifyTextValue(inputs.message) || "Assertion failed");
-      return { out: true };
-    } },
-    "fs.readText": { category: "source", inputs: [{ name: "path", type: "string", default: "", kind: "behavior" }], outputs: [{ name: "out", type: "string", kind: "behavior" }], params: [{ name: "path", type: "string", default: "" }], evaluate: (inputs) => ({ out: getNodeFs().readFileSync(String(inputs.path), "utf8") }) },
-    "fs.writeText": { category: "sink", inputs: [{ name: "path", type: "string", default: "", kind: "behavior" }, { name: "value", type: "any", default: "", kind: "behavior" }], outputs: [], params: [{ name: "path", type: "string", default: "" }, { name: "value", type: "any", default: "" }], evaluate: (inputs) => {
-      const fs = getNodeFs();
-      const path = getNodePath();
-      fs.mkdirSync(path.dirname(String(inputs.path)), { recursive: true });
-      fs.writeFileSync(String(inputs.path), stringifyTextValue(inputs.value), "utf8");
-      return {};
-    } },
-    "fs.exists": { category: "source", inputs: [{ name: "path", type: "string", default: "", kind: "behavior" }], outputs: [{ name: "out", type: "boolean", kind: "behavior" }], params: [{ name: "path", type: "string", default: "" }], evaluate: (inputs) => ({ out: getNodeFs().existsSync(String(inputs.path)) }) },
-    "fs.list": { category: "source", inputs: [{ name: "path", type: "string", default: ".", kind: "behavior" }], outputs: [{ name: "out", type: "array", kind: "behavior" }], params: [{ name: "path", type: "string", default: "." }], evaluate: (inputs) => ({ out: getNodeFs().readdirSync(String(inputs.path)) }) },
-    // Scene Sync effect nodes
-    "scene.setPosition": {
-      category: "sink",
-      inputs: [
-        { name: "objectId", type: "string", default: "", kind: "behavior" },
-        { name: "x", type: "number", default: 0, kind: "behavior" },
-        { name: "y", type: "number", default: 0, kind: "behavior" },
-        { name: "z", type: "number", default: 0, kind: "behavior" }
-      ],
-      outputs: [],
-      params: [
-        { name: "objectId", type: "string", default: "" },
-        { name: "x", type: "number", default: 0 },
-        { name: "y", type: "number", default: 0 },
-        { name: "z", type: "number", default: 0 }
-      ],
-      evaluate: (inputs, params, ctx) => {
-        ctx.engine?._recordEffect({
-          type: "scene.setPosition",
-          objectId: inputs.objectId,
-          position: [inputs.x, inputs.y, inputs.z],
-          target: "scenesync",
-          nodeId: ctx.currentNodeId
-        });
-        return {};
-      }
-    },
-    "scene.setRotation": {
-      category: "sink",
-      inputs: [
-        { name: "objectId", type: "string", default: "", kind: "behavior" },
-        { name: "x", type: "number", default: 0, kind: "behavior" },
-        { name: "y", type: "number", default: 0, kind: "behavior" },
-        { name: "z", type: "number", default: 0, kind: "behavior" },
-        { name: "w", type: "number", default: 1, kind: "behavior" }
-      ],
-      outputs: [],
-      params: [
-        { name: "objectId", type: "string", default: "" },
-        { name: "x", type: "number", default: 0 },
-        { name: "y", type: "number", default: 0 },
-        { name: "z", type: "number", default: 0 },
-        { name: "w", type: "number", default: 1 }
-      ],
-      evaluate: (inputs, params, ctx) => {
-        ctx.engine?._recordEffect({
-          type: "scene.setRotation",
-          objectId: inputs.objectId,
-          rotation: [inputs.x, inputs.y, inputs.z, inputs.w],
-          target: "scenesync",
-          nodeId: ctx.currentNodeId
-        });
-        return {};
-      }
-    },
-    "scene.setScale": {
-      category: "sink",
-      inputs: [
-        { name: "objectId", type: "string", default: "", kind: "behavior" },
-        { name: "x", type: "number", default: 1, kind: "behavior" },
-        { name: "y", type: "number", default: 1, kind: "behavior" },
-        { name: "z", type: "number", default: 1, kind: "behavior" }
-      ],
-      outputs: [],
-      params: [
-        { name: "objectId", type: "string", default: "" },
-        { name: "x", type: "number", default: 1 },
-        { name: "y", type: "number", default: 1 },
-        { name: "z", type: "number", default: 1 }
-      ],
-      evaluate: (inputs, params, ctx) => {
-        ctx.engine?._recordEffect({
-          type: "scene.setScale",
-          objectId: inputs.objectId,
-          scale: [inputs.x, inputs.y, inputs.z],
-          target: "scenesync",
-          nodeId: ctx.currentNodeId
-        });
-        return {};
-      }
-    },
-    // DOM シンクノード
-    setText: {
-      category: "sink",
-      inputs: [
-        { name: "value", type: "any", default: "", kind: "behavior" }
-      ],
-      outputs: [],
-      params: [
-        { name: "target", type: "string", default: "" }
-      ],
-      evaluate: (inputs, params, ctx) => {
-        if (!params.target) return {};
-        const el = document.querySelector(params.target);
-        if (el) el.textContent = String(inputs.value);
-        return {};
-      }
-    },
-    setStyle: {
-      category: "sink",
-      inputs: [
-        { name: "value", type: "any", default: "", kind: "behavior" }
-      ],
-      outputs: [],
-      params: [
-        { name: "target", type: "string", default: "" },
-        { name: "property", type: "string", default: "" },
-        { name: "unit", type: "string", default: "" }
-      ],
-      evaluate: (inputs, params, ctx) => {
-        if (!params.target || !params.property) return {};
-        const el = document.querySelector(params.target);
-        if (el) el.style[params.property] = String(inputs.value) + params.unit;
-        return {};
-      }
-    },
-    setClass: {
-      category: "sink",
-      inputs: [
-        { name: "enabled", type: "boolean", default: true, kind: "behavior" }
-      ],
-      outputs: [],
-      params: [
-        { name: "target", type: "string", default: "" },
-        { name: "className", type: "string", default: "" }
-      ],
-      evaluate: (inputs, params, ctx) => {
-        if (!params.target || !params.className) return {};
-        const el = document.querySelector(params.target);
-        if (!el) return {};
-        el.classList.toggle(params.className, Boolean(inputs.enabled));
-        return {};
-      }
-    },
-    setCssVar: {
-      category: "sink",
-      inputs: [
-        { name: "value", type: "any", default: 0, kind: "behavior" }
-      ],
-      outputs: [],
-      params: [
-        { name: "target", type: "string", default: "" },
-        { name: "name", type: "string", default: "" },
-        { name: "unit", type: "string", default: "" }
-      ],
-      evaluate: (inputs, params, ctx) => {
-        if (!params.target || !params.name) return {};
-        if (inputs.value === null || inputs.value === void 0) return {};
-        const el = document.querySelector(params.target);
-        if (!el) return {};
-        const cssVarName = params.name.startsWith("--") ? params.name : `--${params.name}`;
-        el.style.setProperty(cssVarName, String(inputs.value) + params.unit);
-        return {};
-      }
-    },
-    setTransform2D: {
-      category: "sink",
-      inputs: [
-        { name: "x", type: "number", default: 0, kind: "behavior" },
-        { name: "y", type: "number", default: 0, kind: "behavior" },
-        { name: "scale", type: "number", default: 1, kind: "behavior" },
-        { name: "rotate", type: "number", default: 0, kind: "behavior" }
-      ],
-      outputs: [],
-      params: [
-        { name: "target", type: "string", default: "" },
-        { name: "unit", type: "string", default: "px" },
-        { name: "rotateUnit", type: "string", default: "deg" }
-      ],
-      evaluate: (inputs, params, ctx) => {
-        if (!params.target) return {};
-        const el = document.querySelector(params.target);
-        if (!el) return {};
-        el.style.transform = `translate(${inputs.x}${params.unit}, ${inputs.y}${params.unit}) scale(${inputs.scale}) rotate(${inputs.rotate}${params.rotateUnit})`;
-        return {};
-      }
-    },
-    setAttr: {
-      category: "sink",
-      inputs: [
-        { name: "value", type: "any", default: "", kind: "behavior" }
-      ],
-      outputs: [],
-      params: [
-        { name: "target", type: "string", default: "" },
-        { name: "name", type: "string", default: "" }
-      ],
-      evaluate: (inputs, params, ctx) => {
-        if (!params.target || !params.name) return {};
-        const el = document.querySelector(params.target);
-        if (el) el.setAttribute(params.name, String(inputs.value));
-        return {};
-      }
-    },
-    "time.serverClock": {
-      category: "source",
-      inputs: [],
-      outputs: [{ name: "t", type: "number", kind: "behavior" }],
-      params: [],
-      evaluate: (inputs, params, ctx) => ({ t: ctx.time })
-    },
-    "math.sine": {
-      category: "transform",
-      inputs: [
-        { name: "t", type: "number", default: 0, kind: "behavior" },
-        { name: "freq", type: "number", default: 1, kind: "behavior" },
-        { name: "amplitude", type: "number", default: 1, kind: "behavior" },
-        { name: "offset", type: "number", default: 0, kind: "behavior" }
-      ],
-      outputs: [{ name: "out", type: "number", kind: "behavior" }],
-      params: [
-        { name: "freq", type: "number", default: 1 },
-        { name: "amplitude", type: "number", default: 1 },
-        { name: "offset", type: "number", default: 0 }
-      ],
-      evaluate: (inputs, params, ctx) => {
-        const t2 = inputs.t;
-        const freq = inputs.freq;
-        const amplitude = inputs.amplitude;
-        const offset = inputs.offset;
-        return { out: Math.sin(t2 * freq * 2 * Math.PI) * amplitude + offset };
-      }
-    },
-    log: {
-      category: "output",
-      inputs: [
-        { name: "value", type: "any", default: void 0, kind: "behavior" }
-      ],
-      outputs: [
-        { name: "value", type: "any", kind: "behavior" }
-      ],
-      params: [
-        { name: "label", type: "string", default: "" }
-      ],
-      evaluate: (inputs, params, ctx) => {
-        const label = params.label ?? "";
-        const message = label ? `${label}: ${inspectValue(inputs.value)}` : inspectValue(inputs.value);
-        ctx.engine?._recordEffect({ type: "log", message, nodeId: ctx.currentNodeId });
-        return { value: inputs.value };
-      }
+  function resolveNodeTypesOption(options = {}) {
+    if (options.nodeRegistry && typeof options.nodeRegistry.toObject === "function") {
+      return options.nodeRegistry.toObject();
     }
-  };
+    if (options.nodeTypes && typeof options.nodeTypes === "object") {
+      return options.nodeTypes;
+    }
+    return NODE_TYPES;
+  }
+  function normalizeTimeEnvironment(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return {};
+    }
+    const env = {};
+    if (Number.isFinite(value.time)) {
+      env.time = value.time;
+    }
+    if (Number.isFinite(value.deltaTime)) {
+      env.deltaTime = Math.max(0, value.deltaTime);
+    }
+    if (Number.isFinite(value.tick)) {
+      env.tick = value.tick;
+    }
+    return env;
+  }
   var Loom = class {
-    constructor(graph) {
+    constructor(graph, options = {}) {
+      this._nodeTypes = resolveNodeTypesOption(options);
       this._currentGraph = null;
       this._pendingGraph = null;
       this._sortedNodeIds = [];
@@ -15384,6 +15609,7 @@ var LoomletPreview = (() => {
       this._rafId = null;
       this._startTime = null;
       this._lastTimestamp = null;
+      this._envProvider = null;
       this._inputStates = {};
       this._effects = [];
       this._loadGraphInternal(graph);
@@ -15401,7 +15627,7 @@ var LoomletPreview = (() => {
       }
       if (runLifecycle && this._currentGraph) {
         for (const node2 of this._currentGraph.nodes) {
-          const nodeType = NODE_TYPES[node2.type];
+          const nodeType = this._nodeTypes[node2.type];
           if (nodeType.onStop) {
             nodeType.onStop(node2, this);
           }
@@ -15413,26 +15639,41 @@ var LoomletPreview = (() => {
       this._pendingGraph = null;
       if (runLifecycle && this._currentGraph) {
         for (const node2 of this._currentGraph.nodes) {
-          const nodeType = NODE_TYPES[node2.type];
+          const nodeType = this._nodeTypes[node2.type];
           if (nodeType.onStart) {
             nodeType.onStart(node2, this);
           }
         }
       }
     }
-    evaluateAt(time, frameTimestamp = time * 1e3) {
+    evaluateAt(env, frameTimestamp) {
       this._activatePendingGraph(true);
       if (!this._currentGraph) return;
       this._effects = [];
-      const dt2 = this._computeDeltaTime(frameTimestamp);
+      const resolvedEnvInput = normalizeTimeEnvironment(env);
+      const resolvedTime = Number.isFinite(resolvedEnvInput.time) ? resolvedEnvInput.time : void 0;
+      const resolvedFrameTimestamp = Number.isFinite(frameTimestamp) ? frameTimestamp : Number.isFinite(resolvedTime) ? resolvedTime * 1e3 : void 0;
+      const explicitDt = Number.isFinite(resolvedEnvInput.deltaTime) ? resolvedEnvInput.deltaTime : void 0;
+      const dt2 = explicitDt !== void 0 ? explicitDt : this._computeDeltaTime(resolvedFrameTimestamp);
+      if (explicitDt !== void 0 && Number.isFinite(resolvedFrameTimestamp)) {
+        this._lastTimestamp = resolvedFrameTimestamp;
+      }
+      const resolvedEnv = {
+        ...resolvedEnvInput,
+        ...Number.isFinite(dt2) ? { deltaTime: dt2 } : {}
+      };
       const ctx = {
-        time,
+        env: resolvedEnv,
+        time: resolvedTime,
         dt: dt2,
+        deltaTime: dt2,
+        tick: resolvedEnv.tick,
         engine: this,
+        nodeTypes: this._nodeTypes,
         nodePredicates: /* @__PURE__ */ new Map()
       };
       for (const node2 of this._currentGraph.nodes) {
-        const nodeType = NODE_TYPES[node2.type];
+        const nodeType = this._nodeTypes[node2.type];
         for (const output of nodeType.outputs) {
           if (output.kind === "event") {
             this._values.set(`${node2.id}.${output.name}`, []);
@@ -15447,7 +15688,7 @@ var LoomletPreview = (() => {
       this._eventQueue = [];
       for (const nodeId of this._sortedNodeIds) {
         const node2 = this._currentGraph.nodes.find((n2) => n2.id === nodeId);
-        const nodeType = NODE_TYPES[node2.type];
+        const nodeType = this._nodeTypes[node2.type];
         if (nodeType.category === "input" && nodeType.outputs.length > 0 && nodeType.outputs.every((o) => o.kind === "event")) {
           continue;
         }
@@ -15512,13 +15753,11 @@ var LoomletPreview = (() => {
         }
       }
     }
-    evaluateOnce({ time = 0, dt: dt2 = 0 } = {}) {
-      const safeTime = Number.isFinite(time) ? time : 0;
-      const safeDt = Number.isFinite(dt2) ? Math.max(0, dt2) : 0;
-      const frameTimestamp = safeTime * 1e3;
+    evaluateOnce({ env } = {}) {
+      const resolvedEnv = normalizeTimeEnvironment(env);
+      const frameTimestamp = Number.isFinite(resolvedEnv.time) ? resolvedEnv.time * 1e3 : void 0;
       this._activatePendingGraph(false);
-      this._lastTimestamp = frameTimestamp - safeDt * 1e3;
-      this.evaluateAt(safeTime, frameTimestamp);
+      this.evaluateAt(resolvedEnv, frameTimestamp);
     }
     getValue(ref) {
       return this._values.get(ref);
@@ -15545,7 +15784,7 @@ var LoomletPreview = (() => {
       if (!node2) {
         throw new LoomError("UNKNOWN_NODE", `dispatchEvent references non-existent node: ${nodeId}`, { nodeId });
       }
-      const nodeType = NODE_TYPES[node2.type];
+      const nodeType = this._nodeTypes[node2.type];
       const outputPort = nodeType.outputs.find((o) => o.name === portName);
       if (!outputPort) {
         throw new LoomError(
@@ -15565,15 +15804,24 @@ var LoomletPreview = (() => {
     }
     load(graph) {
       this._validateGraph(graph);
+      if (this._rafId !== null && !this._envProvider && this._graphUsesNodeType("clock", graph)) {
+        throw new LoomError("MISSING_ENV_TIME", "load() requires options.getEnv for graphs that use clock while the runtime is started", { reason: "env.time" });
+      }
       const sortedNodeIds = this._topologicalSort(graph);
       this._pendingGraph = graph;
       this._pendingNodeIds = sortedNodeIds;
     }
-    start() {
+    start(options = {}) {
       if (this._rafId !== null) return;
+      const getEnv = typeof options.getEnv === "function" ? options.getEnv : null;
+      const nextGraph = this._pendingGraph || this._currentGraph;
+      if (!getEnv && this._graphUsesNodeType("clock", nextGraph)) {
+        throw new LoomError("MISSING_ENV_TIME", "start() requires options.getEnv when graph uses clock", { reason: "env.time" });
+      }
+      this._envProvider = getEnv;
       if (this._currentGraph) {
         for (const node2 of this._currentGraph.nodes) {
-          const nodeType = NODE_TYPES[node2.type];
+          const nodeType = this._nodeTypes[node2.type];
           if (nodeType.onStart) {
             nodeType.onStart(node2, this);
           }
@@ -15583,7 +15831,8 @@ var LoomletPreview = (() => {
       this._startTime = performance.now() / 1e3;
       const tick = (timestamp) => {
         const elapsed = timestamp / 1e3 - this._startTime;
-        this.evaluateAt(elapsed, timestamp);
+        const env = this._envProvider ? normalizeTimeEnvironment(this._envProvider({ elapsed, timestamp, engine: this })) : {};
+        this.evaluateAt(env, timestamp);
         this._rafId = requestAnimationFrame(tick);
       };
       this._rafId = requestAnimationFrame(tick);
@@ -15593,9 +15842,10 @@ var LoomletPreview = (() => {
         cancelAnimationFrame(this._rafId);
         this._rafId = null;
       }
+      this._envProvider = null;
       if (this._currentGraph) {
         for (const node2 of this._currentGraph.nodes) {
-          const nodeType = NODE_TYPES[node2.type];
+          const nodeType = this._nodeTypes[node2.type];
           if (nodeType.onStop) {
             nodeType.onStop(node2, this);
           }
@@ -15603,17 +15853,23 @@ var LoomletPreview = (() => {
       }
     }
     _computeDeltaTime(frameTimestamp) {
+      if (!Number.isFinite(frameTimestamp)) {
+        return 0;
+      }
       if (this._lastTimestamp === null) {
         this._lastTimestamp = frameTimestamp;
         return 0;
       }
       const dt2 = Math.max(0, (frameTimestamp - this._lastTimestamp) / 1e3);
       this._lastTimestamp = frameTimestamp;
-      return Math.min(dt2, 0.1);
+      return dt2;
+    }
+    _graphUsesNodeType(type, graph = this._currentGraph) {
+      return Array.isArray(graph?.nodes) && graph.nodes.some((node2) => node2?.type === type);
     }
     _reconcileStateForGraph(graph) {
       const nextStateIds = new Set(
-        graph.nodes.filter((node2) => NODE_TYPES[node2.type]?.category === "state").map((node2) => node2.id)
+        graph.nodes.filter((node2) => this._nodeTypes[node2.type]?.category === "state").map((node2) => node2.id)
       );
       for (const nodeId of Array.from(this._prevOuts.keys())) {
         if (!nextStateIds.has(nodeId)) {
@@ -15646,7 +15902,7 @@ var LoomletPreview = (() => {
         nodeIds.add(node2.id);
       }
       for (const node2 of graph.nodes) {
-        if (!NODE_TYPES[node2.type]) {
+        if (!this._nodeTypes[node2.type]) {
           throw new LoomError("UNKNOWN_NODE_TYPE", `Unknown node type: ${node2.type}`, { nodeId: node2.id, type: node2.type });
         }
       }
@@ -15670,13 +15926,13 @@ var LoomletPreview = (() => {
         const fromPortName = fromParts[1];
         const toPortName = toParts[1];
         const fromNode = graph.nodes.find((n2) => n2.id === fromNodeId);
-        const fromNodeType = NODE_TYPES[fromNode.type];
+        const fromNodeType = this._nodeTypes[fromNode.type];
         const fromPort = fromNodeType.outputs.find((o) => o.name === fromPortName);
         if (!fromPort) {
           throw new LoomError("UNKNOWN_PORT", `Unknown port: ${fromNodeId}.${fromPortName}`, { nodeId: fromNodeId, port: fromPortName, side: "output" });
         }
         const toNode = graph.nodes.find((n2) => n2.id === toNodeId);
-        const toNodeType = NODE_TYPES[toNode.type];
+        const toNodeType = this._nodeTypes[toNode.type];
         const toPort = toNodeType.inputs.find((i2) => i2.name === toPortName);
         if (!toPort) {
           throw new LoomError("UNKNOWN_PORT", `Unknown port: ${toNodeId}.${toPortName}`, { nodeId: toNodeId, port: toPortName, side: "input" });
@@ -15709,7 +15965,7 @@ var LoomletPreview = (() => {
       for (const node2 of graph.nodes) {
         if (node2.type === "filter") {
           const predicate = (node2.params && node2.params.predicate) ?? "true";
-          const dslEval = new RestrictedDSLEvaluator(predicate, node2.id);
+          const dslEval = new RestrictedDSLEvaluator2(predicate, node2.id);
           dslEval.evaluate();
         }
       }
@@ -15840,6 +16096,13 @@ var LoomletPreview = (() => {
       return Array.from(cycleNodes);
     }
   };
+  function createDefaultNodeRegistry() {
+    const registry = createNodeRegistry();
+    registerBuiltinNodes(registry);
+    return registry;
+  }
+  var DEFAULT_NODE_REGISTRY = createDefaultNodeRegistry();
+  var NODE_TYPES = DEFAULT_NODE_REGISTRY.toObject();
 
   // ../../editor-studio/src/rete-operation-helpers.js
   function connectionToAddEdgeOp(connection) {
@@ -16211,15 +16474,21 @@ var LoomletPreview = (() => {
   var isRuntimePaused = false;
   var pausedAtTimestampMs = null;
   var accumulatedPausedMs = 0;
+  var lastEffectsPostMs = 0;
+  var EFFECTS_POST_INTERVAL_MS = 100;
+  var hostInput = {
+    mouseX: 320,
+    mouseY: 240,
+    mouseDown: false,
+    keys: /* @__PURE__ */ new Set()
+  };
   function resizePreviewCanvas() {
     const canvas = document.getElementById("lp-preview-canvas");
     if (!canvas) return;
     const dpr = window.devicePixelRatio || 1;
     canvas.width = Math.round(window.innerWidth * dpr);
     canvas.height = Math.round(window.innerHeight * dpr);
-    if (!loomEngine) {
-      drawPlaceholder(canvas, dpr);
-    }
+    if (!loomEngine) drawPlaceholder(canvas, dpr);
   }
   function drawPlaceholder(canvas, dpr) {
     const ctx = canvas.getContext("2d");
@@ -16244,28 +16513,127 @@ var LoomletPreview = (() => {
     ctx.fillText("Runtime Preview", w2 / 2, h2 / 2 - Math.round(13 * dpr));
     ctx.fillStyle = "rgba(255,255,255,0.09)";
     ctx.font = `${Math.round(11 * dpr)}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
-    ctx.fillText("add render bar() or render point() to see output", w2 / 2, h2 / 2 + Math.round(13 * dpr));
+    ctx.fillText("add render bar(), render point(), or render keys() to see output", w2 / 2, h2 / 2 + Math.round(13 * dpr));
+  }
+  function updatePointerFromEvent(event) {
+    const canvas = document.getElementById("lp-preview-canvas");
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    hostInput.mouseX = event.clientX - rect.left;
+    hostInput.mouseY = event.clientY - rect.top;
+  }
+  function syncMouseDownFromButtons(event) {
+    if (typeof event.buttons === "number") {
+      hostInput.mouseDown = (event.buttons & 1) === 1;
+    }
+  }
+  function initHostInputs() {
+    const canvas = document.getElementById("lp-preview-canvas");
+    if (!canvas) return;
+    canvas.tabIndex = 0;
+    canvas.style.outline = "none";
+    window.addEventListener("pointermove", (event) => {
+      updatePointerFromEvent(event);
+      syncMouseDownFromButtons(event);
+    }, true);
+    window.addEventListener("pointerdown", (event) => {
+      canvas.focus();
+      updatePointerFromEvent(event);
+      syncMouseDownFromButtons(event);
+    }, true);
+    window.addEventListener("pointerup", (event) => {
+      updatePointerFromEvent(event);
+      syncMouseDownFromButtons(event);
+    }, true);
+    window.addEventListener("pointercancel", () => {
+      hostInput.mouseDown = false;
+    }, true);
+    window.addEventListener("mouseup", () => {
+      hostInput.mouseDown = false;
+    }, true);
+    window.addEventListener("keydown", (event) => {
+      hostInput.keys.add(event.code || event.key);
+      hostInput.keys.add(event.key);
+      if (["Space", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.code)) {
+        event.preventDefault();
+      }
+    }, true);
+    window.addEventListener("keyup", (event) => {
+      hostInput.keys.delete(event.code || event.key);
+      hostInput.keys.delete(event.key);
+      if (["Space", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.code)) {
+        event.preventDefault();
+      }
+    }, true);
+    window.addEventListener("blur", () => {
+      hostInput.mouseDown = false;
+      hostInput.keys.clear();
+    });
   }
   function resolveValue(engine, ref) {
-    if (typeof ref === "number") return ref;
+    if (typeof ref === "number" || typeof ref === "boolean") return ref;
     if (ref === null || ref === void 0) return null;
+    if (typeof ref === "string" && ref.startsWith("__loomlet_host:")) return resolveHostInput(ref);
     const numVal = parseFloat(ref);
-    if (!isNaN(numVal) && String(ref).trim() === String(numVal)) return numVal;
-    return engine.getValue(ref);
+    if (!Number.isNaN(numVal) && String(ref).trim() === String(numVal)) return numVal;
+    let value = engine?.getValue(ref);
+    if (value === void 0 && typeof ref === "string" && !ref.includes(".")) {
+      value = engine?.getValue(`${ref}.out`);
+    }
+    if (typeof value === "string" && value.startsWith("__loomlet_host:")) {
+      return resolveHostInput(value);
+    }
+    return value;
+  }
+  function resolveEffectValue(value) {
+    if (typeof value === "string" && value.startsWith("__loomlet_host:")) return resolveHostInput(value);
+    if (Array.isArray(value)) return value.map(resolveEffectValue);
+    if (value && typeof value === "object") {
+      const copy2 = {};
+      for (const [key, nested] of Object.entries(value)) {
+        copy2[key] = resolveEffectValue(nested);
+      }
+      return copy2;
+    }
+    return value;
+  }
+  function resolveConsoleEffect(effect) {
+    const copy2 = { ...effect };
+    for (const key of ["args", "values", "value", "message", "payload"]) {
+      if (Object.prototype.hasOwnProperty.call(copy2, key)) {
+        copy2[key] = resolveEffectValue(copy2[key]);
+      }
+    }
+    return copy2;
+  }
+  function resolveHostInput(token2) {
+    if (token2 === "__loomlet_host:mouseX") return hostInput.mouseX;
+    if (token2 === "__loomlet_host:mouseY") return hostInput.mouseY;
+    if (token2 === "__loomlet_host:mouseDown") return hostInput.mouseDown;
+    const keyPrefix = "__loomlet_host:key:";
+    if (token2.startsWith(keyPrefix)) {
+      return hostInput.keys.has(token2.slice(keyPrefix.length));
+    }
+    return null;
+  }
+  function isEnabled(engine, renderConfig) {
+    const enabled = renderConfig?.enabled;
+    if (enabled === void 0 || enabled === null) return true;
+    return Boolean(resolveValue(engine, enabled));
   }
   function drawFrame(timestamp) {
     const canvas = document.getElementById("lp-preview-canvas");
     if (!canvas || !loomEngine || !currentGraph) return;
     if (isRuntimePaused) {
+      loomRafId = null;
       return;
     }
     try {
-      if (runtimeStartTimestampMs === null) {
-        runtimeStartTimestampMs = timestamp;
-      }
+      if (runtimeStartTimestampMs === null) runtimeStartTimestampMs = timestamp;
       const elapsedSeconds = (timestamp - runtimeStartTimestampMs - accumulatedPausedMs) / 1e3;
-      loomEngine.evaluateAt(elapsedSeconds, timestamp);
-      drawRuntimeCanvas(timestamp);
+      loomEngine.evaluateAt({ time: elapsedSeconds }, timestamp);
+      postRuntimeEffects(timestamp);
+      drawRuntimeCanvas();
     } catch (error) {
       console.error("[loomlet-preview] Runtime error in drawFrame:", error);
       handleRuntimeError(error);
@@ -16273,7 +16641,22 @@ var LoomletPreview = (() => {
     }
     loomRafId = requestAnimationFrame(drawFrame);
   }
-  function drawRuntimeCanvas(timestamp) {
+  function postRuntimeEffects(timestamp) {
+    if (!loomEngine || typeof loomEngine.getEffects !== "function") return;
+    if (timestamp - lastEffectsPostMs < EFFECTS_POST_INTERVAL_MS) return;
+    const effects = loomEngine.getEffects() || [];
+    const consoleEffects = effects.filter(isConsoleEffect).map(resolveConsoleEffect);
+    if (consoleEffects.length === 0) return;
+    lastEffectsPostMs = timestamp;
+    vscode.postMessage({ type: "runtimeEffects", effects: consoleEffects });
+  }
+  function isConsoleEffect(effect) {
+    if (!effect || typeof effect !== "object") return false;
+    const type = String(effect.type || effect.kind || effect.name || "");
+    const target = String(effect.target || "");
+    return type === "console" || type === "console.log" || type === "console.warn" || type === "console.error" || target === "console";
+  }
+  function drawRuntimeCanvas() {
     const canvas = document.getElementById("lp-preview-canvas");
     if (!canvas || !loomEngine || !currentGraph) return;
     const dpr = window.devicePixelRatio || 1;
@@ -16281,38 +16664,92 @@ var LoomletPreview = (() => {
     const w2 = canvas.width;
     const h2 = canvas.height;
     const renderConfig = currentGraph.render;
-    const trail = renderConfig?.trail !== void 0 ? renderConfig.trail : 0.1;
+    const enabled = isEnabled(loomEngine, renderConfig);
+    const trail = renderConfig?.trail !== void 0 ? resolveValue(loomEngine, renderConfig.trail) : 0.1;
     if (trail > 0) {
       ctx.fillStyle = `rgba(0, 0, 0, ${trail})`;
       ctx.fillRect(0, 0, w2, h2);
-    } else {
+    } else if (renderConfig?.type !== "point") {
       ctx.fillStyle = "#1a1a1a";
       ctx.fillRect(0, 0, w2, h2);
     }
-    if (renderConfig?.type === "point") {
-      const x2 = resolveValue(loomEngine, renderConfig.x);
-      const y = resolveValue(loomEngine, renderConfig.y);
-      const color = renderConfig.color || "#00ff00";
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      if (x2 !== null && typeof x2 === "number" && y !== null && typeof y === "number") {
-        ctx.arc(x2 * dpr, y * dpr, 4 * dpr, 0, Math.PI * 2);
-      } else {
-        ctx.arc(w2 / 2, h2 / 2, 4 * dpr, 0, Math.PI * 2);
-      }
-      ctx.fill();
-    } else if (renderConfig?.type === "bar") {
-      const width = resolveValue(loomEngine, renderConfig.width);
-      const color = renderConfig.color || "#00ccff";
-      const cssHeight = renderConfig.height !== void 0 ? renderConfig.height : 40;
-      const heightPx = cssHeight * dpr;
-      const cssY = renderConfig.y !== void 0 ? resolveValue(loomEngine, renderConfig.y) : null;
-      const yPx = cssY !== null && typeof cssY === "number" ? cssY * dpr : (h2 - heightPx) / 2;
-      if (width !== null && typeof width === "number") {
-        ctx.fillStyle = color;
-        ctx.fillRect(0, yPx, width * dpr, heightPx);
-      }
+    if (!enabled) {
+      if (renderConfig?.type === "keys") drawKeyVisualizer(ctx, renderConfig, dpr, w2, h2);
+      return;
     }
+    if (renderConfig?.type === "point") drawPoint(ctx, renderConfig, dpr, w2, h2);
+    else if (renderConfig?.type === "bar") drawBar(ctx, renderConfig, dpr, w2, h2);
+    else if (renderConfig?.type === "keys") drawKeyVisualizer(ctx, renderConfig, dpr, w2, h2);
+  }
+  function drawPoint(ctx, renderConfig, dpr, w2, h2) {
+    const x2 = resolveValue(loomEngine, renderConfig.x);
+    const y = resolveValue(loomEngine, renderConfig.y);
+    const radius = resolveValue(loomEngine, renderConfig.radius) ?? 4;
+    const color = renderConfig.color || "#00ff00";
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    if (typeof x2 === "number" && typeof y === "number") {
+      ctx.arc(x2 * dpr, y * dpr, radius * dpr, 0, Math.PI * 2);
+    } else {
+      ctx.arc(w2 / 2, h2 / 2, radius * dpr, 0, Math.PI * 2);
+    }
+    ctx.fill();
+  }
+  function drawBar(ctx, renderConfig, dpr, w2, h2) {
+    const width = resolveValue(loomEngine, renderConfig.width);
+    if (typeof width !== "number") return;
+    const color = renderConfig.color || "#00ccff";
+    const cssHeight = renderConfig.height !== void 0 ? resolveValue(loomEngine, renderConfig.height) : 40;
+    const cssX = renderConfig.x !== void 0 ? resolveValue(loomEngine, renderConfig.x) : 0;
+    const cssY = renderConfig.y !== void 0 ? resolveValue(loomEngine, renderConfig.y) : null;
+    const heightPx = cssHeight * dpr;
+    const xPx = typeof cssX === "number" ? cssX * dpr : 0;
+    const yPx = typeof cssY === "number" ? cssY * dpr : (h2 - heightPx) / 2;
+    ctx.fillStyle = color;
+    ctx.fillRect(xPx, yPx, width * dpr, heightPx);
+  }
+  function drawKeyVisualizer(ctx, renderConfig, dpr, w2, h2) {
+    const cx = w2 / 2;
+    const cy = h2 / 2;
+    const keyW = 78 * dpr;
+    const keyH = 52 * dpr;
+    const gap = 10 * dpr;
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `${Math.round(16 * dpr)}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.15)";
+    ctx.fillText("Click preview, then press Space / Arrow keys", cx, cy - 110 * dpr);
+    drawKey(ctx, "\u2191", resolveValue(loomEngine, renderConfig.up), cx, cy - keyH - gap, keyW, keyH, dpr);
+    drawKey(ctx, "\u2190", resolveValue(loomEngine, renderConfig.left), cx - keyW - gap, cy, keyW, keyH, dpr);
+    drawKey(ctx, "Space", resolveValue(loomEngine, renderConfig.space), cx, cy, keyW, keyH, dpr);
+    drawKey(ctx, "\u2192", resolveValue(loomEngine, renderConfig.right), cx + keyW + gap, cy, keyW, keyH, dpr);
+    drawKey(ctx, "\u2193", resolveValue(loomEngine, renderConfig.down), cx, cy + keyH + gap, keyW, keyH, dpr);
+    ctx.restore();
+  }
+  function drawKey(ctx, label, active, cx, cy, w2, h2, dpr) {
+    const x2 = cx - w2 / 2;
+    const y = cy - h2 / 2;
+    ctx.fillStyle = active ? "rgba(112,214,255,0.9)" : "rgba(255,255,255,0.08)";
+    ctx.strokeStyle = active ? "rgba(112,214,255,1)" : "rgba(255,255,255,0.18)";
+    ctx.lineWidth = 1 * dpr;
+    ctx.beginPath();
+    roundRect(ctx, x2, y, w2, h2, 10 * dpr);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = active ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.62)";
+    ctx.fillText(label, cx, cy);
+  }
+  function roundRect(ctx, x2, y, width, height, radius) {
+    ctx.moveTo(x2 + radius, y);
+    ctx.lineTo(x2 + width - radius, y);
+    ctx.quadraticCurveTo(x2 + width, y, x2 + width, y + radius);
+    ctx.lineTo(x2 + width, y + height - radius);
+    ctx.quadraticCurveTo(x2 + width, y + height, x2 + width - radius, y + height);
+    ctx.lineTo(x2 + radius, y + height);
+    ctx.quadraticCurveTo(x2, y + height, x2, y + height - radius);
+    ctx.lineTo(x2, y + radius);
+    ctx.quadraticCurveTo(x2, y, x2 + radius, y);
   }
   function handleRuntimeError(error) {
     setStatus("Runtime error \xB7 Read-only Node Preview", true);
@@ -16322,21 +16759,21 @@ var LoomletPreview = (() => {
     if (canvas) drawPlaceholder(canvas, window.devicePixelRatio || 1);
   }
   function stopLoom() {
-    if (loomRafId !== null) {
-      cancelAnimationFrame(loomRafId);
-      loomRafId = null;
-    }
+    if (loomRafId !== null) cancelAnimationFrame(loomRafId);
+    loomRafId = null;
     if (loomEngine) {
       try {
         loomEngine.stop();
       } catch (_) {
       }
-      loomEngine = null;
     }
+    loomEngine = null;
     runtimeStartTimestampMs = null;
     isRuntimePaused = false;
     pausedAtTimestampMs = null;
     accumulatedPausedMs = 0;
+    lastEffectsPostMs = 0;
+    hostInput.mouseDown = false;
   }
   function startLoom(graph) {
     stopLoom();
@@ -16348,36 +16785,26 @@ var LoomletPreview = (() => {
       return;
     }
     try {
-      const graphForLoom = { nodes: graph.nodes || [], edges: graph.edges || [] };
-      loomEngine = new Loom(graphForLoom);
-      runtimeStartTimestampMs = null;
-      isRuntimePaused = false;
-      pausedAtTimestampMs = null;
-      accumulatedPausedMs = 0;
+      loomEngine = new Loom({ nodes: graph.nodes || [], edges: graph.edges || [] });
       loomRafId = requestAnimationFrame(drawFrame);
       updateControlStates();
-    } catch (e) {
-      console.error("[loomlet-preview] Loom engine initialization failed:", e);
-      handleRuntimeError(e);
+    } catch (error) {
+      console.error("[loomlet-preview] Loom engine initialization failed:", error);
+      handleRuntimeError(error);
     }
   }
   function setStatus(text, isError) {
     const el = document.getElementById("lp-status");
     if (!el) return;
     el.textContent = text;
-    if (isError) {
-      el.style.borderLeftColor = "#f44747";
-      el.style.color = "#f88";
-    } else {
-      el.style.borderLeftColor = "#4a90e2";
-      el.style.color = "#9cdcfe";
-    }
+    el.style.borderLeftColor = isError ? "#f44747" : "#4a90e2";
+    el.style.color = isError ? "#f88" : "#9cdcfe";
   }
   function setErrors(errors) {
     lastErrors = errors || [];
-    _renderErrors();
+    renderErrors();
   }
-  function _renderErrors() {
+  function renderErrors() {
     const el = document.getElementById("lp-errors");
     if (!el) return;
     if (!editorVisible || lastErrors.length === 0) {
@@ -16392,61 +16819,54 @@ var LoomletPreview = (() => {
     return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
   function togglePauseResume() {
-    if (!loomEngine || !currentGraph || !currentGraph.render) return;
+    if (!loomEngine || !currentGraph?.render) return;
     if (isRuntimePaused) {
       const now = performance.now();
-      if (pausedAtTimestampMs !== null) {
-        accumulatedPausedMs += now - pausedAtTimestampMs;
-        pausedAtTimestampMs = null;
-      }
+      if (pausedAtTimestampMs !== null) accumulatedPausedMs += now - pausedAtTimestampMs;
+      pausedAtTimestampMs = null;
       isRuntimePaused = false;
-      updateControlStates();
-      updateStatus();
-      loomRafId = requestAnimationFrame(drawFrame);
+      if (loomRafId === null) loomRafId = requestAnimationFrame(drawFrame);
     } else {
       pausedAtTimestampMs = performance.now();
       isRuntimePaused = true;
-      updateControlStates();
-      updateStatus();
+      if (loomRafId !== null) cancelAnimationFrame(loomRafId);
+      loomRafId = null;
     }
+    updateControlStates();
+    updateStatus();
   }
   function resetRuntime() {
-    if (!loomEngine || !currentGraph || !currentGraph.render) return;
+    if (!loomEngine || !currentGraph?.render) return;
     runtimeStartTimestampMs = null;
     accumulatedPausedMs = 0;
     isRuntimePaused = false;
     pausedAtTimestampMs = null;
-    try {
-      loomEngine.evaluateAt(0, performance.now());
-      drawRuntimeCanvas(performance.now());
-    } catch (e) {
-      console.error("[loomlet-preview] Error during reset:", e);
+    lastEffectsPostMs = 0;
+    hostInput.mouseDown = false;
+    const canvas = document.getElementById("lp-preview-canvas");
+    const ctx = canvas?.getContext("2d");
+    if (canvas && ctx) {
+      ctx.fillStyle = "#1a1a1a";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
+    if (loomRafId !== null) cancelAnimationFrame(loomRafId);
+    loomRafId = requestAnimationFrame(drawFrame);
     updateControlStates();
     updateStatus();
-    if (loomRafId !== null) {
-      cancelAnimationFrame(loomRafId);
-    }
-    loomRafId = requestAnimationFrame(drawFrame);
   }
   function updateControlStates() {
-    const canControl = loomEngine && currentGraph && currentGraph.render;
+    const canControl = Boolean(loomEngine && currentGraph?.render);
     const toggleBtn = document.getElementById("lp-toggle-runtime");
     const resetBtn = document.getElementById("lp-reset-runtime");
     if (toggleBtn) {
       toggleBtn.disabled = !canControl;
       toggleBtn.textContent = isRuntimePaused ? "Resume" : "Pause";
     }
-    if (resetBtn) {
-      resetBtn.disabled = !canControl;
-    }
+    if (resetBtn) resetBtn.disabled = !canControl;
   }
   function updateStatus() {
-    if (isRuntimePaused) {
-      setStatus("Paused \xB7 Runtime Preview \xB7 Read-only Node Preview", false);
-    } else if (loomEngine && currentGraph && currentGraph.render) {
-      setStatus("Running \xB7 Runtime Preview \xB7 Read-only Node Preview", false);
-    }
+    if (isRuntimePaused) setStatus("Paused \xB7 Runtime Preview \xB7 Read-only Node Preview", false);
+    else if (loomEngine && currentGraph?.render) setStatus("Running \xB7 Runtime Preview \xB7 Read-only Node Preview", false);
   }
   function toggleEditor() {
     editorVisible = !editorVisible;
@@ -16457,21 +16877,17 @@ var LoomletPreview = (() => {
       if (container) container.style.display = "";
       if (panel) panel.style.flex = "1";
       if (btn) btn.textContent = "Hide Editor";
-      _renderErrors();
     } else {
       if (container) container.style.display = "none";
       if (panel) panel.style.flex = "0 0 auto";
       if (btn) btn.textContent = "Show Editor";
-      _renderErrors();
     }
+    renderErrors();
   }
   function initControlButtons() {
-    const toggleEditorBtn = document.getElementById("lp-toggle-editor");
-    if (toggleEditorBtn) toggleEditorBtn.addEventListener("click", toggleEditor);
-    const toggleRuntimeBtn = document.getElementById("lp-toggle-runtime");
-    if (toggleRuntimeBtn) toggleRuntimeBtn.addEventListener("click", togglePauseResume);
-    const resetRuntimeBtn = document.getElementById("lp-reset-runtime");
-    if (resetRuntimeBtn) resetRuntimeBtn.addEventListener("click", resetRuntime);
+    document.getElementById("lp-toggle-editor")?.addEventListener("click", toggleEditor);
+    document.getElementById("lp-toggle-runtime")?.addEventListener("click", togglePauseResume);
+    document.getElementById("lp-reset-runtime")?.addEventListener("click", resetRuntime);
   }
   function initEditorView() {
     if (editorView) return;
@@ -16480,8 +16896,7 @@ var LoomletPreview = (() => {
     editorView = new NodeEditorView(container, {
       onOperation: () => {
       },
-      // read-only: ignore all edit operations
-      onError: (e) => console.error("[NodeEditorView]", e),
+      onError: (error) => console.error("[NodeEditorView]", error),
       onSelectNode: () => {
       }
     });
@@ -16507,13 +16922,14 @@ var LoomletPreview = (() => {
       await editorView.renderModel(editorModel);
       updateStatus();
       updateControlStates();
-    } catch (e) {
-      console.error("[loomlet-preview] renderModel failed:", e);
+    } catch (error) {
+      console.error("[loomlet-preview] renderModel failed:", error);
       setStatus("Render error \xB7 Read-only Node Preview", true);
     }
   });
   resizePreviewCanvas();
   window.addEventListener("resize", resizePreviewCanvas);
+  initHostInputs();
   initControlButtons();
   vscode.postMessage({ type: "ready" });
 })();

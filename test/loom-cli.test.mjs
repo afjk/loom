@@ -285,6 +285,13 @@ test('run --get returns finite number', () => {
   assert.equal(Number.isFinite(value), true);
 });
 
+test('run fails clearly when clock graph omits --time', () => {
+  const result = runCli(['run', 'examples/cli-basic.loom', '--get', 'x.out']);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /MISSING_ENV_TIME/);
+  assert.match(result.stderr, /env\.time/);
+});
+
 test('text.upper run returns uppercased string', () => {
   const result = runCli(['run', 'examples/cli-text.loom', '--get', 'message.out']);
   assert.equal(result.status, 0, result.stderr);
@@ -482,7 +489,7 @@ test('evaluateOnce supports Node-safe one-shot evaluation', async () => {
   };
 
   const engine = new Loom(graph);
-  engine.evaluateOnce({ time: 0.25, dt: 0 });
+  engine.evaluateOnce({ env: { time: 0.25, deltaTime: 0 } });
   const value = engine.getValue('wave.out');
 
   assert.equal(Number.isFinite(value), true);

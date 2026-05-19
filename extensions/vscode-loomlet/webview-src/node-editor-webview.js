@@ -205,7 +205,7 @@ function drawFrame(timestamp) {
   try {
     if (runtimeStartTimestampMs === null) runtimeStartTimestampMs = timestamp;
     const elapsedSeconds = (timestamp - runtimeStartTimestampMs - accumulatedPausedMs) / 1000;
-    loomEngine.evaluateAt(elapsedSeconds, timestamp);
+    loomEngine.evaluateAt({ time: elapsedSeconds }, timestamp);
     postRuntimeEffects(timestamp);
     drawRuntimeCanvas();
   } catch (error) {
