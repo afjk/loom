@@ -66,3 +66,4 @@ The web node editor keeps UI state (position/zoom/selection) separate from progr
 - [DSL details](DSL.md)
 - [Tour](TOUR.md)
 - [Standard library plan](STANDARD_LIBRARY_PLAN.md)
+- [Semantic Coordinate System](design/semantic-coordinate-system.md) — how Scene Sync / Loomlet expresses positions and rotations across different runtime environments
