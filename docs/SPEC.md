@@ -64,6 +64,9 @@ Runtime は次の責務を持つ。
 
 Web、Unity、Godot など複数の runtime が存在し得るが、それらは同じ評価規則に従うべきである。
 
+Runtime が出力を host API に対応づけるとき、座標系の変換を行う責務がある。
+See [Semantic Coordinate System](./design/semantic-coordinate-system.md) for how Loomlet expresses positions and rotations in a runtime-agnostic way.
+
 ## Scene-level graph と Object-level graph
 
 Loomlet graph は、scene 全体に対して持つことも、個別の scene object に attach することもできる。
