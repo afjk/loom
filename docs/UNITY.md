@@ -174,18 +174,6 @@ void Update()
 | `sceneSetColor`    | `Renderer.material.color` を更新（alpha 維持）    |
 | `sceneSetVisible`  | `GameObject.SetActive(bool)` を呼び出す           |
 
-### Coordinate System Mapping
-
-When implementing `sceneSetPosition` and `sceneSetRotation`, the host runtime maps semantic axes (defined in [Semantic Coordinate System](./design/semantic-coordinate-system.md)) to Unity's native coordinate system. The mappings are typically:
-
-```
-right  → Transform.position.x
-up     → Transform.position.y
-front  → Transform.position.z
-```
-
-For rotations around semantic axes, the host applies `Quaternion.AngleAxis()` with the mapped axis vector.
-
 ## sceneSetRotation の注意事項
 
 `sceneSetRotation` の入力値はラジアンです（JavaScript 版との互換性のため）。  

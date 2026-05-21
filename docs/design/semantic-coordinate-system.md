@@ -1,7 +1,5 @@
 # Semantic Coordinate System
 
-Related issue: [afjk/loomlet#???](https://github.com/afjk/loomlet/issues/???)
-
 ## Overview
 
 Scene Sync / Loomlet spans multiple runtime environments including Web, Unity, glTF, and XR platforms.
@@ -15,6 +13,12 @@ front  = forward direction
 ```
 
 The host runtime is responsible for mapping these semantic axes to its native coordinate system.
+
+### Space qualification
+
+Semantic axes may be interpreted in different coordinate spaces such as world space or object-local space.
+This document focuses on the axis vocabulary and semantic meaning;
+exact space qualification (e.g., "is this world-up or local-up?") is typically determined by the context of the operation or defined in follow-up design specifications.
 
 ## Motivation
 
@@ -37,6 +41,9 @@ This difference causes several problems when expressing transforms without seman
 
 The public interface of Scene Sync / Loomlet **does not assume engine-specific axes**.
 Instead, it expresses transforms using semantic meaning that is stable across all runtime environments.
+
+Semantic axes are a **public expression layer**, not a replacement for native engine coordinates.
+Internally, hosts continue to use their native coordinate systems and internal APIs; semantic axes only affect how Loomlet graphs express and communicate transforms.
 
 Host runtimes translate semantic axes to native axes:
 
@@ -73,7 +80,11 @@ This unambiguously expresses "move 1.0 units right and 1.5 units up" regardless 
 ### Host Mapping
 
 Each host runtime defines how semantic axes map to native axes.
-Common mappings:
+
+The exact mapping depends on the host environment, asset format, importer, and export pipeline.
+Different platforms and frameworks may define their mappings differently.
+
+Example mappings (not prescriptive):
 
 ```
 Web (Three.js):
@@ -85,14 +96,9 @@ Unity:
   right → +X
   up    → +Y
   front → +Z
-
-glTF:
-  right → +X
-  up    → +Y
-  front → -Z
 ```
 
-The host is responsible for this mapping; the Loomlet graph does not need to know about it.
+The host is responsible for establishing and maintaining these mappings; the Loomlet graph does not need to know about specific coordinate conventions.
 
 ## Rotation
 
@@ -144,19 +150,16 @@ A wall clock has:
 ### Typical Loomlet graph behavior
 
 ```loomlet
-// Clock face is a flat object facing the viewer
-clockFace.position = { right: 0, up: 0, front: 0 };
-clockFace.rotation = rotateAround("front", 0);  // face forward
+// Clock face orientation is defined by object placement (host/asset responsibility)
+// Hands rotate around the clock's local front axis
 
-// Hour hand rotates around the front axis
 hourHand.rotation = rotateAround("front", (hour % 12) * 30);
-
-// Minute hand rotates around the front axis
 minuteHand.rotation = rotateAround("front", minute * 6);
-
-// Second hand rotates around the front axis
 secondHand.rotation = rotateAround("front", second * 6);
 ```
+
+In this example, each hand rotates around the `front` axis of its local coordinate space.
+The clock face's orientation in the scene is a separate concern handled by object placement or asset definition, not by Loomlet transforms.
 
 ### Host responsibility
 
