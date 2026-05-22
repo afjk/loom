@@ -466,6 +466,167 @@ test('invalid event timestamp fails clearly', () => {
   );
 });
 
+test('risingEdge emits only on false -> true and never on initial evaluation', () => {
+  const graph = {
+    nodes: [
+      { id: 'clock', type: 'clock' },
+      { id: 'gt', type: 'logic.greaterThan', params: { other: 1 } },
+      { id: 'edge', type: 'risingEdge' }
+    ],
+    edges: [
+      { from: 'clock.t', to: 'gt.value' },
+      { from: 'gt.out', to: 'edge.value' }
+    ]
+  };
+  const engine = new Loom(graph);
+
+  engine.evaluateOnce({ env: { time: 2 } });
+  assert.deepEqual(engine.getValue('edge.event'), []);
+
+  engine.evaluateOnce({ env: { time: 0 } });
+  assert.deepEqual(engine.getValue('edge.event'), []);
+
+  engine.evaluateOnce({ env: { time: 2 } });
+  assert.deepEqual(engine.getValue('edge.event'), [{ timestamp: 2 }]);
+  assert.equal(Object.hasOwn(engine.getValue('edge.event')[0], 'previous'), false);
+  assert.equal(Object.hasOwn(engine.getValue('edge.event')[0], 'current'), false);
+  assert.equal(Object.hasOwn(engine.getValue('edge.event')[0], 'payload'), false);
+
+  engine.evaluateOnce({ env: { time: 3 } });
+  assert.deepEqual(engine.getValue('edge.event'), []);
+});
+
+test('fallingEdge emits only on true -> false and never on initial evaluation', () => {
+  const graph = {
+    nodes: [
+      { id: 'clock', type: 'clock' },
+      { id: 'gt', type: 'logic.greaterThan', params: { other: 1 } },
+      { id: 'edge', type: 'fallingEdge' }
+    ],
+    edges: [
+      { from: 'clock.t', to: 'gt.value' },
+      { from: 'gt.out', to: 'edge.value' }
+    ]
+  };
+  const engine = new Loom(graph);
+
+  engine.evaluateOnce({ env: { time: 0 } });
+  assert.deepEqual(engine.getValue('edge.event'), []);
+
+  engine.evaluateOnce({ env: { time: 2 } });
+  assert.deepEqual(engine.getValue('edge.event'), []);
+
+  engine.evaluateOnce({ env: { time: 3 } });
+  assert.deepEqual(engine.getValue('edge.event'), []);
+
+  engine.evaluateOnce({ env: { time: 0 } });
+  assert.deepEqual(engine.getValue('edge.event'), [{ timestamp: 0 }]);
+
+  engine.evaluateOnce({ env: { time: 0 } });
+  assert.deepEqual(engine.getValue('edge.event'), []);
+});
+
+test('edge state persists across evaluateOnce and evaluateAt on same Loom instance', () => {
+  const graph = {
+    nodes: [
+      { id: 'clock', type: 'clock' },
+      { id: 'gt', type: 'logic.greaterThan', params: { other: 1 } },
+      { id: 'edge', type: 'risingEdge' }
+    ],
+    edges: [
+      { from: 'clock.t', to: 'gt.value' },
+      { from: 'gt.out', to: 'edge.value' }
+    ]
+  };
+  const engine = new Loom(graph);
+
+  engine.evaluateOnce({ env: { time: 0 } });
+  assert.deepEqual(engine.getValue('edge.event'), []);
+
+  engine.evaluateAt({ time: 2 }, 2000);
+  assert.deepEqual(engine.getValue('edge.event'), [{ timestamp: 2 }]);
+});
+
+test('edge state is isolated per node id and per Loom instance and resetState clears it', () => {
+  const graph = {
+    nodes: [
+      { id: 'clock', type: 'clock' },
+      { id: 'gt', type: 'logic.greaterThan', params: { other: 1 } },
+      { id: 'edgeA', type: 'risingEdge' },
+      { id: 'edgeB', type: 'risingEdge' }
+    ],
+    edges: [
+      { from: 'clock.t', to: 'gt.value' },
+      { from: 'gt.out', to: 'edgeA.value' },
+      { from: 'gt.out', to: 'edgeB.value' }
+    ]
+  };
+
+  const engine = new Loom(graph);
+  engine.evaluateOnce({ env: { time: 0 } });
+  engine.evaluateOnce({ env: { time: 2 } });
+  assert.deepEqual(engine.getValue('edgeA.event'), [{ timestamp: 2 }]);
+  assert.deepEqual(engine.getValue('edgeB.event'), [{ timestamp: 2 }]);
+
+  const second = new Loom(graph);
+  second.evaluateOnce({ env: { time: 2 } });
+  assert.deepEqual(second.getValue('edgeA.event'), []);
+
+  engine.resetState();
+  engine.evaluateOnce({ env: { time: 2 } });
+  assert.deepEqual(engine.getValue('edgeA.event'), []);
+});
+
+test('risingEdge -> sendEvent emits one effect only on transition', () => {
+  const graph = {
+    nodes: [
+      { id: 'clock', type: 'clock' },
+      { id: 'gt', type: 'logic.greaterThan', params: { other: 1 } },
+      { id: 'edge', type: 'risingEdge' },
+      { id: 'sender', type: 'sendEvent', params: { channel: 'custom.enterRange' } }
+    ],
+    edges: [
+      { from: 'clock.t', to: 'gt.value' },
+      { from: 'gt.out', to: 'edge.value' },
+      { from: 'edge.event', to: 'sender.trigger' }
+    ]
+  };
+  const engine = new Loom(graph);
+
+  engine.evaluateOnce({ env: { time: 0 } });
+  assert.deepEqual(engine.getEffects(), []);
+
+  engine.evaluateOnce({ env: { time: 2 } });
+  assert.deepEqual(engine.getEffects(), [
+    { kind: 'event.send', channel: 'custom.enterRange', timestampHint: 2 }
+  ]);
+});
+
+test('fallingEdge -> sendEvent emits one effect only on transition', () => {
+  const graph = {
+    nodes: [
+      { id: 'clock', type: 'clock' },
+      { id: 'gt', type: 'logic.greaterThan', params: { other: 1 } },
+      { id: 'edge', type: 'fallingEdge' },
+      { id: 'sender', type: 'sendEvent', params: { channel: 'custom.leaveRange' } }
+    ],
+    edges: [
+      { from: 'clock.t', to: 'gt.value' },
+      { from: 'gt.out', to: 'edge.value' },
+      { from: 'edge.event', to: 'sender.trigger' }
+    ]
+  };
+  const engine = new Loom(graph);
+
+  engine.evaluateOnce({ env: { time: 2 } });
+  assert.deepEqual(engine.getEffects(), []);
+
+  engine.evaluateOnce({ env: { time: 0 } });
+  assert.deepEqual(engine.getEffects(), [
+    { kind: 'event.send', channel: 'custom.leaveRange', timestampHint: 0 }
+  ]);
+});
+
 test('sendEvent emits one event.send effect when trigger receives one event', () => {
   const graph = {
     nodes: [

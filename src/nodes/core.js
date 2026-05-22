@@ -25,6 +25,40 @@ export function registerCoreNodes(registry) {
       };
     }
   });
+  registry.registerNodeType('risingEdge', {
+    category: 'transform',
+    inputs: [{ name: 'value', type: 'boolean', default: false, kind: 'behavior' }],
+    outputs: [{ name: 'event', type: 'event<void>', kind: 'event' }],
+    params: [{ name: 'value', type: 'boolean', default: false }],
+    evaluate: (inputs, params, ctx) => {
+      const hasPrevious = ctx.state.get('hasPrevious', false);
+      const previous = ctx.state.get('previous', undefined);
+      const current = Boolean(inputs.value);
+      const shouldEmit = hasPrevious && previous === false && current === true;
+
+      ctx.state.set('previous', current);
+      ctx.state.set('hasPrevious', true);
+
+      return shouldEmit ? { event: [{ timestamp: ctx.env?.time }] } : { event: [] };
+    }
+  });
+  registry.registerNodeType('fallingEdge', {
+    category: 'transform',
+    inputs: [{ name: 'value', type: 'boolean', default: false, kind: 'behavior' }],
+    outputs: [{ name: 'event', type: 'event<void>', kind: 'event' }],
+    params: [{ name: 'value', type: 'boolean', default: false }],
+    evaluate: (inputs, params, ctx) => {
+      const hasPrevious = ctx.state.get('hasPrevious', false);
+      const previous = ctx.state.get('previous', undefined);
+      const current = Boolean(inputs.value);
+      const shouldEmit = hasPrevious && previous === true && current === false;
+
+      ctx.state.set('previous', current);
+      ctx.state.set('hasPrevious', true);
+
+      return shouldEmit ? { event: [{ timestamp: ctx.env?.time }] } : { event: [] };
+    }
+  });
   registry.registerNodeType('sendEvent', {
     category: 'sink',
     inputs: [
