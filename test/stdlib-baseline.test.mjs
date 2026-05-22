@@ -340,6 +340,166 @@ test('invalid event timestamp fails clearly', () => {
   );
 });
 
+test('sendEvent emits one event.send effect when trigger receives one event', () => {
+  const graph = {
+    nodes: [
+      { id: 'listener', type: 'onEvent', params: { channel: 'custom.input' } },
+      { id: 'sender', type: 'sendEvent', params: { channel: 'custom.output' } }
+    ],
+    edges: [{ from: 'listener.event', to: 'sender.trigger' }]
+  };
+  const engine = new Loom(graph);
+
+  engine.evaluateOnce({
+    env: {
+      time: 1.5,
+      events: [{ channel: 'custom.input', timestamp: 1.0, payload: { key: 'Enter' } }]
+    }
+  });
+
+  assert.deepEqual(engine.getEffects(), [
+    { kind: 'event.send', channel: 'custom.output', timestampHint: 1.5 }
+  ]);
+});
+
+test('sendEvent emits no effect when trigger receives no event', () => {
+  const graph = {
+    nodes: [
+      { id: 'listener', type: 'onEvent', params: { channel: 'custom.input' } },
+      { id: 'sender', type: 'sendEvent', params: { channel: 'custom.output' } }
+    ],
+    edges: [{ from: 'listener.event', to: 'sender.trigger' }]
+  };
+  const engine = new Loom(graph);
+  engine.evaluateOnce({ env: { time: 1.5, events: [] } });
+  assert.deepEqual(engine.getEffects(), []);
+});
+
+test('sendEvent emits one effect per trigger and uses channel/target/timestampHint from params/env', () => {
+  const graph = {
+    nodes: [
+      { id: 'listener', type: 'onEvent', params: { channel: 'custom.input' } },
+      { id: 'sender', type: 'sendEvent', params: { channel: 'custom.output', target: 'object-1' } }
+    ],
+    edges: [{ from: 'listener.event', to: 'sender.trigger' }]
+  };
+  const engine = new Loom(graph);
+
+  engine.evaluateOnce({
+    env: {
+      time: 2.25,
+      events: [
+        { channel: 'custom.input', timestamp: 1.0, payload: 1 },
+        { channel: 'custom.input', timestamp: 1.1, payload: 2 }
+      ]
+    }
+  });
+
+  assert.deepEqual(engine.getEffects(), [
+    { kind: 'event.send', channel: 'custom.output', target: 'object-1', timestampHint: 2.25 },
+    { kind: 'event.send', channel: 'custom.output', target: 'object-1', timestampHint: 2.25 }
+  ]);
+});
+
+test('sendEvent includes target only when provided', () => {
+  const withTarget = new Loom({
+    nodes: [
+      { id: 'listener', type: 'onEvent', params: { channel: 'custom.input' } },
+      { id: 'sender', type: 'sendEvent', params: { channel: 'custom.output', target: 'object-2' } }
+    ],
+    edges: [{ from: 'listener.event', to: 'sender.trigger' }]
+  });
+  const withoutTarget = new Loom({
+    nodes: [
+      { id: 'listener', type: 'onEvent', params: { channel: 'custom.input' } },
+      { id: 'sender', type: 'sendEvent', params: { channel: 'custom.output' } }
+    ],
+    edges: [{ from: 'listener.event', to: 'sender.trigger' }]
+  });
+
+  const env = { time: 1, events: [{ channel: 'custom.input', timestamp: 0.1, payload: null }] };
+  withTarget.evaluateOnce({ env });
+  withoutTarget.evaluateOnce({ env });
+
+  assert.equal(withTarget.getEffects()[0].target, 'object-2');
+  assert.equal(Object.hasOwn(withoutTarget.getEffects()[0], 'target'), false);
+});
+
+test('sendEvent uses explicit payload input and does not implicitly copy trigger.payload', () => {
+  const explicitPayload = { intensity: 0.8 };
+  const graph = {
+    nodes: [
+      { id: 'listener', type: 'onEvent', params: { channel: 'custom.input' } },
+      { id: 'payload', type: 'constant', params: { value: explicitPayload } },
+      { id: 'senderWithPayload', type: 'sendEvent', params: { channel: 'custom.explicit' } },
+      { id: 'senderWithoutPayload', type: 'sendEvent', params: { channel: 'custom.implicit' } }
+    ],
+    edges: [
+      { from: 'listener.event', to: 'senderWithPayload.trigger' },
+      { from: 'payload.out', to: 'senderWithPayload.payload' },
+      { from: 'listener.event', to: 'senderWithoutPayload.trigger' }
+    ]
+  };
+  const engine = new Loom(graph);
+
+  engine.evaluateOnce({
+    env: {
+      time: 1.5,
+      events: [{ channel: 'custom.input', timestamp: 1.0, payload: { fromTrigger: true } }]
+    }
+  });
+
+  const effects = engine.getEffects();
+  const explicit = effects.find((effect) => effect.channel === 'custom.explicit');
+  const implicit = effects.find((effect) => effect.channel === 'custom.implicit');
+  assert.deepEqual(explicit, {
+    kind: 'event.send',
+    channel: 'custom.explicit',
+    payload: explicitPayload,
+    timestampHint: 1.5
+  });
+  assert.equal(Object.hasOwn(implicit, 'payload'), false);
+});
+
+test('sendEvent does not mutate env.events', () => {
+  const graph = {
+    nodes: [
+      { id: 'listener', type: 'onEvent', params: { channel: 'custom.input' } },
+      { id: 'sender', type: 'sendEvent', params: { channel: 'custom.output' } }
+    ],
+    edges: [{ from: 'listener.event', to: 'sender.trigger' }]
+  };
+  const engine = new Loom(graph);
+  const envEvents = [{ channel: 'custom.input', timestamp: 1.0, payload: { nested: true } }];
+  const before = JSON.stringify(envEvents);
+
+  engine.evaluateOnce({ env: { time: 1.5, events: envEvents } });
+
+  assert.equal(JSON.stringify(envEvents), before);
+});
+
+test('onEvent -> sendEvent works with custom channels', () => {
+  const graph = {
+    nodes: [
+      { id: 'in', type: 'onEvent', params: { channel: 'custom.input' } },
+      { id: 'out', type: 'sendEvent', params: { channel: 'custom.output' } }
+    ],
+    edges: [{ from: 'in.event', to: 'out.trigger' }]
+  };
+  const engine = new Loom(graph);
+
+  engine.evaluateOnce({
+    env: {
+      time: 1.5,
+      events: [{ channel: 'custom.input', timestamp: 1.0 }]
+    }
+  });
+
+  assert.deepEqual(engine.getEffects(), [
+    { kind: 'event.send', channel: 'custom.output', timestampHint: 1.5 }
+  ]);
+});
+
 test('console.table records table effect', () => {
   const { effects } = evalGraph([{ id: 'table', type: 'console.table', params: { value: [{ a: 1 }] } }], [], null);
   assert.equal(effects[0].type, 'console.table');
