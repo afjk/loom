@@ -103,7 +103,11 @@ Each node definition in `NODE_TYPES` should have this minimum shape:
   - `inputs`: object mapping input names to current values
   - `params`: object mapping parameter names to literal values
   - `ctx`: runtime context (frame time, engine, node ID, etc.)
+    - `ctx.state.get(slotName, defaultValue?)`: read node-local runtime state for the current Loom instance
+    - `ctx.state.set(slotName, value)`: write node-local runtime state for the current Loom instance
   - Return value: object with one key per output
+
+For stateful graphs, deterministic output sequences require the same graph, same initial graph-instance state, same ordered inputs/environment sequence, and same evaluation rules.
 
 - **`onStart`** (function, optional): Called when the node first enters the graph. Signature: `onStart(ctx) -> void`
 

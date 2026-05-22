@@ -648,6 +648,7 @@ export class Loom {
     this._sortedNodeIds = [];
     this._values = new Map();
     this._prevOuts = new Map();
+    this._stateSlots = new Map();
     this._eventQueue = [];
     this._rafId = null;
     this._startTime = null;
@@ -755,6 +756,7 @@ export class Loom {
     for (const nodeId of this._sortedNodeIds) {
       const node = this._currentGraph.nodes.find(n => n.id === nodeId);
       const nodeType = this._nodeTypes[node.type];
+      const nodeState = this._createNodeState(nodeId);
 
       // input カテゴリかつ全出力が Event のノード（pointerClick, keyDown, keyUp）は
       // Step 4 で this._values に設定済みなのでスキップ
@@ -803,10 +805,13 @@ export class Loom {
       let outputs;
       if (nodeType.category === 'state') {
         const initial = coerceFiniteNumber(params.initial, 0);
-        const prevOut = this._prevOuts.has(nodeId)
-          ? this._prevOuts.get(nodeId)
-          : initial;
-        const stateCtx = { ...ctx, prevOut: sanitizeStateValue(prevOut, initial) };
+        const prevOut = nodeState.get('prevOut', initial);
+        const stateCtx = {
+          ...ctx,
+          currentNodeId: nodeId,
+          state: nodeState,
+          prevOut: sanitizeStateValue(prevOut, initial)
+        };
 
         try {
           outputs = nodeType.evaluate(inputs, params, stateCtx);
@@ -815,13 +820,18 @@ export class Loom {
           const safeOut = sanitizeStateValue(rawOut, initial);
           const safeNewState = sanitizeStateValue(rawNewState, initial);
           outputs = { ...outputs, out: safeOut };
+          nodeState.set('prevOut', safeNewState);
           this._prevOuts.set(nodeId, safeNewState);
         } catch (error) {
           console.error(`State node evaluation failed: ${nodeId}`, error);
           outputs = { out: stateCtx.prevOut };
         }
       } else {
-        outputs = nodeType.evaluate(inputs, params, { ...ctx, currentNodeId: nodeId });
+        outputs = nodeType.evaluate(inputs, params, {
+          ...ctx,
+          currentNodeId: nodeId,
+          state: nodeState
+        });
       }
 
       // 出力値を保存
@@ -855,6 +865,33 @@ export class Loom {
 
   _recordEffect(effect) {
     this._effects.push(effect);
+  }
+
+  _createNodeState(nodeId) {
+    return {
+      get: (slotName, defaultValue) => {
+        const slotKey = String(slotName);
+        const nodeSlots = this._stateSlots.get(nodeId);
+        if (!nodeSlots || !nodeSlots.has(slotKey)) {
+          return defaultValue;
+        }
+        return nodeSlots.get(slotKey);
+      },
+      set: (slotName, value) => {
+        const slotKey = String(slotName);
+        let nodeSlots = this._stateSlots.get(nodeId);
+        if (!nodeSlots) {
+          nodeSlots = new Map();
+          this._stateSlots.set(nodeId, nodeSlots);
+        }
+        nodeSlots.set(slotKey, value);
+      }
+    };
+  }
+
+  resetState() {
+    this._stateSlots.clear();
+    this._prevOuts.clear();
   }
 
   dispatchEvent(ref, payload) {
@@ -977,6 +1014,13 @@ export class Loom {
   }
 
   _reconcileStateForGraph(graph) {
+    const nextNodeIds = new Set(graph.nodes.map(node => node.id));
+    for (const nodeId of Array.from(this._stateSlots.keys())) {
+      if (!nextNodeIds.has(nodeId)) {
+        this._stateSlots.delete(nodeId);
+      }
+    }
+
     const nextStateIds = new Set(
       graph.nodes
         .filter(node => this._nodeTypes[node.type]?.category === 'state')
