@@ -25,6 +25,34 @@ export function registerCoreNodes(registry) {
       };
     }
   });
+  registry.registerNodeType('sendEvent', {
+    category: 'sink',
+    inputs: [
+      { name: 'trigger', type: 'event<any>', kind: 'event' },
+      { name: 'payload', type: 'any', default: undefined, kind: 'behavior' }
+    ],
+    outputs: [],
+    params: [
+      { name: 'channel', type: 'string', default: '' },
+      { name: 'target', type: 'string', default: undefined }
+    ],
+    evaluate: (inputs, params, ctx) => {
+      const triggers = Array.isArray(inputs.trigger) ? inputs.trigger : [];
+      const hasPayload = inputs.payload !== undefined;
+      const hasTarget = params.target !== undefined;
+      const hasTimestampHint = Number.isFinite(ctx.env?.time);
+      for (let i = 0; i < triggers.length; i += 1) {
+        ctx.engine?._recordEffect({
+          kind: 'event.send',
+          channel: params.channel,
+          ...(hasPayload ? { payload: inputs.payload } : {}),
+          ...(hasTarget ? { target: params.target } : {}),
+          ...(hasTimestampHint ? { timestampHint: ctx.env.time } : {})
+        });
+      }
+      return {};
+    }
+  });
   registry.registerNodeType('console.error', {
     category: 'sink',
     inputs: [{ name: 'value', type: 'any', default: undefined, kind: 'behavior' }],
