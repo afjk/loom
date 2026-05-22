@@ -466,6 +466,164 @@ test('invalid event timestamp fails clearly', () => {
   );
 });
 
+// onEvent targetMode filtering tests
+
+test('onEvent: no scope + no targetMode receives all matching channel events (backward compat)', () => {
+  const graph = {
+    nodes: [{ id: 'listener', type: 'onEvent', params: { channel: 'pointer.click' } }],
+    edges: []
+  };
+  const engine = new Loom(graph);
+  const e1 = { channel: 'pointer.click', timestamp: 1.0 };
+  const e2 = { channel: 'pointer.click', timestamp: 1.1, target: 'cube-01' };
+  const e3 = { channel: 'pointer.click', timestamp: 1.2, target: 'cube-02' };
+  engine.evaluateOnce({ env: { time: 2, events: [e1, e2, e3] } });
+  assert.deepEqual(engine.getValue('listener.event'), [e1, e2, e3]);
+});
+
+test('onEvent: targetMode=any receives all matching channel events regardless of target', () => {
+  const graph = {
+    nodes: [{ id: 'listener', type: 'onEvent', params: { channel: 'pointer.click', targetMode: 'any' } }],
+    edges: []
+  };
+  const engine = new Loom(graph);
+  const e1 = { channel: 'pointer.click', timestamp: 1.0 };
+  const e2 = { channel: 'pointer.click', timestamp: 1.1, target: 'cube-01' };
+  const e3 = { channel: 'pointer.click', timestamp: 1.2, target: 'cube-02' };
+  engine.evaluateOnce({ env: { time: 2, events: [e1, e2, e3] } });
+  assert.deepEqual(engine.getValue('listener.event'), [e1, e2, e3]);
+});
+
+test('onEvent: targetMode=explicit receives only events with matching params.target', () => {
+  const graph = {
+    nodes: [{ id: 'listener', type: 'onEvent', params: { channel: 'custom.enterRange', targetMode: 'explicit', target: 'zone-a' } }],
+    edges: []
+  };
+  const engine = new Loom(graph);
+  const e1 = { channel: 'custom.enterRange', timestamp: 3.0, target: 'zone-a' };
+  const e2 = { channel: 'custom.enterRange', timestamp: 3.1, target: 'zone-b' };
+  const e3 = { channel: 'custom.enterRange', timestamp: 3.2 };
+  engine.evaluateOnce({ env: { time: 4, events: [e1, e2, e3] } });
+  assert.deepEqual(engine.getValue('listener.event'), [e1]);
+});
+
+test('onEvent: targetMode=explicit ignores events with different target', () => {
+  const graph = {
+    nodes: [{ id: 'listener', type: 'onEvent', params: { channel: 'custom.enterRange', targetMode: 'explicit', target: 'zone-a' } }],
+    edges: []
+  };
+  const engine = new Loom(graph);
+  const e1 = { channel: 'custom.enterRange', timestamp: 3.0, target: 'zone-b' };
+  engine.evaluateOnce({ env: { time: 4, events: [e1] } });
+  assert.deepEqual(engine.getValue('listener.event'), []);
+});
+
+test('onEvent: targetMode=self receives only events whose target matches current scope id', () => {
+  const graph = {
+    nodes: [{ id: 'listener', type: 'onEvent', params: { channel: 'pointer.click', targetMode: 'self' } }],
+    edges: []
+  };
+  const engine = new Loom(graph);
+  const e1 = { channel: 'pointer.click', timestamp: 1.0, target: 'cube-01' };
+  const e2 = { channel: 'pointer.click', timestamp: 1.1, target: 'cube-02' };
+  engine.evaluateOnce({ env: { time: 2, events: [e1, e2], scope: { type: 'object', id: 'cube-01' } } });
+  assert.deepEqual(engine.getValue('listener.event'), [e1]);
+});
+
+test('onEvent: targetMode=self ignores events targeted at another id', () => {
+  const graph = {
+    nodes: [{ id: 'listener', type: 'onEvent', params: { channel: 'pointer.click', targetMode: 'self' } }],
+    edges: []
+  };
+  const engine = new Loom(graph);
+  const e1 = { channel: 'pointer.click', timestamp: 1.0, target: 'cube-99' };
+  engine.evaluateOnce({ env: { time: 2, events: [e1], scope: { type: 'object', id: 'cube-01' } } });
+  assert.deepEqual(engine.getValue('listener.event'), []);
+});
+
+test('onEvent: targetMode=self ignores untargeted events', () => {
+  const graph = {
+    nodes: [{ id: 'listener', type: 'onEvent', params: { channel: 'pointer.click', targetMode: 'self' } }],
+    edges: []
+  };
+  const engine = new Loom(graph);
+  const e1 = { channel: 'pointer.click', timestamp: 1.0 };
+  engine.evaluateOnce({ env: { time: 2, events: [e1], scope: { type: 'object', id: 'cube-01' } } });
+  assert.deepEqual(engine.getValue('listener.event'), []);
+});
+
+test('onEvent: scopeDefault behaves as any for scene scope', () => {
+  const graph = {
+    nodes: [{ id: 'listener', type: 'onEvent', params: { channel: 'pointer.click' } }],
+    edges: []
+  };
+  const engine = new Loom(graph);
+  const e1 = { channel: 'pointer.click', timestamp: 1.0 };
+  const e2 = { channel: 'pointer.click', timestamp: 1.1, target: 'cube-01' };
+  engine.evaluateOnce({ env: { time: 2, events: [e1, e2], scope: { type: 'scene' } } });
+  assert.deepEqual(engine.getValue('listener.event'), [e1, e2]);
+});
+
+test('onEvent: scopeDefault behaves as any for unknown scope', () => {
+  const graph = {
+    nodes: [{ id: 'listener', type: 'onEvent', params: { channel: 'pointer.click' } }],
+    edges: []
+  };
+  const engine = new Loom(graph);
+  const e1 = { channel: 'pointer.click', timestamp: 1.0 };
+  const e2 = { channel: 'pointer.click', timestamp: 1.1, target: 'cube-01' };
+  engine.evaluateOnce({ env: { time: 2, events: [e1, e2] } });
+  assert.deepEqual(engine.getValue('listener.event'), [e1, e2]);
+});
+
+test('onEvent: scopeDefault behaves as self for object scope', () => {
+  const graph = {
+    nodes: [{ id: 'listener', type: 'onEvent', params: { channel: 'pointer.click' } }],
+    edges: []
+  };
+  const engine = new Loom(graph);
+  const e1 = { channel: 'pointer.click', timestamp: 1.0, target: 'cube-01' };
+  const e2 = { channel: 'pointer.click', timestamp: 1.1, target: 'cube-02' };
+  engine.evaluateOnce({ env: { time: 2, events: [e1, e2], scope: { type: 'object', id: 'cube-01' } } });
+  assert.deepEqual(engine.getValue('listener.event'), [e1]);
+});
+
+test('onEvent: object-scoped default receives self-targeted events only', () => {
+  const graph = {
+    nodes: [{ id: 'listener', type: 'onEvent', params: { channel: 'pointer.click' } }],
+    edges: []
+  };
+  const engine = new Loom(graph);
+  const selfEvent = { channel: 'pointer.click', timestamp: 1.2, target: 'cube-01' };
+  const otherEvent = { channel: 'pointer.click', timestamp: 1.3, target: 'cube-02' };
+  engine.evaluateOnce({ env: { time: 2, events: [selfEvent, otherEvent], scope: { type: 'object', id: 'cube-01' } } });
+  assert.deepEqual(engine.getValue('listener.event'), [selfEvent]);
+});
+
+test('onEvent: object-scoped with targetMode=any can receive global/untargeted events', () => {
+  const graph = {
+    nodes: [{ id: 'listener', type: 'onEvent', params: { channel: 'scene.start', targetMode: 'any' } }],
+    edges: []
+  };
+  const engine = new Loom(graph);
+  const untargeted = { channel: 'scene.start', timestamp: 0.1 };
+  const selfEvent = { channel: 'scene.start', timestamp: 0.2, target: 'cube-01' };
+  engine.evaluateOnce({ env: { time: 1, events: [untargeted, selfEvent], scope: { type: 'object', id: 'cube-01' } } });
+  assert.deepEqual(engine.getValue('listener.event'), [untargeted, selfEvent]);
+});
+
+test('onEvent: targetMode=explicit without target fails clearly', () => {
+  const graph = {
+    nodes: [{ id: 'listener', type: 'onEvent', params: { channel: 'custom.event', targetMode: 'explicit' } }],
+    edges: []
+  };
+  const engine = new Loom(graph);
+  assert.throws(
+    () => engine.evaluateOnce({ env: { time: 1, events: [{ channel: 'custom.event', timestamp: 1 }] } }),
+    (error) => error instanceof LoomError && error.code === 'INVALID_ONEVENT_PARAMS'
+  );
+});
+
 test('risingEdge emits only on false -> true and never on initial evaluation', () => {
   const graph = {
     nodes: [

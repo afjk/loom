@@ -606,6 +606,9 @@ function normalizeTimeEnvironment(value) {
   if (Number.isFinite(value.tick)) {
     env.tick = value.tick;
   }
+  if (value.scope !== undefined && value.scope !== null && typeof value.scope === 'object' && !Array.isArray(value.scope)) {
+    env.scope = value.scope;
+  }
   if (value.events === undefined) {
     env.events = [];
   } else {
