@@ -190,6 +190,132 @@ test('node context exposes deltaTime and tick aliases', () => {
   assert.equal(engine.getValue('ctx.tick'), 7);
 });
 
+test('ctx.state.get returns default when unset', () => {
+  const nodeTypes = {
+    ...NODE_TYPES,
+    'test.stateDefault': {
+      category: 'source',
+      inputs: [],
+      outputs: [{ name: 'out', type: 'any', kind: 'behavior' }],
+      params: [],
+      evaluate: (inputs, params, ctx) => ({ out: ctx.state.get('missing', false) })
+    }
+  };
+
+  const engine = new Loom({ nodes: [{ id: 'n', type: 'test.stateDefault' }], edges: [] }, { nodeTypes });
+  engine.evaluateOnce();
+  assert.equal(engine.getValue('n.out'), false);
+});
+
+test('ctx.state.set persists across evaluations on same Loom instance', () => {
+  const nodeTypes = {
+    ...NODE_TYPES,
+    'test.stateCounter': {
+      category: 'source',
+      inputs: [],
+      outputs: [{ name: 'out', type: 'number', kind: 'behavior' }],
+      params: [],
+      evaluate: (inputs, params, ctx) => {
+        const count = ctx.state.get('count', 0);
+        ctx.state.set('count', count + 1);
+        return { out: count };
+      }
+    }
+  };
+
+  const engine = new Loom({ nodes: [{ id: 'counter', type: 'test.stateCounter' }], edges: [] }, { nodeTypes });
+  engine.evaluateOnce();
+  assert.equal(engine.getValue('counter.out'), 0);
+  engine.evaluateAt({ time: 1 }, 1000);
+  assert.equal(engine.getValue('counter.out'), 1);
+});
+
+test('ctx.state is scoped by node id', () => {
+  const nodeTypes = {
+    ...NODE_TYPES,
+    'test.stateCounter': {
+      category: 'source',
+      inputs: [],
+      outputs: [{ name: 'out', type: 'number', kind: 'behavior' }],
+      params: [],
+      evaluate: (inputs, params, ctx) => {
+        const count = ctx.state.get('count', 0);
+        ctx.state.set('count', count + 1);
+        return { out: count };
+      }
+    }
+  };
+
+  const engine = new Loom({
+    nodes: [
+      { id: 'a', type: 'test.stateCounter' },
+      { id: 'b', type: 'test.stateCounter' }
+    ],
+    edges: []
+  }, { nodeTypes });
+
+  engine.evaluateOnce();
+  assert.equal(engine.getValue('a.out'), 0);
+  assert.equal(engine.getValue('b.out'), 0);
+
+  engine.evaluateOnce({ env: { time: 1 } });
+  assert.equal(engine.getValue('a.out'), 1);
+  assert.equal(engine.getValue('b.out'), 1);
+});
+
+test('ctx.state is scoped by Loom instance', () => {
+  const nodeTypes = {
+    ...NODE_TYPES,
+    'test.stateCounter': {
+      category: 'source',
+      inputs: [],
+      outputs: [{ name: 'out', type: 'number', kind: 'behavior' }],
+      params: [],
+      evaluate: (inputs, params, ctx) => {
+        const count = ctx.state.get('count', 0);
+        ctx.state.set('count', count + 1);
+        return { out: count };
+      }
+    }
+  };
+  const graph = { nodes: [{ id: 'counter', type: 'test.stateCounter' }], edges: [] };
+  const first = new Loom(graph, { nodeTypes });
+  const second = new Loom(graph, { nodeTypes });
+
+  first.evaluateOnce();
+  first.evaluateOnce({ env: { time: 1 } });
+  second.evaluateOnce();
+
+  assert.equal(first.getValue('counter.out'), 1);
+  assert.equal(second.getValue('counter.out'), 0);
+});
+
+test('resetState clears ctx.state slots', () => {
+  const nodeTypes = {
+    ...NODE_TYPES,
+    'test.stateCounter': {
+      category: 'source',
+      inputs: [],
+      outputs: [{ name: 'out', type: 'number', kind: 'behavior' }],
+      params: [],
+      evaluate: (inputs, params, ctx) => {
+        const count = ctx.state.get('count', 0);
+        ctx.state.set('count', count + 1);
+        return { out: count };
+      }
+    }
+  };
+
+  const engine = new Loom({ nodes: [{ id: 'counter', type: 'test.stateCounter' }], edges: [] }, { nodeTypes });
+  engine.evaluateOnce();
+  engine.evaluateOnce({ env: { time: 1 } });
+  assert.equal(engine.getValue('counter.out'), 1);
+
+  engine.resetState();
+  engine.evaluateOnce({ env: { time: 2 } });
+  assert.equal(engine.getValue('counter.out'), 0);
+});
+
 test('clock requires env.time when evaluated', () => {
   const graph = {
     nodes: [{ id: 'timer', type: 'clock' }],
