@@ -200,6 +200,7 @@ test('repl supports event playground commands', () => {
       cwd: projectRoot,
       input: [
         'click = onEvent(channel: "pointer.click")',
+        'send = sendEvent(trigger: click, channel: "custom.clicked")',
         ':scope object cube-01',
         ':event pointer.click {"target":"cube-02"}',
         ':event pointer.click {"target":"cube-01","payload":{"button":0}}',
@@ -223,4 +224,5 @@ test('repl supports event playground commands', () => {
   assert.match(result.stdout, /clockLater\.t = 10.5/);
   assert.match(result.stdout, /last events:/);
   assert.match(result.stdout, /keyboard\.keyDown/);
+  assert.match(result.stderr, /\[event\.send\] channel="custom\.clicked"/);
 });
