@@ -1,0 +1,6 @@
+distance = clock()
+isNear = lessThan(value: distance, threshold: 1.0)
+enter = risingEdge(value: isNear)
+sendEnter = sendEvent(trigger: enter, channel: "custom.enterRange")
+leave = fallingEdge(value: isNear)
+sendLeave = sendEvent(trigger: leave, channel: "custom.leaveRange", target: "zone-a")

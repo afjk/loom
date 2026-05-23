@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseDSLToAST } from '../src/loom-dsl.js';
+import { graphToCanonicalDSL } from '../src/canonical-dsl.js';
+import { parseDSLToAST, compileToGraph } from '../src/loom-dsl.js';
+import { Loom } from '../src/loom.js';
 import { compileLoomSource } from '../src/toolchain/compile.js';
 import { runLoomSource } from '../src/toolchain/run.js';
 import { normalizeGraph, findNode } from './helpers/normalize-graph.mjs';
@@ -86,6 +88,29 @@ function runFixture(name, options = { target: 'cli' }) {
     `Runtime errors in ${name}: ${JSON.stringify(run.errors)}`
   );
   return run;
+}
+
+function canonicalRoundTripFixture(name) {
+  const { graph } = compileFixture(name);
+  const canonical = graphToCanonicalDSL(graph);
+  const parsed = parseDSLToAST(canonical);
+  assert.equal(
+    parsed.errors.length,
+    0,
+    `Canonical parse errors in ${name}: ${JSON.stringify(parsed.errors)}`
+  );
+  const compiled = compileToGraph(parsed.ast);
+  assert.equal(
+    compiled.errors.length,
+    0,
+    `Canonical compile errors in ${name}: ${JSON.stringify(compiled.errors)}`
+  );
+  return {
+    canonical,
+    original: normalizeGraph(graph),
+    roundTripped: normalizeGraph(compiled.graph),
+    graph: compiled.graph
+  };
 }
 
 test('basic-math: parses without errors', () => {
@@ -564,4 +589,55 @@ test('input-param-scene-effect: runtime produces correct Scene Sync position', (
   assert.ok(positionEffect, 'Should have position effect');
   assert.equal(positionEffect.objectId, 'sample-cube', 'objectId should be sample-cube');
   assert.deepEqual(positionEffect.position, [3, 0, 0], 'Position should be [3, 0, 0]');
+});
+
+test('canonical event-flow: onEvent(channel) round-trips semantically', () => {
+  const { original, roundTripped } = canonicalRoundTripFixture('event-on-event-basic.loom');
+  assert.deepEqual(roundTripped, original);
+});
+
+test('canonical event-flow: onEvent(channel, targetMode=self) round-trips semantically', () => {
+  const { original, roundTripped } = canonicalRoundTripFixture('event-on-event-self.loom');
+  assert.deepEqual(roundTripped, original);
+});
+
+test('canonical event-flow: onEvent(channel, targetMode=explicit, target) round-trips semantically', () => {
+  const { original, roundTripped } = canonicalRoundTripFixture('event-on-event-explicit.loom');
+  assert.deepEqual(roundTripped, original);
+});
+
+test('canonical event-flow: risingEdge/fallingEdge -> sendEvent round-trips semantically', () => {
+  const { original, roundTripped, graph } = canonicalRoundTripFixture('event-edge-send.loom');
+  assert.deepEqual(roundTripped, original);
+  assertHasEdge(graph, 'enter.event', 'sendEnter.trigger');
+  assertHasEdge(graph, 'leave.event', 'sendLeave.trigger');
+});
+
+test('canonical event-flow runtime smoke: targetMode=self receives only self-targeted events', () => {
+  const { graph } = canonicalRoundTripFixture('event-on-event-self.loom');
+  const engine = new Loom(graph);
+  const selfEvent = { channel: 'pointer.click', target: 'player-1', payload: 1, timestamp: 1.1 };
+  const otherEvent = { channel: 'pointer.click', target: 'player-2', payload: 2, timestamp: 1.0 };
+  const untargeted = { channel: 'pointer.click', payload: 3, timestamp: 1.2 };
+  engine.evaluateOnce({
+    env: {
+      time: 1,
+      scope: { type: 'object', id: 'player-1' },
+      events: [otherEvent, untargeted, selfEvent]
+    }
+  });
+  assert.deepEqual(engine.getValue('listener.event'), [selfEvent]);
+});
+
+test('canonical event-flow runtime smoke: risingEdge -> sendEvent emits once on false -> true', () => {
+  const { graph } = canonicalRoundTripFixture('event-edge-send.loom');
+  const engine = new Loom(graph);
+  engine.evaluateOnce({ env: { time: 2 } });
+  assert.deepEqual(engine.getEffects(), []);
+  engine.evaluateOnce({ env: { time: 0 } });
+  const secondEffects = engine.getEffects();
+  const enterEffects = secondEffects.filter(
+    (effect) => effect.kind === 'event.send' && effect.channel === 'custom.enterRange'
+  );
+  assert.equal(enterEffects.length, 1);
 });

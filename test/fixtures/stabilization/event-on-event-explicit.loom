@@ -1,0 +1,1 @@
+listener = onEvent(channel: "custom.enterRange", targetMode: "explicit", target: "zone-a")

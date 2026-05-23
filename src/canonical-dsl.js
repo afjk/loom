@@ -25,7 +25,7 @@ export function graphToCanonicalDSL(graph) {
     const allNamedArgs = [];
     for (const inputName of inputNames) {
       if (inputEdges[inputName]) {
-        allNamedArgs.push(formatParam(inputName, inputEdges[inputName]));
+        allNamedArgs.push(formatInputRefParam(inputName, inputEdges[inputName]));
       } else if (params[inputName] !== undefined) {
         allNamedArgs.push(formatParam(inputName, params[inputName]));
         delete params[inputName];
@@ -69,12 +69,13 @@ export function graphToCanonicalDSL(graph) {
   return lines.join('\n') + '\n';
 }
 
-function formatValue(val) {
+function formatValue(val, options = {}) {
+  const { allowIdentifierString = false } = options;
   if (val === null || val === undefined) {
     return 'null';
   }
   if (typeof val === 'string') {
-    if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(val)) {
+    if (allowIdentifierString && /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(val)) {
       return val;
     }
     return `"${val.replace(/"/g, '\\"')}"`;
@@ -87,6 +88,10 @@ function formatValue(val) {
 
 function formatParam(name, value) {
   return `${name}: ${formatValue(value)}`;
+}
+
+function formatInputRefParam(name, value) {
+  return `${name}: ${formatValue(value, { allowIdentifierString: true })}`;
 }
 
 // For render params: nodeId.portName references become bare identifiers (e.g. "width.out" → width)
