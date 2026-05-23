@@ -149,7 +149,8 @@ Recommended order:
    - Event envelope, timestamp, ordering, replay, and host authority semantics remain next work.
 3. **Partial**: Add golden tests for examples
    - Parse/compile and stabilization fixtures exist for current areas.
-   - More semantic snapshots and canonical DSL round-trip tests are still needed.
+   - Canonical DSL round-trip v1 semantic fixtures are covered in `test/stabilization-fixtures.test.mjs` (for example `event-on-event-basic.loom`, `event-on-event-self.loom`, `event-on-event-explicit.loom`, `event-edge-send.loom` for `onEvent` / `sendEvent` / `risingEdge` / `fallingEdge`).
+   - Source-preserving DSL <-> Node Editor round-trip remains future work.
 4. **Done**: Stabilize node definition schema
    - Document current node definition schema in `docs/NODE_DEFINITION_SCHEMA.md`
    - Add conservative metadata shape tests in `test/library-metadata-schema.test.mjs`
@@ -254,20 +255,37 @@ Runtime graph -> evaluation result for deterministic examples
 
 These tests should verify that examples parse, compile, and evaluate as intended. They should not require preserving the author's original whitespace, comments, pipe style, argument style, or editor layout.
 
-### Stabilize later
+### Canonical DSL round-trip v1 (semantic boundary)
 
-The canonicalization path is valuable but should be stabilized only after its intended behavior is defined:
+Canonical DSL round-trip v1 is the semantic boundary:
+
+```text
+Graph -> Canonical DSL -> Graph
+```
+
+In current test helpers this is exercised as:
 
 ```text
 Graph -> Canonical DSL -> Source AST -> Graph
 ```
 
-Generated canonical DSL may use a normalized style rather than the user's original source style. The important goals are:
+and compared after graph normalization for semantic equivalence.
+
+Generated canonical DSL may use a normalized style rather than the user's original source style. v1 goals are:
 
 - generated DSL is parseable
 - generated DSL compiles back to a semantically equivalent graph
 - exact text equality with the original source is not required
-- comments, formatting, pipe syntax, and named-vs-positional argument style are not guaranteed to be preserved
+- comments, formatting, pipe syntax, import order, and named-vs-positional argument style are not guaranteed to be preserved
+- editor layout metadata and hidden metadata exact shape are not guaranteed to be preserved
+
+Semantic comparison may normalize or ignore:
+
+- node ordering when semantically irrelevant
+- edge ordering when semantically irrelevant
+- formatting/source representation differences
+- editor-only layout metadata
+- hidden metadata exact format
 
 ### Do not freeze yet
 
@@ -282,6 +300,9 @@ Avoid strict golden snapshots for areas that are still experimental or visual-on
 - import ordering preservation
 - editor layout metadata round-trip
 - hidden editor metadata exact format
+- bidirectional patching between edited DSL text and existing node layout
+- full function/subgraph source preservation
+- package-aware source preservation
 - node coordinates and visual layout
 - generated canonical DSL exact text layout, unless intentionally testing canonical formatting
 
@@ -305,11 +326,11 @@ Normalization should avoid unstable fields such as editor positions, generated I
 
 Test helpers like `test/helpers/normalize-graph.mjs` provide reusable normalization for semantic snapshots. See stabilization fixture tests for examples.
 
-#### Level 4: Canonical DSL round-trip — **Planned**
+#### Level 4: Canonical DSL round-trip v1 — **Partial**
 
 Compile a graph to canonical DSL, parse it again, compile it again, and compare semantic graph equivalence.
 
-This is desirable, but it should be introduced after canonical DSL behavior is intentionally defined.
+Coverage exists in stabilization fixtures; this level remains partial while normalization/helper details are still being tightened.
 
 #### Level 5: Editor round-trip — **Future**
 
@@ -326,8 +347,8 @@ This is future work and should not be treated as stable yet.
 1. **Planned**: Define host-provided time requirements and update `docs/SPEC.md` if needed.
 2. **Planned**: Define Event envelope v0 and timestamp/order semantics.
 3. **Planned**: Add or update Scene Sync design notes for server-synchronized time and export-local playback clock compatibility.
-4. **Planned**: Define graph normalization rules for semantic round-trip tests.
-5. **Planned**: Add Canonical DSL round-trip v1 tests.
+4. **Planned**: Continue documenting and tightening graph normalization intent for semantic round-trip tests without over-freezing implementation details.
+5. **Partial**: Continue expanding Canonical DSL round-trip v1 semantic fixtures where new node families are stabilized.
 6. **Planned**: Add fixtures for Scene Sync graph attach / clear / run workflows where practical.
 7. **Planned**: Define value-model and swizzle lowering rules before exposing swizzle broadly in DSL or Node Editor.
 8. **Future**: Define function-as-subgraph semantics in labs before promoting it into main.
