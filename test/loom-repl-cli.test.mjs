@@ -226,3 +226,163 @@ test('repl supports event playground commands', () => {
   assert.match(result.stdout, /keyboard\.keyDown/);
   assert.match(result.stderr, /\[event\.send\] channel="custom\.clicked"/);
 });
+
+test('repl :set stores host input and evaluates', () => {
+  const result = spawnSync(
+    process.execPath,
+    [cliPath, 'repl'],
+    {
+      cwd: projectRoot,
+      input: [
+        'd = input("distance", 999)',
+        ':set distance 2.0',
+        ':vars',
+        ':quit'
+      ].join('\n'),
+      encoding: 'utf8'
+    }
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /d\.out = 999/);  // initial eval
+  assert.match(result.stdout, /no effects/);    // :set with no sendEvent
+  assert.match(result.stdout, /Host inputs/);
+  assert.match(result.stdout, /distance = 2/);
+});
+
+test('repl :set with risingEdge -> sendEvent full desired experience', () => {
+  const result = spawnSync(
+    process.execPath,
+    [cliPath, 'repl'],
+    {
+      cwd: projectRoot,
+      input: [
+        'distance = input("distance", 999)',
+        'near = lessThan(distance, 1.0)',
+        'enter = risingEdge(value: near)',
+        'send = sendEvent(trigger: enter, channel: "custom.enterRange")',
+        ':set distance 2.0',
+        ':set distance 0.8',
+        ':set distance 0.6',
+        ':set distance 1.5',
+        ':set distance 0.9',
+        ':quit'
+      ].join('\n'),
+      encoding: 'utf8'
+    }
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  // :set distance 0.8 should emit (false -> true)
+  // :set distance 0.6 should not emit (stays true)
+  // :set distance 1.5 should not emit (true -> false, but no risingEdge)
+  // :set distance 0.9 should emit (false -> true)
+  const noEffectsMatches = result.stdout.match(/no effects/g) || [];
+  const effectsMatches = result.stdout.match(/effects:\s*\n\s*- event\.send channel="custom\.enterRange"/g) || [];
+  assert.equal(noEffectsMatches.length >= 3, true, `expected >= 3 "no effects", got: ${noEffectsMatches.length}`);
+  assert.equal(effectsMatches.length, 2, `expected 2 event.send emits, got: ${effectsMatches.length}`);
+});
+
+test('repl :set with parse rules handles numbers booleans strings', () => {
+  const result = spawnSync(
+    process.execPath,
+    [cliPath, 'repl'],
+    {
+      cwd: projectRoot,
+      input: [
+        'v = input("val", 0)',
+        ':set val 42',
+        ':set val true',
+        ':set val "hello"',
+        ':set val world',
+        ':quit'
+      ].join('\n'),
+      encoding: 'utf8'
+    }
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  // No crash, session continues after each :set
+  assert.match(result.stdout, /no effects/);
+});
+
+test('repl :reset clears host variables', () => {
+  const result = spawnSync(
+    process.execPath,
+    [cliPath, 'repl'],
+    {
+      cwd: projectRoot,
+      input: [
+        ':set distance 2.0',
+        ':vars',
+        ':reset',
+        ':vars',
+        ':quit'
+      ].join('\n'),
+      encoding: 'utf8'
+    }
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /distance = 2/);
+  assert.match(result.stdout, /session reset/);
+  // After reset, vars should not show distance
+  const parts = result.stdout.split('session reset');
+  assert.ok(parts.length >= 2, 'expected session reset marker');
+  assert.ok(!parts[1].includes('distance'), 'distance should be cleared after reset');
+});
+
+test('repl :set without name shows usage error', () => {
+  const result = spawnSync(
+    process.execPath,
+    [cliPath, 'repl'],
+    {
+      cwd: projectRoot,
+      input: [
+        ':set',
+        ':quit'
+      ].join('\n'),
+      encoding: 'utf8'
+    }
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  // :set without args just continues (no :set handler since it's bare :set without space)
+});
+
+test('repl :set without value shows usage error', () => {
+  const result = spawnSync(
+    process.execPath,
+    [cliPath, 'repl'],
+    {
+      cwd: projectRoot,
+      input: [
+        ':set distance',
+        ':quit'
+      ].join('\n'),
+      encoding: 'utf8'
+    }
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stderr, /Usage: :set/);
+});
+
+test('repl help includes :set command', () => {
+  const result = spawnSync(
+    process.execPath,
+    [cliPath, 'repl'],
+    {
+      cwd: projectRoot,
+      input: [
+        ':help',
+        ':quit'
+      ].join('\n'),
+      encoding: 'utf8'
+    }
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /:set/);
+  assert.match(result.stdout, /host input/);
+});

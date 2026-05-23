@@ -1,6 +1,24 @@
 import { LoomError, RestrictedDSLEvaluator, coerceFiniteNumber, getNodeFs, getNodePath, inspectValue, resolveStateInputValue, sanitizeStateValue, stringifyJsonValue, stringifyTextValue, toArray } from './helpers.js';
 
 export function registerCoreNodes(registry) {
+  registry.registerNodeType('input', {
+    category: 'source',
+    inputs: [
+      { name: 'name', type: 'string', default: '', kind: 'behavior' },
+      { name: 'default', type: 'any', default: null, kind: 'behavior' }
+    ],
+    outputs: [{ name: 'out', type: 'any', kind: 'behavior' }],
+    params: [],
+    evaluate: (inputs, params, ctx) => {
+      const inputsMap = ctx.env?.inputs;
+      const name = String(inputs.name ?? '');
+      if (inputsMap && typeof inputsMap === 'object' &&
+          Object.prototype.hasOwnProperty.call(inputsMap, name)) {
+        return { out: inputsMap[name] };
+      }
+      return { out: inputs.default };
+    }
+  });
   registry.registerNodeType('clock', {
     category: 'source',
     inputs: [],
