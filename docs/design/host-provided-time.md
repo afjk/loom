@@ -1,15 +1,18 @@
 # Host-provided time (design note)
 
-Related issue: [afjk/loomlet#213](https://github.com/afjk/loomlet/issues/213)
+Related issues: [afjk/loomlet#203](https://github.com/afjk/loomlet/issues/203), [afjk/loomlet#213](https://github.com/afjk/loomlet/issues/213)
 
 ## Core principle
 
-Loomlet does not own the clock.
+Loomlet does not own the clock. Loomlet does not fetch server time. The host owns time.
 
 Loomlet graphs are evaluated with host-provided `env.time`.
 `env.time` represents graph-local elapsed time in seconds.
 A host may compute this value from local playback time, server-synchronized time, recorded timeline time, or any other clock source.
 The graph itself does not depend on the underlying clock source.
+
+Hosts may freely control `env.time` for use cases such as replay, seek, scrub, or export playback.
+The Loomlet runtime treats every evaluation as stateless with respect to wall-clock time.
 
 ## Time environment v0
 
