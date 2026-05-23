@@ -17,11 +17,47 @@ export function registerCoreNodes(registry) {
     category: 'source',
     inputs: [],
     outputs: [{ name: 'event', type: 'event<any>', kind: 'event' }],
-    params: [{ name: 'channel', type: 'string', default: '' }],
+    params: [
+      { name: 'channel', type: 'string', default: '' },
+      { name: 'targetMode', type: 'string', default: 'scopeDefault' },
+      { name: 'target', type: 'string', default: undefined }
+    ],
     evaluate: (inputs, params, ctx) => {
       const events = Array.isArray(ctx.env?.events) ? ctx.env.events : [];
+      const targetMode = params.targetMode ?? 'scopeDefault';
+
+      if (targetMode === 'explicit' && (params.target === undefined || params.target === null)) {
+        throw new LoomError('INVALID_ONEVENT_PARAMS', 'onEvent: targetMode="explicit" requires params.target to be set', {
+          reason: 'onEvent.targetMode.explicit.missingTarget'
+        });
+      }
+
+      const scope = ctx.env?.scope;
+      const scopeType = scope?.type;
+      const scopeId = scope?.id;
+
+      let effectiveMode = targetMode;
+      if (targetMode === 'scopeDefault') {
+        if (scopeType === 'object') {
+          effectiveMode = 'self';
+        } else {
+          effectiveMode = 'any';
+        }
+      }
+
       return {
-        event: events.filter((event) => event.channel === params.channel)
+        event: events.filter((event) => {
+          if (event.channel !== params.channel) return false;
+          if (effectiveMode === 'any') return true;
+          if (effectiveMode === 'self') {
+            if (scopeId === undefined || scopeId === null) return false;
+            return event.target === scopeId;
+          }
+          if (effectiveMode === 'explicit') {
+            return event.target === params.target;
+          }
+          return true;
+        })
       };
     }
   });
