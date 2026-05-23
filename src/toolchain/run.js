@@ -6,7 +6,8 @@ const CLI_SAFE_CATEGORIES = new Set(['source', 'transform', 'state', 'output']);
 
 function isCliSafeSink(nodeTypeName) {
   return nodeTypeName === 'console.log' || nodeTypeName === 'console.warn' || nodeTypeName === 'console.error' || nodeTypeName === 'console.table' || nodeTypeName === 'fs.writeText'
-    || nodeTypeName === 'scene.setPosition' || nodeTypeName === 'scene.setRotation' || nodeTypeName === 'scene.setScale';
+    || nodeTypeName === 'scene.setPosition' || nodeTypeName === 'scene.setRotation' || nodeTypeName === 'scene.setScale'
+    || nodeTypeName === 'sendEvent';
 }
 
 function getNodeTypes(options = {}) {

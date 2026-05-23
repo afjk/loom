@@ -341,3 +341,55 @@ test('REPL session with custom nodeRegistry can execute package nodes', async ()
   const funcHelp = session.getFunctionHelp('demo.double');
   assert.ok(funcHelp.includes('double'), 'getFunctionHelp should include function description');
 });
+
+test('injectEvents passes env.events to onEvent and clears pending queue', () => {
+  const session = new LoomReplSession({ time: 1 });
+  assert.equal(session.evaluateSnippet('listener = onEvent(channel: "alarm.ring")').ok, true);
+
+  const result = session.injectEvents([
+    { channel: 'alarm.ring', timestamp: 1, payload: { label: 'break' } }
+  ]);
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.values['listener.event'], [{ channel: 'alarm.ring', timestamp: 1, payload: { label: 'break' } }]);
+  assert.equal(session.getEventPlaygroundState().pendingEvents.length, 0);
+  assert.equal(session.getEventPlaygroundState().lastInjectedEvents.length, 1);
+});
+
+test('setTime applies env.time to subsequent evaluations', () => {
+  const session = new LoomReplSession({ time: 0 });
+  session.setTime(10);
+  const result = session.evaluateSnippet('clockNow = clock()');
+  assert.equal(result.ok, true);
+  assert.equal(result.values['clockNow.t'], 10);
+});
+
+test('tick advances time and updates dt for current-source evaluation', () => {
+  const session = new LoomReplSession({ time: 0, dt: 0 });
+  assert.equal(session.evaluateSnippet('smoothed = lowpass(value: 1, tau: 1, initial: 0)').ok, true);
+  session.tick(0.5);
+
+  const result = session.evaluateCurrent();
+  assert.equal(result.ok, true);
+  assert.equal(session.getTime(), 0.5);
+  assert.equal(session.getDeltaTime(), 0.5);
+  assert.ok(result.values['smoothed.out'] > 0);
+});
+
+test('object scope default targeting receives matching self-target events only', () => {
+  const session = new LoomReplSession({ time: 0 });
+  assert.equal(session.evaluateSnippet('listener = onEvent(channel: "pointer.click")').ok, true);
+  session.setObjectScope('cube-01');
+
+  const mismatch = session.injectEvents([
+    { channel: 'pointer.click', timestamp: 0, target: 'cube-02' }
+  ]);
+  assert.equal(mismatch.ok, true);
+  assert.deepEqual(mismatch.values['listener.event'], []);
+
+  const match = session.injectEvents([
+    { channel: 'pointer.click', timestamp: 0, target: 'cube-01' }
+  ]);
+  assert.equal(match.ok, true);
+  assert.deepEqual(match.values['listener.event'], [{ channel: 'pointer.click', timestamp: 0, target: 'cube-01' }]);
+});

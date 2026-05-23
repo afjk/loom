@@ -60,6 +60,23 @@ function appendSnippetToSource(currentSource, snippet) {
   return nextLines.join('\n');
 }
 
+function normalizeScope(scope) {
+  if (!scope || typeof scope !== 'object' || Array.isArray(scope)) {
+    return null;
+  }
+
+  if (scope.type === 'scene') {
+    const id = typeof scope.id === 'string' && scope.id.trim().length > 0 ? scope.id.trim() : undefined;
+    return id ? { type: 'scene', id } : { type: 'scene' };
+  }
+
+  if (scope.type === 'object' && typeof scope.id === 'string' && scope.id.trim().length > 0) {
+    return { type: 'object', id: scope.id.trim() };
+  }
+
+  return null;
+}
+
 export class LoomReplSession {
   constructor(options = {}) {
     this.target = options.target || 'cli';
@@ -67,12 +84,86 @@ export class LoomReplSession {
     this.dt = Number.isFinite(options.dt) ? options.dt : null;
     this.nodeRegistry = options.nodeRegistry || null;
     this.metadataRegistry = options.metadataRegistry || null;
+    this.scope = normalizeScope(options.scope);
     this.sourceLines = [];
     this.source = '';
     this.graph = null;
     this.lastResult = null;
     this.seenEffectNodeIds = new Set();
     this.history = [];
+    this.pendingEvents = [];
+    this.lastInjectedEvents = [];
+  }
+
+  createEvaluationEnv(events) {
+    const env = {};
+    if (this.scope) {
+      env.scope = this.scope;
+    }
+    if (events !== undefined) {
+      env.events = events;
+    }
+    return env;
+  }
+
+  evaluateSource(source, options = {}) {
+    const result = runLoomSource(source, {
+      target: this.target,
+      time: this.time,
+      dt: this.dt,
+      env: this.createEvaluationEnv(options.events),
+      nodeRegistry: this.nodeRegistry,
+      metadataRegistry: this.metadataRegistry
+    });
+
+    if (!result.ok) {
+      return {
+        ok: false,
+        source: this.source,
+        graph: this.graph,
+        values: {},
+        effects: [],
+        errors: result.errors
+      };
+    }
+
+    const allEffects = result.effects || [];
+    const shouldDedupeEffects = options.dedupeEffects !== false;
+    const effects = shouldDedupeEffects
+      ? allEffects.filter((effect) => {
+        if (!effect?.nodeId) {
+          return true;
+        }
+        return !this.seenEffectNodeIds.has(effect.nodeId);
+      })
+      : allEffects;
+
+    if (options.commitSource === true) {
+      this.source = source;
+      this.sourceLines = this.source.split(/\r?\n/);
+      this.seenEffectNodeIds = new Set(
+        allEffects
+          .map((effect) => effect?.nodeId)
+          .filter((nodeId) => typeof nodeId === 'string' && nodeId.length > 0)
+      );
+    }
+    if (options.updateLastResult !== false) {
+      this.lastResult = {
+        ...result,
+        effects
+      };
+      this.graph = result.graph;
+    }
+
+    return {
+      ok: true,
+      empty: false,
+      source: this.source,
+      graph: result.graph,
+      values: result.values,
+      effects,
+      errors: []
+    };
   }
 
   evaluateSnippet(source) {
@@ -93,59 +184,101 @@ export class LoomReplSession {
     }
 
     const nextSource = appendSnippetToSource(this.source, snippet);
-    const result = runLoomSource(nextSource, {
-      target: this.target,
-      time: this.time,
-      dt: this.dt,
-      nodeRegistry: this.nodeRegistry,
-      metadataRegistry: this.metadataRegistry
+    return this.evaluateSource(nextSource, {
+      commitSource: true,
+      dedupeEffects: true
     });
+  }
 
-    if (!result.ok) {
+  evaluateCurrent(options = {}) {
+    if (!this.source) {
       return {
-        ok: false,
+        ok: true,
+        empty: true,
         source: this.source,
         graph: this.graph,
-        values: {},
+        values: this.lastResult?.values || {},
         effects: [],
-        errors: result.errors
+        errors: []
       };
     }
 
-    const allEffects = result.effects || [];
-    const newEffects = allEffects.filter((effect) => {
-      if (!effect?.nodeId) {
-        return true;
-      }
-      return !this.seenEffectNodeIds.has(effect.nodeId);
+    return this.evaluateSource(this.source, {
+      commitSource: false,
+      dedupeEffects: options.dedupeEffects === true,
+      events: options.events
     });
+  }
 
-    this.source = nextSource;
-    this.sourceLines = this.source.split(/\r?\n/);
-    this.graph = result.graph;
-    this.lastResult = {
-      ...result,
-      effects: newEffects
-    };
-    this.seenEffectNodeIds = new Set(
-      allEffects
-        .map((effect) => effect?.nodeId)
-        .filter((nodeId) => typeof nodeId === 'string' && nodeId.length > 0)
-    );
-
-    return {
-      ok: true,
-      empty: false,
-      source: this.source,
-      graph: result.graph,
-      values: result.values,
-      effects: newEffects,
-      errors: []
-    };
+  injectEvents(events) {
+    this.pendingEvents = Array.isArray(events) ? [...events] : [];
+    try {
+      const result = this.evaluateCurrent({
+        dedupeEffects: false,
+        events: this.pendingEvents
+      });
+      if (result.ok) {
+        this.lastInjectedEvents = [...this.pendingEvents];
+      }
+      return {
+        ...result,
+        inputEvents: [...this.pendingEvents]
+      };
+    } finally {
+      this.pendingEvents = [];
+    }
   }
 
   getSource() {
     return this.source;
+  }
+
+  getTime() {
+    return this.time;
+  }
+
+  setTime(time) {
+    this.time = time;
+  }
+
+  getDeltaTime() {
+    return this.dt;
+  }
+
+  tick(deltaTime) {
+    const currentTime = Number.isFinite(this.time) ? this.time : 0;
+    this.time = currentTime + deltaTime;
+    this.dt = deltaTime;
+    return this.time;
+  }
+
+  getScope() {
+    return this.scope;
+  }
+
+  setSceneScope(id) {
+    const nextId = typeof id === 'string' ? id.trim() : '';
+    this.scope = nextId ? { type: 'scene', id: nextId } : { type: 'scene' };
+    return this.scope;
+  }
+
+  setObjectScope(id) {
+    const nextId = typeof id === 'string' ? id.trim() : '';
+    if (!nextId) {
+      throw new Error('Object scope requires an id');
+    }
+    this.scope = { type: 'object', id: nextId };
+    return this.scope;
+  }
+
+  getEventPlaygroundState() {
+    return {
+      time: this.time,
+      dt: this.dt,
+      scope: this.scope,
+      pendingEvents: [...this.pendingEvents],
+      lastInjectedEvents: [...this.lastInjectedEvents]
+    };
   }
 
   reset() {
@@ -155,6 +288,8 @@ export class LoomReplSession {
     this.lastResult = null;
     this.seenEffectNodeIds = new Set();
     this.history = [];
+    this.pendingEvents = [];
+    this.lastInjectedEvents = [];
   }
 
   inspect() {
@@ -185,12 +320,10 @@ export class LoomReplSession {
   }
 
   runSource(source) {
-    return runLoomSource(String(source ?? ''), {
-      target: this.target,
-      time: this.time,
-      dt: this.dt,
-      nodeRegistry: this.nodeRegistry,
-      metadataRegistry: this.metadataRegistry
+    return this.evaluateSource(String(source ?? ''), {
+      commitSource: false,
+      dedupeEffects: false,
+      updateLastResult: false
     });
   }
 
