@@ -2750,6 +2750,62 @@ interface Span { start: { line: number; column: number; offset: number }; end: {
 
 `parseDSLToAST → formatDSL → parseDSLToAST` で得られる AST は、初回 AST と span を除いて等価。コメント・引数順・キー順・リテラル raw 表現・パイプ式の構造が保持される。
 
+### Canonical DSL round-trip v1（semantic）
+
+Canonical DSL round-trip v1 は、source-preserving round-trip ではなく、semantic round-trip を指す。
+
+```text
+Graph -> Canonical DSL -> Graph
+```
+
+現在の安定化テストでは、次の流れで検証している。
+
+```text
+compile fixture source
+  -> Graph
+  -> graphToCanonicalDSL(Graph)
+  -> parseDSLToAST(canonical)
+  -> compileToGraph(parsed AST)
+  -> normalizeGraph(original) === normalizeGraph(roundTripped)
+```
+
+`test/stabilization-fixtures.test.mjs` では event-flow 例（`onEvent` / `sendEvent` / `risingEdge` / `fallingEdge`）を含む fixture でこの比較を行っている。
+
+v1 では次を保持対象にしない:
+
+- 元の formatting
+- comments
+- pipe style
+- import order
+- named-vs-positional argument style
+- editor layout metadata
+- hidden metadata の正確な形
+
+### semantic比較における正規化の意図（v1）
+
+Canonical DSL round-trip v1 の比較は、実装詳細のテキスト一致より意味的一致を優先する。比較時には次を正規化または無視し得る。
+
+- 意味的に無関係な node 順序
+- 意味的に無関係な edge 順序
+- formatting/source representation の差
+- editor-only layout metadata
+- hidden metadata の正確な形式
+
+この正規化ヘルパーの内部実装は今後も調整され得るため、ここでは意図のみを固定する。
+
+### v1 の非目標 / 将来作業
+
+次は semantic round-trip が十分に安定した後の将来作業とする。
+
+- source-preserving DSL <-> Node Editor round-trip
+- comments と formatting の保持
+- 元の pipe style の保持
+- 正確な import order の保持
+- editor layout positions の保持
+- 編集済み DSL text と既存 node layout の双方向 patching
+- function/subgraph の完全な source-preserving
+- package-aware source-preserving
+
 ### 安定性
 
 本章で定義した Source AST 型は後方互換を意識したバージョニングの対象。`_internal` プレフィックスの type は予告なく変更され得る(本バージョンでは未使用)。

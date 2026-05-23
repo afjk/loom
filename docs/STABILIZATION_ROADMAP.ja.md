@@ -76,20 +76,35 @@ Runtime graph -> evaluation result for deterministic examples
 
 これらのテストでは、examplesが意図通りにparse、compile、evaluateできることを検証します。作者が書いた元の空白、コメント、pipe style、argument style、editor layoutの保持は要求しません。
 
-### 後で安定化するもの
+### Canonical DSL round-trip v1（意味的境界）
 
-canonicalization pathは重要ですが、意図する振る舞いを定義してから安定化します。
+Canonical DSL round-trip v1 は、次の意味的境界を指します。
+
+```text
+Graph -> Canonical DSL -> Graph
+```
+
+現在のテストヘルパーでは実際には次の流れで確認しています。
 
 ```text
 Graph -> Canonical DSL -> Source AST -> Graph
 ```
 
-生成されるcanonical DSLは、ユーザーが書いた元のsource styleではなく、正規化されたstyleを使う場合があります。重要な目標は次の通りです。
+比較は graph normalization 後の semantic equivalence を使います。生成されるcanonical DSLは、ユーザーが書いた元のsource styleではなく、正規化されたstyleを使う場合があります。v1 の目標は次の通りです。
 
 - 生成されたDSLがparse可能である
 - 生成されたDSLが意味的に等価なgraphへcompileし直せる
 - 元sourceとの完全なテキスト一致は要求しない
-- コメント、formatting、pipe syntax、named-vs-positional argument styleの保持は保証しない
+- コメント、formatting、pipe syntax、import順序、named-vs-positional argument styleの保持は保証しない
+- editor layout metadata と hidden metadata の正確な形式の保持は保証しない
+
+semantic比較では、次の差分を正規化または無視する場合があります。
+
+- 意味的に無関係な node 順序
+- 意味的に無関係な edge 順序
+- formatting / source 表現の差
+- editor-only layout metadata
+- hidden metadata の正確な形式
 
 ### まだ固定しないもの
 
@@ -104,6 +119,9 @@ Graph -> Canonical DSL -> Source AST -> Graph
 - import順序の保持
 - editor layout metadataのround-trip
 - hidden editor metadataの正確な形式
+- 編集済みDSLテキストと既存node layout間の双方向patch
+- function/subgraph の完全なsource保持
+- package-aware source保持
 - node coordinates と visual layout
 - canonical formattingを意図的にテストする場合を除いた、生成canonical DSLの厳密なテキストレイアウト
 
@@ -125,11 +143,11 @@ Graph -> Canonical DSL -> Source AST -> Graph
 
 正規化では、editor positions、可能な限りgenerated IDs、timestamps、visual-only metadataなど、不安定なfieldを避けるべきです。
 
-#### Level 4: Canonical DSL round-trip
+#### Level 4: Canonical DSL round-trip v1（Partial）
 
 graphをcanonical DSLへcompileし、再度parse、compileして、semantic graph equivalenceを比較する。
 
-これは望ましいですが、canonical DSLの振る舞いを意図的に定義した後で導入します。
+このレベルは `test/stabilization-fixtures.test.mjs` で実施済みです（例: `event-on-event-basic.loom` / `event-on-event-self.loom` / `event-on-event-explicit.loom` / `event-edge-send.loom`）。`onEvent` / `sendEvent` / `risingEdge` / `fallingEdge` のevent-flowも含みます。
 
 #### Level 5: Editor round-trip
 
@@ -141,10 +159,27 @@ Node Editor model -> Graph -> Canonical DSL -> Graph -> Editor model
 
 これは将来の作業であり、まだ安定したものとして扱いません。
 
+### リリース文言ガイダンス
+
+次リリースを「完全な DSL <-> Node Graph round-trip」とは表現しません（source-preserving保証をまだ提供しないため）。
+
+推奨:
+
+```text
+Canonical DSL round-trip v1
+DSL / Node Editor semantic round-trip foundation
+```
+
+避ける:
+
+```text
+Complete DSL <-> Node Graph round-trip
+```
+
 ### 推奨される次のステップ
 
 1. 小さなparse / compile fixturesを追加する。
-2. テスト用のgraph normalization rulesを定義する。
+2. semantic round-trip向けgraph normalizationの意図を、実装詳細を固定しすぎない形で文書化し続ける。
 3. semantic graph snapshot testsを追加する。
-4. 後で `graphToCanonicalDSL` を安定化する。
-5. 後で editor round-trip testsを追加する。
+4. Canonical DSL round-trip v1 のsemantic fixture coverageを、安定化したノード群へ段階的に広げる。
+5. source-preservingな editor round-trip testsは将来作業として扱う。
