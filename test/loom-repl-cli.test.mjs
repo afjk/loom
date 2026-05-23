@@ -191,3 +191,36 @@ test('repl :libs with unknown flag reports error', () => {
   assert.match(result.stdout, /Unknown :libs option: --planned/);
   assert.match(result.stdout, /Use :libs or :libs --all/);
 });
+
+test('repl supports event playground commands', () => {
+  const result = spawnSync(
+    process.execPath,
+    [cliPath, 'repl'],
+    {
+      cwd: projectRoot,
+      input: [
+        'click = onEvent(channel: "pointer.click")',
+        ':scope object cube-01',
+        ':event pointer.click {"target":"cube-02"}',
+        ':event pointer.click {"target":"cube-01","payload":{"button":0}}',
+        ':key Space',
+        ':time 10',
+        'clockNow = clock()',
+        ':tick 0.5',
+        'clockLater = clock()',
+        ':events',
+        ':quit'
+      ].join('\n'),
+      encoding: 'utf8'
+    }
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /scope: object:cube-01/);
+  assert.match(result.stdout, /click\.event = .*cube-01/s);
+  assert.match(result.stdout, /keyboard\.keyDown .*Space/s);
+  assert.match(result.stdout, /clockNow\.t = 10/);
+  assert.match(result.stdout, /clockLater\.t = 10.5/);
+  assert.match(result.stdout, /last events:/);
+  assert.match(result.stdout, /keyboard\.keyDown/);
+});

@@ -229,6 +229,15 @@ Commands:
   :help <lib.func>   Show function documentation
   :load <file>       Load and evaluate a Loom file in this session
   :run <file>        Run a Loom file without mutating this session
+  :event <channel> [json]
+                     Inject one host event for a one-shot evaluation
+  :key <keyName>     Shortcut for :event keyboard.keyDown {"key":"<keyName>"}
+  :time <seconds>    Set current REPL env.time
+  :tick <seconds>    Advance current REPL env.time and set env.deltaTime
+  :scope scene [id]  Set eval scope to scene (optional scene id)
+  :scope object <id> Set eval scope to object id
+  :scope object:<id> Alias for object scope
+  :events            Show current time/scope and last injected event
   :vars              Show current variables
   :history           Show current session input history
   :clear             Clear the terminal (or print blank lines)
@@ -238,7 +247,10 @@ Commands:
   :reset             Clear current session
   :quit              Exit the REPL
   :q                 Exit the REPL
-  :exit              Exit the REPL`;
+  :exit              Exit the REPL
+
+Notes:
+  REPL events are host-provided one-shot inputs for event playground testing.`;
 }
 
 function formatReplVarValue(value) {
@@ -340,8 +352,160 @@ function printEffects(effects) {
     } else if (effect.type === 'scene.setScale') {
       const [x, y, z] = effect.scale || [];
       printError(`[scene.setScale] ${effect.objectId} scale=(${x}, ${y}, ${z})`);
+    } else if (effect.kind === 'event.send') {
+      const parts = [`channel=${JSON.stringify(effect.channel)}`];
+      if (effect.target !== undefined) {
+        parts.push(`target=${JSON.stringify(effect.target)}`);
+      }
+      if (effect.payload !== undefined) {
+        parts.push(`payload=${formatReplVarValue(effect.payload)}`);
+      }
+      if (effect.timestampHint !== undefined) {
+        parts.push(`timestampHint=${formatReplVarValue(effect.timestampHint)}`);
+      }
+      printError(`[event.send] ${parts.join(' ')}`);
     } else {
       printError(`[${effect.level}] ${formatEffectValue(effect.value)}`);
+    }
+  }
+}
+
+const EVENT_ENVELOPE_KEYS = new Set(['channel', 'timestamp', 'target', 'source', 'payload', 'id', 'order']);
+
+function isEventEnvelopeLike(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
+  }
+  return Object.keys(value).some((key) => EVENT_ENVELOPE_KEYS.has(key));
+}
+
+function formatScopeLabel(scope) {
+  if (!scope || typeof scope !== 'object') {
+    return 'none';
+  }
+  if (scope.type === 'object') {
+    return scope.id ? `object:${scope.id}` : 'object';
+  }
+  if (scope.type === 'scene') {
+    return scope.id ? `scene:${scope.id}` : 'scene';
+  }
+  return 'none';
+}
+
+function formatReplTimeValue(value) {
+  if (!Number.isFinite(value)) {
+    return '<unset>';
+  }
+  return value.toFixed(3);
+}
+
+function parseReplEventLine(raw) {
+  const args = String(raw ?? '').trim();
+  if (!args) {
+    throw new Error('Usage: :event <channel> [jsonPayloadOrEnvelope]');
+  }
+
+  const splitIndex = args.search(/\s/);
+  if (splitIndex < 0) {
+    return { channelArg: args, jsonText: null };
+  }
+
+  return {
+    channelArg: args.slice(0, splitIndex).trim(),
+    jsonText: args.slice(splitIndex).trim()
+  };
+}
+
+function buildReplEvent({ channelArg, jsonText, currentTime }) {
+  if (!channelArg) {
+    throw new Error('Usage: :event <channel> [jsonPayloadOrEnvelope]');
+  }
+
+  let parsedValue;
+  if (jsonText) {
+    try {
+      parsedValue = JSON.parse(jsonText);
+    } catch (error) {
+      throw new Error(`Invalid JSON for :event payload: ${error.message}`);
+    }
+  }
+
+  let event;
+  if (jsonText && isEventEnvelopeLike(parsedValue)) {
+    event = { ...parsedValue };
+    if (event.channel === undefined) {
+      event.channel = channelArg;
+    }
+  } else if (jsonText) {
+    event = {
+      channel: channelArg,
+      payload: parsedValue
+    };
+  } else {
+    event = { channel: channelArg };
+  }
+
+  if (event.channel === undefined) {
+    event.channel = channelArg;
+  }
+  if (typeof event.channel !== 'string' || event.channel.trim().length === 0) {
+    throw new Error('Event channel must be a non-empty string');
+  }
+  if (!Number.isFinite(event.timestamp)) {
+    event.timestamp = currentTime;
+  }
+  if (!Number.isFinite(event.timestamp)) {
+    throw new Error('Event timestamp must be a finite number');
+  }
+
+  return event;
+}
+
+function formatInjectedEvent(event) {
+  const detail = { ...event };
+  delete detail.channel;
+  const serialized = Object.keys(detail).length > 0 ? ` ${formatReplVarValue(detail)}` : '';
+  return `- ${event.channel}${serialized}`;
+}
+
+function printEventEvaluationResult(session, result) {
+  const state = session.getEventPlaygroundState();
+  print(`time: ${formatReplTimeValue(state.time)}`);
+  print(`scope: ${formatScopeLabel(state.scope)}`);
+
+  const inputEvents = Array.isArray(result.inputEvents) ? result.inputEvents : [];
+  if (inputEvents.length === 0) {
+    print('input events: <none>');
+  } else {
+    print('input events:');
+    for (const event of inputEvents) {
+      print(`  ${formatInjectedEvent(event)}`);
+    }
+  }
+
+  const eventValues = Object.entries(result.values || {})
+    .filter(([ref, value]) => ref.endsWith('.event') && Array.isArray(value) && value.length > 0);
+  if (eventValues.length > 0) {
+    print('values:');
+    for (const [ref, value] of eventValues) {
+      print(`  ${ref} = ${formatReplVarValue(value)}`);
+    }
+  }
+
+  printEffects(result.effects || []);
+}
+
+function printReplEventsStatus(session) {
+  const state = session.getEventPlaygroundState();
+  print(`time: ${formatReplTimeValue(state.time)}`);
+  print(`dt: ${formatReplTimeValue(state.dt)}`);
+  print(`scope: ${formatScopeLabel(state.scope)}`);
+  if (state.lastInjectedEvents.length === 0) {
+    print('last events: <none>');
+  } else {
+    print('last events:');
+    for (const event of state.lastInjectedEvents) {
+      print(`  ${formatInjectedEvent(event)}`);
     }
   }
 }
@@ -2069,7 +2233,13 @@ async function handleRepl(args) {
   });
 
   return await new Promise((resolve) => {
-    rl.prompt();
+    const prompt = () => {
+      if (!rl.closed) {
+        rl.prompt();
+      }
+    };
+
+    prompt();
 
     rl.on('line', async (line) => {
       const trimmed = line.trim();
@@ -2079,7 +2249,7 @@ async function handleRepl(args) {
       }
       if (trimmed === ':help') {
         print(getReplHelp());
-        rl.prompt();
+        prompt();
         return;
       }
       if (trimmed === ':libs' || trimmed.startsWith(':libs ')) {
@@ -2088,19 +2258,111 @@ async function handleRepl(args) {
 
         if (args.length === 0) {
           print(session.listLibraries());
-          rl.prompt();
+          prompt();
           return;
         }
 
         if (args.length === 1 && args[0] === '--all') {
           print(session.listLibraries({ includePlanned: true }));
-          rl.prompt();
+          prompt();
           return;
         }
 
         print(`Unknown :libs option: ${args.join(' ')}`);
         print('Use :libs or :libs --all');
-        rl.prompt();
+        prompt();
+        return;
+      }
+      if (trimmed === ':event' || trimmed.startsWith(':event ')) {
+        const commandArgs = trimmed.slice(6).trim();
+        try {
+          const parsed = parseReplEventLine(commandArgs);
+          const event = buildReplEvent({
+            channelArg: parsed.channelArg,
+            jsonText: parsed.jsonText,
+            currentTime: session.getTime()
+          });
+          const result = session.injectEvents([event]);
+          if (!result.ok) {
+            printToolErrors(result.errors);
+          } else {
+            printEventEvaluationResult(session, result);
+          }
+        } catch (error) {
+          printError(error.message || String(error));
+        }
+        prompt();
+        return;
+      }
+      if (trimmed === ':key' || trimmed.startsWith(':key ')) {
+        const keyName = trimmed.slice(4).trim();
+        if (!keyName) {
+          printError('Usage: :key <keyName>');
+          prompt();
+          return;
+        }
+        const event = {
+          channel: 'keyboard.keyDown',
+          timestamp: session.getTime(),
+          payload: { key: keyName }
+        };
+        const result = session.injectEvents([event]);
+        if (!result.ok) {
+          printToolErrors(result.errors);
+        } else {
+          printEventEvaluationResult(session, result);
+        }
+        prompt();
+        return;
+      }
+      if (trimmed === ':time' || trimmed.startsWith(':time ')) {
+        const value = Number(trimmed.slice(5).trim());
+        if (!Number.isFinite(value)) {
+          printError('Usage: :time <seconds>');
+          prompt();
+          return;
+        }
+        session.setTime(value);
+        print(`time set: ${formatReplTimeValue(session.getTime())}`);
+        prompt();
+        return;
+      }
+      if (trimmed === ':tick' || trimmed.startsWith(':tick ')) {
+        const value = Number(trimmed.slice(5).trim());
+        if (!Number.isFinite(value)) {
+          printError('Usage: :tick <seconds>');
+          prompt();
+          return;
+        }
+        session.tick(value);
+        print(`time: ${formatReplTimeValue(session.getTime())} (dt=${formatReplTimeValue(session.getDeltaTime())})`);
+        prompt();
+        return;
+      }
+      if (trimmed.startsWith(':scope ')) {
+        const scopeArgs = trimmed.slice(7).trim();
+        try {
+          if (scopeArgs === 'scene') {
+            session.setSceneScope();
+          } else if (scopeArgs.startsWith('scene ')) {
+            session.setSceneScope(scopeArgs.slice(6).trim());
+          } else if (scopeArgs.startsWith('object:')) {
+            session.setObjectScope(scopeArgs.slice(7).trim());
+          } else if (scopeArgs.startsWith('object ')) {
+            session.setObjectScope(scopeArgs.slice(7).trim());
+          } else {
+            throw new Error('Usage: :scope scene [id] | :scope object <id> | :scope object:<id>');
+          }
+          print(`scope: ${formatScopeLabel(session.getScope())}`);
+        } catch (error) {
+          printError(error.message || String(error));
+        }
+        prompt();
+        return;
+      }
+      if (trimmed === ':events') {
+        printReplEventsStatus(session);
+        prompt();
         return;
       }
       if (trimmed === ':vars') {
@@ -2113,7 +2375,7 @@ async function handleRepl(args) {
             print(`${variable.name} = ${formatReplVarValue(variable.value)}`);
           }
         }
-        rl.prompt();
+        prompt();
         return;
       }
       if (trimmed === ':history') {
@@ -2125,7 +2387,7 @@ async function handleRepl(args) {
             print(`${index + 1}: ${entry}`);
           });
         }
-        rl.prompt();
+        prompt();
         return;
       }
       if (trimmed === ':clear') {
@@ -2134,7 +2396,7 @@ async function handleRepl(args) {
         } else {
           print('\n'.repeat(20));
         }
-        rl.prompt();
+        prompt();
         return;
       }
       if (trimmed.startsWith(':help ')) {
@@ -2154,7 +2416,7 @@ async function handleRepl(args) {
             printError(error.message || String(error));
           }
         }
-        rl.prompt();
+        prompt();
         return;
       }
       if (trimmed.startsWith(':load ')) {
@@ -2170,7 +2432,7 @@ async function handleRepl(args) {
         } catch (error) {
           printError(error.message || String(error));
         }
-        rl.prompt();
+        prompt();
         return;
       }
       if (trimmed.startsWith(':run ')) {
@@ -2186,12 +2448,12 @@ async function handleRepl(args) {
         } catch (error) {
           printError(error.message || String(error));
         }
-        rl.prompt();
+        prompt();
         return;
       }
       if (trimmed === ':source') {
         print(session.getSource() || '<empty>');
-        rl.prompt();
+        prompt();
         return;
       }
       if (trimmed === ':inspect') {
@@ -2201,19 +2463,19 @@ async function handleRepl(args) {
         } else {
           print(formatInspectionSummary(inspection.summary));
         }
-        rl.prompt();
+        prompt();
         return;
       }
       if (trimmed === ':graph') {
         const graph = session.getGraph();
         print(graph ? stringifyJson(graph) : '<no graph>');
-        rl.prompt();
+        prompt();
         return;
       }
       if (trimmed === ':reset') {
         session.reset();
         print('session reset');
-        rl.prompt();
+        prompt();
         return;
       }
 
@@ -2223,7 +2485,7 @@ async function handleRepl(args) {
       } else if (!result.empty) {
         printSnippetResult(line, result);
       }
-      rl.prompt();
+      prompt();
     });
 
     rl.on('close', () => {
