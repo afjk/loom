@@ -446,7 +446,10 @@ export const POSITIONAL_BINARY_NODE_TYPES = new Set([
   'math.min',
   'math.max',
   'logic.and',
-  'logic.or'
+  'logic.or',
+  'lessThan',
+  'greaterThan',
+  'input'
 ]);
 
 export function canUseTwoPositionalArgs(nodeName, nodeType) {
@@ -624,6 +627,9 @@ function normalizeTimeEnvironment(value) {
   }
   if (value.scope !== undefined && value.scope !== null && typeof value.scope === 'object' && !Array.isArray(value.scope)) {
     env.scope = value.scope;
+  }
+  if (value.inputs !== undefined && value.inputs !== null && typeof value.inputs === 'object' && !Array.isArray(value.inputs)) {
+    env.inputs = value.inputs;
   }
   if (value.events === undefined) {
     env.events = [];

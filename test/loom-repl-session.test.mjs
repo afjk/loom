@@ -393,3 +393,208 @@ test('object scope default targeting receives matching self-target events only',
   assert.equal(match.ok, true);
   assert.deepEqual(match.values['listener.event'], [{ channel: 'pointer.click', timestamp: 0, target: 'cube-01' }]);
 });
+
+// Host variable and input node tests
+
+test('setInput stores env.inputs value', () => {
+  const session = new LoomReplSession();
+  session.setInput('distance', 2.0);
+  assert.equal(session.getInputs().distance, 2.0);
+});
+
+test('setInput updates existing value', () => {
+  const session = new LoomReplSession();
+  session.setInput('distance', 2.0);
+  session.setInput('distance', 0.8);
+  assert.equal(session.getInputs().distance, 0.8);
+});
+
+test('getInputs returns copy of inputs', () => {
+  const session = new LoomReplSession();
+  session.setInput('x', 1);
+  const inputs = session.getInputs();
+  inputs.x = 999;
+  assert.equal(session.getInputs().x, 1);
+});
+
+test('input node returns env.inputs value when set', () => {
+  const session = new LoomReplSession();
+  session.setInput('distance', 2.0);
+  const result = session.evaluateSnippet('d = input("distance", 999)');
+  assert.equal(result.ok, true);
+  assert.equal(result.values['d.out'], 2.0);
+});
+
+test('input node returns default when name not in env.inputs', () => {
+  const session = new LoomReplSession();
+  const result = session.evaluateSnippet('d = input("missing", 999)');
+  assert.equal(result.ok, true);
+  assert.equal(result.values['d.out'], 999);
+});
+
+test('input node returns updated value after setInput', () => {
+  const session = new LoomReplSession();
+  assert.equal(session.evaluateSnippet('d = input("distance", 999)').ok, true);
+  session.setInput('distance', 2.0);
+  const result = session.evaluateCurrent();
+  assert.equal(result.ok, true);
+  assert.equal(result.values['d.out'], 2.0);
+});
+
+test('setInput triggers evaluation of current source', () => {
+  const session = new LoomReplSession();
+  assert.equal(session.evaluateSnippet('d = input("distance", 999)').ok, true);
+  session.setInput('distance', 42);
+  const result = session.evaluateCurrent();
+  assert.equal(result.ok, true);
+  assert.equal(result.values['d.out'], 42);
+});
+
+test('input values persist across REPL commands', () => {
+  const session = new LoomReplSession();
+  assert.equal(session.evaluateSnippet('d = input("distance", 999)').ok, true);
+  session.setInput('distance', 2.0);
+
+  // Evaluate once
+  const r1 = session.evaluateCurrent();
+  assert.equal(r1.values['d.out'], 2.0);
+
+  // Evaluate again without changing input - value should persist
+  const r2 = session.evaluateCurrent();
+  assert.equal(r2.values['d.out'], 2.0);
+});
+
+test('reset clears host variables', () => {
+  const session = new LoomReplSession();
+  session.setInput('distance', 2.0);
+  session.reset();
+  assert.deepEqual(session.getInputs(), {});
+});
+
+// Persistent engine / stateful edge tests
+
+test('risingEdge does not emit on initial false evaluation', () => {
+  const session = new LoomReplSession({ time: 0 });
+  assert.equal(session.evaluateSnippet('d = input("distance", 999)').ok, true);
+  assert.equal(session.evaluateSnippet('near = lessThan(d, 1.0)').ok, true);
+  assert.equal(session.evaluateSnippet('enter = risingEdge(value: near)').ok, true);
+
+  // Initial eval: distance=999, near=false, risingEdge should not emit
+  const result = session.evaluateCurrent();
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.values['enter.event'], []);
+});
+
+test('risingEdge emits when :set causes false -> true transition', () => {
+  const session = new LoomReplSession({ time: 0 });
+  assert.equal(session.evaluateSnippet('d = input("distance", 999)').ok, true);
+  assert.equal(session.evaluateSnippet('near = lessThan(d, 1.0)').ok, true);
+  assert.equal(session.evaluateSnippet('enter = risingEdge(value: near)').ok, true);
+
+  // :set distance 2.0 -> near=false, no emit
+  session.setInput('distance', 2.0);
+  const r1 = session.evaluateCurrent({ dedupeEffects: false });
+  assert.equal(r1.ok, true);
+  assert.deepEqual(r1.values['enter.event'], []);
+
+  // :set distance 0.8 -> near=true (0.8 < 1.0), risingEdge emits
+  session.setInput('distance', 0.8);
+  const r2 = session.evaluateCurrent({ dedupeEffects: false });
+  assert.equal(r2.ok, true);
+  assert.equal(r2.values['enter.event'].length, 1);
+});
+
+test('risingEdge does not emit again while value stays true', () => {
+  const session = new LoomReplSession({ time: 0 });
+  assert.equal(session.evaluateSnippet('d = input("distance", 999)').ok, true);
+  assert.equal(session.evaluateSnippet('near = lessThan(d, 1.0)').ok, true);
+  assert.equal(session.evaluateSnippet('enter = risingEdge(value: near)').ok, true);
+
+  // Trigger false -> true
+  session.setInput('distance', 2.0);
+  session.evaluateCurrent({ dedupeEffects: false });
+  session.setInput('distance', 0.8);
+  const r1 = session.evaluateCurrent({ dedupeEffects: false });
+  assert.equal(r1.values['enter.event'].length, 1);
+
+  // Stay true - should not emit again
+  session.setInput('distance', 0.6);
+  const r2 = session.evaluateCurrent({ dedupeEffects: false });
+  assert.deepEqual(r2.values['enter.event'], []);
+});
+
+test('fallingEdge emits when :set causes true -> false transition', () => {
+  const session = new LoomReplSession({ time: 0 });
+  assert.equal(session.evaluateSnippet('d = input("distance", 999)').ok, true);
+  assert.equal(session.evaluateSnippet('near = lessThan(d, 1.0)').ok, true);
+  assert.equal(session.evaluateSnippet('exit = fallingEdge(value: near)').ok, true);
+
+  // Establish true state first
+  session.setInput('distance', 2.0);
+  session.evaluateCurrent({ dedupeEffects: false });  // false
+  session.setInput('distance', 0.8);
+  session.evaluateCurrent({ dedupeEffects: false });  // true (no fallingEdge emit)
+
+  // Now go from true -> false
+  session.setInput('distance', 1.5);
+  const r = session.evaluateCurrent({ dedupeEffects: false });
+  assert.equal(r.ok, true);
+  assert.equal(r.values['exit.event'].length, 1);
+});
+
+test('risingEdge -> sendEvent emits effect on false -> true transition', () => {
+  const session = new LoomReplSession({ time: 0 });
+  assert.equal(session.evaluateSnippet('d = input("distance", 999)').ok, true);
+  assert.equal(session.evaluateSnippet('near = lessThan(d, 1.0)').ok, true);
+  assert.equal(session.evaluateSnippet('enter = risingEdge(value: near)').ok, true);
+  assert.equal(session.evaluateSnippet('send = sendEvent(trigger: enter, channel: "custom.enterRange")').ok, true);
+
+  // :set distance 2.0 -> no effects
+  session.setInput('distance', 2.0);
+  const r1 = session.evaluateCurrent({ dedupeEffects: false });
+  assert.equal(r1.effects.filter((e) => e.kind === 'event.send').length, 0);
+
+  // :set distance 0.8 -> emits
+  session.setInput('distance', 0.8);
+  const r2 = session.evaluateCurrent({ dedupeEffects: false });
+  const sends = r2.effects.filter((e) => e.kind === 'event.send');
+  assert.equal(sends.length, 1);
+  assert.equal(sends[0].channel, 'custom.enterRange');
+});
+
+test('reset clears graph instance state', () => {
+  const session = new LoomReplSession({ time: 0 });
+  assert.equal(session.evaluateSnippet('d = input("distance", 999)').ok, true);
+  assert.equal(session.evaluateSnippet('near = lessThan(d, 1.0)').ok, true);
+  assert.equal(session.evaluateSnippet('enter = risingEdge(value: near)').ok, true);
+
+  // Establish state: false -> true
+  session.setInput('distance', 2.0);
+  session.evaluateCurrent({ dedupeEffects: false });
+  session.setInput('distance', 0.8);
+  session.evaluateCurrent({ dedupeEffects: false });
+
+  // Reset - should clear state
+  session.reset();
+  assert.equal(session._engine, null);
+  assert.equal(session._engineSource, null);
+});
+
+test('graph state is preserved across injectEvents', () => {
+  const session = new LoomReplSession({ time: 0 });
+  assert.equal(session.evaluateSnippet('d = input("distance", 999)').ok, true);
+  assert.equal(session.evaluateSnippet('near = lessThan(d, 1.0)').ok, true);
+  assert.equal(session.evaluateSnippet('enter = risingEdge(value: near)').ok, true);
+
+  // Trigger false -> true via setInput
+  session.setInput('distance', 2.0);
+  session.evaluateCurrent({ dedupeEffects: false });
+  session.setInput('distance', 0.8);
+  session.evaluateCurrent({ dedupeEffects: false });
+
+  // injectEvents should use same engine (state: near=true, previous=true)
+  const result = session.injectEvents([{ channel: 'test', timestamp: 0 }]);
+  assert.equal(result.ok, true);
+  // risingEdge should not re-emit since previous=true, current=true
+  assert.deepEqual(result.values['enter.event'], []);
+});

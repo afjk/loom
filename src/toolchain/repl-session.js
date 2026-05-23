@@ -1,6 +1,7 @@
 import { inspectLoomSource } from './inspect.js';
 import { runLoomSource } from './run.js';
 import { RUNTIME_TARGETS } from './runtime-targets.js';
+import { Loom, NODE_TYPES } from '../loom.js';
 import {
   formatLibrariesText,
   formatLibraryHelpText,
@@ -93,6 +94,27 @@ export class LoomReplSession {
     this.history = [];
     this.pendingEvents = [];
     this.lastInjectedEvents = [];
+    this.inputs = {};
+    this._engine = null;
+    this._engineSource = null;
+  }
+
+  _getNodeTypesObject() {
+    if (this.nodeRegistry && typeof this.nodeRegistry.toObject === 'function') {
+      return this.nodeRegistry.toObject();
+    }
+    return NODE_TYPES;
+  }
+
+  _buildEngineEnv(events) {
+    const env = this.createEvaluationEnv(events);
+    if (!Number.isFinite(env.time) && Number.isFinite(this.time)) {
+      env.time = this.time;
+    }
+    if (!Number.isFinite(env.deltaTime) && Number.isFinite(this.dt)) {
+      env.deltaTime = Math.max(0, this.dt);
+    }
+    return env;
   }
 
   createEvaluationEnv(events) {
@@ -102,6 +124,9 @@ export class LoomReplSession {
     }
     if (events !== undefined) {
       env.events = events;
+    }
+    if (Object.keys(this.inputs).length > 0) {
+      env.inputs = { ...this.inputs };
     }
     return env;
   }
@@ -146,6 +171,15 @@ export class LoomReplSession {
           .map((effect) => effect?.nodeId)
           .filter((nodeId) => typeof nodeId === 'string' && nodeId.length > 0)
       );
+      // Create a persistent engine so state is preserved across non-source-change evaluations
+      if (result.graph) {
+        this._engine = new Loom(result.graph, {
+          nodeRegistry: this.nodeRegistry,
+          nodeTypes: this._getNodeTypesObject()
+        });
+        this._engineSource = source;
+        this._engine.evaluateOnce({ env: this._buildEngineEnv(options.events) });
+      }
     }
     if (options.updateLastResult !== false) {
       this.lastResult = {
@@ -199,6 +233,43 @@ export class LoomReplSession {
         graph: this.graph,
         values: this.lastResult?.values || {},
         effects: [],
+        errors: []
+      };
+    }
+
+    // When source has not changed, reuse persistent engine to preserve graph instance state
+    if (this._engine && this._engineSource === this.source) {
+      const env = this._buildEngineEnv(options.events);
+      this._engine.evaluateOnce({ env });
+
+      const allEffects = this._engine.getEffects();
+      const effects = options.dedupeEffects === true
+        ? allEffects.filter((effect) => {
+          if (!effect?.nodeId) return true;
+          return !this.seenEffectNodeIds.has(effect.nodeId);
+        })
+        : allEffects;
+
+      const nodeTypesObj = this._getNodeTypesObject();
+      const values = {};
+      for (const node of this._engine._currentGraph.nodes) {
+        const nodeType = nodeTypesObj[node.type];
+        if (!nodeType || !Array.isArray(nodeType.outputs)) continue;
+        for (const output of nodeType.outputs) {
+          const ref = `${node.id}.${output.name}`;
+          values[ref] = this._engine.getValue(ref);
+        }
+      }
+
+      this.lastResult = { ok: true, values, effects };
+
+      return {
+        ok: true,
+        empty: false,
+        source: this.source,
+        graph: this._engine._currentGraph,
+        values,
+        effects,
         errors: []
       };
     }
@@ -281,6 +352,14 @@ export class LoomReplSession {
     };
   }
 
+  setInput(name, value) {
+    this.inputs[name] = value;
+  }
+
+  getInputs() {
+    return { ...this.inputs };
+  }
+
   reset() {
     this.sourceLines = [];
     this.source = '';
@@ -290,6 +369,9 @@ export class LoomReplSession {
     this.history = [];
     this.pendingEvents = [];
     this.lastInjectedEvents = [];
+    this.inputs = {};
+    this._engine = null;
+    this._engineSource = null;
   }
 
   inspect() {

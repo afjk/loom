@@ -232,25 +232,29 @@ Commands:
   :event <channel> [json]
                      Inject one host event for a one-shot evaluation
   :key <keyName>     Shortcut for :event keyboard.keyDown {"key":"<keyName>"}
+  :set <name> <value>
+                     Set a host input variable and evaluate current graph
   :time <seconds>    Set current REPL env.time
   :tick <seconds>    Advance current REPL env.time and set env.deltaTime
   :scope scene [id]  Set eval scope to scene (optional scene id)
   :scope object <id> Set eval scope to object id
   :scope object:<id> Alias for object scope
   :events            Show current time/scope and last injected event
-  :vars              Show current variables
+  :vars              Show current variables and host inputs
   :history           Show current session input history
   :clear             Clear the terminal (or print blank lines)
   :source            Show accumulated source
   :inspect           Show current graph summary
   :graph             Show current GraphJSON
-  :reset             Clear current session
+  :reset             Clear current session (including host variables)
   :quit              Exit the REPL
   :q                 Exit the REPL
   :exit              Exit the REPL
 
 Notes:
-  REPL events are host-provided one-shot inputs for event playground testing.`;
+  REPL events are host-provided one-shot inputs for event playground testing.
+  Host input variables set via :set persist until changed or :reset.
+  Example: distance = input("distance", 999)`;
 }
 
 function formatReplVarValue(value) {
@@ -506,6 +510,36 @@ function printReplEventsStatus(session) {
     print('last events:');
     for (const event of state.lastInjectedEvents) {
       print(`  ${formatInjectedEvent(event)}`);
+    }
+  }
+}
+
+function parseSetValue(valueText) {
+  const trimmed = String(valueText ?? '').trim();
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return trimmed;
+  }
+}
+
+function printSetResult(result) {
+  const eventSendEffects = (result.effects || []).filter((e) => e.kind === 'event.send');
+  // Print non-event.send effects (log, scene, etc.) via the existing handler
+  printEffects((result.effects || []).filter((e) => e.kind !== 'event.send'));
+  if (eventSendEffects.length === 0) {
+    print('no effects');
+  } else {
+    print('effects:');
+    for (const effect of eventSendEffects) {
+      const parts = [`channel=${JSON.stringify(effect.channel)}`];
+      if (effect.target !== undefined) {
+        parts.push(`target=${JSON.stringify(effect.target)}`);
+      }
+      if (effect.payload !== undefined) {
+        parts.push(`payload=${formatReplVarValue(effect.payload)}`);
+      }
+      print(`  - event.send ${parts.join(' ')}`);
     }
   }
 }
@@ -2327,6 +2361,34 @@ async function handleRepl(args) {
         prompt();
         return;
       }
+      if (trimmed.startsWith(':set ')) {
+        const setArgs = trimmed.slice(5).trim();
+        const spaceIndex = setArgs.search(/\s/);
+        if (spaceIndex < 0) {
+          printError('Usage: :set <name> <value>');
+          prompt();
+          return;
+        }
+        const name = setArgs.slice(0, spaceIndex).trim();
+        const valueText = setArgs.slice(spaceIndex).trim();
+        if (!name) {
+          printError('Usage: :set <name> <value>');
+          prompt();
+          return;
+        }
+        const value = parseSetValue(valueText);
+        session.setInput(name, value);
+        const result = session.evaluateCurrent({ dedupeEffects: false });
+        if (!result.ok) {
+          printToolErrors(result.errors);
+        } else if (!result.empty) {
+          printSetResult(result);
+        } else {
+          print('no source to evaluate');
+        }
+        prompt();
+        return;
+      }
       if (trimmed === ':tick' || trimmed.startsWith(':tick ')) {
         const value = Number(trimmed.slice(5).trim());
         if (!Number.isFinite(value)) {
@@ -2367,12 +2429,21 @@ async function handleRepl(args) {
       }
       if (trimmed === ':vars') {
         const variables = session.getVariables();
-        if (variables.length === 0) {
+        const inputs = session.getInputs();
+        const inputEntries = Object.entries(inputs);
+        if (variables.length === 0 && inputEntries.length === 0) {
           print('Variables:\n\n<none>');
         } else {
           print('Variables:\n');
           for (const variable of variables) {
             print(`${variable.name} = ${formatReplVarValue(variable.value)}`);
+          }
+          if (inputEntries.length > 0) {
+            print('');
+            print('Host inputs:\n');
+            for (const [name, value] of inputEntries) {
+              print(`${name} = ${formatReplVarValue(value)}`);
+            }
           }
         }
         prompt();
