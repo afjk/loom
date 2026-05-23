@@ -340,7 +340,14 @@ test('filter predicate supports semantic vector components right/up/front', () =
     ],
     edges: [{ from: 'input.event', to: 'f.event' }]
   };
-  assert.doesNotThrow(() => new Loom(graph));
+  const engine = new Loom(graph);
+  engine.evaluateOnce({ env: { time: 0 } });
+  engine.dispatchEvent('input.event', { right: 2, up: 1, front: 0 });
+  engine.dispatchEvent('input.event', { right: -1, up: 1, front: 0 });
+  engine.dispatchEvent('input.event', { right: 2, up: 1, front: 5 });
+  engine.evaluateOnce({ env: { time: 1 } });
+
+  assert.deepEqual(engine.getValue('f.event'), [{ right: 2, up: 1, front: 0 }]);
 });
 
 test('filter predicate supports semantic aliases r/u/f', () => {
@@ -351,7 +358,13 @@ test('filter predicate supports semantic aliases r/u/f', () => {
     ],
     edges: [{ from: 'input.event', to: 'f.event' }]
   };
-  assert.doesNotThrow(() => new Loom(graph));
+  const engine = new Loom(graph);
+  engine.evaluateOnce({ env: { time: 0 } });
+  engine.dispatchEvent('input.event', { right: 1, up: 2, front: 3 });
+  engine.dispatchEvent('input.event', { right: 1, up: 2, front: 4 });
+  engine.evaluateOnce({ env: { time: 1 } });
+
+  assert.deepEqual(engine.getValue('f.event'), [{ right: 1, up: 2, front: 3 }]);
 });
 
 test('filter predicate rejects unsupported semantic components', () => {

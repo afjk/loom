@@ -13,7 +13,7 @@ export class LoomError extends Error {
 }
 
 // 制限式 DSL パーサ・インタプリタ
-class RestrictedDSLEvaluator {
+export class RestrictedDSLEvaluator {
   static #SEMANTIC_COMPONENT_ALIASES = {
     r: 'right',
     u: 'up',
