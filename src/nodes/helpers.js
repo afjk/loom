@@ -18,5 +18,6 @@ export {
   mapFunctionValueNode,
   getNodeFs,
   getNodePath,
-  LoomError
+  LoomError,
+  RestrictedDSLEvaluator
 } from '../loom.js';

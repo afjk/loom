@@ -332,6 +332,56 @@ test('clock requires env.time when evaluated', () => {
   assert.equal(result.errors[0]?.code, 'MISSING_ENV_TIME');
 });
 
+test('filter predicate supports semantic vector components right/up/front', () => {
+  const graph = {
+    nodes: [
+      { id: 'input', type: 'keyDown' },
+      { id: 'f', type: 'filter', params: { predicate: 'value.right > 0 && value.up == 1 && value.front == 0' } }
+    ],
+    edges: [{ from: 'input.event', to: 'f.event' }]
+  };
+  const engine = new Loom(graph);
+  engine.evaluateOnce({ env: { time: 0 } });
+  engine.dispatchEvent('input.event', { right: 2, up: 1, front: 0 });
+  engine.dispatchEvent('input.event', { right: -1, up: 1, front: 0 });
+  engine.dispatchEvent('input.event', { right: 2, up: 1, front: 5 });
+  engine.evaluateOnce({ env: { time: 1 } });
+
+  assert.deepEqual(engine.getValue('f.event'), [{ right: 2, up: 1, front: 0 }]);
+});
+
+test('filter predicate supports semantic aliases r/u/f', () => {
+  const graph = {
+    nodes: [
+      { id: 'input', type: 'keyDown' },
+      { id: 'f', type: 'filter', params: { predicate: 'value.r == 1 && value.u == 2 && value.f == 3' } }
+    ],
+    edges: [{ from: 'input.event', to: 'f.event' }]
+  };
+  const engine = new Loom(graph);
+  engine.evaluateOnce({ env: { time: 0 } });
+  engine.dispatchEvent('input.event', { right: 1, up: 2, front: 3 });
+  engine.dispatchEvent('input.event', { right: 1, up: 2, front: 4 });
+  engine.evaluateOnce({ env: { time: 1 } });
+
+  assert.deepEqual(engine.getValue('f.event'), [{ right: 1, up: 2, front: 3 }]);
+});
+
+test('filter predicate rejects unsupported semantic components', () => {
+  const graph = {
+    nodes: [
+      { id: 'input', type: 'keyDown' },
+      { id: 'f', type: 'filter', params: { predicate: 'value.left > 0' } }
+    ],
+    edges: [{ from: 'input.event', to: 'f.event' }]
+  };
+
+  assert.throws(
+    () => new Loom(graph),
+    (error) => error instanceof LoomError && error.code === 'INVALID_GRAPH' && /Invalid field access: value\.left/.test(error.message)
+  );
+});
+
 test('onEvent emits matching events from env.events', () => {
   const graph = {
     nodes: [{ id: 'listener', type: 'onEvent', params: { channel: 'key.down' } }],

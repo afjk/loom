@@ -13,7 +13,22 @@ export class LoomError extends Error {
 }
 
 // 制限式 DSL パーサ・インタプリタ
-class RestrictedDSLEvaluator {
+export class RestrictedDSLEvaluator {
+  static #SEMANTIC_COMPONENT_ALIASES = {
+    r: 'right',
+    u: 'up',
+    f: 'front'
+  };
+
+  static #ALLOWED_VALUE_FIELDS = new Set([
+    'x',
+    'y',
+    'right',
+    'up',
+    'front',
+    ...Object.keys(RestrictedDSLEvaluator.#SEMANTIC_COMPONENT_ALIASES)
+  ]);
+
   constructor(dslString, nodeId) {
     this.input = dslString;
     this.pos = 0;
@@ -258,8 +273,9 @@ class RestrictedDSLEvaluator {
       this.consumeToken();
       if (ident.includes('.')) {
         const parts = ident.split('.');
-        if (parts.length === 2 && parts[0] === 'value' && ['x', 'y'].includes(parts[1])) {
-          return { type: 'fieldAccess', object: 'value', field: parts[1] };
+        if (parts.length === 2 && parts[0] === 'value' && RestrictedDSLEvaluator.#ALLOWED_VALUE_FIELDS.has(parts[1])) {
+          const normalizedField = RestrictedDSLEvaluator.#SEMANTIC_COMPONENT_ALIASES[parts[1]] || parts[1];
+          return { type: 'fieldAccess', object: 'value', field: normalizedField };
         }
         this.error(`Invalid field access: ${ident}`);
       }

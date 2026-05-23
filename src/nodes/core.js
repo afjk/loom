@@ -1,4 +1,4 @@
-import { LoomError, coerceFiniteNumber, getNodeFs, getNodePath, inspectValue, resolveStateInputValue, sanitizeStateValue, stringifyJsonValue, stringifyTextValue, toArray } from './helpers.js';
+import { LoomError, RestrictedDSLEvaluator, coerceFiniteNumber, getNodeFs, getNodePath, inspectValue, resolveStateInputValue, sanitizeStateValue, stringifyJsonValue, stringifyTextValue, toArray } from './helpers.js';
 
 export function registerCoreNodes(registry) {
   registry.registerNodeType('clock', {
