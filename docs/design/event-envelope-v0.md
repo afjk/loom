@@ -117,7 +117,7 @@ lessThan(distance, 1.0)
   -> sendEvent('custom.enterRange')
 ```
 
-The `risingEdge` node emits an event only when `distance` crosses below `1.0`.
+The `risingEdge` node emits when lessThan(distance, 1.0) changes from false to true.
 `sendEvent` emits one `event.send` effect per trigger and does nothing else.
 The host decides what to do with that effect.
 
