@@ -79,11 +79,16 @@ These are valuable if the P0 foundations are clear enough.
    - ✅ Lowering direction is documented (`getComponent` / `swizzle`) while keeping runtime/export semantics explicit.
    - ➡️ General expression component access, multi-component swizzle runtime shape, and Node Editor virtual port UI remain planned/future work.
 
-3. **Partial**: Package extension foundation stabilization
-   - Trusted local package loading, runtime node registration, package metadata registration, CLI/REPL `--package`, docs/help integration, and import validation have a working baseline.
-   - Current next scope remains trusted local packages.
-   - Stabilize package manifests, target compatibility, metadata usage, and generated docs before npm/remote loading.
-   - Package nodes should become usable by CLI/REPL/docs first, then VS Code and Node Editor.
+3. **Done (v0 foundation)**: Package extension foundation stabilization
+   - ✅ Trusted local package loading with explicit file path (`--package`)
+   - ✅ Runtime node registration via `registerLoomletPackage()`
+   - ✅ Optional package metadata registration for discoverability
+   - ✅ CLI/REPL `--package` flag for loading trusted packages
+   - ✅ Docs/help integration (`:libs`, `:help`, `loomlet docs` with package metadata)
+   - ✅ Package-aware import validation against metadata targets
+   - ✅ Tests covering package registration, metadata drift, import validation, and CLI loading
+   - ➡️ **Deferred**: npm/remote loading, sandboxing, permissions, package discovery, manifest files, editor UI
+   - ➡️ See [docs/labs/PACKAGE_SYSTEM.md](./labs/PACKAGE_SYSTEM.md) for v0 boundaries and deferred features
 
 4. **Planned**: Output conflict / single-writer warnings
    - Warn when multiple graphs or sources attempt to write the same object property.
@@ -218,12 +223,10 @@ Candidate experiments:
   - function calls as subgraph references or graph expansion
   - function inputs/outputs as node ports
   - Node Editor representation for collapsible function groups
-- **Partial / Experimental**: `labs/package`
-  - trusted local package baseline exists
-  - package manifest
-  - package versioning
-  - npm/catalog support
-  - sandboxing and permissions
+- **Done (v0 foundation) / Experimental**: `labs/package`
+  - ✅ v0 foundation: trusted local packages, runtime registration, optional metadata, CLI/REPL integration
+  - ➡️ Deferred: package manifest, versioning, npm/catalog support, sandboxing, permissions
+  - ➡️ See [docs/labs/PACKAGE_SYSTEM.md](./labs/PACKAGE_SYSTEM.md)
 - **Future / Experimental**: `labs/ui-graph`
   - UI values/events as Loomlet graph inputs/outputs
 - **Future / Experimental**: `labs/shader-graph`
