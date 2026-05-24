@@ -1,16 +1,34 @@
-# Package System (Experimental)
+# Package System (v0 Foundation)
 
-This document describes the current experimental package system for Loomlet.
+Loomlet package extension v0 supports trusted local JavaScript modules loaded explicitly by file path. Packages are executable JavaScript and must be trusted.
 
-## Current Supported Model
+## v0 Supported Surface
 
-- Trusted local packages only
-- No dynamic loading
-- No npm resolution
-- No sandboxing
-- No permission system
+In v0, packages support:
 
-## Package Shape
+- **Explicit file path loading**: `--package <path>` on CLI or `loadTrustedLocalPackage()` at runtime
+- **Runtime node registration**: Packages register node implementations into a NodeRegistry via `registerLoomletPackage()`
+- **Optional metadata registration**: Packages can export metadata for discoverability and target compatibility
+- **Package-aware import validation**: Compiler validates imports against metadata targets when available
+- **Package-aware CLI / REPL / docs help**: Package metadata appears in `:libs`, `:help <library>`, and `loomlet docs` commands
+
+## v0 Design Principles
+
+- **Trusted source only**: Packages are executable JavaScript with full process capabilities. There is no sandboxing or permission system. Load packages only from sources you trust.
+- **Explicit loading**: Packages must be loaded explicitly by file path. There is no package discovery, catalog, directory scanning, or npm resolution.
+- **Runtime-only or metadata-aware**: A package can work with runtime registration alone, or can add optional metadata for better tooling support.
+
+## Runtime Package API
+
+### Creating and Using a NodeRegistry
+
+The v0 package runtime API centers on three functions:
+
+- `createNodeRegistry()`: Create an empty registry
+- `registerNodeType(nodeType, definition)`: Register a node type in a registry
+- `registerTrustedPackage(registry, packageModule, context?)`: Load a trusted package into a registry
+
+### Package Module Shape
 
 A package must export a `registerLoomletPackage` function that receives a node registry and context:
 
@@ -28,7 +46,7 @@ export function registerLoomletPackage(registry, context) {
 }
 ```
 
-The node type definition follows the standard Loomlet node format:
+The node type definition follows the standard Loomlet node format. See [Node Definition Schema](../NODE_DEFINITION_SCHEMA.md) for full details:
 
 - **category**: One of `source`, `sink`, `state`, `transform`, `effect`, `input`, `special`
 - **inputs**: Array of input port definitions `{ name, type, default?, kind? }`
@@ -36,9 +54,32 @@ The node type definition follows the standard Loomlet node format:
 - **outputs**: Array of output port definitions `{ name, type, kind? }`
 - **evaluate(inputs, params, ctx)**: Function that evaluates the node and returns output values
 
-## Package Metadata
+### Registering a Package at Runtime
 
-A package may optionally export library metadata to make nodes discoverable to editors, documentation tools, and AI authoring systems. Metadata is separate from runtime registration and not required for execution.
+Use `registerTrustedPackage()` to load a trusted package:
+
+```js
+import { createNodeRegistry } from '../../src/runtime/node-registry.js';
+import { registerTrustedPackage } from '../../src/runtime/package-registration.js';
+import * as myPackage from './my-package.js';
+
+const registry = createNodeRegistry();
+registerTrustedPackage(registry, myPackage);
+
+// Now myPackage nodes are available in the registry
+console.log(registry.listNodeTypes()); // ['mylib.node1', 'mylib.node2', ...]
+```
+
+## Metadata Role and Registration
+
+Metadata is optional and separate from runtime registration. Metadata enables:
+
+- **:libs and :help commands**: Package libraries appear in REPL help
+- **docs generation**: `loomlet docs` can show package documentation
+- **import validation**: Compiler can validate imports against package targets
+- **Editor support**: VS Code and Node Editor can eventually use package metadata (not yet implemented in v0)
+
+A package can work perfectly as a runtime-only package without metadata, but tooling will know less about it. Metadata is recommended for better discoverability and target compatibility.
 
 ### Exporting Metadata with `loomletMetadata`
 
@@ -106,14 +147,33 @@ The registry will:
 
 Runtime-only packages are still supported—metadata is optional.
 
-## Import Validation
+## Import Validation and Target Compatibility
 
-A package library becomes importable when:
+In v0, packages support optional target compatibility validation through metadata.
 
-- Its metadata is registered in a metadata registry, or
-- Its runtime node types are registered in a node registry using the `library.function` prefix.
+### How Packages Become Importable
 
-Metadata is used for target compatibility validation during compilation. Runtime-only packages are currently allowed, but target compatibility is unknown until metadata or a manifest exists.
+A package library becomes importable in the DSL when:
+
+1. Its runtime node types are registered in a node registry (always required)
+2. Its metadata is optionally registered in a metadata registry (for target validation)
+
+Without metadata, imports are allowed if the node types exist in the registry, but target compatibility is unknown to tooling.
+
+### Target Compatibility
+
+When metadata is available, the compiler can validate that a package library supports the target you're compiling for:
+
+```js
+// demo package metadata declares targets: ['cli', 'web', 'scenesync']
+const result = compileLoomSource(`
+import demo
+result = demo.double(value: 5)
+`, { target: 'web', metadataRegistry });
+// Succeeds because 'web' is in demo's targets
+```
+
+If you try to import a package targeting an unsupported platform, the compiler will warn you (if metadata is available).
 
 ### With Built-in Libraries
 
@@ -199,13 +259,14 @@ loom.evaluateOnce();
 
 The `nodeRegistry` option can be passed to both the DSL compiler and runtime to enable package nodes.
 
-## REPL Session with Package Registries
+## REPL and CLI with Packages
 
-When a host creates both a node registry and a metadata registry and passes them to `LoomReplSession`, REPL evaluation, import validation, and help all use the same package-aware view. This enables:
+When a host creates both a node registry and a metadata registry and passes them to `LoomReplSession` or CLI commands, REPL evaluation, import validation, and help all use the same package-aware view. This enables:
 
 - **Evaluation**: Custom package nodes execute through `evaluateSnippet()`
-- **Import validation**: Imports are validated against the metadata registry
+- **Import validation**: Imports are validated against the metadata registry (when provided)
 - **Help**: Package metadata appears in `:libs`, `:help <library>`, and `:help <lib.func>`
+- **Docs**: `loomlet docs` shows package metadata
 
 ```js
 import { LoomReplSession } from '../../src/toolchain/repl-session.js';
@@ -344,20 +405,74 @@ y = demo.offset(x, amount: 3)
 ```
 
 
-## Future Work
+## Future Manifest Direction (Not Implemented)
 
-The following are planned but not yet implemented:
+In future versions, packages may use a manifest file to declare metadata, dependencies, and compatibility. A suggested manifest shape for stabilization work:
 
-- **Package manifest**: version, dependencies, targets
-- **Metadata-driven validation**: Compiler and runtime validation using package metadata
-- **Target compatibility**: Node Editor, VS Code, Unity, web
-- **npm package loading**: Load packages from npm
-- **Web/CDN loading**: Load packages from remote URLs
-- **Sandboxing and permissions**: Restrict package capabilities
-- **Package-aware VS Code completion**: Autocomplete for package nodes
-- **Package-aware Node Editor**: UI for adding package nodes
-- **Generated documentation**: Docs from package metadata
-- **Package discovery**: Registry or catalog of available packages
-- **Package versioning**: Semver support and compatibility checks
-- **Package configuration files**: Load packages via manifest or config file
-- **Environment-based package loading**: Load packages based on environment variables
+```json
+{
+  "name": "string",
+  "version": "string (semver)",
+  "description": "string",
+  "main": "string (path to entry point)",
+  "loomlet": {
+    "apiVersion": "string (compatible Loomlet package API version)",
+    "targets": ["string[] (e.g., 'cli', 'web', 'scenesync', 'unity')"],
+    "entry": "string (path to registerLoomletPackage export)",
+    "metadata": "string (optional path to metadata file)"
+  },
+  "dependencies": {
+    "package-name": "semver"
+  }
+}
+```
+
+This manifest may eventually enable:
+- Declaring compatible Loomlet API versions
+- Specifying supported targets (cli, web, scenesync, unity, etc)
+- Declaring dependencies on other packages
+- Auto-discovering packages from manifest files instead of explicit paths
+
+However, the current v0 approach (explicit file path loading without manifest) provides more control and reduces complexity for trusted packages.
+
+## Versioning Axes
+
+When Loomlet gains package versioning support, understand these independent versioning axes:
+
+- **Package version**: Semver assigned by the package author (e.g., 1.2.3)
+- **Loomlet API version**: The compatible Loomlet package API version (e.g., v0, v1)
+- **Targets**: Supported host environments (cli, web, scenesync, unity, etc)
+
+A package built for "Loomlet API v0" may not be compatible with future "Loomlet API v1" if the API changes.
+
+## Editor and Tooling Support
+
+### What Editors Eventually Need (Not Yet Implemented in v0)
+
+VS Code and Node Editor eventually should be able to consume from package metadata:
+
+- Library name and description
+- Function signatures, parameters, defaults, return types
+- Examples and documentation
+- Supported targets
+- Node categories (transform, source, sink, etc)
+- Port shapes / connection compatibility (when available)
+
+### What v0 Provides
+
+Currently, v0 provides the metadata structure and REPL/CLI integration. Editor integration (VS Code completion for package nodes, Node Editor UI for adding package nodes) remains future work. The metadata exists and can be read by tooling; editor features to consume it are deferred.
+
+## Deferred Features (Not v0)
+
+The following are explicitly deferred from v0 and will be addressed in future work:
+
+- **npm package loading**: Load packages from npm registry
+- **Remote/URL loading**: Load packages from HTTP(S) URLs or CDNs
+- **Directory discovery**: Auto-discover packages from directories or manifest files
+- **Manifest file resolution**: Load packages via manifest.json instead of explicit paths
+- **Sandboxing**: Run packages in a restricted execution environment
+- **Permission system**: Grant/revoke package capabilities before execution
+- **Package catalog / discovery**: Registry or marketplace of available packages
+- **Dependency resolution**: Resolve transitive package dependencies
+- **Package-aware VS Code completion**: Autocomplete for package node types and arguments
+- **Package-aware Node Editor UI**: UI for browsing and adding package nodes to graphs
