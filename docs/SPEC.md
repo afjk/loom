@@ -66,6 +66,7 @@ Web、Unity、Godot など複数の runtime が存在し得るが、それらは
 
 Runtime が出力を host API に対応づけるとき、座標系の変換を行う責務がある。
 See [Semantic Coordinate System](./design/semantic-coordinate-system.md) for how Loomlet expresses positions and rotations in a runtime-agnostic way.
+See [Semantic Component Access v0](./design/semantic-component-access-v0.md) for semantic component vocabulary, current predicate DSL support, and virtual lowering direction.
 
 ## Scene-level graph と Object-level graph
 
