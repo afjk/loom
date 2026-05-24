@@ -83,6 +83,8 @@ When adding new portable nodes to Loomlet:
 4. Run `npm test` to verify all cases pass
 5. Consider adding separate fixture files for advanced features (e.g., list.map, list.filter with function values)
 
+See [`docs/PORTABLE_RUNTIME_SUBSET.md`](PORTABLE_RUNTIME_SUBSET.md) §6 for the full parity fixture policy, including when coverage is required and what node categories are excluded from portable fixtures.
+
 ## Future: Higher-Order Functions
 
 Future fixture sets will cover:

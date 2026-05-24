@@ -87,6 +87,7 @@ When implementing Unity support, prioritize in this order:
 ## Reference
 
 See also:
+- `docs/PORTABLE_RUNTIME_SUBSET.md` - v0 portable subset boundary, Scene Sync live/export expectations, and runtime distribution policy
 - `docs/RUNTIME_TARGETS.md` - Overview of runtime target metadata
 - `src/toolchain/runtime-targets.js` - Current LIBRARY_COMPATIBILITY definitions
 - `src/toolchain/library-metadata.js` - Per-library function documentation
