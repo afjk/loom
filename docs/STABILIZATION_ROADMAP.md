@@ -73,10 +73,11 @@ These are valuable if the P0 foundations are clear enough.
    - ✅ Graph evaluation is separate from host mutation; `behavior set`, `behavior clear`, `run`, and `dev` workflows are documented.
    - ✅ CLI operations are tested and easy to use. See [Scene Sync Workflow Guide](./SCENESYNC_WORKFLOW.md) for examples.
 
-2. **Planned**: Swizzle / component access / virtual node foundation
-   - Define value-model rules for vectors, records, and component access.
-   - Support DSL expressions such as `.x`, `.xy`, `.xz`, or equivalent component access syntax only when they can lower into explicit graph nodes.
-   - Treat Node Editor virtual ports and implicit get/swizzle nodes as editor affordances, not hidden runtime behavior.
+2. **Done (v0 foundation)**: Swizzle / component access / virtual node foundation
+   - ✅ Semantic component vocabulary and coordinate-space rule are documented in [Semantic Component Access v0](./design/semantic-component-access-v0.md).
+   - ✅ Current implementation scope is documented: filter predicate DSL supports `value.right/up/front` and `value.r/u/f`.
+   - ✅ Lowering direction is documented (`getComponent` / `swizzle`) while keeping runtime/export semantics explicit.
+   - ➡️ General expression component access, multi-component swizzle runtime shape, and Node Editor virtual port UI remain planned/future work.
 
 3. **Partial**: Package extension foundation stabilization
    - Trusted local package loading, runtime node registration, package metadata registration, CLI/REPL `--package`, docs/help integration, and import validation have a working baseline.
