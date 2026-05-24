@@ -2574,6 +2574,8 @@ Loomlet は単一の JSON グラフ表現を真の単一ソースとし、複数
 
 現在の Loomlet CLI では、Scene Sync link code の redeem、session 保存、room/object の確認、`.loom` から Scene Sync behavior graph へのcompile/run/dev workflow を実験的に実装している。
 
+See [Scene Sync Workflow Guide](./SCENESYNC_WORKFLOW.md) for user-facing documentation of the `run`, `behavior compile`, `behavior set`, `behavior clear`, and `dev` commands.
+
 - ✅ `src/loom-scenesync.js` の追加（Loomlet リポジトリ側のアダプタ層）
 - ✅ `serverClock` ノード追加（クロスクライアント時刻同期）
 - ✅ Sink ノード 5 種：`sceneSetPosition`、`sceneSetRotation`、`sceneSetScale`、`sceneSetColor`、`sceneSetVisible`
