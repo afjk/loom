@@ -49,7 +49,7 @@ Scene Sync live and Scene Sync Export should differ by host-provided environment
 
 - May provide server-synchronized room time as `env.time` / `env.deltaTime`.
 - May provide committed shared events via `env.events`.
-- Requires the afjk.jp presence server at runtime.
+- Requires a Scene Sync presence server or compatible live host at runtime.
 
 ### Scene Sync Export
 
