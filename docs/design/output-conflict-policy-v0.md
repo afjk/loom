@@ -186,7 +186,7 @@ type OutputConflictWarning = {
   code: string;       // machine-readable warning code
   target: string;     // the output target path that is in conflict
   writers: string[];  // identifiers of the conflicting writers
-  severity: 'warning' | 'error';
+  severity: 'info' | 'warning' | 'error';
   message: string;    // human-readable description
 };
 ```
@@ -200,7 +200,7 @@ OUTPUT_CONFLICT
 
 BEHAVIOR_PAUSED_FOR_EDIT
   — A behavior graph's outputs are locally suppressed because the user is editing the target.
-  — severity: warning (informational; this is expected behavior during editing)
+  — severity: info (expected local edit override behavior, not an error condition)
 ```
 
 ### Example warning
