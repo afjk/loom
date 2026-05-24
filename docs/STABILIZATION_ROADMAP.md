@@ -68,10 +68,10 @@ These items should be prioritized before larger authoring features.
 
 These are valuable if the P0 foundations are clear enough.
 
-1. **Planned**: Scene Sync graph attach / clear / run workflow
-   - Clarify scene-level vs object-level graph attachment.
-   - Keep graph evaluation separate from host mutation.
-   - Ensure attach/clear operations are easy to test from CLI, REPL, VS Code, and Scene Sync.
+1. **Done**: Scene Sync graph attach / clear / run workflow
+   - ✅ [Scene Sync Workflow Guide](./SCENESYNC_WORKFLOW.md) documents scene-level vs object-level graph attachment.
+   - ✅ Graph evaluation is separate from host mutation; `behavior set`, `behavior clear`, `run`, and `dev` workflows are documented.
+   - ✅ CLI operations are tested and easy to use. See [Scene Sync Workflow Guide](./SCENESYNC_WORKFLOW.md) for examples.
 
 2. **Planned**: Swizzle / component access / virtual node foundation
    - Define value-model rules for vectors, records, and component access.
