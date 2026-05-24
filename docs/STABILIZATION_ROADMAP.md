@@ -90,10 +90,16 @@ These are valuable if the P0 foundations are clear enough.
    - ➡️ **Deferred**: npm/remote loading, sandboxing, permissions, package discovery, manifest files, editor UI
    - ➡️ See [docs/labs/PACKAGE_SYSTEM.md](./labs/PACKAGE_SYSTEM.md) for v0 boundaries and deferred features
 
-4. **Planned**: Output conflict / single-writer warnings
-   - Warn when multiple graphs or sources attempt to write the same object property.
-   - Prefer a single-writer rule for deterministic behavior.
-   - Route cross-object effects through events, commands, or scene-level graphs rather than direct object mutation.
+4. **Done (v0 design)**: Output conflict / single-writer warnings
+   - ✅ Output target / writer vocabulary is documented in [Output Conflict Policy v0](./design/output-conflict-policy-v0.md).
+   - ✅ Single-writer warning policy (warn, do not block) is documented.
+   - ✅ Manual edit vs manual edit is delegated to the existing Scene Sync edit lock mechanism.
+   - ✅ Selection is documented as local UI state; edit override and t=0 neutral behavior are documented.
+   - ✅ Base transform rebase policy is documented.
+   - ✅ Conflict categories (manual/behavior/graph/command) are documented with v0 precedence rules.
+   - ✅ Detection timing categories (compile-time, attach-time, runtime) are documented.
+   - ✅ Warning shape (`code`, `target`, `writers`, `severity`, `message`) and suggested codes are documented.
+   - ➡️ **Deferred**: full conflict resolver, permission system, runtime write tracker, Scene Sync server changes.
 
 5. **Partial**: Portable runtime subset for Scene Sync / Unity
    - Unity compatibility baseline and portable runtime parity fixtures exist.
