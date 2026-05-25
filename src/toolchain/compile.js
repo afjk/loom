@@ -10,6 +10,13 @@ import {
 
 const DEFAULT_COMPATIBLE_TARGETS = RUNTIME_TARGETS.filter((target) => target !== 'any');
 
+const STATIC_SCENE_OUTPUT_SINKS = {
+  'scene.setPosition': 'position',
+  'scene.offsetPosition': 'position',
+  'scene.setRotation': 'rotation',
+  'scene.setScale': 'scale'
+};
+
 function normalizeImportName(entry) {
   return typeof entry === 'string' ? entry : entry.name;
 }
@@ -167,6 +174,51 @@ function validateImports(ast, target, options = {}) {
   return errors;
 }
 
+function getStaticSceneOutputTarget(node) {
+  const property = STATIC_SCENE_OUTPUT_SINKS[node?.type];
+  const objectId = node?.params?.objectId;
+
+  if (!property || typeof objectId !== 'string' || objectId.length === 0) {
+    return null;
+  }
+
+  return { objectId, property };
+}
+
+function detectDuplicateStaticSceneOutputTargets(graph) {
+  const warnings = [];
+  const seenTargets = new Map();
+
+  for (const node of graph?.nodes || []) {
+    const target = getStaticSceneOutputTarget(node);
+    if (!target) {
+      continue;
+    }
+
+    const key = `${target.objectId}\0${target.property}`;
+    const firstNode = seenTargets.get(key);
+    if (firstNode) {
+      warnings.push({
+        code: 'DUPLICATE_STATIC_SCENE_OUTPUT_TARGET',
+        message: `Multiple static Scene outputs write ${target.property} for object '${target.objectId}' (${firstNode.id}, ${node.id})`,
+        line: null,
+        column: null,
+        source: 'compile',
+        target: {
+          objectId: target.objectId,
+          property: target.property
+        },
+        nodes: [firstNode.id, node.id]
+      });
+      continue;
+    }
+
+    seenTargets.set(key, node);
+  }
+
+  return warnings;
+}
+
 export function compileLoomSource(source, options = {}) {
   let ast = null;
 
@@ -177,7 +229,8 @@ export function compileLoomSource(source, options = {}) {
         ok: false,
         ast,
         graph: null,
-        errors: targetErrors
+        errors: targetErrors,
+        warnings: []
       };
     }
 
@@ -189,7 +242,8 @@ export function compileLoomSource(source, options = {}) {
         ok: false,
         ast,
         graph: null,
-        errors: parsed.errors.map(normalizeLoomError)
+        errors: parsed.errors.map(normalizeLoomError),
+        warnings: []
       };
     }
 
@@ -199,7 +253,8 @@ export function compileLoomSource(source, options = {}) {
         ok: false,
         ast,
         graph: null,
-        errors: importErrors
+        errors: importErrors,
+        warnings: []
       };
     }
 
@@ -209,22 +264,27 @@ export function compileLoomSource(source, options = {}) {
         ok: false,
         ast,
         graph: null,
-        errors: compiled.errors.map(normalizeLoomError)
+        errors: compiled.errors.map(normalizeLoomError),
+        warnings: []
       };
     }
+
+    const warnings = detectDuplicateStaticSceneOutputTargets(compiled.graph);
 
     return {
       ok: true,
       ast,
       graph: compiled.graph,
-      errors: []
+      errors: [],
+      warnings
     };
   } catch (error) {
     return {
       ok: false,
       ast,
       graph: null,
-      errors: [normalizeLoomError(error)]
+      errors: [normalizeLoomError(error)],
+      warnings: []
     };
   }
 }
