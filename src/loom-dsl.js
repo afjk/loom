@@ -126,24 +126,52 @@ export function parseDSLToAST(source) {
     }
 
     function parseExpr() { return parseFunctionLiteral(); }
+    function parseParamList() {
+      expect(TT.LPAREN);
+      const params = [];
+      while (peek().type !== TT.RPAREN && peek().type !== TT.EOF) {
+        const param = expect(TT.IDENT);
+        params.push({ type: 'Identifier', name: param.value, span: param.span });
+        if (peek().type === TT.COMMA) take();
+        else break;
+      }
+      expect(TT.RPAREN);
+      return params;
+    }
     function parseFunctionLiteral() {
       const t = peek();
       if (t.type === TT.IDENT && t.value === 'fn' && peek(1).type === TT.LPAREN) {
         take();
-        expect(TT.LPAREN);
-        const params = [];
-        while (peek().type !== TT.RPAREN && peek().type !== TT.EOF) {
-          const param = expect(TT.IDENT);
-          params.push({ type: 'Identifier', name: param.value, span: param.span });
-          if (peek().type === TT.COMMA) take();
-          else break;
-        }
-        expect(TT.RPAREN);
+        const params = parseParamList();
         expect(TT.ARROW);
         const body = parseExpr();
         return { type: 'FunctionLiteral', params, body, span: spanFrom(t.span.start, body.span.end) };
       }
       return parsePipe();
+    }
+    function parseFunctionDefinition() {
+      const start = expect(TT.IDENT);
+      const name = expect(TT.IDENT);
+      const params = parseParamList();
+      skipNL();
+      let body;
+      let end;
+      if (peek().type === TT.ARROW) {
+        take();
+        skipNL();
+        body = parseExpr();
+        end = body.span.end;
+      } else if (peek().type === TT.LBRACE) {
+        take();
+        skipNL();
+        body = parseExpr();
+        skipNL();
+        end = expect(TT.RBRACE).span.end;
+      } else {
+        const t = peek();
+        throw new LoomDSLError("Expected '=>' or function body block", t.span.start.line, t.span.start.column, 'UNEXPECTED_TOKEN');
+      }
+      return { type: 'FunctionDefinition', name: mkIdent(name), params, body, span: spanFrom(start.span.start, end) };
     }
     function parsePipe() { let left = parseAtom(); while (true) { if (peek().type === TT.PIPE || (peek().type === TT.NEWLINE && peek(1).type === TT.PIPE)) { if (peek().type === TT.NEWLINE) take(); const pt = take(); const right = parseCall(); left = { type: 'PipeExpression', left, right, span: spanFrom(left.span.start, right.span.end) }; } else break; } return left; }
     function isCallStart() {
@@ -242,7 +270,8 @@ export function parseDSLToAST(source) {
         continue;
       }
       let stmt;
-      if (stTok.type === TT.IDENT && stTok.value === 'render') { take(); const call = parseCall(); stmt = { type: 'RenderStatement', call, span: spanFrom(stTok.span.start, call.span.end) }; }
+      if (stTok.type === TT.IDENT && stTok.value === 'fn' && peek(1).type === TT.IDENT) stmt = parseFunctionDefinition();
+      else if (stTok.type === TT.IDENT && stTok.value === 'render') { take(); const call = parseCall(); stmt = { type: 'RenderStatement', call, span: spanFrom(stTok.span.start, call.span.end) }; }
       else if (stTok.type === TT.IDENT && peek(1).type === TT.ASSIGN) { const target = mkIdent(take()); take(); const value = parseExpr(); stmt = { type: 'AssignmentStatement', target, value, span: spanFrom(target.span.start, value.span.end) }; }
       else if (stTok.type === TT.IDENT && (peek(1).type === TT.LPAREN || peek(1).type === TT.DOT)) { const expression = parseExpr(); stmt = { type: 'ExpressionStatement', expression, span: expression.span }; }
       else throw new LoomDSLError('Expected assignment or render statement', stTok.span.start.line, stTok.span.start.column, 'UNEXPECTED_TOKEN');
@@ -276,7 +305,7 @@ export function compileToGraph(ast, options = {}) { /* bridge via existing shape
   try {
     const nodeTypes = resolveNodeTypesOption(options);
     const textAst = astToLegacy(ast);
-    const graph = buildGraph(textAst.statements, { nodeTypes });
+    const graph = buildGraph(textAst.statements, { nodeTypes, functions: textAst.functions });
     if (textAst.imports.length > 0) {
       graph.imports = textAst.imports;
     }
@@ -324,8 +353,19 @@ function astToLegacy(program) {
   }
   return {
     imports: (program.imports || []).map((entry) => entry.name),
+    functions: program.body
+      .filter(s => s.type === 'FunctionDefinition')
+      .map((s) => ({
+        type: 'functionDef',
+        name: s.name.name,
+        params: s.params.map((p) => ({ name: p.name, line: p.span.start.line, col: p.span.start.column })),
+        body: convExpr(s.body),
+        line: s.span.start.line,
+        col: s.span.start.column
+      })),
     statements: program.body
       .filter(s => s.type !== 'CommentStatement')
+      .filter(s => s.type !== 'FunctionDefinition')
       .map((s) => {
         if (s.type === 'RenderStatement') return { type: 'render', call: convExpr(s.call) };
         if (s.type === 'ExpressionStatement') return { type: 'effect', expr: convExpr(s.expression) };
@@ -336,9 +376,33 @@ function astToLegacy(program) {
 
 function buildGraph(stmts, options = {}) { /* mostly original */
   const nodeTypes = options.nodeTypes ?? NODE_TYPES;
+  const functionDefs = new Map();
   const nodes = []; const edges = []; let renderConfig = null; let anonCounter = 0; let effectCounter = 0; const scope = {};
   const anonId = () => `_anon_${++anonCounter}`;
-  const resolveIdent = (name, line, col) => { if (!(name in scope)) throw new LoomDSLError(`Undefined identifier: ${name}`, line, col, 'UNDEFINED_IDENTIFIER'); const node = nodes.find(n => n.id === scope[name]); return `${scope[name]}.${defaultOutputPort(node.type, nodeTypes)}`; };
+  for (const fn of options.functions || []) {
+    if (functionDefs.has(fn.name)) throw new LoomDSLError(`Duplicate function definition: ${fn.name}`, fn.line, fn.col, 'DUPLICATE_FUNCTION');
+    if (nodeTypes[fn.name]) throw new LoomDSLError(`Function '${fn.name}' conflicts with a node type`, fn.line, fn.col, 'DUPLICATE_FUNCTION');
+    const seenParams = new Set();
+    for (const param of fn.params) {
+      if (seenParams.has(param.name)) throw new LoomDSLError(`Duplicate parameter '${param.name}' in function '${fn.name}'`, param.line, param.col, 'DUPLICATE_FUNCTION_PARAM');
+      seenParams.add(param.name);
+    }
+    functionDefs.set(fn.name, fn);
+  }
+  const hasFunctionDefinitions = functionDefs.size > 0;
+  const resolveIdent = (name, line, col, locals = null) => {
+    if (locals?.has(name)) {
+      const expr = locals.get(name);
+      if (expr.type === 'binding' && expr.expr.type === 'ident') return resolveIdent(expr.expr.name, expr.expr.line, expr.expr.col, expr.locals);
+      if (expr.type === 'ident') return resolveIdent(expr.name, expr.line, expr.col, locals);
+      const id = expr.type === 'binding' ? buildExpr(expr.expr, null, null, expr.locals) : buildExpr(expr, null, null, locals);
+      const node = nodes.find(n => n.id === id);
+      return `${id}.${defaultOutputPort(node.type, nodeTypes)}`;
+    }
+    if (!(name in scope)) throw new LoomDSLError(`Undefined identifier: ${name}`, line, col, 'UNDEFINED_IDENTIFIER');
+    const node = nodes.find(n => n.id === scope[name]);
+    return `${scope[name]}.${defaultOutputPort(node.type, nodeTypes)}`;
+  };
   const scopedRefs = () => {
     const refs = {};
     for (const [name, nodeId] of Object.entries(scope)) {
@@ -347,6 +411,34 @@ function buildGraph(stmts, options = {}) { /* mostly original */
     }
     return refs;
   };
+  function validateFunctionExpr(expr, fn, seenCalls = new Set()) {
+    if (expr.type === 'fn') {
+      throw new LoomDSLError(`Function '${fn.name}' body cannot contain function literals`, expr.line, expr.col, 'UNSUPPORTED_FUNCTION_BODY');
+    }
+    if (expr.type === 'ident') {
+      if (!fn.params.some((param) => param.name === expr.name)) {
+        throw new LoomDSLError(`Function '${fn.name}' cannot close over '${expr.name}'`, expr.line, expr.col, 'UNSUPPORTED_FUNCTION_BODY');
+      }
+      return;
+    }
+    if (expr.type === 'call') {
+      if (functionDefs.has(expr.name)) {
+        if (expr.name === fn.name) throw new LoomDSLError(`Recursive function '${fn.name}' is not supported`, expr.line, expr.col, 'RECURSIVE_FUNCTION');
+        if (seenCalls.has(expr.name)) throw new LoomDSLError(`Recursive function call involving '${expr.name}' is not supported`, expr.line, expr.col, 'RECURSIVE_FUNCTION');
+        const nextSeen = new Set(seenCalls);
+        nextSeen.add(fn.name);
+        validateFunctionExpr(functionDefs.get(expr.name).body, functionDefs.get(expr.name), nextSeen);
+      }
+      for (const arg of expr.args) validateFunctionExpr(arg.value, fn, seenCalls);
+      return;
+    }
+    if (expr.type === 'pipe') {
+      validateFunctionExpr(expr.left, fn, seenCalls);
+      validateFunctionExpr(expr.call, fn, seenCalls);
+      return;
+    }
+  }
+  for (const fn of functionDefs.values()) validateFunctionExpr(fn.body, fn, new Set([fn.name]));
   function buildFunctionLiteral(fn, resultId) {
     const id = resultId || anonId();
     nodes.push({ id, type: 'function.literal', params: { params: fn.params, body: fn.body, closureRefs: scopedRefs() } });
@@ -366,6 +458,22 @@ function buildGraph(stmts, options = {}) { /* mostly original */
     wireToNode(expr.object, id, 'value');
     return id;
   }
+  function buildFunctionDefinitionCall(call, resultId, pipeFrom, locals) {
+    const fn = functionDefs.get(call.name);
+    const pos = call.args.filter(a => !a.named);
+    if (call.args.length !== pos.length) throw new LoomDSLError(`Function '${call.name}' only accepts positional arguments`, call.line, call.col, 'MISSING_ARGUMENT_NAME');
+    const suppliedArity = pos.length + (pipeFrom ? 1 : 0);
+    if (suppliedArity !== fn.params.length) {
+      throw new LoomDSLError(`Function '${call.name}' expected ${fn.params.length} argument(s), got ${suppliedArity}`, call.line, call.col, 'WRONG_ARITY');
+    }
+    const nextLocals = new Map(locals || []);
+    let argIndex = 0;
+    if (pipeFrom) {
+      nextLocals.set(fn.params[argIndex++].name, { type: 'ref', ref: pipeFrom, line: call.line, col: call.col });
+    }
+    for (const arg of pos) nextLocals.set(fn.params[argIndex++].name, { type: 'binding', expr: arg.value, locals, line: arg.value.line, col: arg.value.col });
+    return buildExpr(fn.body, resultId, null, nextLocals);
+  }
   function buildUserCall(call, resultId) {
     const id = resultId || anonId();
     nodes.push({ id, type: 'function.call' });
@@ -376,18 +484,21 @@ function buildGraph(stmts, options = {}) { /* mostly original */
     });
     return id;
   }
-  function wireToNode(expr, id, port) {
-    if (expr.type === 'ident') edges.push({ from: resolveIdent(expr.name, expr.line, expr.col), to: `${id}.${port}` });
-    else if (expr.type === 'call' || expr.type === 'pipe' || expr.type === 'fn' || expr.type === 'member') { const inId = buildExpr(expr, null, null); const inNode = nodes.find(n => n.id === inId); edges.push({ from: `${inId}.${defaultOutputPort(inNode.type, nodeTypes)}`, to: `${id}.${port}` }); }
+  function wireToNode(expr, id, port, locals = null) {
+    if (expr.type === 'binding') wireToNode(expr.expr, id, port, expr.locals);
+    else if (expr.type === 'ref') edges.push({ from: expr.ref, to: `${id}.${port}` });
+    else if (expr.type === 'ident' && locals?.has(expr.name)) wireToNode(locals.get(expr.name), id, port, locals);
+    else if (expr.type === 'ident') edges.push({ from: resolveIdent(expr.name, expr.line, expr.col, locals), to: `${id}.${port}` });
+    else if (expr.type === 'call' || expr.type === 'pipe' || expr.type === 'fn' || expr.type === 'member') { const inId = buildExpr(expr, null, null, locals); const inNode = nodes.find(n => n.id === inId); edges.push({ from: `${inId}.${defaultOutputPort(inNode.type, nodeTypes)}`, to: `${id}.${port}` }); }
     else { const nodeObj = nodes.find(n => n.id === id); nodeObj.params ||= {}; nodeObj.params[port] = expr.value; }
   }
-  function buildNode(call, resultId, pipeFrom) { const fnName = call.name; if (!nodeTypes[fnName]) { if (scope[fnName]) return buildUserCall(call, resultId); throw new LoomDSLError(`Unknown node type: ${fnName}`, call.line, call.col, 'UNKNOWN_NODE_TYPE'); } const typeDef = nodeTypes[fnName]; const id = resultId || anonId(); const nodeObj = { id, type: fnName }; nodes.push(nodeObj); const inputNames = typeDef.inputs.map(i => i.name); const paramNames = (typeDef.params || []).map(p => p.name); const pos = call.args.filter(a => !a.named); const named = call.args.filter(a => a.named); const hasUnknownNamed = named.some(a => !inputNames.includes(a.name) && !paramNames.includes(a.name)); if (typeDef.commutative && pos.length && named.length && !hasUnknownNamed) throw new LoomDSLError(`Node '${fnName}' is commutative: arguments must be all positional or all named`, call.line, call.col, 'MISSING_ARGUMENT_NAME'); if (!canUseTwoPositionalArgs(fnName, typeDef) && pos.length > (pipeFrom ? 0 : 1)) throw new LoomDSLError(`Argument at position 2 for '${fnName}' requires a name`, call.line, call.col, 'MISSING_ARGUMENT_NAME'); let idx = 0;
-    const wire = (expr, port) => wireToNode(expr, id, port);
+  function buildNode(call, resultId, pipeFrom, locals = null) { const fnName = call.name; if (functionDefs.has(fnName)) return buildFunctionDefinitionCall(call, resultId, pipeFrom, locals); if (!nodeTypes[fnName]) { if (scope[fnName]) return buildUserCall(call, resultId); if (hasFunctionDefinitions && !fnName.includes('.')) throw new LoomDSLError(`Unknown function: ${fnName}`, call.line, call.col, 'UNKNOWN_FUNCTION'); throw new LoomDSLError(`Unknown node type: ${fnName}`, call.line, call.col, 'UNKNOWN_NODE_TYPE'); } const typeDef = nodeTypes[fnName]; const id = resultId || anonId(); const nodeObj = { id, type: fnName }; nodes.push(nodeObj); const inputNames = typeDef.inputs.map(i => i.name); const paramNames = (typeDef.params || []).map(p => p.name); const pos = call.args.filter(a => !a.named); const named = call.args.filter(a => a.named); const hasUnknownNamed = named.some(a => !inputNames.includes(a.name) && !paramNames.includes(a.name)); if (typeDef.commutative && pos.length && named.length && !hasUnknownNamed) throw new LoomDSLError(`Node '${fnName}' is commutative: arguments must be all positional or all named`, call.line, call.col, 'MISSING_ARGUMENT_NAME'); if (!canUseTwoPositionalArgs(fnName, typeDef) && pos.length > (pipeFrom ? 0 : 1)) throw new LoomDSLError(`Argument at position 2 for '${fnName}' requires a name`, call.line, call.col, 'MISSING_ARGUMENT_NAME'); let idx = 0;
+    const wire = (expr, port) => wireToNode(expr, id, port, locals);
     if (pipeFrom) edges.push({ from: pipeFrom, to: `${id}.${inputNames[idx++]}` });
     for (const a of pos) wire(a.value, inputNames[idx++]);
     for (const a of named) { if (inputNames.includes(a.name)) wire(a.value, a.name); else if (paramNames.includes(a.name)) { if (a.value.type === 'ident' || a.value.type === 'call' || a.value.type === 'fn' || a.value.type === 'member') throw new LoomDSLError(`Parameter '${a.name}' for '${fnName}' must be a literal`, call.line, call.col, 'UNEXPECTED_TOKEN'); nodeObj.params ||= {}; nodeObj.params[a.name] = a.value.value; } else throw new LoomDSLError(`Unknown argument '${a.name}' for '${fnName}'`, call.line, call.col, 'UNKNOWN_ARGUMENT'); }
     return id; };
-  const buildExpr = (expr, resultId, pipeFrom) => expr.type === 'call' ? buildNode(expr, resultId, pipeFrom) : expr.type === 'fn' ? buildFunctionLiteral(expr, resultId) : ['number', 'string', 'bool', 'null', 'array', 'object'].includes(expr.type) ? buildLiteral(expr, resultId) : expr.type === 'member' ? buildMember(expr, resultId) : expr.type === 'pipe' ? (() => { const lId = buildExpr(expr.left, null, null); const ln = nodes.find(n => n.id === lId); return buildNode(expr.call, resultId, `${lId}.${defaultOutputPort(ln.type)}`); })() : expr.type === 'ident' ? scope[expr.name] || (()=>{throw new LoomDSLError(`Undefined identifier: ${expr.name}`, expr.line, expr.col, 'UNDEFINED_IDENTIFIER');})() : (()=>{throw new LoomDSLError('Cannot use literal as expression', expr.line, expr.col, 'UNEXPECTED_TOKEN');})();
+  const buildExpr = (expr, resultId, pipeFrom, locals = null) => expr.type === 'binding' ? buildExpr(expr.expr, resultId, null, expr.locals) : expr.type === 'call' ? buildNode(expr, resultId, pipeFrom, locals) : expr.type === 'fn' ? buildFunctionLiteral(expr, resultId) : ['number', 'string', 'bool', 'null', 'array', 'object'].includes(expr.type) ? buildLiteral(expr, resultId) : expr.type === 'member' ? buildMember(expr, resultId) : expr.type === 'pipe' ? (() => { const lId = buildExpr(expr.left, null, null, locals); const ln = nodes.find(n => n.id === lId); return buildNode(expr.call, resultId, `${lId}.${defaultOutputPort(ln.type, nodeTypes)}`, locals); })() : expr.type === 'ref' ? expr.ref.split('.')[0] : expr.type === 'ident' ? (locals?.has(expr.name) ? buildExpr(locals.get(expr.name), resultId, null, locals) : scope[expr.name] || (()=>{throw new LoomDSLError(`Undefined identifier: ${expr.name}`, expr.line, expr.col, 'UNDEFINED_IDENTIFIER');})()) : (()=>{throw new LoomDSLError('Cannot use literal as expression', expr.line, expr.col, 'UNEXPECTED_TOKEN');})();
   const buildRender = (call) => { const named = {}; for (const a of call.args) { if (!a.named) throw new LoomDSLError('render arguments must be named', call.line, call.col, 'MISSING_ARGUMENT_NAME'); named[a.name] = a.value; } const rv = (e) => { if (e.type === 'ident') return resolveIdent(e.name, e.line, e.col); if (e.type === 'member' || e.type === 'call' || e.type === 'pipe') { const id = buildExpr(e, null, null); const node = nodes.find(n => n.id === id); return `${id}.${defaultOutputPort(node.type, nodeTypes)}`; } return e.value; }; if (call.name === 'point') return { type: 'point', x: named.x ? rv(named.x) : undefined, y: named.y ? rv(named.y) : undefined, color: named.color ? named.color.value : '#00ff00', trail: named.trail ? named.trail.value : 0.1 }; if (call.name === 'bar') return { type: 'bar', width: named.width ? rv(named.width) : undefined, color: named.color ? named.color.value : '#00ccff', height: named.height ? named.height.value : 40, y: named.y ? rv(named.y) : undefined }; throw new LoomDSLError(`Unknown render function: ${call.name}`, call.line, call.col, 'UNKNOWN_NODE_TYPE'); };
   for (const s of stmts) {
     if (s.type === 'render') renderConfig = buildRender(s.call);
@@ -460,7 +571,9 @@ export function formatDSL(ast, options = {}) {
   for (const s of ast.body) {
     if (s.type === 'CommentStatement') { lines.push(`#${s.comment.text}`); continue; }
     if (s.leadingComments) for (const c of s.leadingComments) lines.push(`#${c.text}`);
-    const expr = s.type === 'AssignmentStatement'
+    const expr = s.type === 'FunctionDefinition'
+      ? `fn ${s.name.name}(${s.params.map((p) => p.name).join(', ')}) => ${fmtExpr(s.body, 0)}`
+      : s.type === 'AssignmentStatement'
       ? `${s.target.name} = ${fmtExpr(s.value, 0)}`
       : s.type === 'ExpressionStatement'
         ? `${fmtExpr(s.expression, 0)}`
