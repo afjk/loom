@@ -349,6 +349,102 @@ test('run --json returns object', () => {
   assert.equal(Number.isFinite(values['x.out']), true);
 });
 
+test('run --events-file replays input updates with persistent edge state', async () => {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-events-input-'));
+  const file = path.join(tmpDir, 'edge.loom');
+  const eventsFile = path.join(tmpDir, 'events.json');
+  await fsp.writeFile(file, [
+    'distance = input("distance", 999)',
+    'near = lessThan(distance, 1.0)',
+    'enter = risingEdge(value: near)',
+    'send = sendEvent(trigger: enter, channel: "custom.enterRange")'
+  ].join('\n'), 'utf8');
+  await fsp.writeFile(eventsFile, JSON.stringify({
+    inputs: { distance: 2 },
+    time: 0,
+    steps: [
+      { label: 'outside', inputs: { distance: 2 } },
+      { label: 'enter', inputs: { distance: 0.8 } },
+      { label: 'stay', inputs: { distance: 0.6 } }
+    ]
+  }), 'utf8');
+
+  const result = runCli(['run', file, '--events-file', eventsFile, '--get', 'enter.event']);
+  assert.equal(result.status, 0, result.stderr);
+  const playback = JSON.parse(result.stdout);
+  assert.equal(playback.ok, true);
+  assert.deepEqual(playback.initial.values['enter.event'], []);
+  assert.deepEqual(playback.steps[0].values['enter.event'], []);
+  assert.equal(playback.steps[1].values['enter.event'].length, 1);
+  assert.equal(playback.steps[1].effects.filter((effect) => effect.kind === 'event.send').length, 1);
+  assert.deepEqual(playback.steps[2].values['enter.event'], []);
+});
+
+test('run --events-file dispatches event envelopes to onEvent', async () => {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-events-on-event-'));
+  const file = path.join(tmpDir, 'listener.loom');
+  const eventsFile = path.join(tmpDir, 'events.json');
+  await fsp.writeFile(file, 'listener = onEvent(channel: "pointer.click")\n', 'utf8');
+  await fsp.writeFile(eventsFile, JSON.stringify({
+    time: 2,
+    steps: [
+      { events: [{ channel: 'pointer.click', timestamp: 2, payload: { button: 0 } }] }
+    ]
+  }), 'utf8');
+
+  const result = runCli(['run', file, '--events-file', eventsFile, '--get', 'listener.event']);
+  assert.equal(result.status, 0, result.stderr);
+  const playback = JSON.parse(result.stdout);
+  assert.deepEqual(playback.steps[0].values['listener.event'], [
+    { channel: 'pointer.click', timestamp: 2, payload: { button: 0 } }
+  ]);
+});
+
+test('run --events-file advances time with tick', async () => {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-events-time-'));
+  const file = path.join(tmpDir, 'clock.loom');
+  const eventsFile = path.join(tmpDir, 'events.json');
+  await fsp.writeFile(file, 'now = clock()\n', 'utf8');
+  await fsp.writeFile(eventsFile, JSON.stringify({
+    time: 1,
+    dt: 0,
+    steps: [
+      { tick: 0.25 }
+    ]
+  }), 'utf8');
+
+  const result = runCli(['run', file, '--events-file', eventsFile, '--get', 'now.t']);
+  assert.equal(result.status, 0, result.stderr);
+  const playback = JSON.parse(result.stdout);
+  assert.equal(playback.initial.values['now.t'], 1);
+  assert.equal(playback.steps[0].values['now.t'], 1.25);
+  assert.equal(playback.steps[0].dt, 0.25);
+});
+
+test('run --events-file reports invalid JSON clearly', async () => {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-events-invalid-json-'));
+  const file = path.join(tmpDir, 'listener.loom');
+  const eventsFile = path.join(tmpDir, 'events.json');
+  await fsp.writeFile(file, 'listener = onEvent(channel: "pointer.click")\n', 'utf8');
+  await fsp.writeFile(eventsFile, '{bad', 'utf8');
+
+  const result = runCli(['run', file, '--events-file', eventsFile]);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Invalid events file JSON/);
+});
+
+test('run --events-file reports invalid shape clearly', async () => {
+  const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'loom-cli-events-invalid-shape-'));
+  const file = path.join(tmpDir, 'listener.loom');
+  const eventsFile = path.join(tmpDir, 'events.json');
+  await fsp.writeFile(file, 'listener = onEvent(channel: "pointer.click")\n', 'utf8');
+  await fsp.writeFile(eventsFile, JSON.stringify({ steps: [{ events: { channel: 'pointer.click' } }] }), 'utf8');
+
+  const result = runCli(['run', file, '--events-file', eventsFile]);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /steps\[0\]\.events must be an array/);
+});
+
 test('run unknown option exits 1', () => {
   const result = runCli(['run', 'examples/cli-basic.loom', '--unknown']);
   assert.equal(result.status, 1);

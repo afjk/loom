@@ -11,6 +11,7 @@ import {
   inspectLoomSource,
   formatInspectionSummary,
   runLoomSource,
+  runLoomEventsFilePlayback,
   formatLoomError,
   isKnownRuntimeTarget,
   LoomReplSession,
@@ -211,14 +212,16 @@ Options:
 function getRunHelp() {
   return `Usage:
   loomlet run <file> --get <ref> [--time <number>] [--dt <number>] [--json] [--target <target>] [--package <path>]
+  loomlet run <file> --events-file <events.json> [--get <ref>] [--json] [--target <target>] [--package <path>]
 
 Options:
-  --get <ref>       Output reference to read. Repeatable.
-  --time <number>   Evaluation env.time in seconds. Required for graphs that use clock.
-  --dt <number>     Evaluation env.deltaTime in seconds.
-  --json            Print result values as JSON
-  --target <target> Only cli is supported by loomlet run in this version. Default: cli
-  --package <path>  Load a trusted local package file or manifest directory (repeatable)`;
+  --get <ref>               Output reference to read. Repeatable.
+  --time <number>           Evaluation env.time in seconds. Required for graphs that use clock.
+  --dt <number>             Evaluation env.deltaTime in seconds.
+  --events-file <file>      Replay host inputs, ticks, and event envelopes from JSON.
+  --json                    Print result values as JSON. Events-file playback always prints JSON.
+  --target <target>         Only cli is supported by loomlet run in this version. Default: cli
+  --package <path>          Load a trusted local package file or manifest directory (repeatable)`;
 }
 
 function getReplHelp() {
@@ -2107,6 +2110,7 @@ async function handleRun(args) {
   let dt;
   let json = false;
   let target = 'cli';
+  let eventsFile = null;
 
   for (let index = 0; index < rest2.length; index += 1) {
     const arg = rest2[index];
@@ -2122,6 +2126,13 @@ async function handleRun(args) {
       index += 1;
     } else if (arg === '--dt') {
       dt = parseNumber(rest2[index + 1], '--dt');
+      index += 1;
+    } else if (arg === '--events-file') {
+      const next = rest2[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--events-file requires a file path');
+      }
+      eventsFile = next;
       index += 1;
     } else if (arg === '--json') {
       json = true;
@@ -2139,6 +2150,26 @@ async function handleRun(args) {
 
   const source = await readSourceFile(file);
   const registries = await createCliRegistries({ packages });
+  if (eventsFile) {
+    const eventsFileText = await readSourceFile(eventsFile);
+    const result = runLoomEventsFilePlayback(source, eventsFileText, {
+      filename: file,
+      eventsFilename: eventsFile,
+      target,
+      get: get.length === 1 ? get[0] : get.length > 1 ? get : undefined,
+      time,
+      dt,
+      nodeRegistry: registries.nodeRegistry,
+      metadataRegistry: registries.metadataRegistry
+    });
+    if (!result.ok) {
+      printToolErrors(result.errors);
+      return 1;
+    }
+    print(stringifyJson(result));
+    return 0;
+  }
+
   const result = runLoomSource(source, {
     filename: file,
     target,
