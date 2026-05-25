@@ -1,0 +1,18 @@
+{
+  "manifestpkg": {
+    "name": "manifestpkg",
+    "description": "Manifest package fixture metadata.",
+    "targets": ["cli", "web"],
+    "functions": {
+      "value": {
+        "name": "value",
+        "signature": "manifestpkg.value()",
+        "description": "Returns a fixture value.",
+        "args": [],
+        "returns": "number",
+        "targets": ["cli", "web"],
+        "examples": ["result = manifestpkg.value()"]
+      }
+    }
+  }
+}

@@ -1,12 +1,12 @@
 # Package System (v0 Foundation)
 
-Loomlet package extension v0 supports trusted local JavaScript modules loaded explicitly by file path. Packages are executable JavaScript and must be trusted.
+Loomlet package extension v0 supports trusted local JavaScript modules loaded explicitly by file path, plus explicit directory loading through `loomlet.package.json`. Packages are executable JavaScript and must be trusted.
 
 ## v0 Supported Surface
 
 In v0, packages support:
 
-- **Explicit file path loading**: `--package <path>` on CLI or `loadTrustedLocalPackage()` at runtime
+- **Explicit local loading**: `--package <path>` on CLI or `loadTrustedLocalPackage()` at runtime, where `<path>` is a JavaScript module file or a directory containing `loomlet.package.json`
 - **Runtime node registration**: Packages register node implementations into a NodeRegistry via `registerLoomletPackage()`
 - **Optional metadata registration**: Packages can export metadata for discoverability and target compatibility
 - **Package-aware import validation**: Compiler validates imports against metadata targets when available
@@ -15,7 +15,7 @@ In v0, packages support:
 ## v0 Design Principles
 
 - **Trusted source only**: Packages are executable JavaScript with full process capabilities. There is no sandboxing or permission system. Load packages only from sources you trust.
-- **Explicit loading**: Packages must be loaded explicitly by file path. There is no package discovery, catalog, directory scanning, or npm resolution.
+- **Explicit loading**: Packages must be loaded explicitly by file path or directory path. There is no package discovery, catalog, recursive directory scanning, or npm resolution.
 - **Runtime-only or metadata-aware**: A package can work with runtime registration alone, or can add optional metadata for better tooling support.
 
 ## Runtime Package API
@@ -318,18 +318,42 @@ loomlet docs demo --package ./examples/packages/demo/index.js
 loomlet docs demo.double --package ./examples/packages/demo/index.js
 ```
 
+Directory packages are loaded by pointing `--package` at a directory that contains `loomlet.package.json`:
+
+```bash
+loomlet run ./file.loom --package ./path/to/package-dir --get x.out
+loomlet docs --package ./path/to/package-dir
+```
+
 ### Important Notes on Packages
 
 **Packages are executable JavaScript.** They must be trusted code. There is no sandboxing or permission system. Load packages only from sources you trust.
 
 ### Package Resolution and Paths
 
-- Package paths must point to a JavaScript module file (e.g., `./examples/packages/demo/index.js`)
+- Package paths must point to a JavaScript module file (e.g., `./examples/packages/demo/index.js`) or to a directory containing `loomlet.package.json`
 - Local file paths are resolved relative to `process.cwd()`
 - Absolute paths are used as-is
-- **Directory discovery is not supported** — you must specify the `.js` file
+- Directory package loading only checks the exact directory passed to `--package`; recursive discovery is not supported
 - **npm resolution is not supported**
 - **Remote URL loading is not supported**
+
+### Directory Manifest Shape
+
+`loomlet.package.json` v0 requires `name`, `version`, and `loomlet.entry`. `loomlet.metadata` is optional and, when present, points to a JSON or JavaScript metadata file. Metadata files are treated as a Loomlet library metadata map, matching the existing `loomletMetadata` export shape.
+
+```json
+{
+  "name": "my-package",
+  "version": "0.0.0",
+  "loomlet": {
+    "entry": "./index.js",
+    "metadata": "./metadata.json"
+  }
+}
+```
+
+The entry module must export `registerLoomletPackage(registry, context)`. The metadata path is resolved relative to the package directory and must stay inside that directory.
 
 ### Multiple Packages and Load Summaries
 
@@ -405,9 +429,9 @@ y = demo.offset(x, amount: 3)
 ```
 
 
-## Future Manifest Direction (Not Implemented)
+## Future Manifest Direction
 
-In future versions, packages may use a manifest file to declare metadata, dependencies, and compatibility. A suggested manifest shape for stabilization work:
+Future versions may extend the manifest to declare API compatibility, dependencies, and richer compatibility data. A possible extended manifest shape:
 
 ```json
 {
@@ -427,13 +451,13 @@ In future versions, packages may use a manifest file to declare metadata, depend
 }
 ```
 
-This manifest may eventually enable:
+An extended manifest may eventually enable:
 - Declaring compatible Loomlet API versions
 - Specifying supported targets (cli, web, scenesync, unity, etc)
 - Declaring dependencies on other packages
 - Auto-discovering packages from manifest files instead of explicit paths
 
-However, the current v0 approach (explicit file path loading without manifest) provides more control and reduces complexity for trusted packages.
+The current v0 manifest loader does not perform version solving, dependency resolution, npm resolution, publishing, package catalog lookup, remote/CDN loading, sandboxing, or permission checks.
 
 ## Versioning Axes
 
@@ -469,7 +493,7 @@ The following are explicitly deferred from v0 and will be addressed in future wo
 - **npm package loading**: Load packages from npm registry
 - **Remote/URL loading**: Load packages from HTTP(S) URLs or CDNs
 - **Directory discovery**: Auto-discover packages from directories or manifest files
-- **Manifest file resolution**: Load packages via manifest.json instead of explicit paths
+- **Package manifest extensions**: Dependency, API-version, and catalog fields beyond the v0 local loader
 - **Sandboxing**: Run packages in a restricted execution environment
 - **Permission system**: Grant/revoke package capabilities before execution
 - **Package catalog / discovery**: Registry or marketplace of available packages

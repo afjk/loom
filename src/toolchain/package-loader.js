@@ -1,7 +1,9 @@
 import { pathToFileURL } from 'node:url';
-import { access } from 'node:fs/promises';
+import { access, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { registerTrustedPackage } from '../runtime/package-registration.js';
+
+const MANIFEST_FILENAME = 'loomlet.package.json';
 
 export class PackageLoadError extends Error {
   constructor(message, packagePath, details = {}) {
@@ -10,6 +12,197 @@ export class PackageLoadError extends Error {
     this.packagePath = packagePath;
     this.details = details;
   }
+}
+
+function resolvePackagePath(packagePath) {
+  return path.isAbsolute(packagePath)
+    ? packagePath
+    : path.resolve(process.cwd(), packagePath);
+}
+
+async function loadJsonFile(filePath, packagePath, label) {
+  let text;
+  try {
+    text = await readFile(filePath, 'utf8');
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      throw new PackageLoadError(
+        `${label} not found: ${packagePath}`,
+        packagePath,
+        { originalError: error }
+      );
+    }
+    throw error;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    throw new PackageLoadError(
+      `${label} is not valid JSON: ${packagePath}\n${error.message}`,
+      packagePath,
+      { originalError: error }
+    );
+  }
+}
+
+function validatePackageManifest(manifest, packagePath) {
+  if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) {
+    throw new PackageLoadError(
+      `Invalid package manifest: ${packagePath}\nManifest must be a JSON object.`,
+      packagePath
+    );
+  }
+
+  if (typeof manifest.name !== 'string' || manifest.name.length === 0) {
+    throw new PackageLoadError(
+      `Invalid package manifest: ${packagePath}\nRequired field "name" must be a non-empty string.`,
+      packagePath
+    );
+  }
+
+  if (typeof manifest.version !== 'string' || manifest.version.length === 0) {
+    throw new PackageLoadError(
+      `Invalid package manifest: ${packagePath}\nRequired field "version" must be a non-empty string.`,
+      packagePath
+    );
+  }
+
+  if (!manifest.loomlet || typeof manifest.loomlet !== 'object' || Array.isArray(manifest.loomlet)) {
+    throw new PackageLoadError(
+      `Invalid package manifest: ${packagePath}\nRequired field "loomlet" must be an object.`,
+      packagePath
+    );
+  }
+
+  if (typeof manifest.loomlet.entry !== 'string' || manifest.loomlet.entry.length === 0) {
+    throw new PackageLoadError(
+      `Invalid package manifest: ${packagePath}\nRequired field "loomlet.entry" must be a non-empty string.`,
+      packagePath
+    );
+  }
+
+  if (
+    manifest.loomlet.metadata !== undefined &&
+    (typeof manifest.loomlet.metadata !== 'string' || manifest.loomlet.metadata.length === 0)
+  ) {
+    throw new PackageLoadError(
+      `Invalid package manifest: ${packagePath}\nOptional field "loomlet.metadata" must be a non-empty string when provided.`,
+      packagePath
+    );
+  }
+}
+
+function resolveManifestRelativePath(packageRoot, manifestPath, fieldName, packagePath) {
+  if (path.isAbsolute(manifestPath)) {
+    throw new PackageLoadError(
+      `Invalid package manifest: ${packagePath}\nField "${fieldName}" must be a relative path.`,
+      packagePath
+    );
+  }
+
+  const normalized = path.normalize(manifestPath);
+  if (normalized === '..' || normalized.startsWith(`..${path.sep}`)) {
+    throw new PackageLoadError(
+      `Invalid package manifest: ${packagePath}\nField "${fieldName}" must stay inside the package directory.`,
+      packagePath
+    );
+  }
+
+  return path.resolve(packageRoot, normalized);
+}
+
+function normalizeMetadataModule(metadataModule) {
+  if (metadataModule?.loomletMetadata) {
+    return metadataModule.loomletMetadata;
+  }
+  if (metadataModule?.default) {
+    return metadataModule.default;
+  }
+  return metadataModule;
+}
+
+async function loadManifestMetadata(metadataPath, packagePath) {
+  if (metadataPath.endsWith('.json')) {
+    return loadJsonFile(metadataPath, packagePath, 'Package metadata file');
+  }
+
+  const metadataModule = await import(pathToFileURL(metadataPath).href);
+  return normalizeMetadataModule(metadataModule);
+}
+
+async function resolvePackageEntry(packagePath) {
+  const resolvedPath = resolvePackagePath(packagePath);
+  let packageStat;
+
+  try {
+    packageStat = await stat(resolvedPath);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      throw new PackageLoadError(
+        `Package file not found: ${packagePath}`,
+        packagePath,
+        { originalError: error }
+      );
+    }
+    throw error;
+  }
+
+  if (!packageStat.isDirectory()) {
+    await access(resolvedPath);
+    return {
+      kind: 'file',
+      path: packagePath,
+      resolvedPath,
+      entryPath: resolvedPath,
+      manifestPath: null,
+      metadataPath: null,
+      packageModule: await import(pathToFileURL(resolvedPath).href)
+    };
+  }
+
+  const manifestPath = path.join(resolvedPath, MANIFEST_FILENAME);
+  const manifest = await loadJsonFile(
+    manifestPath,
+    packagePath,
+    `Package manifest ${MANIFEST_FILENAME}`
+  );
+  validatePackageManifest(manifest, packagePath);
+
+  const entryPath = resolveManifestRelativePath(
+    resolvedPath,
+    manifest.loomlet.entry,
+    'loomlet.entry',
+    packagePath
+  );
+  const entryModule = await import(pathToFileURL(entryPath).href);
+
+  let metadataPath = null;
+  let packageModule = entryModule;
+  if (manifest.loomlet.metadata) {
+    metadataPath = resolveManifestRelativePath(
+      resolvedPath,
+      manifest.loomlet.metadata,
+      'loomlet.metadata',
+      packagePath
+    );
+    const loomletMetadata = await loadManifestMetadata(metadataPath, packagePath);
+    packageModule = {
+      registerLoomletPackage: entryModule.registerLoomletPackage,
+      loomletMetadata
+    };
+  }
+
+  return {
+    kind: 'directory',
+    path: packagePath,
+    resolvedPath,
+    entryPath,
+    manifestPath,
+    metadataPath,
+    manifest,
+    packageModule
+  };
 }
 
 export async function loadTrustedLocalPackage(packagePath, options = {}) {
@@ -23,16 +216,8 @@ export async function loadTrustedLocalPackage(packagePath, options = {}) {
 
   const { nodeRegistry, metadataRegistry } = options;
 
-  let resolvedPath;
   try {
-    if (path.isAbsolute(packagePath)) {
-      resolvedPath = packagePath;
-    } else {
-      resolvedPath = path.resolve(process.cwd(), packagePath);
-    }
-
-    // Check that the resolved path exists before attempting import
-    await access(resolvedPath);
+    const packageEntry = await resolvePackageEntry(packagePath);
 
     // Track state before loading package
     const beforeNodeTypes = new Set(Object.keys(nodeRegistry.toObject()));
@@ -40,10 +225,7 @@ export async function loadTrustedLocalPackage(packagePath, options = {}) {
       ? new Set(Object.keys(metadataRegistry.toObject()))
       : new Set();
 
-    const fileUrl = pathToFileURL(resolvedPath).href;
-    const packageModule = await import(fileUrl);
-
-    registerTrustedPackage(nodeRegistry, packageModule, {
+    registerTrustedPackage(nodeRegistry, packageEntry.packageModule, {
       nodeRegistry,
       metadataRegistry
     });
@@ -60,7 +242,10 @@ export async function loadTrustedLocalPackage(packagePath, options = {}) {
 
     return {
       path: packagePath,
-      resolvedPath,
+      resolvedPath: packageEntry.resolvedPath,
+      manifestPath: packageEntry.manifestPath,
+      entryPath: packageEntry.entryPath,
+      metadataPath: packageEntry.metadataPath,
       libraries: addedLibraries.sort(),
       nodeTypes: addedNodeTypes.sort()
     };
