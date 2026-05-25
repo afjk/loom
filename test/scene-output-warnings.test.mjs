@@ -17,7 +17,7 @@ function compile(source) {
 }
 
 function findDuplicateWarnings(result) {
-  return result.warnings.filter((warning) => warning.code === 'DUPLICATE_STATIC_SCENE_OUTPUT_TARGET');
+  return result.warnings.filter((warning) => warning.code === 'OUTPUT_CONFLICT');
 }
 
 test('compile warns when same static scene target is written twice', () => {
@@ -31,10 +31,25 @@ scene.setPosition("sample-cube", x: 1, y: 1, z: 1)
   assert.equal(result.ok, true);
   const warnings = findDuplicateWarnings(result);
   assert.equal(warnings.length, 1);
-  assert.deepEqual(warnings[0].target, {
-    objectId: 'sample-cube',
-    property: 'position'
-  });
+  assert.equal(warnings[0].target, 'object:sample-cube.position');
+  assert.deepEqual(warnings[0].writers, ['_effect1', '_effect2']);
+  assert.equal(warnings[0].severity, 'warning');
+});
+
+test('compile reports one output conflict warning per static target', () => {
+  const result = compile(`
+import scene
+
+scene.setPosition("sample-cube", x: 0, y: 0, z: 0)
+scene.setPosition("sample-cube", x: 1, y: 1, z: 1)
+scene.setPosition("sample-cube", x: 2, y: 2, z: 2)
+`);
+
+  assert.equal(result.ok, true);
+  const warnings = findDuplicateWarnings(result);
+  assert.equal(warnings.length, 1);
+  assert.equal(warnings[0].target, 'object:sample-cube.position');
+  assert.deepEqual(warnings[0].writers, ['_effect1', '_effect2', '_effect3']);
 });
 
 test('compile does not warn for same scene object with different static properties', () => {
@@ -93,7 +108,7 @@ scene.setPosition("sample-cube", x: 1, y: 1, z: 1)
   });
 
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stderr, /Warning: DUPLICATE_STATIC_SCENE_OUTPUT_TARGET/);
+  assert.match(result.stderr, /Warning: OUTPUT_CONFLICT/);
   const graph = JSON.parse(result.stdout);
   assert.equal(graph.nodes.filter((node) => node.type === 'scene.setPosition').length, 2);
 });

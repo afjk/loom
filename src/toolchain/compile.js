@@ -187,7 +187,7 @@ function getStaticSceneOutputTarget(node) {
 
 function detectDuplicateStaticSceneOutputTargets(graph) {
   const warnings = [];
-  const seenTargets = new Map();
+  const targets = new Map();
 
   for (const node of graph?.nodes || []) {
     const target = getStaticSceneOutputTarget(node);
@@ -196,24 +196,28 @@ function detectDuplicateStaticSceneOutputTargets(graph) {
     }
 
     const key = `${target.objectId}\0${target.property}`;
-    const firstNode = seenTargets.get(key);
-    if (firstNode) {
-      warnings.push({
-        code: 'DUPLICATE_STATIC_SCENE_OUTPUT_TARGET',
-        message: `Multiple static Scene outputs write ${target.property} for object '${target.objectId}' (${firstNode.id}, ${node.id})`,
-        line: null,
-        column: null,
-        source: 'compile',
-        target: {
-          objectId: target.objectId,
-          property: target.property
-        },
-        nodes: [firstNode.id, node.id]
-      });
+    const writerIds = targets.get(key) ?? [];
+    writerIds.push(node.id);
+    targets.set(key, writerIds);
+  }
+
+  for (const [key, writerIds] of targets) {
+    if (writerIds.length < 2) {
       continue;
     }
 
-    seenTargets.set(key, node);
+    const [objectId, property] = key.split('\0');
+    const target = `object:${objectId}.${property}`;
+    warnings.push({
+      code: 'OUTPUT_CONFLICT',
+      message: `Multiple writers target ${target}: ${writerIds.join(', ')}`,
+      line: null,
+      column: null,
+      source: 'compile',
+      severity: 'warning',
+      target,
+      writers: writerIds
+    });
   }
 
   return warnings;
