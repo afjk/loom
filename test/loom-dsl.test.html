@@ -337,6 +337,56 @@ wave = sine(t, freq: 0.3, amplitude: 2)`;
       assertEqual(out.graph.render.x, `${xNode.id}.out`);
       assertEqual(out.graph.render.y, `${yNode.id}.out`);
     });
+    test("18i. compileToGraph inlines simple function definition call", () => {
+      const src = `fn double(x) => add(x, x)\nvalue = double(2)`;
+      const { ast, errors } = parseDSLToAST(src);
+      assertEqual(errors.length, 0);
+      assertEqual(ast.body[0].type, "FunctionDefinition");
+      const out = compileToGraph(ast);
+      assertEqual(out.errors.length, 0);
+      assert(hasNode(out.graph.nodes, "value", "add"), "call lowered to add node");
+      assertEqual(out.graph.nodes.find(n => n.id === "value").params, { a: 2, b: 2 });
+      assert(!out.graph.nodes.some(n => n.type === "function.literal" || n.type === "function.call"), "no runtime function nodes");
+    });
+    test("18j. compileToGraph expands multiple function calls deterministically", () => {
+      const src = `fn plusOne(x) => add(x, 1)\na = plusOne(1)\nb = plusOne(2)`;
+      const first = compileToGraph(parseDSLToAST(src).ast);
+      const second = compileToGraph(parseDSLToAST(src).ast);
+      assertEqual(first.errors.length, 0);
+      assertEqual(first.graph, second.graph, "deterministic graph");
+      assert(hasNode(first.graph.nodes, "a", "add"));
+      assert(hasNode(first.graph.nodes, "b", "add"));
+    });
+    test("18k. compileToGraph supports nested same-file function calls", () => {
+      const src = `fn double(x) => add(x, x)\nfn quadruple(x) => double(double(x))\nvalue = quadruple(3)`;
+      const out = compileToGraph(parseDSLToAST(src).ast);
+      assertEqual(out.errors.length, 0);
+      assert(hasNode(out.graph.nodes, "value", "add"), "outer call lowered");
+      assert(out.graph.nodes.filter(n => n.type === "add").length >= 3, "nested calls expanded");
+    });
+    test("18l. compileToGraph reports function definition diagnostics", () => {
+      let out = compileToGraph(parseDSLToAST(`fn id(x) => x\nvalue = id()`).ast);
+      assertEqual(out.errors[0].code, "WRONG_ARITY");
+
+      out = compileToGraph(parseDSLToAST(`fn id(x) => x\nvalue = missing(1)`).ast);
+      assertEqual(out.errors[0].code, "UNKNOWN_FUNCTION");
+
+      out = compileToGraph(parseDSLToAST(`fn id(x) => x\nfn id(y) => y\nvalue = id(1)`).ast);
+      assertEqual(out.errors[0].code, "DUPLICATE_FUNCTION");
+
+      out = compileToGraph(parseDSLToAST(`fn loop(x) => loop(x)\nvalue = loop(1)`).ast);
+      assertEqual(out.errors[0].code, "RECURSIVE_FUNCTION");
+
+      out = compileToGraph(parseDSLToAST(`base = 1\nfn addBase(x) => add(x, base)\nvalue = addBase(2)`).ast);
+      assertEqual(out.errors[0].code, "UNSUPPORTED_FUNCTION_BODY");
+
+      out = compileToGraph(parseDSLToAST(`fn prev(x) => delay1(x)\nvalue = prev(1)`).ast);
+      assertEqual(out.errors[0].code, "UNSUPPORTED_FUNCTION_BODY");
+    });
+    test("18m. compileToGraph rejects higher-order function definition bodies", () => {
+      const out = compileToGraph(parseDSLToAST(`fn makeAdder(x) => fn(y) => add(x, y)\nvalue = makeAdder(1)`).ast);
+      assertEqual(out.errors[0].code, "UNSUPPORTED_FUNCTION_BODY");
+    });
 
     test("19. parseDSLToAST parse error is non-throwing", () => {
       const out = parseDSLToAST("a = ");
@@ -377,6 +427,14 @@ wave = sine(t, freq: 0.3, amplitude: 2)`;
       const out = formatDSL(ast);
       assert(out.includes('message = text.upper("hello")'), "qualified assignment preserved");
       assert(out.includes('console.log(message)'), "effect statement preserved");
+    });
+    test("21d. formatDSL emits function definitions deterministically", () => {
+      const src = `fn double(x) {\n  add(x, x)\n}\nvalue = double(2)`;
+      const ast = parseDSLToAST(src).ast;
+      const out1 = formatDSL(ast);
+      const out2 = formatDSL(ast);
+      assert(out1.includes("fn double(x) => add(x, x)"), "function definition emitted");
+      assertEqual(out1, out2, "deterministic");
     });
 
     const el = document.getElementById("results");
