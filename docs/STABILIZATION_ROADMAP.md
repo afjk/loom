@@ -101,12 +101,17 @@ These are valuable if the P0 foundations are clear enough.
    - ✅ Warning shape (`code`, `target`, `writers`, `severity`, `message`) and suggested codes are documented.
    - ➡️ **Deferred**: full conflict resolver, permission system, runtime write tracker, Scene Sync server changes.
 
-5. **Partial**: Portable runtime subset for Scene Sync / Unity
-   - Unity compatibility baseline and portable runtime parity fixtures exist.
-   - Clarify which nodes are portable across JS and future Unity/C# runtimes.
-   - Keep host-adapter nodes separate from portable pure nodes.
-   - Use runtime parity fixtures to avoid Scene Sync behavior diverging by host.
-   - Unity/C# runtime implementation remains future work.
+5. **Done (v0 portable subset and runtime distribution design)**: Portable runtime subset for Scene Sync / Unity
+   - ✅ Portable pure / host-adapter / JS-only categories defined in [`docs/PORTABLE_RUNTIME_SUBSET.md`](PORTABLE_RUNTIME_SUBSET.md).
+   - ✅ Scene Sync live/export expectations documented (host-provided env/time/events, no afjk.jp clock dependency).
+   - ✅ Runtime distribution policy documented: Loomlet repo as source of truth, Scene Sync Export self-containment, vendored pinned runtime direction.
+   - ✅ Current `html/assets/js/scenesync/loom/` embedded runtime documented as transitional.
+   - ✅ Unity/C# runtime remains future work; portable parity fixtures define expected behavior before implementation.
+   - ✅ Safe portable node baseline documented (math, logic, text, json, list, time, state, debug).
+   - ✅ Host-adapter and JS-only examples documented.
+   - ✅ Parity fixture policy documented.
+   - ✅ Non-portable marking policy documented.
+   - ➡️ **Deferred**: Unity/C# runtime implementation, browser bundle build, Scene Sync embedded runtime replacement, CDN integration, export version metadata, deterministic random.
 
 ### P2: stretch goals / later stabilization
 
