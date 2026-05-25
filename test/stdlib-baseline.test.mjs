@@ -122,6 +122,41 @@ test('debug baseline nodes', () => {
   assert.throws(() => evalNode('debug.assert', { condition: false, message: 'bad' }), (error) => error instanceof LoomError && error.code === 'ASSERTION_FAILED' && /bad/.test(error.message));
 });
 
+test('getComponent reads explicit semantic vector components', () => {
+  const graph = {
+    nodes: [
+      { id: 'vector', type: 'constant', params: { value: { right: 2, up: 3, front: 4 } } },
+      { id: 'right', type: 'getComponent', params: { component: 'right' } },
+      { id: 'up', type: 'getComponent', params: { component: 'up' } },
+      { id: 'front', type: 'getComponent', params: { component: 'front' } }
+    ],
+    edges: [
+      { from: 'vector.out', to: 'right.value' },
+      { from: 'vector.out', to: 'up.value' },
+      { from: 'vector.out', to: 'front.value' }
+    ]
+  };
+  const engine = new Loom(graph);
+  engine.evaluateOnce();
+
+  assert.equal(engine.getValue('right.out'), 2);
+  assert.equal(engine.getValue('up.out'), 3);
+  assert.equal(engine.getValue('front.out'), 4);
+  assert.equal(evalNode('getComponent', { value: { x: 9 }, component: 'x' }), undefined);
+});
+
+test('DSL semantic component access evaluates through explicit getComponent nodes', () => {
+  const result = runLoomSource('v = constant(value: {right: 2, up: 3, front: 4})\nr = v.r\nf = v.front', {
+    get: ['r.out', 'f.out']
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.values['r.out'], 2);
+  assert.equal(result.values['f.out'], 4);
+  assert.ok(result.graph.nodes.some((node) => node.id === 'r' && node.type === 'getComponent'));
+  assert.ok(result.graph.nodes.some((node) => node.id === 'f' && node.type === 'getComponent'));
+});
+
 test('clock reads host-provided env.time deterministically', () => {
   const graph = {
     nodes: [

@@ -1,5 +1,7 @@
 import { LoomError, RestrictedDSLEvaluator, coerceFiniteNumber, getNodeFs, getNodePath, inspectValue, resolveStateInputValue, sanitizeStateValue, stringifyJsonValue, stringifyTextValue, toArray } from './helpers.js';
 
+const SEMANTIC_COMPONENTS = new Set(['right', 'up', 'front']);
+
 export function registerCoreNodes(registry) {
   registry.registerNodeType('input', {
     category: 'source',
@@ -192,6 +194,23 @@ export function registerCoreNodes(registry) {
   registry.registerNodeType('debug.assert', { category: 'transform', inputs: [{ name: 'condition', type: 'any', default: false, kind: 'behavior' }, { name: 'message', type: 'string', default: 'Assertion failed', kind: 'behavior' }], outputs: [{ name: 'out', type: 'boolean', kind: 'behavior' }], params: [{ name: 'condition', type: 'any', default: false }, { name: 'message', type: 'string', default: 'Assertion failed' }], evaluate: (inputs) => { if (!inputs.condition) throw new LoomError('ASSERTION_FAILED', stringifyTextValue(inputs.message) || 'Assertion failed'); return { out: true }; } });
   registry.registerNodeType('debug.inspect', { category: 'transform', inputs: [{ name: 'value', type: 'any', default: null, kind: 'behavior' }], outputs: [{ name: 'out', type: 'string', kind: 'behavior' }], params: [{ name: 'value', type: 'any', default: null }], evaluate: (inputs) => ({ out: inspectValue(inputs.value) }) });
   registry.registerNodeType('debug.trace', { category: 'transform', inputs: [{ name: 'value', type: 'any', default: null, kind: 'behavior' }, { name: 'label', type: 'string', default: 'trace', kind: 'behavior' }], outputs: [{ name: 'out', type: 'any', kind: 'behavior' }], params: [{ name: 'value', type: 'any', default: null }, { name: 'label', type: 'string', default: 'trace' }], evaluate: (inputs, params, ctx) => { ctx.engine?._recordEffect({ type: 'debug.trace', label: inputs.label, value: inputs.value, nodeId: ctx.currentNodeId }); return { out: inputs.value }; } });
+  registry.registerNodeType('getComponent', {
+    category: 'transform',
+    inputs: [{ name: 'value', type: 'any', default: null, kind: 'behavior' }],
+    outputs: [{ name: 'out', type: 'any', kind: 'behavior' }],
+    params: [{ name: 'component', type: 'string', default: 'right' }],
+    evaluate: (inputs, params) => {
+      const value = inputs.value;
+      const component = String(params.component ?? '');
+      if (!SEMANTIC_COMPONENTS.has(component)) {
+        return { out: undefined };
+      }
+      if (value != null && typeof value === 'object' && Object.prototype.hasOwnProperty.call(value, component)) {
+        return { out: value[component] };
+      }
+      return { out: undefined };
+    }
+  });
   registry.registerNodeType('delay1', {
     category: 'state',
     inputs: [
