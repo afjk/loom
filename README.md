@@ -44,10 +44,11 @@ npm install -g @afjk/loomlet
 loomlet --help
 ```
 
-To load a trusted local package:
+To load a trusted local package file or manifest directory:
 
 ```bash
 loomlet run ./file.loom --package ./examples/packages/demo/index.js --get x.out
+loomlet run ./file.loom --package ./path/to/package-dir --get x.out
 ```
 
 See [Package System docs](docs/labs/PACKAGE_SYSTEM.md) for details.

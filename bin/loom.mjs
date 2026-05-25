@@ -104,14 +104,14 @@ function parsePackageArgs(args) {
     if (arg === '--package') {
       const packagePath = args[index + 1];
       if (!packagePath || packagePath.startsWith('-')) {
-        throw new Error('--package requires a file path');
+        throw new Error('--package requires a file or directory path');
       }
       packages.push(packagePath);
       index += 1;
     } else if (arg.startsWith('--package=')) {
       const packagePath = arg.slice(10);
       if (!packagePath) {
-        throw new Error('--package= requires a file path');
+        throw new Error('--package= requires a file or directory path');
       }
       packages.push(packagePath);
     } else {
@@ -178,7 +178,7 @@ Options:
   -o, --out <file>    Write GraphJSON to a file
   --pretty false      Print compact JSON
   --target <target>   Validate imports for a runtime target. Default: any
-  --package <path>    Load a trusted local package (repeatable)`;
+  --package <path>    Load a trusted local package file or manifest directory (repeatable)`;
 }
 
 function getFormatHelp() {
@@ -199,7 +199,7 @@ Options:
   --graph             Print GraphJSON
   --json              Print the full inspection result as JSON
   --target <target>   Validate imports for a runtime target. Default: any
-  --package <path>    Load a trusted local package (repeatable)`;
+  --package <path>    Load a trusted local package file or manifest directory (repeatable)`;
 }
 
 function getRunHelp() {
@@ -212,7 +212,7 @@ Options:
   --dt <number>     Evaluation env.deltaTime in seconds.
   --json            Print result values as JSON
   --target <target> Only cli is supported by loomlet run in this version. Default: cli
-  --package <path>  Load a trusted local package (repeatable)`;
+  --package <path>  Load a trusted local package file or manifest directory (repeatable)`;
 }
 
 function getReplHelp() {
@@ -220,7 +220,7 @@ function getReplHelp() {
   loomlet repl [--package <path>]
 
 Options:
-  --package <path>   Load a trusted local package (repeatable)
+  --package <path>   Load a trusted local package file or manifest directory (repeatable)
 
 Commands:
   :help              Show REPL help
@@ -2168,7 +2168,7 @@ async function handleDocs(args) {
       'Options:',
       '  --json                 Output as JSON',
       '  --include-planned      Include planned libraries',
-      '  --package <path>       Load a trusted local package (repeatable)',
+      '  --package <path>       Load a trusted local package file or manifest directory (repeatable)',
       '',
       'Examples:',
       '  loomlet docs',
@@ -2177,6 +2177,7 @@ async function handleDocs(args) {
       '  loomlet docs text.upper --json',
       '  loomlet docs --include-planned',
       '  loomlet docs --package ./examples/packages/demo/index.js',
+      '  loomlet docs --package ./path/to/package-dir',
       '  loomlet docs demo --package ./examples/packages/demo/index.js'
     ];
     print(lines.join('\n'));
