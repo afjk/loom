@@ -67,6 +67,12 @@ function printToolErrors(errors) {
   }
 }
 
+function printToolWarnings(warnings = []) {
+  for (const warning of warnings) {
+    printError(`Warning: ${formatLoomError(warning)}`);
+  }
+}
+
 function parseBoolean(value) {
   if (value === 'true') {
     return true;
@@ -1926,6 +1932,7 @@ async function handleCompile(args) {
     printToolErrors(result.errors);
     return 1;
   }
+  printToolWarnings(result.warnings);
 
   const json = stringifyJson(result.graph, pretty);
   if (outputPath) {
