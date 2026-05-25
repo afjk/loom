@@ -74,8 +74,9 @@ The semantic axis vocabulary is now documented.
 
 - `right`, `up`, and `front` are the public semantic axis names.
 - `r`, `u`, and `f` are short aliases.
-- The current v0 implementation is limited to filter predicate DSL component access, such as `value.right`, `value.up`, and `value.front`.
-- General expression component access and multi-component swizzle remain future work.
+- Filter predicate DSL component access supports `value.right`, `value.up`, `value.front`, and aliases.
+- General DSL expression component access supports `expr.right`, `expr.up`, `expr.front`, and aliases by lowering to explicit `getComponent` nodes.
+- Multi-component swizzle remains future work.
 
 ### Package extension foundation
 
@@ -136,7 +137,6 @@ The portable runtime boundary is now documented for Scene Sync Export and future
 The following are intentionally not part of the stable next-release promise:
 
 - full source-preserving DSL <-> Node Editor round-trip
-- general expression component access
 - multi-component swizzle
 - function definition as subgraph
 - npm / remote package loading

@@ -2,8 +2,8 @@
 
 ## Purpose
 
-This note documents the current v0 foundation for semantic component access in support of afjk/loomlet#208.
-It focuses on the currently implemented predicate DSL behavior and intended lowering model, while deferring broader value-model/editor work.
+This note documents the current v0 foundation for semantic component access in support of afjk/loomlet#208 and afjk/loomlet#256.
+It focuses on predicate DSL behavior, general DSL expression access, and the explicit lowering model, while deferring broader value-model/editor work.
 
 ## Public vocabulary (v0)
 
@@ -43,7 +43,7 @@ It does not introduce automatic world/local conversion in core.
 
 ## Current v0 implementation status
 
-Current implementation is limited to filter predicate DSL field access on `value`:
+Filter predicate DSL field access on `value` supports:
 
 - `value.right`
 - `value.up`
@@ -55,7 +55,17 @@ Current implementation is limited to filter predicate DSL field access on `value
 This behavior is implemented in `RestrictedDSLEvaluator` and covered by tests in `test/stdlib-baseline.test.mjs`.
 For predicate compatibility, `value.x` / `value.y` are still accepted internally today, but they are not the preferred semantic public vocabulary for this v0 direction.
 
-General DSL expression component access is not fully implemented yet and remains future work.
+General DSL expressions also support single-component access:
+
+- `expr.right`
+- `expr.up`
+- `expr.front`
+- `expr.r`
+- `expr.u`
+- `expr.f`
+
+These expressions lower to explicit `getComponent` graph nodes with a normalized `component` parameter.
+Multi-component swizzles such as `expr.ru` are not implemented in this v0 scope.
 
 ## Virtual node / lowering model
 
@@ -66,7 +76,7 @@ Intended lowering model:
 
 - `v.right` → `getComponent(v, "right")`
 - `v.r` → `getComponent(v, "right")`
-- `v.ru` → `swizzle(v, ["right", "up"])`
+- `v.ru` → future `swizzle(v, ["right", "up"])`
 
 Node Editor may eventually expose virtual component ports, but compiled/exported graphs must preserve explicit semantics.
 
@@ -86,7 +96,6 @@ Multi-component swizzle is future work unless/until implemented in runtime/compi
 
 ## Explicitly deferred
 
-- General DSL expression component access
 - Multi-component swizzle return shape
 - Node Editor virtual port UI
 - Automatic world/local conversion
