@@ -27,7 +27,9 @@ function runCli(args, options = {}) {
 }
 
 const DEMO_PACKAGE_PATH = './examples/packages/demo/index.js';
+const MANIFEST_PACKAGE_PATH = './test/fixtures/manifest-package';
 const FIXTURE_PACKAGE_DEMO_LOOM = './test/fixtures/package-demo.loom';
+const FIXTURE_MANIFEST_PACKAGE_LOOM = './test/fixtures/manifest-package.loom';
 
 test('loadTrustedLocalPackage loads demo package', async () => {
   const nodeRegistry = createNodeRegistry();
@@ -116,6 +118,108 @@ test('loadTrustedLocalPackage registers both nodes and metadata', async () => {
   assert.ok(demoMeta.functions.offset);
 });
 
+test('loadTrustedLocalPackage preserves explicit file package loading', async () => {
+  const nodeRegistry = createNodeRegistry();
+  const metadataRegistry = createLibraryMetadataRegistry();
+
+  registerBuiltinNodes(nodeRegistry);
+
+  const result = await loadTrustedLocalPackage(DEMO_PACKAGE_PATH, {
+    nodeRegistry,
+    metadataRegistry
+  });
+
+  assert.equal(result.path, DEMO_PACKAGE_PATH);
+  assert.equal(result.manifestPath, null);
+  assert.ok(result.entryPath.endsWith('/examples/packages/demo/index.js'));
+  assert.ok(nodeRegistry.hasNodeType('demo.double'));
+  assert.ok(metadataRegistry.hasLibraryMetadata('demo'));
+});
+
+test('loadTrustedLocalPackage loads directory manifest entry and metadata', async () => {
+  const nodeRegistry = createNodeRegistry();
+  const metadataRegistry = createLibraryMetadataRegistry();
+
+  registerBuiltinNodes(nodeRegistry);
+
+  const result = await loadTrustedLocalPackage(MANIFEST_PACKAGE_PATH, {
+    nodeRegistry,
+    metadataRegistry
+  });
+
+  assert.equal(result.path, MANIFEST_PACKAGE_PATH);
+  assert.ok(result.manifestPath.endsWith('/test/fixtures/manifest-package/loomlet.package.json'));
+  assert.ok(result.entryPath.endsWith('/test/fixtures/manifest-package/index.js'));
+  assert.ok(result.metadataPath.endsWith('/test/fixtures/manifest-package/metadata.json'));
+  assert.deepEqual(result.libraries, ['manifestpkg']);
+  assert.deepEqual(result.nodeTypes, ['manifestpkg.value']);
+  assert.ok(nodeRegistry.hasNodeType('manifestpkg.value'));
+  assert.ok(metadataRegistry.hasLibraryMetadata('manifestpkg'));
+  assert.equal(metadataRegistry.getLibraryMetadata('manifestpkg').functions.value.returns, 'number');
+});
+
+test('loadTrustedLocalPackage throws for directory missing manifest', async () => {
+  const nodeRegistry = createNodeRegistry();
+  const metadataRegistry = createLibraryMetadataRegistry();
+
+  registerBuiltinNodes(nodeRegistry);
+
+  await assert.rejects(
+    async () => {
+      await loadTrustedLocalPackage('./test/fixtures/package-missing-manifest', {
+        nodeRegistry,
+        metadataRegistry
+      });
+    },
+    (error) => {
+      assert.ok(error.message.includes('Package manifest loomlet.package.json not found'));
+      return true;
+    }
+  );
+});
+
+test('loadTrustedLocalPackage throws for directory missing entry', async () => {
+  const nodeRegistry = createNodeRegistry();
+  const metadataRegistry = createLibraryMetadataRegistry();
+
+  registerBuiltinNodes(nodeRegistry);
+
+  await assert.rejects(
+    async () => {
+      await loadTrustedLocalPackage('./test/fixtures/package-missing-entry', {
+        nodeRegistry,
+        metadataRegistry
+      });
+    },
+    (error) => {
+      assert.ok(error.message.includes('Failed to load package'));
+      assert.ok(error.message.includes('missing.js'));
+      return true;
+    }
+  );
+});
+
+test('loadTrustedLocalPackage throws for invalid directory manifest', async () => {
+  const nodeRegistry = createNodeRegistry();
+  const metadataRegistry = createLibraryMetadataRegistry();
+
+  registerBuiltinNodes(nodeRegistry);
+
+  await assert.rejects(
+    async () => {
+      await loadTrustedLocalPackage('./test/fixtures/package-invalid-manifest', {
+        nodeRegistry,
+        metadataRegistry
+      });
+    },
+    (error) => {
+      assert.ok(error.message.includes('Invalid package manifest'));
+      assert.ok(error.message.includes('Required field "name"'));
+      return true;
+    }
+  );
+});
+
 test('loadTrustedLocalPackage throws for missing file', async () => {
   const nodeRegistry = createNodeRegistry();
   const metadataRegistry = createLibraryMetadataRegistry();
@@ -183,6 +287,14 @@ test('loom docs --package <path> form works', () => {
   assert.ok(result.stdout.includes('demo'), 'Output should include demo library');
 });
 
+test('loom docs --package <directory> shows manifest metadata', () => {
+  const result = runCli(['docs', '--package', MANIFEST_PACKAGE_PATH]);
+
+  assert.strictEqual(result.status, 0, `CLI should succeed. stderr: ${result.stderr}`);
+  assert.ok(result.stdout.includes('manifestpkg'), 'Output should include manifest package library');
+  assert.ok(result.stdout.includes('Manifest package fixture metadata'));
+});
+
 test('loom docs with package shows both builtin and package libraries', () => {
   const result = runCli(['docs', `--package=${DEMO_PACKAGE_PATH}`]);
 
@@ -220,6 +332,34 @@ test('loom run <file> --package loads and executes code with package', () => {
 
   assert.strictEqual(result.status, 0, `CLI should succeed. stderr: ${result.stderr}`);
   assert.ok(result.stdout.includes('42'), 'demo.double(21) should return 42');
+});
+
+test('loom run <file> --package <directory> loads and executes manifest package', () => {
+  const result = runCli([
+    'run',
+    FIXTURE_MANIFEST_PACKAGE_LOOM,
+    '--package',
+    MANIFEST_PACKAGE_PATH,
+    '--get',
+    'x.out'
+  ]);
+
+  assert.strictEqual(result.status, 0, `CLI should succeed. stderr: ${result.stderr}`);
+  assert.ok(result.stdout.includes('7'), 'manifestpkg.value() should return 7');
+});
+
+test('loom compile rejects manifest package import for unsupported target', () => {
+  const result = runCli([
+    'compile',
+    FIXTURE_MANIFEST_PACKAGE_LOOM,
+    '--package',
+    MANIFEST_PACKAGE_PATH,
+    '--target',
+    'unity'
+  ]);
+
+  assert.notStrictEqual(result.status, 0, 'Compile should reject unsupported target');
+  assert.ok(result.stderr.includes("Import 'manifestpkg' is not available in target 'unity'"));
 });
 
 test('loom run <file> --package with same package flag twice fails', () => {

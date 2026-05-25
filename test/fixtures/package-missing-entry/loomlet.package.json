@@ -1,0 +1,7 @@
+{
+  "name": "package-missing-entry",
+  "version": "0.0.0",
+  "loomlet": {
+    "entry": "./missing.js"
+  }
+}
