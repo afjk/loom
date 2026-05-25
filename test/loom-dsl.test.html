@@ -379,6 +379,9 @@ wave = sine(t, freq: 0.3, amplitude: 2)`;
 
       out = compileToGraph(parseDSLToAST(`base = 1\nfn addBase(x) => add(x, base)\nvalue = addBase(2)`).ast);
       assertEqual(out.errors[0].code, "UNSUPPORTED_FUNCTION_BODY");
+
+      out = compileToGraph(parseDSLToAST(`fn prev(x) => delay1(x)\nvalue = prev(1)`).ast);
+      assertEqual(out.errors[0].code, "UNSUPPORTED_FUNCTION_BODY");
     });
     test("18m. compileToGraph rejects higher-order function definition bodies", () => {
       const out = compileToGraph(parseDSLToAST(`fn makeAdder(x) => fn(y) => add(x, y)\nvalue = makeAdder(1)`).ast);

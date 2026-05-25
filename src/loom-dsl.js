@@ -428,6 +428,12 @@ function buildGraph(stmts, options = {}) { /* mostly original */
         const nextSeen = new Set(seenCalls);
         nextSeen.add(fn.name);
         validateFunctionExpr(functionDefs.get(expr.name).body, functionDefs.get(expr.name), nextSeen);
+      } else {
+        const typeDef = nodeTypes[expr.name];
+        const statefulNodeNames = new Set(['risingEdge', 'fallingEdge']);
+        if (typeDef?.category === 'state' || statefulNodeNames.has(expr.name)) {
+          throw new LoomDSLError(`Function '${fn.name}' body cannot contain stateful node '${expr.name}'`, expr.line, expr.col, 'UNSUPPORTED_FUNCTION_BODY');
+        }
       }
       for (const arg of expr.args) validateFunctionExpr(arg.value, fn, seenCalls);
       return;
