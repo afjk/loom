@@ -316,6 +316,10 @@ export class LoomReplSession {
     return this.dt;
   }
 
+  setDeltaTime(dt) {
+    this.dt = Math.max(0, dt);
+  }
+
   tick(deltaTime) {
     const currentTime = Number.isFinite(this.time) ? this.time : 0;
     this.time = currentTime + deltaTime;
