@@ -97,6 +97,21 @@ test('Scene Sync browser runtime supports host deltaTime and events through bund
   assert.deepEqual(effects[1].offset, [0.25, 0, 0]);
 });
 
+test('Scene Sync browser runtime evaluates semantic swizzle graph nodes', async () => {
+  const runtimeModule = await import(`${pathToFileURL(bundlePath).href}?case=swizzle-${Date.now()}`);
+  const runtime = runtimeModule.createSceneSyncRuntime({
+    nodes: [
+      { id: 'vector', type: 'constant', params: { value: { right: 2, up: 3, front: 4 } } },
+      { id: 'horizontal', type: 'swizzle', params: { components: ['right', 'front'] } }
+    ],
+    edges: [{ from: 'vector.out', to: 'horizontal.value' }]
+  });
+
+  runtime.evaluateAt({ time: 0, deltaTime: 0.016, events: [] });
+
+  assert.deepEqual(runtime.getValue('horizontal.out'), [2, 4]);
+});
+
 test('Scene Sync browser runtime supports legacy adapter node aliases with target params', async () => {
   const runtimeModule = await import(`${pathToFileURL(bundlePath).href}?case=legacy-${Date.now()}`);
   const object = {

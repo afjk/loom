@@ -2,6 +2,16 @@ import { LoomError, RestrictedDSLEvaluator, coerceFiniteNumber, getNodeFs, getNo
 
 const SEMANTIC_COMPONENTS = new Set(['right', 'up', 'front']);
 
+function readSemanticComponent(value, component) {
+  if (!SEMANTIC_COMPONENTS.has(component)) {
+    return undefined;
+  }
+  if (value != null && typeof value === 'object' && Object.prototype.hasOwnProperty.call(value, component)) {
+    return value[component];
+  }
+  return undefined;
+}
+
 export function registerCoreNodes(registry) {
   registry.registerNodeType('input', {
     category: 'source',
@@ -200,15 +210,20 @@ export function registerCoreNodes(registry) {
     outputs: [{ name: 'out', type: 'any', kind: 'behavior' }],
     params: [{ name: 'component', type: 'string', default: 'right' }],
     evaluate: (inputs, params) => {
-      const value = inputs.value;
       const component = String(params.component ?? '');
-      if (!SEMANTIC_COMPONENTS.has(component)) {
-        return { out: undefined };
-      }
-      if (value != null && typeof value === 'object' && Object.prototype.hasOwnProperty.call(value, component)) {
-        return { out: value[component] };
-      }
-      return { out: undefined };
+      return { out: readSemanticComponent(inputs.value, component) };
+    }
+  });
+  registry.registerNodeType('swizzle', {
+    category: 'transform',
+    inputs: [{ name: 'value', type: 'any', default: null, kind: 'behavior' }],
+    outputs: [{ name: 'out', type: 'array', kind: 'behavior' }],
+    params: [{ name: 'components', type: 'array', default: [] }],
+    evaluate: (inputs, params) => {
+      const components = Array.isArray(params.components) ? params.components : [];
+      return {
+        out: components.map((component) => readSemanticComponent(inputs.value, String(component ?? '')))
+      };
     }
   });
   registry.registerNodeType('delay1', {

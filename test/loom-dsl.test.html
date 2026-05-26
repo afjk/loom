@@ -321,10 +321,21 @@ wave = sine(t, freq: 0.3, amplitude: 2)`;
       assert(hasEdge(out.graph.edges, "v.out", "u.value"));
     });
     test("18g. compileToGraph rejects unsupported component swizzle", () => {
-      const { ast } = parseDSLToAST("v = constant(value: {right: 1})\nru = v.ru");
+      const { ast } = parseDSLToAST("v = constant(value: {right: 1})\nrr = v.rr");
       const out = compileToGraph(ast);
       assert(out.errors.length > 0, "compile error returned");
       assertEqual(out.errors[0].code, "UNKNOWN_ARGUMENT");
+    });
+    test("18g2. compileToGraph lowers semantic swizzle to explicit swizzle", () => {
+      const { ast } = parseDSLToAST("v = constant(value: {right: 1, up: 2, front: 3})\nrf = v.rf\nall = v.ruf");
+      const out = compileToGraph(ast);
+      assertEqual(out.errors.length, 0);
+      assert(hasNode(out.graph.nodes, "rf", "swizzle"), "rf swizzle node generated");
+      assert(hasNode(out.graph.nodes, "all", "swizzle"), "ruf swizzle node generated");
+      assertEqual(out.graph.nodes.find(n => n.id === "rf").params, { components: ["right", "front"] });
+      assertEqual(out.graph.nodes.find(n => n.id === "all").params, { components: ["right", "up", "front"] });
+      assert(hasEdge(out.graph.edges, "v.out", "rf.value"));
+      assert(hasEdge(out.graph.edges, "v.out", "all.value"));
     });
     test("18h. compileToGraph supports semantic component access in render args", () => {
       const { ast } = parseDSLToAST("v = constant(value: {right: 1, up: 2})\nrender point(x: v.right, y: v.up)");

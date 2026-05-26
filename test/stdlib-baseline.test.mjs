@@ -145,6 +145,17 @@ test('getComponent reads explicit semantic vector components', () => {
   assert.equal(evalNode('getComponent', { value: { x: 9 }, component: 'x' }), undefined);
 });
 
+test('swizzle reads semantic vector components in requested order', () => {
+  assert.deepEqual(
+    evalNode('swizzle', { value: { right: 2, up: 3, front: 4 }, components: ['right', 'front'] }),
+    [2, 4]
+  );
+  assert.deepEqual(
+    evalNode('swizzle', { value: { right: 2, up: 3, front: 4 }, components: ['right', 'up', 'front'] }),
+    [2, 3, 4]
+  );
+});
+
 test('DSL semantic component access evaluates through explicit getComponent nodes', () => {
   const result = runLoomSource('v = constant(value: {right: 2, up: 3, front: 4})\nr = v.r\nf = v.front', {
     get: ['r.out', 'f.out']
@@ -155,6 +166,28 @@ test('DSL semantic component access evaluates through explicit getComponent node
   assert.equal(result.values['f.out'], 4);
   assert.ok(result.graph.nodes.some((node) => node.id === 'r' && node.type === 'getComponent'));
   assert.ok(result.graph.nodes.some((node) => node.id === 'f' && node.type === 'getComponent'));
+});
+
+test('DSL semantic swizzles evaluate through explicit swizzle nodes', () => {
+  const result = runLoomSource([
+    'v = constant(value: {right: 2, up: 3, front: 4})',
+    'ru = v.ru',
+    'rf = v.rf',
+    'uf = v.uf',
+    'all = v.ruf'
+  ].join('\n'), {
+    get: ['ru.out', 'rf.out', 'uf.out', 'all.out']
+  });
+
+  assert.equal(result.ok, true, JSON.stringify(result.errors));
+  assert.deepEqual(result.values['ru.out'], [2, 3]);
+  assert.deepEqual(result.values['rf.out'], [2, 4]);
+  assert.deepEqual(result.values['uf.out'], [3, 4]);
+  assert.deepEqual(result.values['all.out'], [2, 3, 4]);
+  assert.deepEqual(result.graph.nodes.find((node) => node.id === 'rf')?.params, {
+    components: ['right', 'front']
+  });
+  assert.ok(result.graph.nodes.every((node) => node.id !== 'ru' || node.type === 'swizzle'));
 });
 
 test('clock reads host-provided env.time deterministically', () => {
