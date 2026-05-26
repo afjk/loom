@@ -1,4 +1,5 @@
 const VERSION = '0.1.2';
+const SEMANTIC_COMPONENTS = new Set(['right', 'up', 'front']);
 
 export class LoomletSceneSyncRuntimeError extends Error {
   constructor(code, message, details = {}) {
@@ -11,6 +12,16 @@ export class LoomletSceneSyncRuntimeError extends Error {
 
 function isObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function readSemanticComponent(value, component) {
+  if (!SEMANTIC_COMPONENTS.has(component)) {
+    return undefined;
+  }
+  if (value != null && typeof value === 'object' && Object.prototype.hasOwnProperty.call(value, component)) {
+    return value[component];
+  }
+  return undefined;
 }
 
 function normalizeEnv(value) {
@@ -178,6 +189,23 @@ function buildNodeTypes() {
     outputs: [{ name: 'out', default: 0 }],
     params: [{ name: 'value', default: 0 }],
     evaluate: (inputs, params) => ({ out: params.value })
+  });
+  register('getComponent', {
+    inputs: [{ name: 'value', default: null }],
+    outputs: [{ name: 'out' }],
+    params: [{ name: 'component', default: 'right' }],
+    evaluate: (inputs, params) => ({ out: readSemanticComponent(inputs.value, stringifyText(params.component)) })
+  });
+  register('swizzle', {
+    inputs: [{ name: 'value', default: null }],
+    outputs: [{ name: 'out' }],
+    params: [{ name: 'components', default: [] }],
+    evaluate: (inputs, params) => {
+      const components = Array.isArray(params.components) ? params.components : [];
+      return {
+        out: components.map((component) => readSemanticComponent(inputs.value, stringifyText(component)))
+      };
+    }
   });
   register('input', {
     inputs: [{ name: 'name', default: '' }, { name: 'default', default: null }],

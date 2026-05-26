@@ -76,7 +76,7 @@ The semantic axis vocabulary is now documented.
 - `r`, `u`, and `f` are short aliases.
 - Filter predicate DSL component access supports `value.right`, `value.up`, `value.front`, and aliases.
 - General DSL expression component access supports `expr.right`, `expr.up`, `expr.front`, and aliases by lowering to explicit `getComponent` nodes.
-- Multi-component swizzle remains future work.
+- Multi-component semantic swizzles support `expr.ru`, `expr.rf`, `expr.uf`, and `expr.ruf` by lowering to explicit `swizzle` nodes that return ordered arrays.
 
 ### Package extension foundation
 
@@ -137,7 +137,6 @@ The portable runtime boundary is now documented for Scene Sync Export and future
 The following are intentionally not part of the stable next-release promise:
 
 - full source-preserving DSL <-> Node Editor round-trip
-- multi-component swizzle
 - function definition as subgraph
 - npm / remote package loading
 - package sandboxing and permissions

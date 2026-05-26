@@ -65,7 +65,21 @@ General DSL expressions also support single-component access:
 - `expr.f`
 
 These expressions lower to explicit `getComponent` graph nodes with a normalized `component` parameter.
-Multi-component swizzles such as `expr.ru` are not implemented in this v0 scope.
+
+Multi-component swizzles lower to explicit `swizzle` graph nodes with normalized
+`components` parameters:
+
+- `expr.ru`
+- `expr.rf`
+- `expr.uf`
+- `expr.ruf`
+
+Swizzles return arrays preserving requested order:
+
+- `expr.rf` returns `[right, front]`
+- `expr.ruf` returns `[right, up, front]`
+
+Repeated components such as `expr.rr` are rejected in this v0 scope.
 
 ## Virtual node / lowering model
 
@@ -76,13 +90,13 @@ Intended lowering model:
 
 - `v.right` → `getComponent(v, "right")`
 - `v.r` → `getComponent(v, "right")`
-- `v.ru` → future `swizzle(v, ["right", "up"])`
+- `v.ru` → `swizzle(v, ["right", "up"])`
 
 Node Editor may eventually expose virtual component ports, but compiled/exported graphs must preserve explicit semantics.
 
-## Swizzle direction (future)
+## Swizzle v0
 
-Planned semantic shorthand direction:
+Supported semantic shorthand:
 
 - `v.r`
 - `v.u`
@@ -92,11 +106,11 @@ Planned semantic shorthand direction:
 - `v.uf`
 - `v.ruf`
 
-Multi-component swizzle is future work unless/until implemented in runtime/compiler.
+The runtime return shape is an array. Two components produce a 2-item array, and
+three components produce a 3-item array.
 
 ## Explicitly deferred
 
-- Multi-component swizzle return shape
 - Node Editor virtual port UI
 - Automatic world/local conversion
 - Matrix/quaternion transform integration

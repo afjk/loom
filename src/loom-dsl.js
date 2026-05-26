@@ -38,7 +38,10 @@ const SEMANTIC_COMPONENT_ALIASES = {
   f: 'front'
 };
 const SEMANTIC_COMPONENTS = new Set(['right', 'up', 'front', ...Object.keys(SEMANTIC_COMPONENT_ALIASES)]);
+const SEMANTIC_SWIZZLES = new Set(['ru', 'rf', 'uf', 'ruf']);
 const normalizeSemanticComponent = (component) => SEMANTIC_COMPONENT_ALIASES[component] || component;
+const isSemanticSwizzleCandidate = (property) => /^[ruf]+$/.test(property) && property.length > 1;
+const normalizeSemanticSwizzle = (property) => [...property].map(normalizeSemanticComponent);
 
 function tokenize(src) {
   const tokens = [];
@@ -456,13 +459,22 @@ function buildGraph(stmts, options = {}) { /* mostly original */
     return id;
   }
   function buildMember(expr, resultId) {
-    if (!SEMANTIC_COMPONENTS.has(expr.property)) {
-      throw new LoomDSLError(`Unsupported semantic component access: ${expr.property}`, expr.line, expr.col, 'UNKNOWN_ARGUMENT');
+    if (SEMANTIC_COMPONENTS.has(expr.property)) {
+      const id = resultId || anonId();
+      nodes.push({ id, type: 'getComponent', params: { component: normalizeSemanticComponent(expr.property) } });
+      wireToNode(expr.object, id, 'value');
+      return id;
     }
-    const id = resultId || anonId();
-    nodes.push({ id, type: 'getComponent', params: { component: normalizeSemanticComponent(expr.property) } });
-    wireToNode(expr.object, id, 'value');
-    return id;
+    if (SEMANTIC_SWIZZLES.has(expr.property)) {
+      const id = resultId || anonId();
+      nodes.push({ id, type: 'swizzle', params: { components: normalizeSemanticSwizzle(expr.property) } });
+      wireToNode(expr.object, id, 'value');
+      return id;
+    }
+    if (isSemanticSwizzleCandidate(expr.property)) {
+      throw new LoomDSLError(`Unsupported semantic swizzle: ${expr.property}`, expr.line, expr.col, 'UNKNOWN_ARGUMENT');
+    }
+    throw new LoomDSLError(`Unsupported semantic component access: ${expr.property}`, expr.line, expr.col, 'UNKNOWN_ARGUMENT');
   }
   function buildFunctionDefinitionCall(call, resultId, pipeFrom, locals) {
     const fn = functionDefs.get(call.name);

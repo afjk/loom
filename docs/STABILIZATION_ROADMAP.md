@@ -74,9 +74,9 @@ See [`docs/RELEASE_NOTES_NEXT.md`](RELEASE_NOTES_NEXT.md) for the release-note d
 
 2. **Done (v0 foundation)**: Swizzle / component access / virtual node foundation
    - ✅ Semantic component vocabulary and coordinate-space rule are documented in [Semantic Component Access v0](./design/semantic-component-access-v0.md).
-   - ✅ Current implementation scope is documented: filter predicate DSL supports `value.right/up/front` and `value.r/u/f`.
-   - ✅ Lowering direction is documented (`getComponent` / `swizzle`) while keeping runtime/export semantics explicit.
-   - ➡️ General expression component access, multi-component swizzle runtime shape, and Node Editor virtual port UI remain planned/future work.
+   - ✅ Current implementation scope is documented: filter predicate DSL and general expressions support semantic component access.
+   - ✅ Lowering direction is implemented (`getComponent` / `swizzle`) while keeping runtime/export semantics explicit.
+   - ➡️ Node Editor virtual port UI remains planned/future work.
 
 3. **Done (v0 foundation)**: Package extension foundation stabilization
    - ✅ Trusted local package loading with explicit file path (`--package`).
