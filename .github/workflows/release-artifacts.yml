@@ -75,6 +75,25 @@ jobs:
             npm install
           fi
 
+      - name: Align VS Code extension core dependency for packaging
+        working-directory: extensions/vscode-loomlet
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const rootVersion = require('../../package.json').version;
+          const range = `^${rootVersion}`;
+
+          for (const file of ['package.json', 'package-lock.json']) {
+            const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
+            pkg.dependencies ??= {};
+            pkg.dependencies['@afjk/loomlet'] = range;
+            if (pkg.packages?.['']?.dependencies) {
+              pkg.packages[''].dependencies['@afjk/loomlet'] = range;
+            }
+            fs.writeFileSync(file, `${JSON.stringify(pkg, null, 2)}\n`);
+          }
+          NODE
+
       - name: Install packed core package into extension
         run: |
           TARBALL=$(ls -t afjk-loomlet-*.tgz | head -1)
