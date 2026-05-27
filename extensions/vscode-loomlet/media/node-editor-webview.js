@@ -25,9 +25,9 @@ var LoomletPreview = (() => {
     mod
   ));
 
-  // node_modules/@babel/runtime/helpers/OverloadYield.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/OverloadYield.js
   var require_OverloadYield = __commonJS({
-    "node_modules/@babel/runtime/helpers/OverloadYield.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/OverloadYield.js"(exports, module) {
       function _OverloadYield(e, d2) {
         this.v = e, this.k = d2;
       }
@@ -35,9 +35,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/regeneratorDefine.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorDefine.js
   var require_regeneratorDefine = __commonJS({
-    "node_modules/@babel/runtime/helpers/regeneratorDefine.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorDefine.js"(exports, module) {
       function _regeneratorDefine(e, r2, n2, t2) {
         var i2 = Object.defineProperty;
         try {
@@ -63,9 +63,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/regenerator.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/regenerator.js
   var require_regenerator = __commonJS({
-    "node_modules/@babel/runtime/helpers/regenerator.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/regenerator.js"(exports, module) {
       var regeneratorDefine = require_regeneratorDefine();
       function _regenerator() {
         var e, t2, r2 = "function" == typeof Symbol ? Symbol : {}, n2 = r2.iterator || "@@iterator", o = r2.toStringTag || "@@toStringTag";
@@ -145,9 +145,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/regeneratorAsyncIterator.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorAsyncIterator.js
   var require_regeneratorAsyncIterator = __commonJS({
-    "node_modules/@babel/runtime/helpers/regeneratorAsyncIterator.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorAsyncIterator.js"(exports, module) {
       var OverloadYield = require_OverloadYield();
       var regeneratorDefine = require_regeneratorDefine();
       function AsyncIterator(t2, e) {
@@ -183,9 +183,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/regeneratorAsyncGen.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorAsyncGen.js
   var require_regeneratorAsyncGen = __commonJS({
-    "node_modules/@babel/runtime/helpers/regeneratorAsyncGen.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorAsyncGen.js"(exports, module) {
       var regenerator = require_regenerator();
       var regeneratorAsyncIterator = require_regeneratorAsyncIterator();
       function _regeneratorAsyncGen(r2, e, t2, o, n2) {
@@ -195,9 +195,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/regeneratorAsync.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorAsync.js
   var require_regeneratorAsync = __commonJS({
-    "node_modules/@babel/runtime/helpers/regeneratorAsync.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorAsync.js"(exports, module) {
       var regeneratorAsyncGen = require_regeneratorAsyncGen();
       function _regeneratorAsync(n2, e, r2, t2, o) {
         var a2 = regeneratorAsyncGen(n2, e, r2, t2, o);
@@ -209,9 +209,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/regeneratorKeys.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorKeys.js
   var require_regeneratorKeys = __commonJS({
-    "node_modules/@babel/runtime/helpers/regeneratorKeys.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorKeys.js"(exports, module) {
       function _regeneratorKeys(e) {
         var n2 = Object(e), r2 = [];
         for (var t2 in n2) r2.unshift(t2);
@@ -224,9 +224,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/typeof.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/typeof.js
   var require_typeof = __commonJS({
-    "node_modules/@babel/runtime/helpers/typeof.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/typeof.js"(exports, module) {
       function _typeof2(o) {
         "@babel/helpers - typeof";
         return module.exports = _typeof2 = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o2) {
@@ -239,9 +239,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/regeneratorValues.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorValues.js
   var require_regeneratorValues = __commonJS({
-    "node_modules/@babel/runtime/helpers/regeneratorValues.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorValues.js"(exports, module) {
       var _typeof2 = require_typeof()["default"];
       function _regeneratorValues(e) {
         if (null != e) {
@@ -263,9 +263,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/regeneratorRuntime.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorRuntime.js
   var require_regeneratorRuntime = __commonJS({
-    "node_modules/@babel/runtime/helpers/regeneratorRuntime.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorRuntime.js"(exports, module) {
       var OverloadYield = require_OverloadYield();
       var regenerator = require_regenerator();
       var regeneratorAsync = require_regeneratorAsync();
@@ -343,9 +343,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/regenerator/index.js
+  // ../../editor-studio/node_modules/@babel/runtime/regenerator/index.js
   var require_regenerator2 = __commonJS({
-    "node_modules/@babel/runtime/regenerator/index.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/regenerator/index.js"(exports, module) {
       var runtime = require_regeneratorRuntime()();
       module.exports = runtime;
       try {
@@ -360,9 +360,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/react/cjs/react.production.min.js
+  // ../../editor-studio/node_modules/react/cjs/react.production.min.js
   var require_react_production_min = __commonJS({
-    "node_modules/react/cjs/react.production.min.js"(exports) {
+    "../../editor-studio/node_modules/react/cjs/react.production.min.js"(exports) {
       "use strict";
       var l2 = Symbol.for("react.element");
       var n2 = Symbol.for("react.portal");
@@ -631,9 +631,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/react/index.js
+  // ../../editor-studio/node_modules/react/index.js
   var require_react = __commonJS({
-    "node_modules/react/index.js"(exports, module) {
+    "../../editor-studio/node_modules/react/index.js"(exports, module) {
       "use strict";
       if (true) {
         module.exports = require_react_production_min();
@@ -643,9 +643,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/scheduler/cjs/scheduler.production.min.js
+  // ../../editor-studio/node_modules/scheduler/cjs/scheduler.production.min.js
   var require_scheduler_production_min = __commonJS({
-    "node_modules/scheduler/cjs/scheduler.production.min.js"(exports) {
+    "../../editor-studio/node_modules/scheduler/cjs/scheduler.production.min.js"(exports) {
       "use strict";
       function f2(a2, b2) {
         var c2 = a2.length;
@@ -896,9 +896,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/scheduler/index.js
+  // ../../editor-studio/node_modules/scheduler/index.js
   var require_scheduler = __commonJS({
-    "node_modules/scheduler/index.js"(exports, module) {
+    "../../editor-studio/node_modules/scheduler/index.js"(exports, module) {
       "use strict";
       if (true) {
         module.exports = require_scheduler_production_min();
@@ -908,9 +908,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/react-dom/cjs/react-dom.production.min.js
+  // ../../editor-studio/node_modules/react-dom/cjs/react-dom.production.min.js
   var require_react_dom_production_min = __commonJS({
-    "node_modules/react-dom/cjs/react-dom.production.min.js"(exports) {
+    "../../editor-studio/node_modules/react-dom/cjs/react-dom.production.min.js"(exports) {
       "use strict";
       var aa = require_react();
       var ca = require_scheduler();
@@ -7520,9 +7520,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/react-dom/index.js
+  // ../../editor-studio/node_modules/react-dom/index.js
   var require_react_dom = __commonJS({
-    "node_modules/react-dom/index.js"(exports, module) {
+    "../../editor-studio/node_modules/react-dom/index.js"(exports, module) {
       "use strict";
       function checkDCE() {
         if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ === "undefined" || typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.checkDCE !== "function") {
@@ -7546,7 +7546,7 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js
   function asyncGeneratorStep(n2, t2, e, r2, o, a2, c2) {
     try {
       var i2 = n2[a2](c2), u2 = i2.value;
@@ -7571,12 +7571,12 @@ var LoomletPreview = (() => {
     };
   }
 
-  // node_modules/@babel/runtime/helpers/esm/classCallCheck.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/classCallCheck.js
   function _classCallCheck(a2, n2) {
     if (!(a2 instanceof n2)) throw new TypeError("Cannot call a class as a function");
   }
 
-  // node_modules/@babel/runtime/helpers/esm/typeof.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/typeof.js
   function _typeof(o) {
     "@babel/helpers - typeof";
     return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o2) {
@@ -7586,7 +7586,7 @@ var LoomletPreview = (() => {
     }, _typeof(o);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/toPrimitive.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/toPrimitive.js
   function toPrimitive(t2, r2) {
     if ("object" != _typeof(t2) || !t2) return t2;
     var e = t2[Symbol.toPrimitive];
@@ -7598,13 +7598,13 @@ var LoomletPreview = (() => {
     return ("string" === r2 ? String : Number)(t2);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/toPropertyKey.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/toPropertyKey.js
   function toPropertyKey(t2) {
     var i2 = toPrimitive(t2, "string");
     return "symbol" == _typeof(i2) ? i2 : i2 + "";
   }
 
-  // node_modules/@babel/runtime/helpers/esm/createClass.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/createClass.js
   function _defineProperties(e, r2) {
     for (var t2 = 0; t2 < r2.length; t2++) {
       var o = r2[t2];
@@ -7617,34 +7617,34 @@ var LoomletPreview = (() => {
     }), e;
   }
 
-  // node_modules/@babel/runtime/helpers/esm/assertThisInitialized.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/assertThisInitialized.js
   function _assertThisInitialized(e) {
     if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
     return e;
   }
 
-  // node_modules/@babel/runtime/helpers/esm/possibleConstructorReturn.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/possibleConstructorReturn.js
   function _possibleConstructorReturn(t2, e) {
     if (e && ("object" == _typeof(e) || "function" == typeof e)) return e;
     if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined");
     return _assertThisInitialized(t2);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/getPrototypeOf.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/getPrototypeOf.js
   function _getPrototypeOf(t2) {
     return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function(t3) {
       return t3.__proto__ || Object.getPrototypeOf(t3);
     }, _getPrototypeOf(t2);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/setPrototypeOf.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/setPrototypeOf.js
   function _setPrototypeOf(t2, e) {
     return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function(t3, e2) {
       return t3.__proto__ = e2, t3;
     }, _setPrototypeOf(t2, e);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/inherits.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/inherits.js
   function _inherits(t2, e) {
     if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function");
     t2.prototype = Object.create(e && e.prototype, {
@@ -7658,7 +7658,7 @@ var LoomletPreview = (() => {
     }), e && _setPrototypeOf(t2, e);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/defineProperty.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/defineProperty.js
   function _defineProperty(e, r2, t2) {
     return (r2 = toPropertyKey(r2)) in e ? Object.defineProperty(e, r2, {
       value: t2,
@@ -7668,7 +7668,7 @@ var LoomletPreview = (() => {
     }) : e[r2] = t2, e;
   }
 
-  // node_modules/rete/rete.esm.js
+  // ../../editor-studio/node_modules/rete/rete.esm.js
   var import_regenerator = __toESM(require_regenerator2());
   function _createForOfIteratorHelper$1(r2, e) {
     var t2 = "undefined" != typeof Symbol && r2[Symbol.iterator] || r2["@@iterator"];
@@ -8466,27 +8466,27 @@ var LoomletPreview = (() => {
     Connection
   });
 
-  // node_modules/rete-area-plugin/rete-area-plugin.esm.js
+  // ../../editor-studio/node_modules/rete-area-plugin/rete-area-plugin.esm.js
   var import_regenerator2 = __toESM(require_regenerator2());
 
-  // node_modules/@babel/runtime/helpers/esm/arrayLikeToArray.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/arrayLikeToArray.js
   function _arrayLikeToArray2(r2, a2) {
     (null == a2 || a2 > r2.length) && (a2 = r2.length);
     for (var e = 0, n2 = Array(a2); e < a2; e++) n2[e] = r2[e];
     return n2;
   }
 
-  // node_modules/@babel/runtime/helpers/esm/arrayWithoutHoles.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/arrayWithoutHoles.js
   function _arrayWithoutHoles(r2) {
     if (Array.isArray(r2)) return _arrayLikeToArray2(r2);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/iterableToArray.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/iterableToArray.js
   function _iterableToArray(r2) {
     if ("undefined" != typeof Symbol && null != r2[Symbol.iterator] || null != r2["@@iterator"]) return Array.from(r2);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/unsupportedIterableToArray.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/unsupportedIterableToArray.js
   function _unsupportedIterableToArray2(r2, a2) {
     if (r2) {
       if ("string" == typeof r2) return _arrayLikeToArray2(r2, a2);
@@ -8495,17 +8495,17 @@ var LoomletPreview = (() => {
     }
   }
 
-  // node_modules/@babel/runtime/helpers/esm/nonIterableSpread.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/nonIterableSpread.js
   function _nonIterableSpread() {
     throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
   }
 
-  // node_modules/@babel/runtime/helpers/esm/toConsumableArray.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/toConsumableArray.js
   function _toConsumableArray(r2) {
     return _arrayWithoutHoles(r2) || _iterableToArray(r2) || _unsupportedIterableToArray2(r2) || _nonIterableSpread();
   }
 
-  // node_modules/rete-area-plugin/rete-area-plugin.esm.js
+  // ../../editor-studio/node_modules/rete-area-plugin/rete-area-plugin.esm.js
   var Content = /* @__PURE__ */ function() {
     function Content2(reordered) {
       _classCallCheck(this, Content2);
@@ -10247,13 +10247,13 @@ var LoomletPreview = (() => {
     }]);
   }(BaseAreaPlugin);
 
-  // node_modules/@babel/runtime/helpers/esm/superPropBase.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/superPropBase.js
   function _superPropBase(t2, o) {
     for (; !{}.hasOwnProperty.call(t2, o) && null !== (t2 = _getPrototypeOf(t2)); ) ;
     return t2;
   }
 
-  // node_modules/@babel/runtime/helpers/esm/get.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/get.js
   function _get() {
     return _get = "undefined" != typeof Reflect && Reflect.get ? Reflect.get.bind() : function(e, t2, r2) {
       var p2 = _superPropBase(e, t2);
@@ -10264,15 +10264,15 @@ var LoomletPreview = (() => {
     }, _get.apply(null, arguments);
   }
 
-  // node_modules/rete-connection-plugin/rete-connection-plugin.esm.js
+  // ../../editor-studio/node_modules/rete-connection-plugin/rete-connection-plugin.esm.js
   var import_regenerator3 = __toESM(require_regenerator2());
 
-  // node_modules/@babel/runtime/helpers/esm/arrayWithHoles.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/arrayWithHoles.js
   function _arrayWithHoles(r2) {
     if (Array.isArray(r2)) return r2;
   }
 
-  // node_modules/@babel/runtime/helpers/esm/iterableToArrayLimit.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/iterableToArrayLimit.js
   function _iterableToArrayLimit(r2, l2) {
     var t2 = null == r2 ? null : "undefined" != typeof Symbol && r2[Symbol.iterator] || r2["@@iterator"];
     if (null != t2) {
@@ -10295,17 +10295,17 @@ var LoomletPreview = (() => {
     }
   }
 
-  // node_modules/@babel/runtime/helpers/esm/nonIterableRest.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/nonIterableRest.js
   function _nonIterableRest() {
     throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
   }
 
-  // node_modules/@babel/runtime/helpers/esm/slicedToArray.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/slicedToArray.js
   function _slicedToArray(r2, e) {
     return _arrayWithHoles(r2) || _iterableToArrayLimit(r2, e) || _unsupportedIterableToArray2(r2, e) || _nonIterableRest();
   }
 
-  // node_modules/rete-connection-plugin/rete-connection-plugin.esm.js
+  // ../../editor-studio/node_modules/rete-connection-plugin/rete-connection-plugin.esm.js
   function ownKeys2(e, r2) {
     var t2 = Object.keys(e);
     if (Object.getOwnPropertySymbols) {
@@ -11060,14 +11060,14 @@ var LoomletPreview = (() => {
     }]);
   }(Scope);
 
-  // node_modules/rete-react-plugin/rete-react-plugin.esm.js
+  // ../../editor-studio/node_modules/rete-react-plugin/rete-react-plugin.esm.js
   var React = __toESM(require_react());
   var import_react2 = __toESM(require_react());
   var ReactDOM = __toESM(require_react_dom());
   var import_react_dom = __toESM(require_react_dom());
   var import_regenerator5 = __toESM(require_regenerator2());
 
-  // node_modules/rete-render-utils/rete-render-utils.esm.js
+  // ../../editor-studio/node_modules/rete-render-utils/rete-render-utils.esm.js
   var import_regenerator4 = __toESM(require_regenerator2());
   function classicConnectionPath(points, curvature) {
     var _points = _slicedToArray(points, 2), _points$ = _points[0], x1 = _points$.x, y1 = _points$.y, _points$2 = _points[1], x2 = _points$2.x, y2 = _points$2.y;
@@ -11428,7 +11428,7 @@ var LoomletPreview = (() => {
     return new DOMSocketPosition(props);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/taggedTemplateLiteral.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/taggedTemplateLiteral.js
   function _taggedTemplateLiteral(e, t2) {
     return t2 || (t2 = e.slice(0)), Object.freeze(Object.defineProperties(e, {
       raw: {
@@ -11437,10 +11437,10 @@ var LoomletPreview = (() => {
     }));
   }
 
-  // node_modules/styled-components/dist/styled-components.browser.esm.js
+  // ../../editor-studio/node_modules/styled-components/dist/styled-components.browser.esm.js
   var import_react = __toESM(require_react());
 
-  // node_modules/stylis/src/Enum.js
+  // ../../editor-studio/node_modules/stylis/src/Enum.js
   var MS = "-ms-";
   var MOZ = "-moz-";
   var WEBKIT = "-webkit-";
@@ -11452,7 +11452,7 @@ var LoomletPreview = (() => {
   var KEYFRAMES = "@keyframes";
   var LAYER = "@layer";
 
-  // node_modules/stylis/src/Utility.js
+  // ../../editor-studio/node_modules/stylis/src/Utility.js
   var abs = Math.abs;
   var from = String.fromCharCode;
   var assign = Object.assign;
@@ -11495,7 +11495,7 @@ var LoomletPreview = (() => {
     });
   }
 
-  // node_modules/stylis/src/Tokenizer.js
+  // ../../editor-studio/node_modules/stylis/src/Tokenizer.js
   var line = 1;
   var column = 1;
   var length = 0;
@@ -11626,7 +11626,7 @@ var LoomletPreview = (() => {
     return slice(index4, position);
   }
 
-  // node_modules/stylis/src/Parser.js
+  // ../../editor-studio/node_modules/stylis/src/Parser.js
   function compile(value) {
     return dealloc(parse("", null, null, null, [""], value = alloc(value), 0, [0], value));
   }
@@ -11763,7 +11763,7 @@ var LoomletPreview = (() => {
     return node(value, root, parent, DECLARATION, substr(value, 0, length2), substr(value, length2 + 1, -1), length2, siblings);
   }
 
-  // node_modules/stylis/src/Prefixer.js
+  // ../../editor-studio/node_modules/stylis/src/Prefixer.js
   function prefix(value, length2, children) {
     switch (hash(value, length2)) {
       case 5103:
@@ -11913,7 +11913,7 @@ var LoomletPreview = (() => {
     return value;
   }
 
-  // node_modules/stylis/src/Serializer.js
+  // ../../editor-studio/node_modules/stylis/src/Serializer.js
   function serialize(children, callback) {
     var output = "";
     for (var i2 = 0; i2 < children.length; i2++)
@@ -11938,7 +11938,7 @@ var LoomletPreview = (() => {
     return strlen(children = serialize(element.children, callback)) ? element.return = element.value + "{" + children + "}" : "";
   }
 
-  // node_modules/stylis/src/Middleware.js
+  // ../../editor-studio/node_modules/stylis/src/Middleware.js
   function middleware(collection) {
     var length2 = sizeof(collection);
     return function(element, index4, children, callback) {
@@ -11989,7 +11989,7 @@ var LoomletPreview = (() => {
     }
   }
 
-  // node_modules/styled-components/dist/styled-components.browser.esm.js
+  // ../../editor-studio/node_modules/styled-components/dist/styled-components.browser.esm.js
   var r;
   var i;
   var c = "undefined" != typeof process && void 0 !== process.env && (process.env.REACT_APP_SC_ATTR || process.env.SC_ATTR) || "data-styled";
@@ -12610,7 +12610,7 @@ var LoomletPreview = (() => {
   var $t = `:not(style[${c}])`;
   var Rt = `style[${c}]`;
 
-  // node_modules/@babel/runtime/helpers/esm/extends.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/extends.js
   function _extends() {
     return _extends = Object.assign ? Object.assign.bind() : function(n2) {
       for (var e = 1; e < arguments.length; e++) {
@@ -12621,7 +12621,7 @@ var LoomletPreview = (() => {
     }, _extends.apply(null, arguments);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/objectWithoutPropertiesLoose.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/objectWithoutPropertiesLoose.js
   function _objectWithoutPropertiesLoose(r2, e) {
     if (null == r2) return {};
     var t2 = {};
@@ -12632,7 +12632,7 @@ var LoomletPreview = (() => {
     return t2;
   }
 
-  // node_modules/@babel/runtime/helpers/esm/objectWithoutProperties.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/objectWithoutProperties.js
   function _objectWithoutProperties(e, t2) {
     if (null == e) return {};
     var o, r2, i2 = _objectWithoutPropertiesLoose(e, t2);
@@ -12643,7 +12643,7 @@ var LoomletPreview = (() => {
     return i2;
   }
 
-  // node_modules/rete-react-plugin/rete-react-plugin.esm.js
+  // ../../editor-studio/node_modules/rete-react-plugin/rete-react-plugin.esm.js
   function getRenderer(props) {
     var createRoot = props === null || props === void 0 ? void 0 : props.createRoot;
     var wrappers = /* @__PURE__ */ new WeakMap();
@@ -15803,13 +15803,15 @@ var LoomletPreview = (() => {
   }
   function summarizeNodeOutputsFromValues(node2, nodeType, valuesMap) {
     const outputDefs = Array.isArray(nodeType?.outputs) ? nodeType.outputs : [];
+    const getOutputName = (output) => typeof output === "string" ? output : output?.name;
     if (outputDefs.length === 0) return void 0;
     if (outputDefs.length === 1) {
-      return valuesMap.get(`${node2.id}.${outputDefs[0].name}`);
+      return valuesMap.get(`${node2.id}.${getOutputName(outputDefs[0])}`);
     }
     const summary = {};
     for (const output of outputDefs) {
-      summary[output.name] = valuesMap.get(`${node2.id}.${output.name}`);
+      const outputName = getOutputName(output);
+      summary[outputName] = valuesMap.get(`${node2.id}.${outputName}`);
     }
     return summary;
   }
@@ -15913,17 +15915,6 @@ var LoomletPreview = (() => {
             this._values.set(`${node2.id}.${output.name}`, []);
           }
         }
-        if (this._probeConfig.values) {
-          const latestValues = /* @__PURE__ */ new Map();
-          for (const node3 of this._currentGraph.nodes) {
-            const nodeType2 = this._nodeTypes[node3.type];
-            latestValues.set(
-              node3.id,
-              summarizeNodeOutputsFromValues(node3, nodeType2, this._values)
-            );
-          }
-          this._latestNodeValues = latestValues;
-        }
       }
       for (const { ref, payload } of this._eventQueue) {
         const current = this._values.get(ref) || [];
@@ -16007,6 +15998,17 @@ var LoomletPreview = (() => {
             this._values.set(ref, outputs[portName]);
           }
         }
+      }
+      if (this._probeConfig.values) {
+        const latestValues = /* @__PURE__ */ new Map();
+        for (const node2 of this._currentGraph.nodes) {
+          const nodeType = this._nodeTypes[node2.type];
+          latestValues.set(
+            node2.id,
+            summarizeNodeOutputsFromValues(node2, nodeType, this._values)
+          );
+        }
+        this._latestNodeValues = latestValues;
       }
     }
     evaluateOnce({ env } = {}) {
@@ -16445,13 +16447,15 @@ var LoomletPreview = (() => {
   }
   function summarizeNodeOutputs(node2, nodeType, getValue) {
     const outputDefs = Array.isArray(nodeType?.outputs) ? nodeType.outputs : [];
+    const getOutputName = (output) => typeof output === "string" ? output : output?.name;
     if (outputDefs.length === 0) return void 0;
     if (outputDefs.length === 1) {
-      return getValue(`${node2.id}.${outputDefs[0].name}`);
+      return getValue(`${node2.id}.${getOutputName(outputDefs[0])}`);
     }
     const summary = {};
     for (const output of outputDefs) {
-      summary[output.name] = getValue(`${node2.id}.${output.name}`);
+      const outputName = getOutputName(output);
+      summary[outputName] = getValue(`${node2.id}.${outputName}`);
     }
     return summary;
   }
@@ -16554,6 +16558,13 @@ var LoomletPreview = (() => {
   var VALUE_PREVIEW_CONTROL_KEY = "__preview";
   function getPortName(port) {
     return typeof port === "string" ? port : port.name;
+  }
+  function getNodeControl(node2, key) {
+    if (!node2?.controls) return null;
+    if (typeof node2.controls.get === "function") {
+      return node2.controls.get(key);
+    }
+    return node2.controls[key] ?? null;
   }
   function createReteNode(editorNode, onControl, previewText) {
     const nodeTypeDef = NODE_TYPES[editorNode.type];
@@ -16841,7 +16852,7 @@ var LoomletPreview = (() => {
       for (const nodeId of this.currentEditorModel.order || []) {
         const node2 = this.editor.getNode(nodeId);
         if (!node2) continue;
-        const control = node2.controls.get(VALUE_PREVIEW_CONTROL_KEY);
+        const control = getNodeControl(node2, VALUE_PREVIEW_CONTROL_KEY);
         if (!control) continue;
         const nextText = this._getNodePreviewText(nodeId);
         if (control.value === nextText) continue;

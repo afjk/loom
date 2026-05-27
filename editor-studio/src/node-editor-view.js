@@ -29,6 +29,14 @@ function getPortName(port) {
   return typeof port === 'string' ? port : port.name;
 }
 
+function getNodeControl(node, key) {
+  if (!node?.controls) return null;
+  if (typeof node.controls.get === 'function') {
+    return node.controls.get(key);
+  }
+  return node.controls[key] ?? null;
+}
+
 function createReteNode(editorNode, onControl, previewText) {
   const nodeTypeDef = NODE_TYPES[editorNode.type];
   const displayLabel = editorNode.label || editorNode.type;
@@ -383,7 +391,7 @@ export class NodeEditorView {
     for (const nodeId of this.currentEditorModel.order || []) {
       const node = this.editor.getNode(nodeId);
       if (!node) continue;
-      const control = node.controls.get(VALUE_PREVIEW_CONTROL_KEY);
+      const control = getNodeControl(node, VALUE_PREVIEW_CONTROL_KEY);
       if (!control) continue;
 
       const nextText = this._getNodePreviewText(nodeId);
