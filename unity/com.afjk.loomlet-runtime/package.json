@@ -1,0 +1,18 @@
+{
+  "name": "com.afjk.loomlet-runtime",
+  "version": "0.3.0",
+  "displayName": "Loomlet Runtime",
+  "description": "Runtime-only Unity package for evaluating compiled Loomlet Graph JSON.",
+  "unity": "2021.3",
+  "keywords": [
+    "loomlet",
+    "dataflow",
+    "runtime",
+    "scenesync"
+  ],
+  "author": {
+    "name": "afjk",
+    "url": "https://github.com/afjk"
+  },
+  "license": "MIT"
+}

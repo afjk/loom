@@ -1,0 +1,21 @@
+{
+  "name": "Loomlet.Runtime.Tests",
+  "rootNamespace": "Loomlet.Runtime.Tests",
+  "references": [
+    "Loomlet.Runtime",
+    "Loomlet.Unity",
+    "UnityEngine.TestRunner",
+    "UnityEditor.TestRunner"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

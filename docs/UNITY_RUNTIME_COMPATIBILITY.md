@@ -2,11 +2,12 @@
 
 This document defines the current compatibility baseline between the JavaScript Loomlet runtime and a future Unity runtime.
 
-**It does not mean a Unity runtime is fully implemented yet.**
+The first runtime-only Unity package now lives under `unity/com.afjk.loomlet-runtime`.
 
 It defines which node semantics should be preserved when Unity support is implemented. This baseline makes future Unity implementation decisions explicit, enables early metadata consistency testing, and guides porting priorities.
 
 See [Runtime Parity Fixtures](RUNTIME_PARITY_FIXTURES.md) for data-driven test cases that verify portable node behavior across runtimes.
+See [Unity Runtime Implementation Plan](UNITY_RUNTIME_IMPLEMENTATION_PLAN.md) for current package scope, non-goals, and host authority boundaries.
 
 ## Compatibility levels
 
@@ -71,6 +72,9 @@ When implementing Unity support, prioritize in this order:
 
 ## Explicit non-goals
 
+- **Unity DSL parser/compiler**: Unity consumes compiled Graph JSON. `.loomlet` DSL parsing and compilation stay in JS/editor/tooling layers.
+- **Scene Clock control from behavior graphs**: pause, seek, resume, reset, and follow-server are host controls, not Loomlet effects.
+- **Scene Sync Unity bridge**: Scene Sync integration is a later host-adapter bridge layer, separate from the runtime core.
 - **Floating-point equivalence**: Do not require exact floating-point equality for every math edge case. Target semantic equivalence within typical numerical tolerances.
 - **DOM/Canvas/Three**: Do not implement DOM, canvas, or Three.js in Unity. Keep these as js-only.
 - **Node.js fs**: Do not guarantee Node.js `fs` behavior in Unity. File I/O should use Unity-native APIs if needed.
