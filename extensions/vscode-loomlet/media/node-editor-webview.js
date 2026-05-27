@@ -13956,7 +13956,34 @@ var LoomletPreview = (() => {
   }
 
   // ../../src/nodes/core.js
+  var SEMANTIC_COMPONENTS = /* @__PURE__ */ new Set(["right", "up", "front"]);
+  function readSemanticComponent(value, component) {
+    if (!SEMANTIC_COMPONENTS.has(component)) {
+      return void 0;
+    }
+    if (value != null && typeof value === "object" && Object.prototype.hasOwnProperty.call(value, component)) {
+      return value[component];
+    }
+    return void 0;
+  }
   function registerCoreNodes(registry) {
+    registry.registerNodeType("input", {
+      category: "source",
+      inputs: [
+        { name: "name", type: "string", default: "", kind: "behavior" },
+        { name: "default", type: "any", default: null, kind: "behavior" }
+      ],
+      outputs: [{ name: "out", type: "any", kind: "behavior" }],
+      params: [],
+      evaluate: (inputs, params, ctx) => {
+        const inputsMap = ctx.env?.inputs;
+        const name = String(inputs.name ?? "");
+        if (inputsMap && typeof inputsMap === "object" && Object.prototype.hasOwnProperty.call(inputsMap, name)) {
+          return { out: inputsMap[name] };
+        }
+        return { out: inputs.default };
+      }
+    });
     registry.registerNodeType("clock", {
       category: "source",
       inputs: [],
@@ -13967,6 +13994,108 @@ var LoomletPreview = (() => {
           throw new LoomError("MISSING_ENV_TIME", "clock requires env.time in the evaluation environment", { reason: "env.time" });
         }
         return { t: ctx.env.time };
+      }
+    });
+    registry.registerNodeType("onEvent", {
+      category: "source",
+      inputs: [],
+      outputs: [{ name: "event", type: "event<any>", kind: "event" }],
+      params: [
+        { name: "channel", type: "string", default: "" },
+        { name: "targetMode", type: "string", default: "scopeDefault" },
+        { name: "target", type: "string", default: void 0 }
+      ],
+      evaluate: (inputs, params, ctx) => {
+        const events = Array.isArray(ctx.env?.events) ? ctx.env.events : [];
+        const targetMode = params.targetMode ?? "scopeDefault";
+        if (targetMode === "explicit" && (params.target === void 0 || params.target === null)) {
+          throw new LoomError("INVALID_ONEVENT_PARAMS", 'onEvent: targetMode="explicit" requires params.target to be set', {
+            reason: "onEvent.targetMode.explicit.missingTarget"
+          });
+        }
+        const scope = ctx.env?.scope;
+        const scopeType = scope?.type;
+        const scopeId = scope?.id;
+        let effectiveMode = targetMode;
+        if (targetMode === "scopeDefault") {
+          if (scopeType === "object") {
+            effectiveMode = "self";
+          } else {
+            effectiveMode = "any";
+          }
+        }
+        return {
+          event: events.filter((event) => {
+            if (event.channel !== params.channel) return false;
+            if (effectiveMode === "any") return true;
+            if (effectiveMode === "self") {
+              if (scopeId === void 0 || scopeId === null) return false;
+              return event.target === scopeId;
+            }
+            if (effectiveMode === "explicit") {
+              return event.target === params.target;
+            }
+            return true;
+          })
+        };
+      }
+    });
+    registry.registerNodeType("risingEdge", {
+      category: "transform",
+      inputs: [{ name: "value", type: "boolean", default: false, kind: "behavior" }],
+      outputs: [{ name: "event", type: "event<void>", kind: "event" }],
+      params: [{ name: "value", type: "boolean", default: false }],
+      evaluate: (inputs, params, ctx) => {
+        const hasPrevious = ctx.state.get("hasPrevious", false);
+        const previous = ctx.state.get("previous", void 0);
+        const current = Boolean(inputs.value);
+        const shouldEmit = hasPrevious && previous === false && current === true;
+        ctx.state.set("previous", current);
+        ctx.state.set("hasPrevious", true);
+        return shouldEmit ? { event: [{ timestamp: ctx.env?.time }] } : { event: [] };
+      }
+    });
+    registry.registerNodeType("fallingEdge", {
+      category: "transform",
+      inputs: [{ name: "value", type: "boolean", default: false, kind: "behavior" }],
+      outputs: [{ name: "event", type: "event<void>", kind: "event" }],
+      params: [{ name: "value", type: "boolean", default: false }],
+      evaluate: (inputs, params, ctx) => {
+        const hasPrevious = ctx.state.get("hasPrevious", false);
+        const previous = ctx.state.get("previous", void 0);
+        const current = Boolean(inputs.value);
+        const shouldEmit = hasPrevious && previous === true && current === false;
+        ctx.state.set("previous", current);
+        ctx.state.set("hasPrevious", true);
+        return shouldEmit ? { event: [{ timestamp: ctx.env?.time }] } : { event: [] };
+      }
+    });
+    registry.registerNodeType("sendEvent", {
+      category: "sink",
+      inputs: [
+        { name: "trigger", type: "event<any>", kind: "event" },
+        { name: "payload", type: "any", default: void 0, kind: "behavior" }
+      ],
+      outputs: [],
+      params: [
+        { name: "channel", type: "string", default: "" },
+        { name: "target", type: "string", default: void 0 }
+      ],
+      evaluate: (inputs, params, ctx) => {
+        const triggers = Array.isArray(inputs.trigger) ? inputs.trigger : [];
+        const hasPayload = inputs.payload !== void 0;
+        const hasTarget = params.target !== void 0;
+        const hasTimestampHint = Number.isFinite(ctx.env?.time);
+        for (let i2 = 0; i2 < triggers.length; i2 += 1) {
+          ctx.engine?._recordEffect({
+            kind: "event.send",
+            channel: params.channel,
+            ...hasPayload ? { payload: inputs.payload } : {},
+            ...hasTarget ? { target: params.target } : {},
+            ...hasTimestampHint ? { timestampHint: ctx.env.time } : {}
+          });
+        }
+        return {};
       }
     });
     registry.registerNodeType("console.error", {
@@ -14026,6 +14155,28 @@ var LoomletPreview = (() => {
       ctx.engine?._recordEffect({ type: "debug.trace", label: inputs.label, value: inputs.value, nodeId: ctx.currentNodeId });
       return { out: inputs.value };
     } });
+    registry.registerNodeType("getComponent", {
+      category: "transform",
+      inputs: [{ name: "value", type: "any", default: null, kind: "behavior" }],
+      outputs: [{ name: "out", type: "any", kind: "behavior" }],
+      params: [{ name: "component", type: "string", default: "right" }],
+      evaluate: (inputs, params) => {
+        const component = String(params.component ?? "");
+        return { out: readSemanticComponent(inputs.value, component) };
+      }
+    });
+    registry.registerNodeType("swizzle", {
+      category: "transform",
+      inputs: [{ name: "value", type: "any", default: null, kind: "behavior" }],
+      outputs: [{ name: "out", type: "array", kind: "behavior" }],
+      params: [{ name: "components", type: "array", default: [] }],
+      evaluate: (inputs, params) => {
+        const components = Array.isArray(params.components) ? params.components : [];
+        return {
+          out: components.map((component) => readSemanticComponent(inputs.value, String(component ?? "")))
+        };
+      }
+    });
     registry.registerNodeType("delay1", {
       category: "state",
       inputs: [
@@ -15099,7 +15250,20 @@ var LoomletPreview = (() => {
       this.details = details;
     }
   };
-  var RestrictedDSLEvaluator2 = class {
+  var RestrictedDSLEvaluator = class _RestrictedDSLEvaluator {
+    static #SEMANTIC_COMPONENT_ALIASES = {
+      r: "right",
+      u: "up",
+      f: "front"
+    };
+    static #ALLOWED_VALUE_FIELDS = /* @__PURE__ */ new Set([
+      "x",
+      "y",
+      "right",
+      "up",
+      "front",
+      ...Object.keys(_RestrictedDSLEvaluator.#SEMANTIC_COMPONENT_ALIASES)
+    ]);
     constructor(dslString, nodeId) {
       this.input = dslString;
       this.pos = 0;
@@ -15317,8 +15481,9 @@ var LoomletPreview = (() => {
         this.consumeToken();
         if (ident.includes(".")) {
           const parts = ident.split(".");
-          if (parts.length === 2 && parts[0] === "value" && ["x", "y"].includes(parts[1])) {
-            return { type: "fieldAccess", object: "value", field: parts[1] };
+          if (parts.length === 2 && parts[0] === "value" && _RestrictedDSLEvaluator.#ALLOWED_VALUE_FIELDS.has(parts[1])) {
+            const normalizedField = _RestrictedDSLEvaluator.#SEMANTIC_COMPONENT_ALIASES[parts[1]] || parts[1];
+            return { type: "fieldAccess", object: "value", field: normalizedField };
           }
           this.error(`Invalid field access: ${ident}`);
         }
@@ -15460,7 +15625,10 @@ var LoomletPreview = (() => {
     "math.min",
     "math.max",
     "logic.and",
-    "logic.or"
+    "logic.or",
+    "lessThan",
+    "greaterThan",
+    "input"
   ]);
   function canUseTwoPositionalArgs(nodeName, nodeType) {
     return Boolean(nodeType.commutative || POSITIONAL_BINARY_NODE_TYPES.has(nodeName));
@@ -15583,7 +15751,7 @@ var LoomletPreview = (() => {
   }
   function normalizeTimeEnvironment(value) {
     if (!value || typeof value !== "object" || Array.isArray(value)) {
-      return {};
+      return { events: [] };
     }
     const env = {};
     if (Number.isFinite(value.time)) {
@@ -15595,7 +15763,55 @@ var LoomletPreview = (() => {
     if (Number.isFinite(value.tick)) {
       env.tick = value.tick;
     }
+    if (value.scope !== void 0 && value.scope !== null && typeof value.scope === "object" && !Array.isArray(value.scope)) {
+      env.scope = value.scope;
+    }
+    if (value.inputs !== void 0 && value.inputs !== null && typeof value.inputs === "object" && !Array.isArray(value.inputs)) {
+      env.inputs = value.inputs;
+    }
+    if (value.events === void 0) {
+      env.events = [];
+    } else {
+      if (!Array.isArray(value.events)) {
+        throw new LoomError("INVALID_ENV_EVENTS", "env.events must be an array when provided", {
+          reason: "env.events"
+        });
+      }
+      env.events = value.events.map((event, index4) => {
+        if (!event || typeof event !== "object" || Array.isArray(event)) {
+          throw new LoomError("INVALID_ENV_EVENTS", `env.events[${index4}] must be an object`, {
+            reason: "env.events",
+            index: index4
+          });
+        }
+        if (typeof event.channel !== "string") {
+          throw new LoomError("INVALID_ENV_EVENTS", `env.events[${index4}].channel must be a string`, {
+            reason: "env.events.channel",
+            index: index4
+          });
+        }
+        if (!Number.isFinite(event.timestamp)) {
+          throw new LoomError("INVALID_ENV_EVENTS", `env.events[${index4}].timestamp must be a finite number`, {
+            reason: "env.events.timestamp",
+            index: index4
+          });
+        }
+        return event;
+      });
+    }
     return env;
+  }
+  function summarizeNodeOutputsFromValues(node2, nodeType, valuesMap) {
+    const outputDefs = Array.isArray(nodeType?.outputs) ? nodeType.outputs : [];
+    if (outputDefs.length === 0) return void 0;
+    if (outputDefs.length === 1) {
+      return valuesMap.get(`${node2.id}.${outputDefs[0].name}`);
+    }
+    const summary = {};
+    for (const output of outputDefs) {
+      summary[output.name] = valuesMap.get(`${node2.id}.${output.name}`);
+    }
+    return summary;
   }
   var Loom = class {
     constructor(graph, options = {}) {
@@ -15605,6 +15821,7 @@ var LoomletPreview = (() => {
       this._sortedNodeIds = [];
       this._values = /* @__PURE__ */ new Map();
       this._prevOuts = /* @__PURE__ */ new Map();
+      this._stateSlots = /* @__PURE__ */ new Map();
       this._eventQueue = [];
       this._rafId = null;
       this._startTime = null;
@@ -15612,6 +15829,10 @@ var LoomletPreview = (() => {
       this._envProvider = null;
       this._inputStates = {};
       this._effects = [];
+      this._probeConfig = {
+        values: false
+      };
+      this._latestNodeValues = /* @__PURE__ */ new Map();
       this._loadGraphInternal(graph);
     }
     // 外部からノード型を追加するための静的メソッド（アダプタ層向け）
@@ -15620,6 +15841,19 @@ var LoomletPreview = (() => {
         throw new LoomError("DUPLICATE_NODE_TYPE", `Node type already registered: ${name}`, { name });
       }
       NODE_TYPES[name] = definition;
+    }
+    enableProbes(options = {}) {
+      this._probeConfig = {
+        ...this._probeConfig,
+        values: options.values === true
+      };
+      if (!this._probeConfig.values) {
+        this._latestNodeValues.clear();
+      }
+    }
+    disableProbes() {
+      this._probeConfig.values = false;
+      this._latestNodeValues.clear();
     }
     _activatePendingGraph(runLifecycle = true) {
       if (this._pendingGraph === null) {
@@ -15679,6 +15913,17 @@ var LoomletPreview = (() => {
             this._values.set(`${node2.id}.${output.name}`, []);
           }
         }
+        if (this._probeConfig.values) {
+          const latestValues = /* @__PURE__ */ new Map();
+          for (const node3 of this._currentGraph.nodes) {
+            const nodeType2 = this._nodeTypes[node3.type];
+            latestValues.set(
+              node3.id,
+              summarizeNodeOutputsFromValues(node3, nodeType2, this._values)
+            );
+          }
+          this._latestNodeValues = latestValues;
+        }
       }
       for (const { ref, payload } of this._eventQueue) {
         const current = this._values.get(ref) || [];
@@ -15689,6 +15934,7 @@ var LoomletPreview = (() => {
       for (const nodeId of this._sortedNodeIds) {
         const node2 = this._currentGraph.nodes.find((n2) => n2.id === nodeId);
         const nodeType = this._nodeTypes[node2.type];
+        const nodeState = this._createNodeState(nodeId);
         if (nodeType.category === "input" && nodeType.outputs.length > 0 && nodeType.outputs.every((o) => o.kind === "event")) {
           continue;
         }
@@ -15725,8 +15971,13 @@ var LoomletPreview = (() => {
         let outputs;
         if (nodeType.category === "state") {
           const initial = coerceFiniteNumber(params.initial, 0);
-          const prevOut = this._prevOuts.has(nodeId) ? this._prevOuts.get(nodeId) : initial;
-          const stateCtx = { ...ctx, prevOut: sanitizeStateValue(prevOut, initial) };
+          const prevOut = nodeState.get("prevOut", initial);
+          const stateCtx = {
+            ...ctx,
+            currentNodeId: nodeId,
+            state: nodeState,
+            prevOut: sanitizeStateValue(prevOut, initial)
+          };
           try {
             outputs = nodeType.evaluate(inputs, params, stateCtx);
             const rawOut = outputs?.out;
@@ -15734,13 +15985,18 @@ var LoomletPreview = (() => {
             const safeOut = sanitizeStateValue(rawOut, initial);
             const safeNewState = sanitizeStateValue(rawNewState, initial);
             outputs = { ...outputs, out: safeOut };
+            nodeState.set("prevOut", safeNewState);
             this._prevOuts.set(nodeId, safeNewState);
           } catch (error) {
             console.error(`State node evaluation failed: ${nodeId}`, error);
             outputs = { out: stateCtx.prevOut };
           }
         } else {
-          outputs = nodeType.evaluate(inputs, params, { ...ctx, currentNodeId: nodeId });
+          outputs = nodeType.evaluate(inputs, params, {
+            ...ctx,
+            currentNodeId: nodeId,
+            state: nodeState
+          });
         }
         for (const outputDef of nodeType.outputs) {
           const portName = outputDef.name;
@@ -15762,11 +16018,39 @@ var LoomletPreview = (() => {
     getValue(ref) {
       return this._values.get(ref);
     }
+    getLatestNodeValues() {
+      return new Map(this._latestNodeValues);
+    }
     getEffects() {
       return [...this._effects];
     }
     _recordEffect(effect) {
       this._effects.push(effect);
+    }
+    _createNodeState(nodeId) {
+      return {
+        get: (slotName, defaultValue) => {
+          const slotKey = String(slotName);
+          const nodeSlots = this._stateSlots.get(nodeId);
+          if (!nodeSlots || !nodeSlots.has(slotKey)) {
+            return defaultValue;
+          }
+          return nodeSlots.get(slotKey);
+        },
+        set: (slotName, value) => {
+          const slotKey = String(slotName);
+          let nodeSlots = this._stateSlots.get(nodeId);
+          if (!nodeSlots) {
+            nodeSlots = /* @__PURE__ */ new Map();
+            this._stateSlots.set(nodeId, nodeSlots);
+          }
+          nodeSlots.set(slotKey, value);
+        }
+      };
+    }
+    resetState() {
+      this._stateSlots.clear();
+      this._prevOuts.clear();
     }
     dispatchEvent(ref, payload) {
       const [nodeId, portName] = ref.split(".");
@@ -15868,6 +16152,12 @@ var LoomletPreview = (() => {
       return Array.isArray(graph?.nodes) && graph.nodes.some((node2) => node2?.type === type);
     }
     _reconcileStateForGraph(graph) {
+      const nextNodeIds = new Set(graph.nodes.map((node2) => node2.id));
+      for (const nodeId of Array.from(this._stateSlots.keys())) {
+        if (!nextNodeIds.has(nodeId)) {
+          this._stateSlots.delete(nodeId);
+        }
+      }
       const nextStateIds = new Set(
         graph.nodes.filter((node2) => this._nodeTypes[node2.type]?.category === "state").map((node2) => node2.id)
       );
@@ -15965,7 +16255,7 @@ var LoomletPreview = (() => {
       for (const node2 of graph.nodes) {
         if (node2.type === "filter") {
           const predicate = (node2.params && node2.params.predicate) ?? "true";
-          const dslEval = new RestrictedDSLEvaluator2(predicate, node2.id);
+          const dslEval = new RestrictedDSLEvaluator(predicate, node2.id);
           dslEval.evaluate();
         }
       }
@@ -16104,6 +16394,89 @@ var LoomletPreview = (() => {
   var DEFAULT_NODE_REGISTRY = createDefaultNodeRegistry();
   var NODE_TYPES = DEFAULT_NODE_REGISTRY.toObject();
 
+  // ../../src/value-preview.js
+  function formatNumber(value) {
+    if (!Number.isFinite(value)) return String(value);
+    if (Number.isInteger(value)) return String(value);
+    return Number(value.toFixed(3)).toString();
+  }
+  function formatString(value, maxLength = 32) {
+    if (value.length <= maxLength) return JSON.stringify(value);
+    return `${JSON.stringify(value.slice(0, maxLength))}\u2026`;
+  }
+  function isNumericVector(value) {
+    return Array.isArray(value) && value.length >= 2 && value.length <= 4 && value.every((item) => typeof item === "number" && Number.isFinite(item));
+  }
+  function formatArray(value) {
+    if (isNumericVector(value)) {
+      return `vec${value.length}(${value.map(formatNumber).join(", ")})`;
+    }
+    if (value.length === 0) return "[]";
+    const previewItems = value.slice(0, 3).map((item) => formatValuePreview(item, { depth: 1 }));
+    const suffix = value.length > 3 ? ", \u2026" : "";
+    return `[${previewItems.join(", ")}${suffix}]`;
+  }
+  function formatObject(value, depth) {
+    if (!value) return "null";
+    const keys = Object.keys(value);
+    if (keys.length === 0) return "{}";
+    const vectorKeys = ["x", "y", "z", "w"];
+    const presentVectorKeys = vectorKeys.filter((key) => typeof value[key] === "number" && Number.isFinite(value[key]));
+    if (presentVectorKeys.length >= 2) {
+      const vals = presentVectorKeys.map((key) => formatNumber(value[key]));
+      return `vec${presentVectorKeys.length}(${vals.join(", ")})`;
+    }
+    if (depth >= 1) return `{\u2026${keys.length}}`;
+    const shownKeys = keys.slice(0, 3);
+    const shown = shownKeys.map((key) => `${key}: ${formatValuePreview(value[key], { depth: depth + 1 })}`);
+    const suffix = keys.length > shownKeys.length ? ", \u2026" : "";
+    return `{${shown.join(", ")}${suffix}}`;
+  }
+  function formatValuePreview(value, { depth = 0 } = {}) {
+    if (value === void 0) return "undefined";
+    if (value === null) return "null";
+    if (typeof value === "number") return formatNumber(value);
+    if (typeof value === "boolean") return value ? "true" : "false";
+    if (typeof value === "string") return formatString(value);
+    if (typeof value === "function") return "\u0192()";
+    if (Array.isArray(value)) return formatArray(value);
+    if (typeof value === "object") return formatObject(value, depth);
+    return String(value);
+  }
+  function summarizeNodeOutputs(node2, nodeType, getValue) {
+    const outputDefs = Array.isArray(nodeType?.outputs) ? nodeType.outputs : [];
+    if (outputDefs.length === 0) return void 0;
+    if (outputDefs.length === 1) {
+      return getValue(`${node2.id}.${outputDefs[0].name}`);
+    }
+    const summary = {};
+    for (const output of outputDefs) {
+      summary[output.name] = getValue(`${node2.id}.${output.name}`);
+    }
+    return summary;
+  }
+  function getLatestNodeValues(engine, graph, nodeTypes = {}) {
+    if (!engine || !graph) return /* @__PURE__ */ new Map();
+    if (typeof engine.getLatestNodeValues === "function") {
+      const observed = engine.getLatestNodeValues();
+      if (observed instanceof Map) {
+        return observed;
+      }
+    }
+    if (typeof engine.getValue !== "function") {
+      return /* @__PURE__ */ new Map();
+    }
+    const values = /* @__PURE__ */ new Map();
+    for (const node2 of graph.nodes || []) {
+      const nodeType = nodeTypes[node2.type];
+      values.set(
+        node2.id,
+        summarizeNodeOutputs(node2, nodeType, (ref) => engine.getValue(ref))
+      );
+    }
+    return values;
+  }
+
   // ../../editor-studio/src/rete-operation-helpers.js
   function connectionToAddEdgeOp(connection) {
     return {
@@ -16178,10 +16551,11 @@ var LoomletPreview = (() => {
 
   // ../../editor-studio/src/node-editor-view.js
   var socket = new classic.Socket("value");
+  var VALUE_PREVIEW_CONTROL_KEY = "__preview";
   function getPortName(port) {
     return typeof port === "string" ? port : port.name;
   }
-  function createReteNode(editorNode, onControl) {
+  function createReteNode(editorNode, onControl, previewText) {
     const nodeTypeDef = NODE_TYPES[editorNode.type];
     const displayLabel = editorNode.label || editorNode.type;
     const node2 = new classic.Node(displayLabel);
@@ -16212,6 +16586,12 @@ var LoomletPreview = (() => {
       });
       node2.addControl(key, ctrl);
     }
+    if (previewText !== null) {
+      node2.addControl(VALUE_PREVIEW_CONTROL_KEY, new classic.InputControl("text", {
+        initial: previewText,
+        readonly: true
+      }));
+    }
     return node2;
   }
   function findReteConnectionIdByEdgeId(connectionMap, edgeId) {
@@ -16232,6 +16612,8 @@ var LoomletPreview = (() => {
       this.connectionMap = /* @__PURE__ */ new Map();
       this._renderLock = null;
       this.currentEditorModel = null;
+      this._valuePreviewEnabled = true;
+      this._nodeValuePreviews = /* @__PURE__ */ new Map();
       this.editor = new NodeEditor();
       this.area = new AreaPlugin(this.container);
       this.connectionPlugin = new ConnectionPlugin();
@@ -16291,11 +16673,16 @@ var LoomletPreview = (() => {
         if (!this.isRendering) {
           this.onOperation(op);
         }
-      });
+      }, this._getNodePreviewText(editorNode.id));
       await this.editor.addNode(reteNode);
       const pos = editorNode.position ?? { x: 0, y: 0 };
       await this.area.translate(reteNode.id, { x: pos.x, y: pos.y });
       return reteNode;
+    }
+    _getNodePreviewText(nodeId) {
+      if (!this._valuePreviewEnabled) return null;
+      if (!this._nodeValuePreviews.has(nodeId)) return "\u2014";
+      return formatValuePreview(this._nodeValuePreviews.get(nodeId));
     }
     async _addReteConnection(edge) {
       const sourceNode = this.editor.getNode(edge.fromNodeId);
@@ -16441,6 +16828,34 @@ var LoomletPreview = (() => {
       }
       this.currentEditorModel = cloneEditorModelSnapshot(editorModel);
     }
+    setNodeValuePreviews(previews) {
+      if (previews instanceof Map) {
+        this._nodeValuePreviews = previews;
+      } else if (previews && typeof previews === "object") {
+        this._nodeValuePreviews = new Map(Object.entries(previews));
+      } else {
+        this._nodeValuePreviews = /* @__PURE__ */ new Map();
+      }
+      if (!this._valuePreviewEnabled) return;
+      if (!this.currentEditorModel) return;
+      for (const nodeId of this.currentEditorModel.order || []) {
+        const node2 = this.editor.getNode(nodeId);
+        if (!node2) continue;
+        const control = node2.controls.get(VALUE_PREVIEW_CONTROL_KEY);
+        if (!control) continue;
+        const nextText = this._getNodePreviewText(nodeId);
+        if (control.value === nextText) continue;
+        control.setValue(nextText);
+        this.area?.update?.("control", control.id);
+      }
+    }
+    async setValuePreviewEnabled(enabled) {
+      const nextEnabled = enabled !== false;
+      if (this._valuePreviewEnabled === nextEnabled) return;
+      this._valuePreviewEnabled = nextEnabled;
+      if (!this.currentEditorModel) return;
+      await this.renderModel(this.currentEditorModel, { force: true });
+    }
     async focusNode(nodeId) {
       if (!nodeId || !this.editor || !this.area) {
         return false;
@@ -16475,7 +16890,10 @@ var LoomletPreview = (() => {
   var pausedAtTimestampMs = null;
   var accumulatedPausedMs = 0;
   var lastEffectsPostMs = 0;
+  var lastNodeValuesPostMs = 0;
+  var valuePreviewEnabled = true;
   var EFFECTS_POST_INTERVAL_MS = 100;
+  var NODE_VALUES_POST_INTERVAL_MS = 100;
   var hostInput = {
     mouseX: 320,
     mouseY: 240,
@@ -16633,6 +17051,7 @@ var LoomletPreview = (() => {
       const elapsedSeconds = (timestamp - runtimeStartTimestampMs - accumulatedPausedMs) / 1e3;
       loomEngine.evaluateAt({ time: elapsedSeconds }, timestamp);
       postRuntimeEffects(timestamp);
+      postNodeValuePreviews(timestamp);
       drawRuntimeCanvas();
     } catch (error) {
       console.error("[loomlet-preview] Runtime error in drawFrame:", error);
@@ -16649,6 +17068,12 @@ var LoomletPreview = (() => {
     if (consoleEffects.length === 0) return;
     lastEffectsPostMs = timestamp;
     vscode.postMessage({ type: "runtimeEffects", effects: consoleEffects });
+  }
+  function postNodeValuePreviews(timestamp) {
+    if (!valuePreviewEnabled || !editorView || !loomEngine || !currentGraph) return;
+    if (timestamp - lastNodeValuesPostMs < NODE_VALUES_POST_INTERVAL_MS) return;
+    lastNodeValuesPostMs = timestamp;
+    editorView.setNodeValuePreviews(getLatestNodeValues(loomEngine, currentGraph, NODE_TYPES));
   }
   function isConsoleEffect(effect) {
     if (!effect || typeof effect !== "object") return false;
@@ -16773,12 +17198,13 @@ var LoomletPreview = (() => {
     pausedAtTimestampMs = null;
     accumulatedPausedMs = 0;
     lastEffectsPostMs = 0;
+    lastNodeValuesPostMs = 0;
     hostInput.mouseDown = false;
   }
   function startLoom(graph) {
     stopLoom();
     currentGraph = graph || null;
-    if (!graph || !graph.render) {
+    if (!graph) {
       const canvas = document.getElementById("lp-preview-canvas");
       if (canvas) drawPlaceholder(canvas, window.devicePixelRatio || 1);
       updateControlStates();
@@ -16786,6 +17212,9 @@ var LoomletPreview = (() => {
     }
     try {
       loomEngine = new Loom({ nodes: graph.nodes || [], edges: graph.edges || [] });
+      if (valuePreviewEnabled && typeof loomEngine.enableProbes === "function") {
+        loomEngine.enableProbes({ values: true });
+      }
       loomRafId = requestAnimationFrame(drawFrame);
       updateControlStates();
     } catch (error) {
@@ -16819,7 +17248,7 @@ var LoomletPreview = (() => {
     return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
   function togglePauseResume() {
-    if (!loomEngine || !currentGraph?.render) return;
+    if (!loomEngine) return;
     if (isRuntimePaused) {
       const now = performance.now();
       if (pausedAtTimestampMs !== null) accumulatedPausedMs += now - pausedAtTimestampMs;
@@ -16836,12 +17265,13 @@ var LoomletPreview = (() => {
     updateStatus();
   }
   function resetRuntime() {
-    if (!loomEngine || !currentGraph?.render) return;
+    if (!loomEngine) return;
     runtimeStartTimestampMs = null;
     accumulatedPausedMs = 0;
     isRuntimePaused = false;
     pausedAtTimestampMs = null;
     lastEffectsPostMs = 0;
+    lastNodeValuesPostMs = 0;
     hostInput.mouseDown = false;
     const canvas = document.getElementById("lp-preview-canvas");
     const ctx = canvas?.getContext("2d");
@@ -16855,18 +17285,20 @@ var LoomletPreview = (() => {
     updateStatus();
   }
   function updateControlStates() {
-    const canControl = Boolean(loomEngine && currentGraph?.render);
+    const canControl = Boolean(loomEngine);
     const toggleBtn = document.getElementById("lp-toggle-runtime");
     const resetBtn = document.getElementById("lp-reset-runtime");
+    const valuesBtn = document.getElementById("lp-toggle-values");
     if (toggleBtn) {
       toggleBtn.disabled = !canControl;
       toggleBtn.textContent = isRuntimePaused ? "Resume" : "Pause";
     }
     if (resetBtn) resetBtn.disabled = !canControl;
+    if (valuesBtn) valuesBtn.textContent = valuePreviewEnabled ? "Hide Values" : "Show Values";
   }
   function updateStatus() {
     if (isRuntimePaused) setStatus("Paused \xB7 Runtime Preview \xB7 Read-only Node Preview", false);
-    else if (loomEngine && currentGraph?.render) setStatus("Running \xB7 Runtime Preview \xB7 Read-only Node Preview", false);
+    else if (loomEngine) setStatus("Running \xB7 Runtime Preview \xB7 Read-only Node Preview", false);
   }
   function toggleEditor() {
     editorVisible = !editorVisible;
@@ -16884,10 +17316,29 @@ var LoomletPreview = (() => {
     }
     renderErrors();
   }
+  function toggleValuePreview() {
+    valuePreviewEnabled = !valuePreviewEnabled;
+    if (editorView) {
+      editorView.setValuePreviewEnabled(valuePreviewEnabled).catch((error) => {
+        console.error("[loomlet-preview] setValuePreviewEnabled failed:", error);
+      });
+    }
+    if (loomEngine && typeof loomEngine.enableProbes === "function" && typeof loomEngine.disableProbes === "function") {
+      if (valuePreviewEnabled) {
+        loomEngine.enableProbes({ values: true });
+        lastNodeValuesPostMs = 0;
+        postNodeValuePreviews(performance.now());
+      } else {
+        loomEngine.disableProbes();
+      }
+    }
+    updateControlStates();
+  }
   function initControlButtons() {
     document.getElementById("lp-toggle-editor")?.addEventListener("click", toggleEditor);
     document.getElementById("lp-toggle-runtime")?.addEventListener("click", togglePauseResume);
     document.getElementById("lp-reset-runtime")?.addEventListener("click", resetRuntime);
+    document.getElementById("lp-toggle-values")?.addEventListener("click", toggleValuePreview);
   }
   function initEditorView() {
     if (editorView) return;
@@ -16899,6 +17350,9 @@ var LoomletPreview = (() => {
       onError: (error) => console.error("[NodeEditorView]", error),
       onSelectNode: () => {
       }
+    });
+    editorView.setValuePreviewEnabled(valuePreviewEnabled).catch((error) => {
+      console.error("[loomlet-preview] setValuePreviewEnabled init failed:", error);
     });
   }
   window.addEventListener("message", async (event) => {
