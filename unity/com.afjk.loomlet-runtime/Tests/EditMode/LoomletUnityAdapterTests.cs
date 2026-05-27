@@ -55,7 +55,42 @@ namespace Loomlet.Runtime.Tests
                 var block = new MaterialPropertyBlock();
                 go.GetComponent<Renderer>().GetPropertyBlock(block);
 
-                Assert.AreEqual(new Color(0.25f, 0.5f, 0.75f, 1f), block.GetColor("_Color"));
+                AssertColor(new Color(0.25f, 0.5f, 0.75f, 1f), block.GetColor("_Color"));
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void RendererColorBindingDoesNothingForMissingOutput()
+        {
+            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            try
+            {
+                var renderer = go.GetComponent<Renderer>();
+                var initial = new Color(0.1f, 0.2f, 0.3f, 1f);
+                LoomletUnityMaterialColor.Apply(renderer, initial);
+
+                var binding = new LoomletUnityBinding
+                {
+                    output = "missing.out",
+                    property = LoomletUnityProperty.RendererColor
+                };
+
+                binding.Apply(CreateHostInputResult(new Dictionary<string, object>
+                {
+                    ["r"] = 1.0,
+                    ["g"] = 1.0,
+                    ["b"] = 1.0,
+                    ["a"] = 1.0
+                }), go);
+
+                var block = new MaterialPropertyBlock();
+                renderer.GetPropertyBlock(block);
+
+                AssertColor(initial, block.GetColor("_Color"));
             }
             finally
             {
@@ -68,6 +103,15 @@ namespace Loomlet.Runtime.Tests
             var graph = LoomletGraph.FromJson("{\"nodes\":[{\"id\":\"color\",\"type\":\"host.input\",\"params\":{\"name\":\"color\"}}],\"edges\":[]}");
             var context = new LoomletEvaluationContext().SetHostInput("color", value);
             return new LoomletEvaluator(graph).Evaluate(context);
+        }
+
+        private static void AssertColor(Color expected, Color actual)
+        {
+            const float tolerance = 0.0001f;
+            Assert.That(actual.r, Is.EqualTo(expected.r).Within(tolerance), "r");
+            Assert.That(actual.g, Is.EqualTo(expected.g).Within(tolerance), "g");
+            Assert.That(actual.b, Is.EqualTo(expected.b).Within(tolerance), "b");
+            Assert.That(actual.a, Is.EqualTo(expected.a).Within(tolerance), "a");
         }
     }
 }
