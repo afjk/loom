@@ -191,3 +191,36 @@ jobs:
           npx @vscode/vsce publish --packagePath "$VSIX" -p "$VSCE_PAT"
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+  publish-unity-upm:
+    needs:
+      - build-release-artifacts
+      - publish-npm
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Publish Unity Runtime to upm.afjk.jp
+        working-directory: unity/com.afjk.loomlet-runtime
+        env:
+          UPM_TOKEN: ${{ secrets.UPM_TOKEN }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if [ -z "$UPM_TOKEN" ]; then
+            echo "UPM_TOKEN secret is required to publish to upm.afjk.jp"
+            exit 1
+          fi
+
+          VERSION="${RELEASE_TAG#v}"
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+          npm pack --dry-run
+
+          echo "//upm.afjk.jp/:_authToken=${UPM_TOKEN}" > ~/.npmrc
+          npm publish --registry https://upm.afjk.jp
