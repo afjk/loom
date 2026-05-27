@@ -2,9 +2,7 @@
 
 Runtime parity fixtures are data-driven graph cases used to verify that different Loomlet runtimes produce compatible results for portable nodes.
 
-The first consumer is the JavaScript runtime test suite (`test/runtime-parity-fixtures.test.mjs`).
-
-A future Unity/C# runtime can reuse the same JSON fixtures without needing the Loomlet DSL compiler, ensuring implementation parity across platforms.
+The first consumer is the JavaScript runtime test suite (`test/runtime-parity-fixtures.test.mjs`). The Unity runtime package also copies this fixture set to `unity/com.afjk.loomlet-runtime/Tests/Fixtures/portable-node-cases.json` for EditMode tests.
 
 ## Fixture Format
 
@@ -71,7 +69,7 @@ Fixtures are defined in JSON format with a stable schema:
 npm test
 ```
 
-The runtime parity tests run as part of the unit test suite.
+The runtime parity tests run as part of the unit test suite. `npm test` also runs `scripts/check-unity-runtime-fixtures.mjs`, which fails if the Unity fixture copy drifts from the JS source fixture.
 
 ## Adding New Cases
 
