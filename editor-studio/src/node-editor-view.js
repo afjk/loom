@@ -3,6 +3,7 @@ import { AreaPlugin, AreaExtensions } from 'rete-area-plugin';
 import { ConnectionPlugin, Presets as ConnectionPresets } from 'rete-connection-plugin';
 import { ReactPlugin, Presets } from 'rete-react-plugin';
 import { NODE_TYPES } from '../../src/loom.js';
+import { formatValuePreview } from '../../src/value-preview.js';
 import {
   connectionToAddEdgeOp,
   translateToMoveNodeOp,
@@ -22,12 +23,21 @@ import {
 } from './node-editor-view-diff.js';
 
 const socket = new ClassicPreset.Socket('value');
+const VALUE_PREVIEW_CONTROL_KEY = '__preview';
 
 function getPortName(port) {
   return typeof port === 'string' ? port : port.name;
 }
 
-function createReteNode(editorNode, onControl) {
+function getNodeControl(node, key) {
+  if (!node?.controls) return null;
+  if (typeof node.controls.get === 'function') {
+    return node.controls.get(key);
+  }
+  return node.controls[key] ?? null;
+}
+
+function createReteNode(editorNode, onControl, previewText) {
   const nodeTypeDef = NODE_TYPES[editorNode.type];
   const displayLabel = editorNode.label || editorNode.type;
   const node = new ClassicPreset.Node(displayLabel);
@@ -61,6 +71,13 @@ function createReteNode(editorNode, onControl) {
     node.addControl(key, ctrl);
   }
 
+  if (previewText !== null) {
+    node.addControl(VALUE_PREVIEW_CONTROL_KEY, new ClassicPreset.InputControl('text', {
+      initial: previewText,
+      readonly: true
+    }));
+  }
+
   return node;
 }
 
@@ -84,6 +101,8 @@ export class NodeEditorView {
     this.connectionMap = new Map();
     this._renderLock = null;
     this.currentEditorModel = null;
+    this._valuePreviewEnabled = true;
+    this._nodeValuePreviews = new Map();
 
     this.editor = new NodeEditor();
     this.area = new AreaPlugin(this.container);
@@ -155,7 +174,7 @@ export class NodeEditorView {
       if (!this.isRendering) {
         this.onOperation(op);
       }
-    });
+    }, this._getNodePreviewText(editorNode.id));
 
     await this.editor.addNode(reteNode);
 
@@ -163,6 +182,12 @@ export class NodeEditorView {
     await this.area.translate(reteNode.id, { x: pos.x, y: pos.y });
 
     return reteNode;
+  }
+
+  _getNodePreviewText(nodeId) {
+    if (!this._valuePreviewEnabled) return null;
+    if (!this._nodeValuePreviews.has(nodeId)) return '—';
+    return formatValuePreview(this._nodeValuePreviews.get(nodeId));
   }
 
   async _addReteConnection(edge) {
@@ -349,6 +374,39 @@ export class NodeEditorView {
     }
 
     this.currentEditorModel = cloneEditorModelSnapshot(editorModel);
+  }
+
+  setNodeValuePreviews(previews) {
+    if (previews instanceof Map) {
+      this._nodeValuePreviews = previews;
+    } else if (previews && typeof previews === 'object') {
+      this._nodeValuePreviews = new Map(Object.entries(previews));
+    } else {
+      this._nodeValuePreviews = new Map();
+    }
+
+    if (!this._valuePreviewEnabled) return;
+    if (!this.currentEditorModel) return;
+
+    for (const nodeId of this.currentEditorModel.order || []) {
+      const node = this.editor.getNode(nodeId);
+      if (!node) continue;
+      const control = getNodeControl(node, VALUE_PREVIEW_CONTROL_KEY);
+      if (!control) continue;
+
+      const nextText = this._getNodePreviewText(nodeId);
+      if (control.value === nextText) continue;
+      control.setValue(nextText);
+      this.area?.update?.('control', control.id);
+    }
+  }
+
+  async setValuePreviewEnabled(enabled) {
+    const nextEnabled = enabled !== false;
+    if (this._valuePreviewEnabled === nextEnabled) return;
+    this._valuePreviewEnabled = nextEnabled;
+    if (!this.currentEditorModel) return;
+    await this.renderModel(this.currentEditorModel, { force: true });
   }
 
   async focusNode(nodeId) {

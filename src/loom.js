@@ -665,6 +665,23 @@ function normalizeTimeEnvironment(value) {
   return env;
 }
 
+function summarizeNodeOutputsFromValues(node, nodeType, valuesMap) {
+  const outputDefs = Array.isArray(nodeType?.outputs) ? nodeType.outputs : [];
+  const getOutputName = (output) => (typeof output === 'string' ? output : output?.name);
+  if (outputDefs.length === 0) return undefined;
+
+  if (outputDefs.length === 1) {
+    return valuesMap.get(`${node.id}.${getOutputName(outputDefs[0])}`);
+  }
+
+  const summary = {};
+  for (const output of outputDefs) {
+    const outputName = getOutputName(output);
+    summary[outputName] = valuesMap.get(`${node.id}.${outputName}`);
+  }
+  return summary;
+}
+
 export class Loom {
   constructor(graph, options = {}) {
     this._nodeTypes = resolveNodeTypesOption(options);
@@ -681,6 +698,10 @@ export class Loom {
     this._envProvider = null;
     this._inputStates = {};
     this._effects = [];
+    this._probeConfig = {
+      values: false
+    };
+    this._latestNodeValues = new Map();
 
     // グラフの検証とソートを実行
     this._loadGraphInternal(graph);
@@ -692,6 +713,22 @@ export class Loom {
       throw new LoomError('DUPLICATE_NODE_TYPE', `Node type already registered: ${name}`, { name });
     }
     NODE_TYPES[name] = definition;
+  }
+
+  enableProbes(options = {}) {
+    this._probeConfig = {
+      ...this._probeConfig,
+      values: options.values === true
+    };
+
+    if (!this._probeConfig.values) {
+      this._latestNodeValues.clear();
+    }
+  }
+
+  disableProbes() {
+    this._probeConfig.values = false;
+    this._latestNodeValues.clear();
   }
 
   _activatePendingGraph(runLifecycle = true) {
@@ -767,6 +804,7 @@ export class Loom {
           this._values.set(`${node.id}.${output.name}`, []);
         }
       }
+
     }
 
     // Step 4: dispatchEvent で積まれたイベントを this._values に反映してキューをクリア
@@ -812,6 +850,7 @@ export class Loom {
             inputs[portName] = inputDef.default;
           }
         }
+
       }
 
       // パラメータ値の解決
@@ -870,6 +909,18 @@ export class Loom {
         }
       }
     }
+
+    if (this._probeConfig.values) {
+      const latestValues = new Map();
+      for (const node of this._currentGraph.nodes) {
+        const nodeType = this._nodeTypes[node.type];
+        latestValues.set(
+          node.id,
+          summarizeNodeOutputsFromValues(node, nodeType, this._values)
+        );
+      }
+      this._latestNodeValues = latestValues;
+    }
   }
 
   evaluateOnce({ env } = {}) {
@@ -882,6 +933,10 @@ export class Loom {
 
   getValue(ref) {
     return this._values.get(ref);
+  }
+
+  getLatestNodeValues() {
+    return new Map(this._latestNodeValues);
   }
 
   getEffects() {

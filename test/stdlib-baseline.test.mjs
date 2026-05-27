@@ -6,6 +6,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { Loom, LoomError, NODE_TYPES } from '../src/loom.js';
+import { formatValuePreview } from '../src/value-preview.js';
 import { runLoomSource } from '../src/toolchain/run.js';
 import { LIBRARY_METADATA } from '../src/toolchain/library-metadata.js';
 import { isLibraryAvailableInTarget } from '../src/toolchain/runtime-targets.js';
@@ -256,6 +257,54 @@ test('node context exposes deltaTime and tick aliases', () => {
   assert.equal(engine.getValue('ctx.dt'), 0.25);
   assert.equal(engine.getValue('ctx.deltaTime'), 0.25);
   assert.equal(engine.getValue('ctx.tick'), 7);
+});
+
+test('value probes capture latest node outputs without extra evaluations', () => {
+  let evaluateCalls = 0;
+  const nodeTypes = {
+    ...NODE_TYPES,
+    'test.probeCounter': {
+      category: 'source',
+      inputs: [],
+      outputs: [{ name: 'out', type: 'number', kind: 'behavior' }],
+      params: [],
+      evaluate: () => {
+        evaluateCalls += 1;
+        return { out: evaluateCalls };
+      }
+    }
+  };
+
+  const engine = new Loom({ nodes: [{ id: 'counter', type: 'test.probeCounter' }], edges: [] }, { nodeTypes });
+  engine.enableProbes({ values: true });
+  engine.evaluateOnce();
+
+  assert.equal(evaluateCalls, 1);
+  assert.equal(engine.getLatestNodeValues().get('counter'), 1);
+
+  engine.evaluateOnce();
+  assert.equal(evaluateCalls, 2);
+  assert.equal(engine.getLatestNodeValues().get('counter'), 2);
+});
+
+test('value probes can be disabled', () => {
+  const engine = new Loom({ nodes: [{ id: 'n', type: 'constant', params: { value: 3 } }], edges: [] });
+  engine.enableProbes({ values: true });
+  engine.evaluateOnce();
+  assert.equal(engine.getLatestNodeValues().get('n'), 3);
+
+  engine.disableProbes();
+  engine.evaluateOnce();
+  assert.equal(engine.getLatestNodeValues().size, 0);
+});
+
+test('value preview formatter returns compact summaries', () => {
+  assert.equal(formatValuePreview(1.23456), '1.235');
+  assert.equal(formatValuePreview(true), 'true');
+  assert.equal(formatValuePreview('loomlet'), '"loomlet"');
+  assert.equal(formatValuePreview([1, 2, 3]), 'vec3(1, 2, 3)');
+  assert.equal(formatValuePreview({ x: 1, y: 2 }), 'vec2(1, 2)');
+  assert.equal(formatValuePreview({ very: { deep: 1 } }), '{very: {…1}}');
 });
 
 test('ctx.state.get returns default when unset', () => {

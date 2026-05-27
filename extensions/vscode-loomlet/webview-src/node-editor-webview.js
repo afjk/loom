@@ -1,7 +1,8 @@
 // WebView bundle entry point for the Loomlet Node Preview panel.
 // Bundled by esbuild; runs inside a VS Code WebView (browser context).
 import { NodeEditorView } from '../../../editor-studio/src/node-editor-view.js';
-import { Loom } from '@afjk/loomlet/runtime';
+import { Loom, NODE_TYPES } from '../../../src/loom.js';
+import { getLatestNodeValues } from '../../../src/value-preview.js';
 
 const vscode = acquireVsCodeApi();
 let editorView = null;
@@ -16,8 +17,11 @@ let isRuntimePaused = false;
 let pausedAtTimestampMs = null;
 let accumulatedPausedMs = 0;
 let lastEffectsPostMs = 0;
+let lastNodeValuesPostMs = 0;
+let valuePreviewEnabled = true;
 
 const EFFECTS_POST_INTERVAL_MS = 100;
+const NODE_VALUES_POST_INTERVAL_MS = 100;
 
 const hostInput = {
   mouseX: 320,
@@ -207,6 +211,7 @@ function drawFrame(timestamp) {
     const elapsedSeconds = (timestamp - runtimeStartTimestampMs - accumulatedPausedMs) / 1000;
     loomEngine.evaluateAt({ time: elapsedSeconds }, timestamp);
     postRuntimeEffects(timestamp);
+    postNodeValuePreviews(timestamp);
     drawRuntimeCanvas();
   } catch (error) {
     console.error('[loomlet-preview] Runtime error in drawFrame:', error);
@@ -227,6 +232,14 @@ function postRuntimeEffects(timestamp) {
 
   lastEffectsPostMs = timestamp;
   vscode.postMessage({ type: 'runtimeEffects', effects: consoleEffects });
+}
+
+function postNodeValuePreviews(timestamp) {
+  if (!valuePreviewEnabled || !editorView || !loomEngine || !currentGraph) return;
+  if (timestamp - lastNodeValuesPostMs < NODE_VALUES_POST_INTERVAL_MS) return;
+
+  lastNodeValuesPostMs = timestamp;
+  editorView.setNodeValuePreviews(getLatestNodeValues(loomEngine, currentGraph, NODE_TYPES));
 }
 
 function isConsoleEffect(effect) {
@@ -367,13 +380,14 @@ function stopLoom() {
   pausedAtTimestampMs = null;
   accumulatedPausedMs = 0;
   lastEffectsPostMs = 0;
+  lastNodeValuesPostMs = 0;
   hostInput.mouseDown = false;
 }
 
 function startLoom(graph) {
   stopLoom();
   currentGraph = graph || null;
-  if (!graph || !graph.render) {
+  if (!graph) {
     const canvas = document.getElementById('lp-preview-canvas');
     if (canvas) drawPlaceholder(canvas, window.devicePixelRatio || 1);
     updateControlStates();
@@ -382,6 +396,9 @@ function startLoom(graph) {
 
   try {
     loomEngine = new Loom({ nodes: graph.nodes || [], edges: graph.edges || [] });
+    if (valuePreviewEnabled && typeof loomEngine.enableProbes === 'function') {
+      loomEngine.enableProbes({ values: true });
+    }
     loomRafId = requestAnimationFrame(drawFrame);
     updateControlStates();
   } catch (error) {
@@ -420,7 +437,7 @@ function escapeHtml(str) {
 }
 
 function togglePauseResume() {
-  if (!loomEngine || !currentGraph?.render) return;
+  if (!loomEngine) return;
   if (isRuntimePaused) {
     const now = performance.now();
     if (pausedAtTimestampMs !== null) accumulatedPausedMs += now - pausedAtTimestampMs;
@@ -438,12 +455,13 @@ function togglePauseResume() {
 }
 
 function resetRuntime() {
-  if (!loomEngine || !currentGraph?.render) return;
+  if (!loomEngine) return;
   runtimeStartTimestampMs = null;
   accumulatedPausedMs = 0;
   isRuntimePaused = false;
   pausedAtTimestampMs = null;
   lastEffectsPostMs = 0;
+  lastNodeValuesPostMs = 0;
   hostInput.mouseDown = false;
 
   const canvas = document.getElementById('lp-preview-canvas');
@@ -460,19 +478,21 @@ function resetRuntime() {
 }
 
 function updateControlStates() {
-  const canControl = Boolean(loomEngine && currentGraph?.render);
+  const canControl = Boolean(loomEngine);
   const toggleBtn = document.getElementById('lp-toggle-runtime');
   const resetBtn = document.getElementById('lp-reset-runtime');
+  const valuesBtn = document.getElementById('lp-toggle-values');
   if (toggleBtn) {
     toggleBtn.disabled = !canControl;
     toggleBtn.textContent = isRuntimePaused ? 'Resume' : 'Pause';
   }
   if (resetBtn) resetBtn.disabled = !canControl;
+  if (valuesBtn) valuesBtn.textContent = valuePreviewEnabled ? 'Hide Values' : 'Show Values';
 }
 
 function updateStatus() {
   if (isRuntimePaused) setStatus('Paused · Runtime Preview · Read-only Node Preview', false);
-  else if (loomEngine && currentGraph?.render) setStatus('Running · Runtime Preview · Read-only Node Preview', false);
+  else if (loomEngine) setStatus('Running · Runtime Preview · Read-only Node Preview', false);
 }
 
 function toggleEditor() {
@@ -492,10 +512,32 @@ function toggleEditor() {
   renderErrors();
 }
 
+function toggleValuePreview() {
+  valuePreviewEnabled = !valuePreviewEnabled;
+  if (editorView) {
+    editorView.setValuePreviewEnabled(valuePreviewEnabled).catch((error) => {
+      console.error('[loomlet-preview] setValuePreviewEnabled failed:', error);
+    });
+  }
+
+  if (loomEngine && typeof loomEngine.enableProbes === 'function' && typeof loomEngine.disableProbes === 'function') {
+    if (valuePreviewEnabled) {
+      loomEngine.enableProbes({ values: true });
+      lastNodeValuesPostMs = 0;
+      postNodeValuePreviews(performance.now());
+    } else {
+      loomEngine.disableProbes();
+    }
+  }
+
+  updateControlStates();
+}
+
 function initControlButtons() {
   document.getElementById('lp-toggle-editor')?.addEventListener('click', toggleEditor);
   document.getElementById('lp-toggle-runtime')?.addEventListener('click', togglePauseResume);
   document.getElementById('lp-reset-runtime')?.addEventListener('click', resetRuntime);
+  document.getElementById('lp-toggle-values')?.addEventListener('click', toggleValuePreview);
 }
 
 function initEditorView() {
@@ -506,6 +548,9 @@ function initEditorView() {
     onOperation: () => {},
     onError: (error) => console.error('[NodeEditorView]', error),
     onSelectNode: () => {}
+  });
+  editorView.setValuePreviewEnabled(valuePreviewEnabled).catch((error) => {
+    console.error('[loomlet-preview] setValuePreviewEnabled init failed:', error);
   });
 }
 

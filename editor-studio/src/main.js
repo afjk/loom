@@ -7,6 +7,7 @@ import { closeBrackets, closeBracketsKeymap, completionKeymap } from '@codemirro
 import { forceLinting } from '@codemirror/lint';
 
 import { Loom, NODE_TYPES } from '../../src/loom.js';
+import { getLatestNodeValues } from '../../src/value-preview.js';
 import { loomletDslExtensions } from './loomlet-codemirror.js';
 import { parseDSLToAST, compileToGraph } from '../../src/loom-dsl.js';
 import { compileLoomToSceneSyncGraph } from '../../src/scenesync/graph-adapter.js';
@@ -95,6 +96,7 @@ const SCENE_SYNC_STORAGE_KEYS = {
 const MAX_HISTORY_ENTRIES = 100;
 const MOVE_HISTORY_COALESCE_MS = 250;
 const PARAM_HISTORY_COALESCE_MS = 750;
+const NODE_VALUE_PREVIEW_INTERVAL_MS = 100;
 
 let outputEntries = [];
 const MAX_OUTPUT_ENTRIES = 500;
@@ -142,6 +144,7 @@ let moveHistoryCoalesceTimer = null;
 let activeParamHistoryKey = null;
 let paramHistoryCoalesceTimer = null;
 let editorMaximizeMode = 'split';
+let lastNodeValuePreviewAtMs = 0;
 
 const elements = {
   dslEditorHost: document.getElementById('dsl-editor-host'),
@@ -1776,6 +1779,7 @@ function runPreview(graph) {
   if (engine && typeof engine.stop === 'function') {
     engine.stop();
   }
+  lastNodeValuePreviewAtMs = 0;
 
   resizePreviewCanvas();
 
@@ -1794,6 +1798,9 @@ function runPreview(graph) {
     };
 
     engine = new Loom(graphForLoom);
+    if (typeof engine.enableProbes === 'function') {
+      engine.enableProbes({ values: true });
+    }
     engine.start({ getEnv: ({ elapsed }) => ({ time: elapsed }) });
 
     animationFrameId = requestAnimationFrame(() => {
@@ -1849,9 +1856,20 @@ function tick(engine, graph) {
         ctx.fillRect(0, y, width, height);
       }
     }
+
+    postNodeValuePreviews(engine, graph);
   }
 
   animationFrameId = requestAnimationFrame(() => tick(engine, graph));
+}
+
+function postNodeValuePreviews(engineInstance, graph) {
+  if (!nodeEditor || !engineInstance || !graph) return;
+  const now = performance.now();
+  if (now - lastNodeValuePreviewAtMs < NODE_VALUE_PREVIEW_INTERVAL_MS) return;
+  lastNodeValuePreviewAtMs = now;
+
+  nodeEditor.setNodeValuePreviews(getLatestNodeValues(engineInstance, graph, NODE_TYPES));
 }
 
 function resolveValue(engine, ref) {

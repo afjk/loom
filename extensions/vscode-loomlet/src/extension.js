@@ -539,6 +539,7 @@ function getWebviewContent(scriptUri, nonce, cspSource) {
         <div id="lp-status">Waiting for graph...</div>
         <button id="lp-toggle-runtime" class="lp-control-btn" disabled>Pause</button>
         <button id="lp-reset-runtime" class="lp-control-btn" disabled>Reset</button>
+        <button id="lp-toggle-values" class="lp-control-btn">Hide Values</button>
         <button id="lp-toggle-editor" class="lp-control-btn">Hide Editor</button>
       </div>
       <div id="lp-errors"></div>

@@ -25,9 +25,9 @@ var LoomletPreview = (() => {
     mod
   ));
 
-  // node_modules/@babel/runtime/helpers/OverloadYield.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/OverloadYield.js
   var require_OverloadYield = __commonJS({
-    "node_modules/@babel/runtime/helpers/OverloadYield.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/OverloadYield.js"(exports, module) {
       function _OverloadYield(e, d2) {
         this.v = e, this.k = d2;
       }
@@ -35,9 +35,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/regeneratorDefine.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorDefine.js
   var require_regeneratorDefine = __commonJS({
-    "node_modules/@babel/runtime/helpers/regeneratorDefine.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorDefine.js"(exports, module) {
       function _regeneratorDefine(e, r2, n2, t2) {
         var i2 = Object.defineProperty;
         try {
@@ -63,9 +63,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/regenerator.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/regenerator.js
   var require_regenerator = __commonJS({
-    "node_modules/@babel/runtime/helpers/regenerator.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/regenerator.js"(exports, module) {
       var regeneratorDefine = require_regeneratorDefine();
       function _regenerator() {
         var e, t2, r2 = "function" == typeof Symbol ? Symbol : {}, n2 = r2.iterator || "@@iterator", o = r2.toStringTag || "@@toStringTag";
@@ -145,9 +145,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/regeneratorAsyncIterator.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorAsyncIterator.js
   var require_regeneratorAsyncIterator = __commonJS({
-    "node_modules/@babel/runtime/helpers/regeneratorAsyncIterator.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorAsyncIterator.js"(exports, module) {
       var OverloadYield = require_OverloadYield();
       var regeneratorDefine = require_regeneratorDefine();
       function AsyncIterator(t2, e) {
@@ -183,9 +183,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/regeneratorAsyncGen.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorAsyncGen.js
   var require_regeneratorAsyncGen = __commonJS({
-    "node_modules/@babel/runtime/helpers/regeneratorAsyncGen.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorAsyncGen.js"(exports, module) {
       var regenerator = require_regenerator();
       var regeneratorAsyncIterator = require_regeneratorAsyncIterator();
       function _regeneratorAsyncGen(r2, e, t2, o, n2) {
@@ -195,9 +195,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/regeneratorAsync.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorAsync.js
   var require_regeneratorAsync = __commonJS({
-    "node_modules/@babel/runtime/helpers/regeneratorAsync.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorAsync.js"(exports, module) {
       var regeneratorAsyncGen = require_regeneratorAsyncGen();
       function _regeneratorAsync(n2, e, r2, t2, o) {
         var a2 = regeneratorAsyncGen(n2, e, r2, t2, o);
@@ -209,9 +209,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/regeneratorKeys.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorKeys.js
   var require_regeneratorKeys = __commonJS({
-    "node_modules/@babel/runtime/helpers/regeneratorKeys.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorKeys.js"(exports, module) {
       function _regeneratorKeys(e) {
         var n2 = Object(e), r2 = [];
         for (var t2 in n2) r2.unshift(t2);
@@ -224,9 +224,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/typeof.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/typeof.js
   var require_typeof = __commonJS({
-    "node_modules/@babel/runtime/helpers/typeof.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/typeof.js"(exports, module) {
       function _typeof2(o) {
         "@babel/helpers - typeof";
         return module.exports = _typeof2 = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o2) {
@@ -239,9 +239,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/regeneratorValues.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorValues.js
   var require_regeneratorValues = __commonJS({
-    "node_modules/@babel/runtime/helpers/regeneratorValues.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorValues.js"(exports, module) {
       var _typeof2 = require_typeof()["default"];
       function _regeneratorValues(e) {
         if (null != e) {
@@ -263,9 +263,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/regeneratorRuntime.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorRuntime.js
   var require_regeneratorRuntime = __commonJS({
-    "node_modules/@babel/runtime/helpers/regeneratorRuntime.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/helpers/regeneratorRuntime.js"(exports, module) {
       var OverloadYield = require_OverloadYield();
       var regenerator = require_regenerator();
       var regeneratorAsync = require_regeneratorAsync();
@@ -343,9 +343,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/regenerator/index.js
+  // ../../editor-studio/node_modules/@babel/runtime/regenerator/index.js
   var require_regenerator2 = __commonJS({
-    "node_modules/@babel/runtime/regenerator/index.js"(exports, module) {
+    "../../editor-studio/node_modules/@babel/runtime/regenerator/index.js"(exports, module) {
       var runtime = require_regeneratorRuntime()();
       module.exports = runtime;
       try {
@@ -360,9 +360,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/react/cjs/react.production.min.js
+  // ../../editor-studio/node_modules/react/cjs/react.production.min.js
   var require_react_production_min = __commonJS({
-    "node_modules/react/cjs/react.production.min.js"(exports) {
+    "../../editor-studio/node_modules/react/cjs/react.production.min.js"(exports) {
       "use strict";
       var l2 = Symbol.for("react.element");
       var n2 = Symbol.for("react.portal");
@@ -631,9 +631,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/react/index.js
+  // ../../editor-studio/node_modules/react/index.js
   var require_react = __commonJS({
-    "node_modules/react/index.js"(exports, module) {
+    "../../editor-studio/node_modules/react/index.js"(exports, module) {
       "use strict";
       if (true) {
         module.exports = require_react_production_min();
@@ -643,9 +643,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/scheduler/cjs/scheduler.production.min.js
+  // ../../editor-studio/node_modules/scheduler/cjs/scheduler.production.min.js
   var require_scheduler_production_min = __commonJS({
-    "node_modules/scheduler/cjs/scheduler.production.min.js"(exports) {
+    "../../editor-studio/node_modules/scheduler/cjs/scheduler.production.min.js"(exports) {
       "use strict";
       function f2(a2, b2) {
         var c2 = a2.length;
@@ -896,9 +896,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/scheduler/index.js
+  // ../../editor-studio/node_modules/scheduler/index.js
   var require_scheduler = __commonJS({
-    "node_modules/scheduler/index.js"(exports, module) {
+    "../../editor-studio/node_modules/scheduler/index.js"(exports, module) {
       "use strict";
       if (true) {
         module.exports = require_scheduler_production_min();
@@ -908,9 +908,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/react-dom/cjs/react-dom.production.min.js
+  // ../../editor-studio/node_modules/react-dom/cjs/react-dom.production.min.js
   var require_react_dom_production_min = __commonJS({
-    "node_modules/react-dom/cjs/react-dom.production.min.js"(exports) {
+    "../../editor-studio/node_modules/react-dom/cjs/react-dom.production.min.js"(exports) {
       "use strict";
       var aa = require_react();
       var ca = require_scheduler();
@@ -7520,9 +7520,9 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/react-dom/index.js
+  // ../../editor-studio/node_modules/react-dom/index.js
   var require_react_dom = __commonJS({
-    "node_modules/react-dom/index.js"(exports, module) {
+    "../../editor-studio/node_modules/react-dom/index.js"(exports, module) {
       "use strict";
       function checkDCE() {
         if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ === "undefined" || typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.checkDCE !== "function") {
@@ -7546,7 +7546,7 @@ var LoomletPreview = (() => {
     }
   });
 
-  // node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js
   function asyncGeneratorStep(n2, t2, e, r2, o, a2, c2) {
     try {
       var i2 = n2[a2](c2), u2 = i2.value;
@@ -7571,12 +7571,12 @@ var LoomletPreview = (() => {
     };
   }
 
-  // node_modules/@babel/runtime/helpers/esm/classCallCheck.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/classCallCheck.js
   function _classCallCheck(a2, n2) {
     if (!(a2 instanceof n2)) throw new TypeError("Cannot call a class as a function");
   }
 
-  // node_modules/@babel/runtime/helpers/esm/typeof.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/typeof.js
   function _typeof(o) {
     "@babel/helpers - typeof";
     return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(o2) {
@@ -7586,7 +7586,7 @@ var LoomletPreview = (() => {
     }, _typeof(o);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/toPrimitive.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/toPrimitive.js
   function toPrimitive(t2, r2) {
     if ("object" != _typeof(t2) || !t2) return t2;
     var e = t2[Symbol.toPrimitive];
@@ -7598,13 +7598,13 @@ var LoomletPreview = (() => {
     return ("string" === r2 ? String : Number)(t2);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/toPropertyKey.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/toPropertyKey.js
   function toPropertyKey(t2) {
     var i2 = toPrimitive(t2, "string");
     return "symbol" == _typeof(i2) ? i2 : i2 + "";
   }
 
-  // node_modules/@babel/runtime/helpers/esm/createClass.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/createClass.js
   function _defineProperties(e, r2) {
     for (var t2 = 0; t2 < r2.length; t2++) {
       var o = r2[t2];
@@ -7617,34 +7617,34 @@ var LoomletPreview = (() => {
     }), e;
   }
 
-  // node_modules/@babel/runtime/helpers/esm/assertThisInitialized.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/assertThisInitialized.js
   function _assertThisInitialized(e) {
     if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
     return e;
   }
 
-  // node_modules/@babel/runtime/helpers/esm/possibleConstructorReturn.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/possibleConstructorReturn.js
   function _possibleConstructorReturn(t2, e) {
     if (e && ("object" == _typeof(e) || "function" == typeof e)) return e;
     if (void 0 !== e) throw new TypeError("Derived constructors may only return object or undefined");
     return _assertThisInitialized(t2);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/getPrototypeOf.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/getPrototypeOf.js
   function _getPrototypeOf(t2) {
     return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function(t3) {
       return t3.__proto__ || Object.getPrototypeOf(t3);
     }, _getPrototypeOf(t2);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/setPrototypeOf.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/setPrototypeOf.js
   function _setPrototypeOf(t2, e) {
     return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function(t3, e2) {
       return t3.__proto__ = e2, t3;
     }, _setPrototypeOf(t2, e);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/inherits.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/inherits.js
   function _inherits(t2, e) {
     if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function");
     t2.prototype = Object.create(e && e.prototype, {
@@ -7658,7 +7658,7 @@ var LoomletPreview = (() => {
     }), e && _setPrototypeOf(t2, e);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/defineProperty.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/defineProperty.js
   function _defineProperty(e, r2, t2) {
     return (r2 = toPropertyKey(r2)) in e ? Object.defineProperty(e, r2, {
       value: t2,
@@ -7668,7 +7668,7 @@ var LoomletPreview = (() => {
     }) : e[r2] = t2, e;
   }
 
-  // node_modules/rete/rete.esm.js
+  // ../../editor-studio/node_modules/rete/rete.esm.js
   var import_regenerator = __toESM(require_regenerator2());
   function _createForOfIteratorHelper$1(r2, e) {
     var t2 = "undefined" != typeof Symbol && r2[Symbol.iterator] || r2["@@iterator"];
@@ -8466,27 +8466,27 @@ var LoomletPreview = (() => {
     Connection
   });
 
-  // node_modules/rete-area-plugin/rete-area-plugin.esm.js
+  // ../../editor-studio/node_modules/rete-area-plugin/rete-area-plugin.esm.js
   var import_regenerator2 = __toESM(require_regenerator2());
 
-  // node_modules/@babel/runtime/helpers/esm/arrayLikeToArray.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/arrayLikeToArray.js
   function _arrayLikeToArray2(r2, a2) {
     (null == a2 || a2 > r2.length) && (a2 = r2.length);
     for (var e = 0, n2 = Array(a2); e < a2; e++) n2[e] = r2[e];
     return n2;
   }
 
-  // node_modules/@babel/runtime/helpers/esm/arrayWithoutHoles.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/arrayWithoutHoles.js
   function _arrayWithoutHoles(r2) {
     if (Array.isArray(r2)) return _arrayLikeToArray2(r2);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/iterableToArray.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/iterableToArray.js
   function _iterableToArray(r2) {
     if ("undefined" != typeof Symbol && null != r2[Symbol.iterator] || null != r2["@@iterator"]) return Array.from(r2);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/unsupportedIterableToArray.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/unsupportedIterableToArray.js
   function _unsupportedIterableToArray2(r2, a2) {
     if (r2) {
       if ("string" == typeof r2) return _arrayLikeToArray2(r2, a2);
@@ -8495,17 +8495,17 @@ var LoomletPreview = (() => {
     }
   }
 
-  // node_modules/@babel/runtime/helpers/esm/nonIterableSpread.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/nonIterableSpread.js
   function _nonIterableSpread() {
     throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
   }
 
-  // node_modules/@babel/runtime/helpers/esm/toConsumableArray.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/toConsumableArray.js
   function _toConsumableArray(r2) {
     return _arrayWithoutHoles(r2) || _iterableToArray(r2) || _unsupportedIterableToArray2(r2) || _nonIterableSpread();
   }
 
-  // node_modules/rete-area-plugin/rete-area-plugin.esm.js
+  // ../../editor-studio/node_modules/rete-area-plugin/rete-area-plugin.esm.js
   var Content = /* @__PURE__ */ function() {
     function Content2(reordered) {
       _classCallCheck(this, Content2);
@@ -10247,13 +10247,13 @@ var LoomletPreview = (() => {
     }]);
   }(BaseAreaPlugin);
 
-  // node_modules/@babel/runtime/helpers/esm/superPropBase.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/superPropBase.js
   function _superPropBase(t2, o) {
     for (; !{}.hasOwnProperty.call(t2, o) && null !== (t2 = _getPrototypeOf(t2)); ) ;
     return t2;
   }
 
-  // node_modules/@babel/runtime/helpers/esm/get.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/get.js
   function _get() {
     return _get = "undefined" != typeof Reflect && Reflect.get ? Reflect.get.bind() : function(e, t2, r2) {
       var p2 = _superPropBase(e, t2);
@@ -10264,15 +10264,15 @@ var LoomletPreview = (() => {
     }, _get.apply(null, arguments);
   }
 
-  // node_modules/rete-connection-plugin/rete-connection-plugin.esm.js
+  // ../../editor-studio/node_modules/rete-connection-plugin/rete-connection-plugin.esm.js
   var import_regenerator3 = __toESM(require_regenerator2());
 
-  // node_modules/@babel/runtime/helpers/esm/arrayWithHoles.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/arrayWithHoles.js
   function _arrayWithHoles(r2) {
     if (Array.isArray(r2)) return r2;
   }
 
-  // node_modules/@babel/runtime/helpers/esm/iterableToArrayLimit.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/iterableToArrayLimit.js
   function _iterableToArrayLimit(r2, l2) {
     var t2 = null == r2 ? null : "undefined" != typeof Symbol && r2[Symbol.iterator] || r2["@@iterator"];
     if (null != t2) {
@@ -10295,17 +10295,17 @@ var LoomletPreview = (() => {
     }
   }
 
-  // node_modules/@babel/runtime/helpers/esm/nonIterableRest.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/nonIterableRest.js
   function _nonIterableRest() {
     throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
   }
 
-  // node_modules/@babel/runtime/helpers/esm/slicedToArray.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/slicedToArray.js
   function _slicedToArray(r2, e) {
     return _arrayWithHoles(r2) || _iterableToArrayLimit(r2, e) || _unsupportedIterableToArray2(r2, e) || _nonIterableRest();
   }
 
-  // node_modules/rete-connection-plugin/rete-connection-plugin.esm.js
+  // ../../editor-studio/node_modules/rete-connection-plugin/rete-connection-plugin.esm.js
   function ownKeys2(e, r2) {
     var t2 = Object.keys(e);
     if (Object.getOwnPropertySymbols) {
@@ -11060,14 +11060,14 @@ var LoomletPreview = (() => {
     }]);
   }(Scope);
 
-  // node_modules/rete-react-plugin/rete-react-plugin.esm.js
+  // ../../editor-studio/node_modules/rete-react-plugin/rete-react-plugin.esm.js
   var React = __toESM(require_react());
   var import_react2 = __toESM(require_react());
   var ReactDOM = __toESM(require_react_dom());
   var import_react_dom = __toESM(require_react_dom());
   var import_regenerator5 = __toESM(require_regenerator2());
 
-  // node_modules/rete-render-utils/rete-render-utils.esm.js
+  // ../../editor-studio/node_modules/rete-render-utils/rete-render-utils.esm.js
   var import_regenerator4 = __toESM(require_regenerator2());
   function classicConnectionPath(points, curvature) {
     var _points = _slicedToArray(points, 2), _points$ = _points[0], x1 = _points$.x, y1 = _points$.y, _points$2 = _points[1], x2 = _points$2.x, y2 = _points$2.y;
@@ -11428,7 +11428,7 @@ var LoomletPreview = (() => {
     return new DOMSocketPosition(props);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/taggedTemplateLiteral.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/taggedTemplateLiteral.js
   function _taggedTemplateLiteral(e, t2) {
     return t2 || (t2 = e.slice(0)), Object.freeze(Object.defineProperties(e, {
       raw: {
@@ -11437,10 +11437,10 @@ var LoomletPreview = (() => {
     }));
   }
 
-  // node_modules/styled-components/dist/styled-components.browser.esm.js
+  // ../../editor-studio/node_modules/styled-components/dist/styled-components.browser.esm.js
   var import_react = __toESM(require_react());
 
-  // node_modules/stylis/src/Enum.js
+  // ../../editor-studio/node_modules/stylis/src/Enum.js
   var MS = "-ms-";
   var MOZ = "-moz-";
   var WEBKIT = "-webkit-";
@@ -11452,7 +11452,7 @@ var LoomletPreview = (() => {
   var KEYFRAMES = "@keyframes";
   var LAYER = "@layer";
 
-  // node_modules/stylis/src/Utility.js
+  // ../../editor-studio/node_modules/stylis/src/Utility.js
   var abs = Math.abs;
   var from = String.fromCharCode;
   var assign = Object.assign;
@@ -11495,7 +11495,7 @@ var LoomletPreview = (() => {
     });
   }
 
-  // node_modules/stylis/src/Tokenizer.js
+  // ../../editor-studio/node_modules/stylis/src/Tokenizer.js
   var line = 1;
   var column = 1;
   var length = 0;
@@ -11626,7 +11626,7 @@ var LoomletPreview = (() => {
     return slice(index4, position);
   }
 
-  // node_modules/stylis/src/Parser.js
+  // ../../editor-studio/node_modules/stylis/src/Parser.js
   function compile(value) {
     return dealloc(parse("", null, null, null, [""], value = alloc(value), 0, [0], value));
   }
@@ -11763,7 +11763,7 @@ var LoomletPreview = (() => {
     return node(value, root, parent, DECLARATION, substr(value, 0, length2), substr(value, length2 + 1, -1), length2, siblings);
   }
 
-  // node_modules/stylis/src/Prefixer.js
+  // ../../editor-studio/node_modules/stylis/src/Prefixer.js
   function prefix(value, length2, children) {
     switch (hash(value, length2)) {
       case 5103:
@@ -11913,7 +11913,7 @@ var LoomletPreview = (() => {
     return value;
   }
 
-  // node_modules/stylis/src/Serializer.js
+  // ../../editor-studio/node_modules/stylis/src/Serializer.js
   function serialize(children, callback) {
     var output = "";
     for (var i2 = 0; i2 < children.length; i2++)
@@ -11938,7 +11938,7 @@ var LoomletPreview = (() => {
     return strlen(children = serialize(element.children, callback)) ? element.return = element.value + "{" + children + "}" : "";
   }
 
-  // node_modules/stylis/src/Middleware.js
+  // ../../editor-studio/node_modules/stylis/src/Middleware.js
   function middleware(collection) {
     var length2 = sizeof(collection);
     return function(element, index4, children, callback) {
@@ -11989,7 +11989,7 @@ var LoomletPreview = (() => {
     }
   }
 
-  // node_modules/styled-components/dist/styled-components.browser.esm.js
+  // ../../editor-studio/node_modules/styled-components/dist/styled-components.browser.esm.js
   var r;
   var i;
   var c = "undefined" != typeof process && void 0 !== process.env && (process.env.REACT_APP_SC_ATTR || process.env.SC_ATTR) || "data-styled";
@@ -12610,7 +12610,7 @@ var LoomletPreview = (() => {
   var $t = `:not(style[${c}])`;
   var Rt = `style[${c}]`;
 
-  // node_modules/@babel/runtime/helpers/esm/extends.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/extends.js
   function _extends() {
     return _extends = Object.assign ? Object.assign.bind() : function(n2) {
       for (var e = 1; e < arguments.length; e++) {
@@ -12621,7 +12621,7 @@ var LoomletPreview = (() => {
     }, _extends.apply(null, arguments);
   }
 
-  // node_modules/@babel/runtime/helpers/esm/objectWithoutPropertiesLoose.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/objectWithoutPropertiesLoose.js
   function _objectWithoutPropertiesLoose(r2, e) {
     if (null == r2) return {};
     var t2 = {};
@@ -12632,7 +12632,7 @@ var LoomletPreview = (() => {
     return t2;
   }
 
-  // node_modules/@babel/runtime/helpers/esm/objectWithoutProperties.js
+  // ../../editor-studio/node_modules/@babel/runtime/helpers/esm/objectWithoutProperties.js
   function _objectWithoutProperties(e, t2) {
     if (null == e) return {};
     var o, r2, i2 = _objectWithoutPropertiesLoose(e, t2);
@@ -12643,7 +12643,7 @@ var LoomletPreview = (() => {
     return i2;
   }
 
-  // node_modules/rete-react-plugin/rete-react-plugin.esm.js
+  // ../../editor-studio/node_modules/rete-react-plugin/rete-react-plugin.esm.js
   function getRenderer(props) {
     var createRoot = props === null || props === void 0 ? void 0 : props.createRoot;
     var wrappers = /* @__PURE__ */ new WeakMap();
@@ -13956,7 +13956,34 @@ var LoomletPreview = (() => {
   }
 
   // ../../src/nodes/core.js
+  var SEMANTIC_COMPONENTS = /* @__PURE__ */ new Set(["right", "up", "front"]);
+  function readSemanticComponent(value, component) {
+    if (!SEMANTIC_COMPONENTS.has(component)) {
+      return void 0;
+    }
+    if (value != null && typeof value === "object" && Object.prototype.hasOwnProperty.call(value, component)) {
+      return value[component];
+    }
+    return void 0;
+  }
   function registerCoreNodes(registry) {
+    registry.registerNodeType("input", {
+      category: "source",
+      inputs: [
+        { name: "name", type: "string", default: "", kind: "behavior" },
+        { name: "default", type: "any", default: null, kind: "behavior" }
+      ],
+      outputs: [{ name: "out", type: "any", kind: "behavior" }],
+      params: [],
+      evaluate: (inputs, params, ctx) => {
+        const inputsMap = ctx.env?.inputs;
+        const name = String(inputs.name ?? "");
+        if (inputsMap && typeof inputsMap === "object" && Object.prototype.hasOwnProperty.call(inputsMap, name)) {
+          return { out: inputsMap[name] };
+        }
+        return { out: inputs.default };
+      }
+    });
     registry.registerNodeType("clock", {
       category: "source",
       inputs: [],
@@ -13967,6 +13994,108 @@ var LoomletPreview = (() => {
           throw new LoomError("MISSING_ENV_TIME", "clock requires env.time in the evaluation environment", { reason: "env.time" });
         }
         return { t: ctx.env.time };
+      }
+    });
+    registry.registerNodeType("onEvent", {
+      category: "source",
+      inputs: [],
+      outputs: [{ name: "event", type: "event<any>", kind: "event" }],
+      params: [
+        { name: "channel", type: "string", default: "" },
+        { name: "targetMode", type: "string", default: "scopeDefault" },
+        { name: "target", type: "string", default: void 0 }
+      ],
+      evaluate: (inputs, params, ctx) => {
+        const events = Array.isArray(ctx.env?.events) ? ctx.env.events : [];
+        const targetMode = params.targetMode ?? "scopeDefault";
+        if (targetMode === "explicit" && (params.target === void 0 || params.target === null)) {
+          throw new LoomError("INVALID_ONEVENT_PARAMS", 'onEvent: targetMode="explicit" requires params.target to be set', {
+            reason: "onEvent.targetMode.explicit.missingTarget"
+          });
+        }
+        const scope = ctx.env?.scope;
+        const scopeType = scope?.type;
+        const scopeId = scope?.id;
+        let effectiveMode = targetMode;
+        if (targetMode === "scopeDefault") {
+          if (scopeType === "object") {
+            effectiveMode = "self";
+          } else {
+            effectiveMode = "any";
+          }
+        }
+        return {
+          event: events.filter((event) => {
+            if (event.channel !== params.channel) return false;
+            if (effectiveMode === "any") return true;
+            if (effectiveMode === "self") {
+              if (scopeId === void 0 || scopeId === null) return false;
+              return event.target === scopeId;
+            }
+            if (effectiveMode === "explicit") {
+              return event.target === params.target;
+            }
+            return true;
+          })
+        };
+      }
+    });
+    registry.registerNodeType("risingEdge", {
+      category: "transform",
+      inputs: [{ name: "value", type: "boolean", default: false, kind: "behavior" }],
+      outputs: [{ name: "event", type: "event<void>", kind: "event" }],
+      params: [{ name: "value", type: "boolean", default: false }],
+      evaluate: (inputs, params, ctx) => {
+        const hasPrevious = ctx.state.get("hasPrevious", false);
+        const previous = ctx.state.get("previous", void 0);
+        const current = Boolean(inputs.value);
+        const shouldEmit = hasPrevious && previous === false && current === true;
+        ctx.state.set("previous", current);
+        ctx.state.set("hasPrevious", true);
+        return shouldEmit ? { event: [{ timestamp: ctx.env?.time }] } : { event: [] };
+      }
+    });
+    registry.registerNodeType("fallingEdge", {
+      category: "transform",
+      inputs: [{ name: "value", type: "boolean", default: false, kind: "behavior" }],
+      outputs: [{ name: "event", type: "event<void>", kind: "event" }],
+      params: [{ name: "value", type: "boolean", default: false }],
+      evaluate: (inputs, params, ctx) => {
+        const hasPrevious = ctx.state.get("hasPrevious", false);
+        const previous = ctx.state.get("previous", void 0);
+        const current = Boolean(inputs.value);
+        const shouldEmit = hasPrevious && previous === true && current === false;
+        ctx.state.set("previous", current);
+        ctx.state.set("hasPrevious", true);
+        return shouldEmit ? { event: [{ timestamp: ctx.env?.time }] } : { event: [] };
+      }
+    });
+    registry.registerNodeType("sendEvent", {
+      category: "sink",
+      inputs: [
+        { name: "trigger", type: "event<any>", kind: "event" },
+        { name: "payload", type: "any", default: void 0, kind: "behavior" }
+      ],
+      outputs: [],
+      params: [
+        { name: "channel", type: "string", default: "" },
+        { name: "target", type: "string", default: void 0 }
+      ],
+      evaluate: (inputs, params, ctx) => {
+        const triggers = Array.isArray(inputs.trigger) ? inputs.trigger : [];
+        const hasPayload = inputs.payload !== void 0;
+        const hasTarget = params.target !== void 0;
+        const hasTimestampHint = Number.isFinite(ctx.env?.time);
+        for (let i2 = 0; i2 < triggers.length; i2 += 1) {
+          ctx.engine?._recordEffect({
+            kind: "event.send",
+            channel: params.channel,
+            ...hasPayload ? { payload: inputs.payload } : {},
+            ...hasTarget ? { target: params.target } : {},
+            ...hasTimestampHint ? { timestampHint: ctx.env.time } : {}
+          });
+        }
+        return {};
       }
     });
     registry.registerNodeType("console.error", {
@@ -14026,6 +14155,28 @@ var LoomletPreview = (() => {
       ctx.engine?._recordEffect({ type: "debug.trace", label: inputs.label, value: inputs.value, nodeId: ctx.currentNodeId });
       return { out: inputs.value };
     } });
+    registry.registerNodeType("getComponent", {
+      category: "transform",
+      inputs: [{ name: "value", type: "any", default: null, kind: "behavior" }],
+      outputs: [{ name: "out", type: "any", kind: "behavior" }],
+      params: [{ name: "component", type: "string", default: "right" }],
+      evaluate: (inputs, params) => {
+        const component = String(params.component ?? "");
+        return { out: readSemanticComponent(inputs.value, component) };
+      }
+    });
+    registry.registerNodeType("swizzle", {
+      category: "transform",
+      inputs: [{ name: "value", type: "any", default: null, kind: "behavior" }],
+      outputs: [{ name: "out", type: "array", kind: "behavior" }],
+      params: [{ name: "components", type: "array", default: [] }],
+      evaluate: (inputs, params) => {
+        const components = Array.isArray(params.components) ? params.components : [];
+        return {
+          out: components.map((component) => readSemanticComponent(inputs.value, String(component ?? "")))
+        };
+      }
+    });
     registry.registerNodeType("delay1", {
       category: "state",
       inputs: [
@@ -15099,7 +15250,20 @@ var LoomletPreview = (() => {
       this.details = details;
     }
   };
-  var RestrictedDSLEvaluator2 = class {
+  var RestrictedDSLEvaluator = class _RestrictedDSLEvaluator {
+    static #SEMANTIC_COMPONENT_ALIASES = {
+      r: "right",
+      u: "up",
+      f: "front"
+    };
+    static #ALLOWED_VALUE_FIELDS = /* @__PURE__ */ new Set([
+      "x",
+      "y",
+      "right",
+      "up",
+      "front",
+      ...Object.keys(_RestrictedDSLEvaluator.#SEMANTIC_COMPONENT_ALIASES)
+    ]);
     constructor(dslString, nodeId) {
       this.input = dslString;
       this.pos = 0;
@@ -15317,8 +15481,9 @@ var LoomletPreview = (() => {
         this.consumeToken();
         if (ident.includes(".")) {
           const parts = ident.split(".");
-          if (parts.length === 2 && parts[0] === "value" && ["x", "y"].includes(parts[1])) {
-            return { type: "fieldAccess", object: "value", field: parts[1] };
+          if (parts.length === 2 && parts[0] === "value" && _RestrictedDSLEvaluator.#ALLOWED_VALUE_FIELDS.has(parts[1])) {
+            const normalizedField = _RestrictedDSLEvaluator.#SEMANTIC_COMPONENT_ALIASES[parts[1]] || parts[1];
+            return { type: "fieldAccess", object: "value", field: normalizedField };
           }
           this.error(`Invalid field access: ${ident}`);
         }
@@ -15460,7 +15625,10 @@ var LoomletPreview = (() => {
     "math.min",
     "math.max",
     "logic.and",
-    "logic.or"
+    "logic.or",
+    "lessThan",
+    "greaterThan",
+    "input"
   ]);
   function canUseTwoPositionalArgs(nodeName, nodeType) {
     return Boolean(nodeType.commutative || POSITIONAL_BINARY_NODE_TYPES.has(nodeName));
@@ -15583,7 +15751,7 @@ var LoomletPreview = (() => {
   }
   function normalizeTimeEnvironment(value) {
     if (!value || typeof value !== "object" || Array.isArray(value)) {
-      return {};
+      return { events: [] };
     }
     const env = {};
     if (Number.isFinite(value.time)) {
@@ -15595,7 +15763,57 @@ var LoomletPreview = (() => {
     if (Number.isFinite(value.tick)) {
       env.tick = value.tick;
     }
+    if (value.scope !== void 0 && value.scope !== null && typeof value.scope === "object" && !Array.isArray(value.scope)) {
+      env.scope = value.scope;
+    }
+    if (value.inputs !== void 0 && value.inputs !== null && typeof value.inputs === "object" && !Array.isArray(value.inputs)) {
+      env.inputs = value.inputs;
+    }
+    if (value.events === void 0) {
+      env.events = [];
+    } else {
+      if (!Array.isArray(value.events)) {
+        throw new LoomError("INVALID_ENV_EVENTS", "env.events must be an array when provided", {
+          reason: "env.events"
+        });
+      }
+      env.events = value.events.map((event, index4) => {
+        if (!event || typeof event !== "object" || Array.isArray(event)) {
+          throw new LoomError("INVALID_ENV_EVENTS", `env.events[${index4}] must be an object`, {
+            reason: "env.events",
+            index: index4
+          });
+        }
+        if (typeof event.channel !== "string") {
+          throw new LoomError("INVALID_ENV_EVENTS", `env.events[${index4}].channel must be a string`, {
+            reason: "env.events.channel",
+            index: index4
+          });
+        }
+        if (!Number.isFinite(event.timestamp)) {
+          throw new LoomError("INVALID_ENV_EVENTS", `env.events[${index4}].timestamp must be a finite number`, {
+            reason: "env.events.timestamp",
+            index: index4
+          });
+        }
+        return event;
+      });
+    }
     return env;
+  }
+  function summarizeNodeOutputsFromValues(node2, nodeType, valuesMap) {
+    const outputDefs = Array.isArray(nodeType?.outputs) ? nodeType.outputs : [];
+    const getOutputName = (output) => typeof output === "string" ? output : output?.name;
+    if (outputDefs.length === 0) return void 0;
+    if (outputDefs.length === 1) {
+      return valuesMap.get(`${node2.id}.${getOutputName(outputDefs[0])}`);
+    }
+    const summary = {};
+    for (const output of outputDefs) {
+      const outputName = getOutputName(output);
+      summary[outputName] = valuesMap.get(`${node2.id}.${outputName}`);
+    }
+    return summary;
   }
   var Loom = class {
     constructor(graph, options = {}) {
@@ -15605,6 +15823,7 @@ var LoomletPreview = (() => {
       this._sortedNodeIds = [];
       this._values = /* @__PURE__ */ new Map();
       this._prevOuts = /* @__PURE__ */ new Map();
+      this._stateSlots = /* @__PURE__ */ new Map();
       this._eventQueue = [];
       this._rafId = null;
       this._startTime = null;
@@ -15612,6 +15831,10 @@ var LoomletPreview = (() => {
       this._envProvider = null;
       this._inputStates = {};
       this._effects = [];
+      this._probeConfig = {
+        values: false
+      };
+      this._latestNodeValues = /* @__PURE__ */ new Map();
       this._loadGraphInternal(graph);
     }
     // 外部からノード型を追加するための静的メソッド（アダプタ層向け）
@@ -15620,6 +15843,19 @@ var LoomletPreview = (() => {
         throw new LoomError("DUPLICATE_NODE_TYPE", `Node type already registered: ${name}`, { name });
       }
       NODE_TYPES[name] = definition;
+    }
+    enableProbes(options = {}) {
+      this._probeConfig = {
+        ...this._probeConfig,
+        values: options.values === true
+      };
+      if (!this._probeConfig.values) {
+        this._latestNodeValues.clear();
+      }
+    }
+    disableProbes() {
+      this._probeConfig.values = false;
+      this._latestNodeValues.clear();
     }
     _activatePendingGraph(runLifecycle = true) {
       if (this._pendingGraph === null) {
@@ -15689,6 +15925,7 @@ var LoomletPreview = (() => {
       for (const nodeId of this._sortedNodeIds) {
         const node2 = this._currentGraph.nodes.find((n2) => n2.id === nodeId);
         const nodeType = this._nodeTypes[node2.type];
+        const nodeState = this._createNodeState(nodeId);
         if (nodeType.category === "input" && nodeType.outputs.length > 0 && nodeType.outputs.every((o) => o.kind === "event")) {
           continue;
         }
@@ -15725,8 +15962,13 @@ var LoomletPreview = (() => {
         let outputs;
         if (nodeType.category === "state") {
           const initial = coerceFiniteNumber(params.initial, 0);
-          const prevOut = this._prevOuts.has(nodeId) ? this._prevOuts.get(nodeId) : initial;
-          const stateCtx = { ...ctx, prevOut: sanitizeStateValue(prevOut, initial) };
+          const prevOut = nodeState.get("prevOut", initial);
+          const stateCtx = {
+            ...ctx,
+            currentNodeId: nodeId,
+            state: nodeState,
+            prevOut: sanitizeStateValue(prevOut, initial)
+          };
           try {
             outputs = nodeType.evaluate(inputs, params, stateCtx);
             const rawOut = outputs?.out;
@@ -15734,13 +15976,18 @@ var LoomletPreview = (() => {
             const safeOut = sanitizeStateValue(rawOut, initial);
             const safeNewState = sanitizeStateValue(rawNewState, initial);
             outputs = { ...outputs, out: safeOut };
+            nodeState.set("prevOut", safeNewState);
             this._prevOuts.set(nodeId, safeNewState);
           } catch (error) {
             console.error(`State node evaluation failed: ${nodeId}`, error);
             outputs = { out: stateCtx.prevOut };
           }
         } else {
-          outputs = nodeType.evaluate(inputs, params, { ...ctx, currentNodeId: nodeId });
+          outputs = nodeType.evaluate(inputs, params, {
+            ...ctx,
+            currentNodeId: nodeId,
+            state: nodeState
+          });
         }
         for (const outputDef of nodeType.outputs) {
           const portName = outputDef.name;
@@ -15752,6 +15999,17 @@ var LoomletPreview = (() => {
           }
         }
       }
+      if (this._probeConfig.values) {
+        const latestValues = /* @__PURE__ */ new Map();
+        for (const node2 of this._currentGraph.nodes) {
+          const nodeType = this._nodeTypes[node2.type];
+          latestValues.set(
+            node2.id,
+            summarizeNodeOutputsFromValues(node2, nodeType, this._values)
+          );
+        }
+        this._latestNodeValues = latestValues;
+      }
     }
     evaluateOnce({ env } = {}) {
       const resolvedEnv = normalizeTimeEnvironment(env);
@@ -15762,11 +16020,39 @@ var LoomletPreview = (() => {
     getValue(ref) {
       return this._values.get(ref);
     }
+    getLatestNodeValues() {
+      return new Map(this._latestNodeValues);
+    }
     getEffects() {
       return [...this._effects];
     }
     _recordEffect(effect) {
       this._effects.push(effect);
+    }
+    _createNodeState(nodeId) {
+      return {
+        get: (slotName, defaultValue) => {
+          const slotKey = String(slotName);
+          const nodeSlots = this._stateSlots.get(nodeId);
+          if (!nodeSlots || !nodeSlots.has(slotKey)) {
+            return defaultValue;
+          }
+          return nodeSlots.get(slotKey);
+        },
+        set: (slotName, value) => {
+          const slotKey = String(slotName);
+          let nodeSlots = this._stateSlots.get(nodeId);
+          if (!nodeSlots) {
+            nodeSlots = /* @__PURE__ */ new Map();
+            this._stateSlots.set(nodeId, nodeSlots);
+          }
+          nodeSlots.set(slotKey, value);
+        }
+      };
+    }
+    resetState() {
+      this._stateSlots.clear();
+      this._prevOuts.clear();
     }
     dispatchEvent(ref, payload) {
       const [nodeId, portName] = ref.split(".");
@@ -15868,6 +16154,12 @@ var LoomletPreview = (() => {
       return Array.isArray(graph?.nodes) && graph.nodes.some((node2) => node2?.type === type);
     }
     _reconcileStateForGraph(graph) {
+      const nextNodeIds = new Set(graph.nodes.map((node2) => node2.id));
+      for (const nodeId of Array.from(this._stateSlots.keys())) {
+        if (!nextNodeIds.has(nodeId)) {
+          this._stateSlots.delete(nodeId);
+        }
+      }
       const nextStateIds = new Set(
         graph.nodes.filter((node2) => this._nodeTypes[node2.type]?.category === "state").map((node2) => node2.id)
       );
@@ -15965,7 +16257,7 @@ var LoomletPreview = (() => {
       for (const node2 of graph.nodes) {
         if (node2.type === "filter") {
           const predicate = (node2.params && node2.params.predicate) ?? "true";
-          const dslEval = new RestrictedDSLEvaluator2(predicate, node2.id);
+          const dslEval = new RestrictedDSLEvaluator(predicate, node2.id);
           dslEval.evaluate();
         }
       }
@@ -16104,6 +16396,91 @@ var LoomletPreview = (() => {
   var DEFAULT_NODE_REGISTRY = createDefaultNodeRegistry();
   var NODE_TYPES = DEFAULT_NODE_REGISTRY.toObject();
 
+  // ../../src/value-preview.js
+  function formatNumber(value) {
+    if (!Number.isFinite(value)) return String(value);
+    if (Number.isInteger(value)) return String(value);
+    return Number(value.toFixed(3)).toString();
+  }
+  function formatString(value, maxLength = 32) {
+    if (value.length <= maxLength) return JSON.stringify(value);
+    return `${JSON.stringify(value.slice(0, maxLength))}\u2026`;
+  }
+  function isNumericVector(value) {
+    return Array.isArray(value) && value.length >= 2 && value.length <= 4 && value.every((item) => typeof item === "number" && Number.isFinite(item));
+  }
+  function formatArray(value) {
+    if (isNumericVector(value)) {
+      return `vec${value.length}(${value.map(formatNumber).join(", ")})`;
+    }
+    if (value.length === 0) return "[]";
+    const previewItems = value.slice(0, 3).map((item) => formatValuePreview(item, { depth: 1 }));
+    const suffix = value.length > 3 ? ", \u2026" : "";
+    return `[${previewItems.join(", ")}${suffix}]`;
+  }
+  function formatObject(value, depth) {
+    if (!value) return "null";
+    const keys = Object.keys(value);
+    if (keys.length === 0) return "{}";
+    const vectorKeys = ["x", "y", "z", "w"];
+    const presentVectorKeys = vectorKeys.filter((key) => typeof value[key] === "number" && Number.isFinite(value[key]));
+    if (presentVectorKeys.length >= 2) {
+      const vals = presentVectorKeys.map((key) => formatNumber(value[key]));
+      return `vec${presentVectorKeys.length}(${vals.join(", ")})`;
+    }
+    if (depth >= 1) return `{\u2026${keys.length}}`;
+    const shownKeys = keys.slice(0, 3);
+    const shown = shownKeys.map((key) => `${key}: ${formatValuePreview(value[key], { depth: depth + 1 })}`);
+    const suffix = keys.length > shownKeys.length ? ", \u2026" : "";
+    return `{${shown.join(", ")}${suffix}}`;
+  }
+  function formatValuePreview(value, { depth = 0 } = {}) {
+    if (value === void 0) return "undefined";
+    if (value === null) return "null";
+    if (typeof value === "number") return formatNumber(value);
+    if (typeof value === "boolean") return value ? "true" : "false";
+    if (typeof value === "string") return formatString(value);
+    if (typeof value === "function") return "\u0192()";
+    if (Array.isArray(value)) return formatArray(value);
+    if (typeof value === "object") return formatObject(value, depth);
+    return String(value);
+  }
+  function summarizeNodeOutputs(node2, nodeType, getValue) {
+    const outputDefs = Array.isArray(nodeType?.outputs) ? nodeType.outputs : [];
+    const getOutputName = (output) => typeof output === "string" ? output : output?.name;
+    if (outputDefs.length === 0) return void 0;
+    if (outputDefs.length === 1) {
+      return getValue(`${node2.id}.${getOutputName(outputDefs[0])}`);
+    }
+    const summary = {};
+    for (const output of outputDefs) {
+      const outputName = getOutputName(output);
+      summary[outputName] = getValue(`${node2.id}.${outputName}`);
+    }
+    return summary;
+  }
+  function getLatestNodeValues(engine, graph, nodeTypes = {}) {
+    if (!engine || !graph) return /* @__PURE__ */ new Map();
+    if (typeof engine.getLatestNodeValues === "function") {
+      const observed = engine.getLatestNodeValues();
+      if (observed instanceof Map) {
+        return observed;
+      }
+    }
+    if (typeof engine.getValue !== "function") {
+      return /* @__PURE__ */ new Map();
+    }
+    const values = /* @__PURE__ */ new Map();
+    for (const node2 of graph.nodes || []) {
+      const nodeType = nodeTypes[node2.type];
+      values.set(
+        node2.id,
+        summarizeNodeOutputs(node2, nodeType, (ref) => engine.getValue(ref))
+      );
+    }
+    return values;
+  }
+
   // ../../editor-studio/src/rete-operation-helpers.js
   function connectionToAddEdgeOp(connection) {
     return {
@@ -16178,10 +16555,18 @@ var LoomletPreview = (() => {
 
   // ../../editor-studio/src/node-editor-view.js
   var socket = new classic.Socket("value");
+  var VALUE_PREVIEW_CONTROL_KEY = "__preview";
   function getPortName(port) {
     return typeof port === "string" ? port : port.name;
   }
-  function createReteNode(editorNode, onControl) {
+  function getNodeControl(node2, key) {
+    if (!node2?.controls) return null;
+    if (typeof node2.controls.get === "function") {
+      return node2.controls.get(key);
+    }
+    return node2.controls[key] ?? null;
+  }
+  function createReteNode(editorNode, onControl, previewText) {
     const nodeTypeDef = NODE_TYPES[editorNode.type];
     const displayLabel = editorNode.label || editorNode.type;
     const node2 = new classic.Node(displayLabel);
@@ -16212,6 +16597,12 @@ var LoomletPreview = (() => {
       });
       node2.addControl(key, ctrl);
     }
+    if (previewText !== null) {
+      node2.addControl(VALUE_PREVIEW_CONTROL_KEY, new classic.InputControl("text", {
+        initial: previewText,
+        readonly: true
+      }));
+    }
     return node2;
   }
   function findReteConnectionIdByEdgeId(connectionMap, edgeId) {
@@ -16232,6 +16623,8 @@ var LoomletPreview = (() => {
       this.connectionMap = /* @__PURE__ */ new Map();
       this._renderLock = null;
       this.currentEditorModel = null;
+      this._valuePreviewEnabled = true;
+      this._nodeValuePreviews = /* @__PURE__ */ new Map();
       this.editor = new NodeEditor();
       this.area = new AreaPlugin(this.container);
       this.connectionPlugin = new ConnectionPlugin();
@@ -16291,11 +16684,16 @@ var LoomletPreview = (() => {
         if (!this.isRendering) {
           this.onOperation(op);
         }
-      });
+      }, this._getNodePreviewText(editorNode.id));
       await this.editor.addNode(reteNode);
       const pos = editorNode.position ?? { x: 0, y: 0 };
       await this.area.translate(reteNode.id, { x: pos.x, y: pos.y });
       return reteNode;
+    }
+    _getNodePreviewText(nodeId) {
+      if (!this._valuePreviewEnabled) return null;
+      if (!this._nodeValuePreviews.has(nodeId)) return "\u2014";
+      return formatValuePreview(this._nodeValuePreviews.get(nodeId));
     }
     async _addReteConnection(edge) {
       const sourceNode = this.editor.getNode(edge.fromNodeId);
@@ -16441,6 +16839,34 @@ var LoomletPreview = (() => {
       }
       this.currentEditorModel = cloneEditorModelSnapshot(editorModel);
     }
+    setNodeValuePreviews(previews) {
+      if (previews instanceof Map) {
+        this._nodeValuePreviews = previews;
+      } else if (previews && typeof previews === "object") {
+        this._nodeValuePreviews = new Map(Object.entries(previews));
+      } else {
+        this._nodeValuePreviews = /* @__PURE__ */ new Map();
+      }
+      if (!this._valuePreviewEnabled) return;
+      if (!this.currentEditorModel) return;
+      for (const nodeId of this.currentEditorModel.order || []) {
+        const node2 = this.editor.getNode(nodeId);
+        if (!node2) continue;
+        const control = getNodeControl(node2, VALUE_PREVIEW_CONTROL_KEY);
+        if (!control) continue;
+        const nextText = this._getNodePreviewText(nodeId);
+        if (control.value === nextText) continue;
+        control.setValue(nextText);
+        this.area?.update?.("control", control.id);
+      }
+    }
+    async setValuePreviewEnabled(enabled) {
+      const nextEnabled = enabled !== false;
+      if (this._valuePreviewEnabled === nextEnabled) return;
+      this._valuePreviewEnabled = nextEnabled;
+      if (!this.currentEditorModel) return;
+      await this.renderModel(this.currentEditorModel, { force: true });
+    }
     async focusNode(nodeId) {
       if (!nodeId || !this.editor || !this.area) {
         return false;
@@ -16475,7 +16901,10 @@ var LoomletPreview = (() => {
   var pausedAtTimestampMs = null;
   var accumulatedPausedMs = 0;
   var lastEffectsPostMs = 0;
+  var lastNodeValuesPostMs = 0;
+  var valuePreviewEnabled = true;
   var EFFECTS_POST_INTERVAL_MS = 100;
+  var NODE_VALUES_POST_INTERVAL_MS = 100;
   var hostInput = {
     mouseX: 320,
     mouseY: 240,
@@ -16633,6 +17062,7 @@ var LoomletPreview = (() => {
       const elapsedSeconds = (timestamp - runtimeStartTimestampMs - accumulatedPausedMs) / 1e3;
       loomEngine.evaluateAt({ time: elapsedSeconds }, timestamp);
       postRuntimeEffects(timestamp);
+      postNodeValuePreviews(timestamp);
       drawRuntimeCanvas();
     } catch (error) {
       console.error("[loomlet-preview] Runtime error in drawFrame:", error);
@@ -16649,6 +17079,12 @@ var LoomletPreview = (() => {
     if (consoleEffects.length === 0) return;
     lastEffectsPostMs = timestamp;
     vscode.postMessage({ type: "runtimeEffects", effects: consoleEffects });
+  }
+  function postNodeValuePreviews(timestamp) {
+    if (!valuePreviewEnabled || !editorView || !loomEngine || !currentGraph) return;
+    if (timestamp - lastNodeValuesPostMs < NODE_VALUES_POST_INTERVAL_MS) return;
+    lastNodeValuesPostMs = timestamp;
+    editorView.setNodeValuePreviews(getLatestNodeValues(loomEngine, currentGraph, NODE_TYPES));
   }
   function isConsoleEffect(effect) {
     if (!effect || typeof effect !== "object") return false;
@@ -16773,12 +17209,13 @@ var LoomletPreview = (() => {
     pausedAtTimestampMs = null;
     accumulatedPausedMs = 0;
     lastEffectsPostMs = 0;
+    lastNodeValuesPostMs = 0;
     hostInput.mouseDown = false;
   }
   function startLoom(graph) {
     stopLoom();
     currentGraph = graph || null;
-    if (!graph || !graph.render) {
+    if (!graph) {
       const canvas = document.getElementById("lp-preview-canvas");
       if (canvas) drawPlaceholder(canvas, window.devicePixelRatio || 1);
       updateControlStates();
@@ -16786,6 +17223,9 @@ var LoomletPreview = (() => {
     }
     try {
       loomEngine = new Loom({ nodes: graph.nodes || [], edges: graph.edges || [] });
+      if (valuePreviewEnabled && typeof loomEngine.enableProbes === "function") {
+        loomEngine.enableProbes({ values: true });
+      }
       loomRafId = requestAnimationFrame(drawFrame);
       updateControlStates();
     } catch (error) {
@@ -16819,7 +17259,7 @@ var LoomletPreview = (() => {
     return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
   function togglePauseResume() {
-    if (!loomEngine || !currentGraph?.render) return;
+    if (!loomEngine) return;
     if (isRuntimePaused) {
       const now = performance.now();
       if (pausedAtTimestampMs !== null) accumulatedPausedMs += now - pausedAtTimestampMs;
@@ -16836,12 +17276,13 @@ var LoomletPreview = (() => {
     updateStatus();
   }
   function resetRuntime() {
-    if (!loomEngine || !currentGraph?.render) return;
+    if (!loomEngine) return;
     runtimeStartTimestampMs = null;
     accumulatedPausedMs = 0;
     isRuntimePaused = false;
     pausedAtTimestampMs = null;
     lastEffectsPostMs = 0;
+    lastNodeValuesPostMs = 0;
     hostInput.mouseDown = false;
     const canvas = document.getElementById("lp-preview-canvas");
     const ctx = canvas?.getContext("2d");
@@ -16855,18 +17296,20 @@ var LoomletPreview = (() => {
     updateStatus();
   }
   function updateControlStates() {
-    const canControl = Boolean(loomEngine && currentGraph?.render);
+    const canControl = Boolean(loomEngine);
     const toggleBtn = document.getElementById("lp-toggle-runtime");
     const resetBtn = document.getElementById("lp-reset-runtime");
+    const valuesBtn = document.getElementById("lp-toggle-values");
     if (toggleBtn) {
       toggleBtn.disabled = !canControl;
       toggleBtn.textContent = isRuntimePaused ? "Resume" : "Pause";
     }
     if (resetBtn) resetBtn.disabled = !canControl;
+    if (valuesBtn) valuesBtn.textContent = valuePreviewEnabled ? "Hide Values" : "Show Values";
   }
   function updateStatus() {
     if (isRuntimePaused) setStatus("Paused \xB7 Runtime Preview \xB7 Read-only Node Preview", false);
-    else if (loomEngine && currentGraph?.render) setStatus("Running \xB7 Runtime Preview \xB7 Read-only Node Preview", false);
+    else if (loomEngine) setStatus("Running \xB7 Runtime Preview \xB7 Read-only Node Preview", false);
   }
   function toggleEditor() {
     editorVisible = !editorVisible;
@@ -16884,10 +17327,29 @@ var LoomletPreview = (() => {
     }
     renderErrors();
   }
+  function toggleValuePreview() {
+    valuePreviewEnabled = !valuePreviewEnabled;
+    if (editorView) {
+      editorView.setValuePreviewEnabled(valuePreviewEnabled).catch((error) => {
+        console.error("[loomlet-preview] setValuePreviewEnabled failed:", error);
+      });
+    }
+    if (loomEngine && typeof loomEngine.enableProbes === "function" && typeof loomEngine.disableProbes === "function") {
+      if (valuePreviewEnabled) {
+        loomEngine.enableProbes({ values: true });
+        lastNodeValuesPostMs = 0;
+        postNodeValuePreviews(performance.now());
+      } else {
+        loomEngine.disableProbes();
+      }
+    }
+    updateControlStates();
+  }
   function initControlButtons() {
     document.getElementById("lp-toggle-editor")?.addEventListener("click", toggleEditor);
     document.getElementById("lp-toggle-runtime")?.addEventListener("click", togglePauseResume);
     document.getElementById("lp-reset-runtime")?.addEventListener("click", resetRuntime);
+    document.getElementById("lp-toggle-values")?.addEventListener("click", toggleValuePreview);
   }
   function initEditorView() {
     if (editorView) return;
@@ -16899,6 +17361,9 @@ var LoomletPreview = (() => {
       onError: (error) => console.error("[NodeEditorView]", error),
       onSelectNode: () => {
       }
+    });
+    editorView.setValuePreviewEnabled(valuePreviewEnabled).catch((error) => {
+      console.error("[loomlet-preview] setValuePreviewEnabled init failed:", error);
     });
   }
   window.addEventListener("message", async (event) => {
