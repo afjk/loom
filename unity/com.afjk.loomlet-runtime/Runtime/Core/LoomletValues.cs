@@ -27,8 +27,9 @@ namespace Loomlet.Runtime
             if (value is bool b) return b;
             if (value is string s) return s.Length > 0;
             if (value is double d) return d != 0 && !double.IsNaN(d);
+            if (value is float f) return f != 0 && !float.IsNaN(f);
             if (value is int i) return i != 0;
-            if (value is IList<object> list) return list.Count > 0;
+            if (value is long l) return l != 0;
             return true;
         }
 
@@ -37,7 +38,7 @@ namespace Loomlet.Runtime
             if (value == null) return new List<object>();
             if (value is List<object> list) return list;
             if (value is object[] array) return new List<object>(array);
-            return new List<object> { value };
+            return new List<object>();
         }
 
         public static string Text(object value)

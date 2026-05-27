@@ -56,6 +56,35 @@ namespace Loomlet.Runtime.Tests
             Assert.AreEqual(1, ((List<object>)result.GetValue("event.events")).Count);
         }
 
+        [Test]
+        public void HostEventsCanBeClearedBetweenFrames()
+        {
+            var graph = LoomletGraph.FromJson("{\"nodes\":[{\"id\":\"event\",\"type\":\"host.event\",\"params\":{\"name\":\"object.activate\"}}],\"edges\":[]}");
+            var evaluator = new LoomletEvaluator(graph);
+            var context = new LoomletEvaluationContext().AddHostEvent("object.activate", "tap");
+
+            var first = evaluator.Evaluate(context);
+            context.ClearHostEvents();
+            var second = evaluator.Evaluate(context);
+
+            Assert.AreEqual(1, ((List<object>)first.GetValue("event.events")).Count);
+            Assert.AreEqual(0, ((List<object>)second.GetValue("event.events")).Count);
+        }
+
+        [Test]
+        public void ListReverseAndSortDoNotMutateInputLists()
+        {
+            var reverseGraph = LoomletGraph.FromJson("{\"nodes\":[{\"id\":\"src\",\"type\":\"host.input\",\"params\":{\"name\":\"list\"}},{\"id\":\"rev\",\"type\":\"list.reverse\"}],\"edges\":[{\"from\":\"src.out\",\"to\":\"rev.list\"}]}");
+            var sortGraph = LoomletGraph.FromJson("{\"nodes\":[{\"id\":\"src\",\"type\":\"host.input\",\"params\":{\"name\":\"list\"}},{\"id\":\"sort\",\"type\":\"list.sort\"}],\"edges\":[{\"from\":\"src.out\",\"to\":\"sort.list\"}]}");
+            var input = new List<object> { 3.0, 1.0, 2.0 };
+
+            new LoomletEvaluator(reverseGraph).Evaluate(new LoomletEvaluationContext().SetHostInput("list", input));
+            Assert.AreEqual("[3,1,2]", LoomletJson.Stringify(input));
+
+            new LoomletEvaluator(sortGraph).Evaluate(new LoomletEvaluationContext().SetHostInput("list", input));
+            Assert.AreEqual("[3,1,2]", LoomletJson.Stringify(input));
+        }
+
         private static List<Dictionary<string, object>> LoadFixtureCases()
         {
             var path = FindFixturePath();

@@ -1554,6 +1554,46 @@
       "evaluate": {},
       "get": "n.out",
       "expected": [1, 2, 3]
+    },
+    {
+      "id": "list.length.non_array_is_empty",
+      "library": "list",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "list.length",
+            "params": {
+              "list": "not-a-list"
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 0
+    },
+    {
+      "id": "logic.not.empty_array_is_truthy",
+      "library": "logic",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "logic.not",
+            "params": {
+              "value": []
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": false
     }
   ]
 }

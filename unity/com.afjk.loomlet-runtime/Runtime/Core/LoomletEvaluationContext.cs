@@ -47,6 +47,24 @@ namespace Loomlet.Runtime
             return this;
         }
 
+        public LoomletEvaluationContext SetHostEvents(string name, IEnumerable<object> events)
+        {
+            _hostEvents[name] = events == null ? new List<object>() : new List<object>(events);
+            return this;
+        }
+
+        public LoomletEvaluationContext ClearHostEvents()
+        {
+            _hostEvents.Clear();
+            return this;
+        }
+
+        public LoomletEvaluationContext ClearHostEvents(string name)
+        {
+            _hostEvents.Remove(name);
+            return this;
+        }
+
         public IReadOnlyList<object> GetHostEvents(string name)
         {
             return _hostEvents.TryGetValue(name, out var events) ? events : EmptyEvents;
