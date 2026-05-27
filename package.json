@@ -1,6 +1,6 @@
 {
   "name": "@afjk/loomlet",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": false,
   "type": "module",
   "description": "A small reactive DSL and node graph toolkit for interactive scenes.",
