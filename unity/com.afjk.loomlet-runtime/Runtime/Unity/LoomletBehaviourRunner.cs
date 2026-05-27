@@ -79,6 +79,7 @@ namespace Loomlet.Unity
                     ResolveTransform(fallbackObject).localScale = LoomletUnityConversions.Vector3(value, ResolveTransform(fallbackObject).localScale);
                     break;
                 case LoomletUnityProperty.RendererColor:
+                    if (value == null) return;
                     var renderer = ResolveRenderer(fallbackObject);
                     if (renderer != null) LoomletUnityMaterialColor.Apply(renderer, LoomletUnityConversions.Color(value, Color.white));
                     break;
