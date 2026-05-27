@@ -28,7 +28,7 @@ Add the afjk scoped registry and the package dependency to `Packages/manifest.js
 }
 ```
 
-The package version follows the Loomlet GitHub Release tag without the leading `v`. For example, release tag `v0.3.0` publishes `com.afjk.loomlet-runtime@0.3.0`.
+The package version follows the Loomlet GitHub Release tag without the leading `v`. For example, release tag `v0.3.0` publishes `com.afjk.loomlet-runtime@0.3.0`. Replace `0.3.0` with the version you want to install.
 
 ## Runtime model
 
@@ -36,9 +36,9 @@ Loomlet authoring and compilation happen outside Unity. Use the JavaScript CLI, 
 
 Scene Sync Unity packages can depend on this package for graph evaluation and Unity object adapters. This runtime package does not depend on Scene Sync.
 
-## Fixture parity
+## Fixture parity for repository development
 
-EditMode tests use `Tests/Fixtures/portable-node-cases.json`, copied from `test/fixtures/runtime-parity/portable-node-cases.json`. Run `npm test` from the repository root to detect fixture drift.
+In this repository, EditMode tests use `Tests/Fixtures/portable-node-cases.json`, copied from `test/fixtures/runtime-parity/portable-node-cases.json`. Run `npm test` from the repository root to detect fixture drift. These tests are not included in the published UPM package.
 
 ## Scene Sync
 
