@@ -226,8 +226,8 @@ Runtime-specific experiments are allowed if clearly marked as `js-only` or `expe
 The following items are **explicitly out of scope** for this v0 design document. They are deferred to future work:
 
 - Unity DSL compiler
-- Browser runtime bundle build implementation (e.g., `dist/loomlet-scenesync-runtime.browser.js`)
-- Replacing the Scene Sync embedded runtime copy (`html/assets/js/scenesync/loom/`)
+- Further changes to the Scene Sync browser runtime distribution model
+- Further changes to how Scene Sync consumes or vendors the browser runtime bundle
 - CDN URL integration for live runtime delivery
 - Export package structure changes (adopting the recommended vendor layout)
 - Export runtime version metadata implementation
