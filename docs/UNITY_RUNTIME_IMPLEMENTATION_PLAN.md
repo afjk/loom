@@ -1,10 +1,12 @@
 # Unity Runtime Implementation Plan
 
-This plan tracks the runtime-only Unity implementation started after Loomlet v0.2.0.
+This plan tracks the runtime-only Unity implementation foundation delivered in Loomlet v0.3.0 and its follow-up work.
 
 ## Scope
 
 Unity consumes compiled Graph JSON. It does not parse `.loomlet` DSL source, compile DSL, resolve packages, or provide authoring UI. The JavaScript runtime remains the reference implementation for Graph JSON semantics and runtime parity fixtures.
+
+Dependency direction: Scene Sync Unity packages may depend on Loomlet Runtime, and Loomlet Runtime must not depend on Scene Sync.
 
 ## Package layout
 

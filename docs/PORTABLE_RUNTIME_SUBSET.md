@@ -1,6 +1,6 @@
 # Portable Runtime Subset — v0
 
-This document defines the v0 portable subset boundary for Loomlet and the runtime distribution policy for Scene Sync and future Unity/C# runtime support.
+This document defines the v0 portable subset boundary for Loomlet and the runtime distribution policy for Scene Sync and Unity/C# runtime support.
 
 It closes the design gap described in [afjk/loomlet#211](https://github.com/afjk/loomlet/issues/211).
 
@@ -17,7 +17,7 @@ Loomlet nodes are grouped into three portability categories:
 
 ### portable pure
 
-Deterministic graph semantics that should match across JS, Scene Sync Export, and future Unity/C# runtime.
+Deterministic graph semantics that should match across JS, Scene Sync Export, and Unity/C# runtime.
 
 These nodes depend only on their inputs and the host-provided environment (`env.time`, `env.deltaTime`, `env.events`). They do not call external services, access the DOM, or require a specific JavaScript runtime.
 
@@ -70,7 +70,7 @@ Loomlet graph:
   must not call afjk.jp or own the clock.
 ```
 
-This rule applies across all host environments. It is what makes the graph portable between Scene Sync live, Scene Sync Export, and future Unity runtime.
+This rule applies across all host environments. It is what makes the graph portable between Scene Sync live, Scene Sync Export, and Unity runtime.
 
 ---
 
@@ -111,15 +111,37 @@ Scene Sync Export already includes the embedded Loomlet runtime files in exporte
 
 ---
 
-## 4. Unity/C# runtime
+## 4. Unity/C# runtime (v0.3.0)
 
-Unity/C# runtime is **future work**.
+Loomlet v0.3.0 includes a runtime-only Unity foundation package: `unity/com.afjk.loomlet-runtime` (published as UPM package `com.afjk.loomlet-runtime`).
 
-Portable parity fixtures define expected behavior before implementation. A future Unity implementation can consume the graph JSON fixtures directly without requiring DSL compiler support. This makes parity verifiable before any Unity-specific runtime code is written.
+Current runtime scope:
 
-**Important**: metadata target support (`unity: yes` in `docs/RUNTIME_TARGETS.md`) does **not** prove that a Unity runtime is implemented. It documents what *should* be portable when implementation happens.
+- Graph JSON evaluator (Unity consumes compiled Graph JSON generated outside Unity).
+- Portable nodes subset used by current parity fixtures.
+- Read-only host context nodes:
+  - `host.input`
+  - `host.event`
+  - `scene.clock`
+- Minimal Unity object adapter:
+  - Transform position/local position/rotation/local rotation/scale
+  - Renderer color
 
-See [`docs/UNITY_RUNTIME_COMPATIBILITY.md`](UNITY_RUNTIME_COMPATIBILITY.md) for the current compatibility baseline and porting priorities.
+Explicit non-scope for this runtime package:
+
+- DSL parse / compile in Unity
+- Node Editor integration in Unity
+- Scene Sync-specific binding layer
+- Package resolver / remote package loading
+
+Graph JSON authoring/compilation remains outside Unity (Web, CLI, VS Code, Node Editor, etc.). Unity runtime evaluates those compiled Graph JSON assets.
+
+Dependency direction with Scene Sync:
+
+- Scene Sync Unity package may depend on Loomlet Runtime.
+- Loomlet Runtime must not depend on Scene Sync.
+
+See [`docs/UNITY_RUNTIME_COMPATIBILITY.md`](UNITY_RUNTIME_COMPATIBILITY.md) and [`docs/UNITY_RUNTIME_IMPLEMENTATION_PLAN.md`](UNITY_RUNTIME_IMPLEMENTATION_PLAN.md) for detailed compatibility baseline and implementation scope.
 
 ---
 
@@ -127,7 +149,7 @@ See [`docs/UNITY_RUNTIME_COMPATIBILITY.md`](UNITY_RUNTIME_COMPATIBILITY.md) for 
 
 The following is the current safe baseline for portable contexts, consistent with `docs/UNITY_RUNTIME_COMPATIBILITY.md` and `docs/RUNTIME_TARGETS.md`.
 
-### Portable pure (safe for Scene Sync Export, future Unity runtime, parity fixtures)
+### Portable pure (safe for Scene Sync Export, Unity runtime, parity fixtures)
 
 | Library | Notes |
 |---|---|
@@ -164,7 +186,7 @@ The following is the current safe baseline for portable contexts, consistent wit
 
 ## 6. Parity fixture policy
 
-If a node is **portable and stable enough** to be used in Scene Sync Export or a future Unity runtime, it should have runtime parity fixture coverage.
+If a node is **portable and stable enough** to be used in Scene Sync Export or Unity runtime, it should have runtime parity fixture coverage.
 
 ### Fixture constraints
 
@@ -203,7 +225,6 @@ Runtime-specific experiments are allowed if clearly marked as `js-only` or `expe
 
 The following items are **explicitly out of scope** for this v0 design document. They are deferred to future work:
 
-- Unity/C# runtime implementation
 - Unity DSL compiler
 - Browser runtime bundle build implementation (e.g., `dist/loomlet-scenesync-runtime.browser.js`)
 - Replacing the Scene Sync embedded runtime copy (`html/assets/js/scenesync/loom/`)
