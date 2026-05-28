@@ -1118,6 +1118,16 @@ test('console.table records table effect', () => {
 });
 
 test('fs baseline nodes are CLI-only and access local files', () => {
+  if (typeof process.getBuiltinModule !== 'function') {
+    assert.throws(
+      () => evalNode('fs.exists', { path: 'package.json' }),
+      error => error instanceof LoomError && error.code === 'UNSUPPORTED_RUNTIME_NODE'
+    );
+    assert.equal(isLibraryAvailableInTarget('fs', 'cli'), true);
+    assert.equal(isLibraryAvailableInTarget('fs', 'web'), false);
+    return;
+  }
+
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'loomlet-fs-'));
   const file = path.join(tmpDir, 'sample.txt');
   evalGraph([{ id: 'write', type: 'fs.writeText', params: { path: file, value: 'hello' } }], []);
