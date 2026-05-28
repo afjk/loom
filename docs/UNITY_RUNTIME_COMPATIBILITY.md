@@ -1,10 +1,10 @@
 # Unity Runtime Compatibility
 
-This document defines the current compatibility baseline between the JavaScript Loomlet runtime and a future Unity runtime.
+This document defines the current compatibility baseline between the JavaScript Loomlet runtime and the Unity runtime foundation shipped in Loomlet v0.3.0.
 
 The first runtime-only Unity package now lives under `unity/com.afjk.loomlet-runtime`.
 
-It defines which node semantics should be preserved when Unity support is implemented. This baseline makes future Unity implementation decisions explicit, enables early metadata consistency testing, and guides porting priorities.
+It defines which node semantics should be preserved across runtimes. This baseline keeps runtime-only scope explicit, enables metadata consistency testing, and guides follow-up porting priorities.
 
 See [Runtime Parity Fixtures](RUNTIME_PARITY_FIXTURES.md) for data-driven test cases that verify portable node behavior across runtimes.
 See [Unity Runtime Implementation Plan](UNITY_RUNTIME_IMPLEMENTATION_PLAN.md) for current package scope, non-goals, and host authority boundaries.
@@ -33,6 +33,13 @@ See [Unity Runtime Implementation Plan](UNITY_RUNTIME_IMPLEMENTATION_PLAN.md) fo
 
 ## Current baseline
 
+Runtime-only Unity scope in v0.3.0:
+
+- Unity consumes compiled Graph JSON from external authoring/compile tooling (Web/CLI/VS Code/Node Editor).
+- Runtime evaluator covers current portable subset used in parity fixtures.
+- Read-only host context includes `host.input`, `host.event`, and `scene.clock`.
+- Unity adapter includes minimal Transform and Renderer color binding.
+
 | Library | Unity target | Compatibility level | Notes |
 |---|---:|---|---|
 | math | yes | portable | Numeric behavior should match JS where practical. Core functions: add, subtract, multiply, divide, sine, cosine, etc. |
@@ -56,7 +63,7 @@ See [Unity Runtime Implementation Plan](UNITY_RUNTIME_IMPLEMENTATION_PLAN.md) fo
 
 ## Porting priorities
 
-When implementing Unity support, prioritize in this order:
+For follow-up Unity runtime expansion, prioritize in this order:
 
 1. Pure numeric/math nodes (portable foundation)
 2. Logic nodes (conditional semantics)
@@ -73,6 +80,8 @@ When implementing Unity support, prioritize in this order:
 ## Explicit non-goals
 
 - **Unity DSL parser/compiler**: Unity consumes compiled Graph JSON. `.loomlet` DSL parsing and compilation stay in JS/editor/tooling layers.
+- **Node Editor integration in Unity**: authoring/editor UX remains outside the runtime package.
+- **Package resolver**: remote package resolution/loading is outside Unity runtime scope.
 - **Scene Clock control from behavior graphs**: pause, seek, resume, reset, and follow-server are host controls, not Loomlet effects.
 - **Scene Sync Unity bridge**: Scene Sync integration is a later host-adapter bridge layer, separate from the runtime core.
 - **Floating-point equivalence**: Do not require exact floating-point equality for every math edge case. Target semantic equivalence within typical numerical tolerances.
@@ -83,6 +92,7 @@ When implementing Unity support, prioritize in this order:
 
 ## Constraints and assumptions
 
+- **Dependency direction**: Scene Sync Unity packages may depend on Loomlet Runtime, but Loomlet Runtime must not depend on Scene Sync.
 - **Host environment differences**: Unity and JavaScript runtimes will have different garbage collection, number representation (doubles vs floats in some cases), and library availability. Portable code should account for these.
 - **Function-valued operations**: Functional programming constructs (list.map, list.filter, list.reduce) may have limitations in some Unity/C# contexts. The baseline assumes they work but reserves the right to document special cases.
 - **Numeric precision**: JSON number parsing and math edge cases may differ between JavaScript and Unity. Portable code should avoid brittle floating-point assertions.

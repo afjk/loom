@@ -34,6 +34,8 @@ The package version follows the Loomlet GitHub Release tag without the leading `
 
 Loomlet authoring and compilation happen outside Unity. Use the JavaScript CLI, VS Code extension, Node Editor, or another host tool to produce Loomlet Graph JSON, then load that Graph JSON in Unity. Unity does not parse `.loomlet` DSL source and does not compile DSL files.
 
+Out of scope for this runtime package: Unity-side DSL parser/compiler, Node Editor integration, Scene Sync-specific bridge binding, and package resolver/remote package loading.
+
 Scene Sync Unity packages can depend on this package for graph evaluation and Unity object adapters. This runtime package does not depend on Scene Sync.
 
 ## Fixture parity for repository development
