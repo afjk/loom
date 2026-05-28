@@ -3,6 +3,18 @@
 import { createNodeRegistry } from './runtime/node-registry.js';
 import { registerBuiltinNodes } from './nodes/index.js';
 
+let nodeFs = null;
+let nodePath = null;
+
+function getNodeBuiltin(name) {
+  const processRef = globalThis.process;
+  if (!processRef?.versions?.node) return null;
+  if (typeof processRef.getBuiltinModule === 'function') {
+    return processRef.getBuiltinModule(name);
+  }
+  return null;
+}
+
 export class LoomError extends Error {
   constructor(code, message, details = {}) {
     super(message);
@@ -563,15 +575,19 @@ function mapFunctionValueNode(name, reducer) {
 }
 
 function getNodeFs() {
-  const getBuiltinModule = globalThis.process?.getBuiltinModule;
-  if (typeof getBuiltinModule !== 'function') {
+  nodeFs ||= getNodeBuiltin('fs');
+  if (!nodeFs) {
     throw new LoomError('UNSUPPORTED_RUNTIME_NODE', 'fs nodes are only available in the Node.js CLI runtime');
   }
-  return getBuiltinModule('fs');
+  return nodeFs;
 }
 
 function getNodePath() {
-  return globalThis.process.getBuiltinModule('path');
+  nodePath ||= getNodeBuiltin('path');
+  if (!nodePath) {
+    throw new LoomError('UNSUPPORTED_RUNTIME_NODE', 'fs nodes are only available in the Node.js CLI runtime');
+  }
+  return nodePath;
 }
 
 // Export helper functions for node modules
