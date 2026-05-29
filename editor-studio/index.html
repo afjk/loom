@@ -28,9 +28,17 @@
       <button id="generateDslBtn" class="btn btn-primary">Generate Canonical DSL</button>
       <div class="toolbar-status" aria-label="Editor status">
         <span id="dirty-status" class="status-pill">Saved</span>
-        <span id="auto-sync-status-pill" class="status-pill is-on">Node-&gt;DSL: live</span>
+        <span
+          id="auto-sync-status-pill"
+          class="status-pill is-on"
+          title="Node edits rewrite DSL as canonical text. Layout-only node moves preserve the current DSL text."
+        >Node-&gt;DSL: live</span>
       </div>
-      <span id="auto-apply-status" class="auto-apply-status">DSL-&gt;Node: live</span>
+      <span
+        id="auto-apply-status"
+        class="auto-apply-status"
+        title="DSL edits apply to the node editor automatically. Fix DSL errors before editing the graph."
+      >DSL-&gt;Node: live</span>
     </div>
 
     <div id="editor-panels" class="editor-panels">

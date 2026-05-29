@@ -23,6 +23,7 @@ import {
 import { graphToCanonicalDSL } from '../../src/canonical-dsl.js';
 import { createStore } from './studio-store.js';
 import { NodeEditorView } from './node-editor-view.js';
+import { syncPendingDslBeforeNodeOperation } from './live-sync-guards.js';
 import {
   normalizeEditorCategory,
   createDefaultParamsForNodeType,
@@ -82,8 +83,6 @@ const BOTTOM_PANEL_HEIGHT_KEY = 'loomlet.editorStudio.bottomPanelHeight';
 const BOTTOM_PANEL_COLLAPSED_KEY = 'loomlet.editorStudio.bottomPanelCollapsed';
 const EDITOR_SPLIT_WIDTH_KEY = 'loomlet.editorStudio.editorSplitWidth';
 const ACTIVE_BOTTOM_TAB_KEY = 'loomlet.editorStudio.activeBottomTab';
-const AUTO_APPLY_DSL_KEY = 'loomlet.editorStudio.autoApplyDslEnabled';
-const AUTO_SYNC_GRAPH_TO_DSL_KEY = 'loomlet.editorStudio.autoSyncGraphToDslEnabled';
 const EDITOR_MAXIMIZE_MODE_KEY = 'loomlet.editorStudio.editorMaximizeMode';
 
 const SCENE_SYNC_STORAGE_KEYS = {
@@ -125,10 +124,10 @@ let currentFileName = '';
 let isDirty = false;
 let isApplyingProgrammaticDslChange = false;
 let hasUnsyncedDslText = false;
-let autoApplyDslEnabled = true;
-let autoSyncGraphToDslEnabled = true;
 let autoApplyTimer = null;
-let autoApplyDelayMs = 200;
+const AUTO_APPLY_DSL_ENABLED = true;
+const AUTO_SYNC_GRAPH_TO_DSL_ENABLED = true;
+const AUTO_APPLY_DELAY_MS = 200;
 let autoApplyRequestId = 0;
 let latestSuccessfulDslText = '';
 let bottomPanelHeight = DEFAULT_BOTTOM_PANEL_HEIGHT;
@@ -171,9 +170,7 @@ const elements = {
   nodeListSearch: document.getElementById('node-list-search'),
   nodeListCategory: document.getElementById('node-list-category'),
   nodeList: document.getElementById('node-list'),
-  autoApplyDslToggle: document.getElementById('autoApplyDslToggle'),
   autoApplyStatus: document.getElementById('auto-apply-status'),
-  autoSyncGraphToDslToggle: document.getElementById('autoSyncGraphToDslToggle'),
   bottomPanel: document.getElementById('bottom-panel'),
   bottomPanelResizeHandle: document.getElementById('bottom-panel-resize-handle'),
   bottomPanelCollapseBtn: document.getElementById('bottom-panel-collapse-btn'),
@@ -182,7 +179,6 @@ const elements = {
   undoBtn: document.getElementById('undo-btn'),
   redoBtn: document.getElementById('redo-btn'),
   dirtyStatus: document.getElementById('dirty-status'),
-  autoApplyStatusPill: document.getElementById('auto-apply-status-pill'),
   autoSyncStatusPill: document.getElementById('auto-sync-status-pill'),
   outputLog: document.getElementById('output-log'),
   clearOutputBtn: document.getElementById('clear-output-btn'),
@@ -451,24 +447,6 @@ function loadActiveBottomTab() {
   selectBottomTab(savedTab);
 }
 
-function loadAutoApplyDslSetting() {
-  autoApplyDslEnabled = true;
-  saveAutoApplyDslSetting();
-}
-
-function saveAutoApplyDslSetting() {
-  localStorage.setItem(AUTO_APPLY_DSL_KEY, String(autoApplyDslEnabled));
-}
-
-function loadAutoSyncGraphToDslSetting() {
-  autoSyncGraphToDslEnabled = true;
-  saveAutoSyncGraphToDslSetting();
-}
-
-function saveAutoSyncGraphToDslSetting() {
-  localStorage.setItem(AUTO_SYNC_GRAPH_TO_DSL_KEY, String(autoSyncGraphToDslEnabled));
-}
-
 function loadEditorMaximizeMode() {
   const saved = localStorage.getItem(EDITOR_MAXIMIZE_MODE_KEY);
   if (saved && ['split', 'dsl', 'node'].includes(saved)) {
@@ -590,12 +568,6 @@ function renderFileStatus() {
 function renderAutoApplyStatus(status = null) {
   if (!elements.autoApplyStatus) return;
 
-  if (!autoApplyDslEnabled) {
-    elements.autoApplyStatus.textContent = 'DSL->Node: paused';
-    elements.autoApplyStatus.className = 'auto-apply-status';
-    return;
-  }
-
   if (status === 'pending') {
     elements.autoApplyStatus.textContent = 'DSL->Node: pending';
     elements.autoApplyStatus.className = 'auto-apply-status pending';
@@ -623,11 +595,6 @@ function renderAutoSyncGraphToDslStatus(status = null) {
 
   elements.autoSyncStatusPill.className = 'status-pill';
 
-  if (!autoSyncGraphToDslEnabled) {
-    elements.autoSyncStatusPill.textContent = 'Node->DSL: paused';
-    return;
-  }
-
   if (status === 'ok') {
     elements.autoSyncStatusPill.textContent = 'Node->DSL: synced';
     elements.autoSyncStatusPill.classList.add('is-on');
@@ -648,7 +615,6 @@ function renderDirtyStatus() {
 
 
 function scheduleAutoApplyDsl() {
-  if (!autoApplyDslEnabled) return;
   if (isApplyingProgrammaticDslChange) return;
 
   if (autoApplyTimer) {
@@ -662,7 +628,7 @@ function scheduleAutoApplyDsl() {
   autoApplyTimer = window.setTimeout(() => {
     autoApplyTimer = null;
     autoApplyDslFromEditor(requestId);
-  }, autoApplyDelayMs);
+  }, AUTO_APPLY_DELAY_MS);
 }
 
 function cancelPendingAutoApplyDsl() {
@@ -672,10 +638,16 @@ function cancelPendingAutoApplyDsl() {
   }
 
   autoApplyRequestId += 1;
+  renderAutoApplyStatus('ok');
+}
 
-  if (autoApplyDslEnabled) {
-    renderAutoApplyStatus('ok');
+function interruptPendingAutoApplyDsl() {
+  if (autoApplyTimer) {
+    clearTimeout(autoApplyTimer);
+    autoApplyTimer = null;
   }
+
+  autoApplyRequestId += 1;
 }
 
 function isAbortError(error) {
@@ -1001,7 +973,7 @@ function generateCanonicalDslFromState() {
 }
 
 function syncGraphToDslEditor({ markDirty = true, force = false } = {}) {
-  if (!force && !autoSyncGraphToDslEnabled) return null;
+  if (!force && !AUTO_SYNC_GRAPH_TO_DSL_ENABLED) return null;
 
   const dsl = generateCanonicalDslFromState();
 
@@ -1049,11 +1021,11 @@ function generateDsl() {
 
   const dsl = syncGraphToDslEditor({ markDirty: true, force: true });
   if (!dsl) return;
-  renderAutoApplyStatus(autoApplyDslEnabled ? 'ok' : null);
+  renderAutoApplyStatus('ok');
 }
 
 async function autoApplyDslFromEditor(requestId) {
-  if (!autoApplyDslEnabled) return;
+  if (!AUTO_APPLY_DSL_ENABLED) return;
   if (requestId !== autoApplyRequestId) return;
 
   const sourceText = getDslText();
@@ -1066,7 +1038,7 @@ async function autoApplyDslFromEditor(requestId) {
   const result = await applyDslTextToGraph(sourceText, {
     markDirty: true,
     preserveGraphOnError: true,
-    shouldCommit: () => autoApplyDslEnabled && requestId === autoApplyRequestId
+    shouldCommit: () => requestId === autoApplyRequestId
   });
 
   if (result.stale) return;
@@ -2433,10 +2405,7 @@ async function restoreEditorHistorySnapshot(snapshot, { pushRedo = false, pushUn
 
   setDirty(true);
   renderUndoRedoState();
-
-  if (autoApplyDslEnabled) {
-    renderAutoApplyStatus('ok');
-  }
+  renderAutoApplyStatus('ok');
 }
 
 async function undoGraphEdit() {
@@ -2517,36 +2486,6 @@ function setupEventListeners() {
   elements.saveFileBtn.addEventListener('click', saveDslFile);
   elements.saveAsFileBtn.addEventListener('click', saveDslAsFile);
 
-  elements.autoApplyDslToggle?.addEventListener('change', () => {
-    autoApplyDslEnabled = Boolean(elements.autoApplyDslToggle.checked);
-    saveAutoApplyDslSetting();
-
-    if (!autoApplyDslEnabled) {
-      if (autoApplyTimer) {
-        clearTimeout(autoApplyTimer);
-        autoApplyTimer = null;
-      }
-      renderAutoApplyStatus();
-      return;
-    }
-
-    renderAutoApplyStatus();
-
-    if (hasUnsyncedDslText) {
-      scheduleAutoApplyDsl();
-    }
-  });
-
-  elements.autoSyncGraphToDslToggle?.addEventListener('change', () => {
-    autoSyncGraphToDslEnabled = Boolean(elements.autoSyncGraphToDslToggle.checked);
-    saveAutoSyncGraphToDslSetting();
-    renderAutoSyncGraphToDslStatus();
-
-    if (autoSyncGraphToDslEnabled && !hasUnsyncedDslText) {
-      syncGraphToDslEditor({ markDirty: false });
-    }
-  });
-
   elements.editorPanels?.querySelectorAll('[data-action="maximize-dsl"]').forEach(btn => {
     btn.addEventListener('click', () => setEditorMaximizeMode('dsl'));
   });
@@ -2618,6 +2557,44 @@ function setupEventListeners() {
 async function handleOperation(operation) {
   const state = store.getState();
   if (!state.editorModel) return null;
+
+  const pendingDsl = await syncPendingDslBeforeNodeOperation({
+    hasUnsyncedDslText,
+    getDslText,
+    applyDslTextToGraph,
+    interruptAutoApply: interruptPendingAutoApplyDsl,
+    onSyncOk: () => {
+      clearEditorHistory();
+      renderAutoApplyStatus('ok');
+    },
+    onSyncError: () => {
+      appendOutput({
+        level: 'error',
+        message: 'Resolve DSL errors before editing the node graph.'
+      });
+      renderAutoApplyStatus('error');
+    }
+  });
+
+  if (!pendingDsl.ok) {
+    await nodeEditor?.renderModel(state.editorModel, { force: true });
+    renderGraphJSON(state.graph);
+    renderErrors();
+    renderInspector();
+    updateNodeListCategories();
+    renderNodeList();
+
+    return {
+      state: store.getState(),
+      change: {
+        operation,
+        graphChanged: false,
+        shouldRerenderView: false,
+        affectsDsl: false
+      },
+      error: new Error('DSL_SYNC_REQUIRED')
+    };
+  }
 
   const beforeSnapshot = createEditorHistorySnapshot();
   const shouldPushHistory = shouldPushHistoryForOperation(operation);
@@ -2714,8 +2691,6 @@ async function init() {
   loadBottomPanelLayout();
   loadEditorSplitLayout();
   loadActiveBottomTab();
-  loadAutoApplyDslSetting();
-  loadAutoSyncGraphToDslSetting();
   loadEditorMaximizeMode();
   loadSceneSyncSettings();
   renderFileStatus();
@@ -2728,13 +2703,6 @@ async function init() {
   updateNodeListCategories();
   renderNodeList();
   renderOutput();
-
-  if (elements.autoApplyDslToggle) {
-    elements.autoApplyDslToggle.checked = autoApplyDslEnabled;
-  }
-  if (elements.autoSyncGraphToDslToggle) {
-    elements.autoSyncGraphToDslToggle.checked = autoSyncGraphToDslEnabled;
-  }
 
   applyEditorMaximizeMode();
 
