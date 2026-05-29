@@ -2555,8 +2555,8 @@ function setupEventListeners() {
 }
 
 async function handleOperation(operation) {
-  const state = store.getState();
-  if (!state.editorModel) return null;
+  const initialState = store.getState();
+  if (!initialState.editorModel) return null;
 
   const pendingDsl = await syncPendingDslBeforeNodeOperation({
     hasUnsyncedDslText,
@@ -2577,8 +2577,8 @@ async function handleOperation(operation) {
   });
 
   if (!pendingDsl.ok) {
-    await nodeEditor?.renderModel(state.editorModel, { force: true });
-    renderGraphJSON(state.graph);
+    await nodeEditor?.renderModel(initialState.editorModel, { force: true });
+    renderGraphJSON(initialState.graph);
     renderErrors();
     renderInspector();
     updateNodeListCategories();
@@ -2596,6 +2596,7 @@ async function handleOperation(operation) {
     };
   }
 
+  const state = store.getState();
   const beforeSnapshot = createEditorHistorySnapshot();
   const shouldPushHistory = shouldPushHistoryForOperation(operation);
 
