@@ -26,19 +26,11 @@
       </button>
       <button id="applyDslBtn" class="btn btn-primary">Apply DSL → Node</button>
       <button id="generateDslBtn" class="btn btn-primary">Generate Canonical DSL</button>
-      <label class="toolbar-toggle">
-        <input id="autoApplyDslToggle" type="checkbox" />
-        <span>Auto Apply DSL</span>
-      </label>
-      <label class="toolbar-toggle">
-        <input id="autoSyncGraphToDslToggle" type="checkbox" />
-        <span>Auto Sync DSL</span>
-        <span class="toolbar-help" title="Rewrites DSL as canonical text and may remove comments and formatting.">ⓘ</span>
-      </label>
       <div class="toolbar-status" aria-label="Editor status">
         <span id="dirty-status" class="status-pill">Saved</span>
+        <span id="auto-sync-status-pill" class="status-pill is-on">Node-&gt;DSL: live</span>
       </div>
-      <span id="auto-apply-status" class="auto-apply-status">Manual</span>
+      <span id="auto-apply-status" class="auto-apply-status">DSL-&gt;Node: live</span>
     </div>
 
     <div id="editor-panels" class="editor-panels">

@@ -83,6 +83,7 @@ const BOTTOM_PANEL_COLLAPSED_KEY = 'loomlet.editorStudio.bottomPanelCollapsed';
 const EDITOR_SPLIT_WIDTH_KEY = 'loomlet.editorStudio.editorSplitWidth';
 const ACTIVE_BOTTOM_TAB_KEY = 'loomlet.editorStudio.activeBottomTab';
 const AUTO_APPLY_DSL_KEY = 'loomlet.editorStudio.autoApplyDslEnabled';
+const AUTO_SYNC_GRAPH_TO_DSL_KEY = 'loomlet.editorStudio.autoSyncGraphToDslEnabled';
 const EDITOR_MAXIMIZE_MODE_KEY = 'loomlet.editorStudio.editorMaximizeMode';
 
 const SCENE_SYNC_STORAGE_KEYS = {
@@ -124,10 +125,10 @@ let currentFileName = '';
 let isDirty = false;
 let isApplyingProgrammaticDslChange = false;
 let hasUnsyncedDslText = false;
-let autoApplyDslEnabled = false;
-let autoSyncGraphToDslEnabled = false;
+let autoApplyDslEnabled = true;
+let autoSyncGraphToDslEnabled = true;
 let autoApplyTimer = null;
-let autoApplyDelayMs = 500;
+let autoApplyDelayMs = 200;
 let autoApplyRequestId = 0;
 let latestSuccessfulDslText = '';
 let bottomPanelHeight = DEFAULT_BOTTOM_PANEL_HEIGHT;
@@ -451,14 +452,21 @@ function loadActiveBottomTab() {
 }
 
 function loadAutoApplyDslSetting() {
-  const saved = localStorage.getItem(AUTO_APPLY_DSL_KEY);
-  if (saved !== null) {
-    autoApplyDslEnabled = saved === 'true';
-  }
+  autoApplyDslEnabled = true;
+  saveAutoApplyDslSetting();
 }
 
 function saveAutoApplyDslSetting() {
   localStorage.setItem(AUTO_APPLY_DSL_KEY, String(autoApplyDslEnabled));
+}
+
+function loadAutoSyncGraphToDslSetting() {
+  autoSyncGraphToDslEnabled = true;
+  saveAutoSyncGraphToDslSetting();
+}
+
+function saveAutoSyncGraphToDslSetting() {
+  localStorage.setItem(AUTO_SYNC_GRAPH_TO_DSL_KEY, String(autoSyncGraphToDslEnabled));
 }
 
 function loadEditorMaximizeMode() {
@@ -583,31 +591,51 @@ function renderAutoApplyStatus(status = null) {
   if (!elements.autoApplyStatus) return;
 
   if (!autoApplyDslEnabled) {
-    elements.autoApplyStatus.textContent = 'Manual';
+    elements.autoApplyStatus.textContent = 'DSL->Node: paused';
     elements.autoApplyStatus.className = 'auto-apply-status';
     return;
   }
 
   if (status === 'pending') {
-    elements.autoApplyStatus.textContent = 'Auto: pending';
+    elements.autoApplyStatus.textContent = 'DSL->Node: pending';
     elements.autoApplyStatus.className = 'auto-apply-status pending';
     return;
   }
 
   if (status === 'ok') {
-    elements.autoApplyStatus.textContent = 'Auto: synced';
+    elements.autoApplyStatus.textContent = 'DSL->Node: synced';
     elements.autoApplyStatus.className = 'auto-apply-status ok';
     return;
   }
 
   if (status === 'error') {
-    elements.autoApplyStatus.textContent = 'Auto: error';
+    elements.autoApplyStatus.textContent = 'DSL->Node: error';
     elements.autoApplyStatus.className = 'auto-apply-status error';
     return;
   }
 
-  elements.autoApplyStatus.textContent = 'Auto: on';
+  elements.autoApplyStatus.textContent = 'DSL->Node: live';
   elements.autoApplyStatus.className = 'auto-apply-status';
+}
+
+function renderAutoSyncGraphToDslStatus(status = null) {
+  if (!elements.autoSyncStatusPill) return;
+
+  elements.autoSyncStatusPill.className = 'status-pill';
+
+  if (!autoSyncGraphToDslEnabled) {
+    elements.autoSyncStatusPill.textContent = 'Node->DSL: paused';
+    return;
+  }
+
+  if (status === 'ok') {
+    elements.autoSyncStatusPill.textContent = 'Node->DSL: synced';
+    elements.autoSyncStatusPill.classList.add('is-on');
+    return;
+  }
+
+  elements.autoSyncStatusPill.textContent = 'Node->DSL: live';
+  elements.autoSyncStatusPill.classList.add('is-on');
 }
 
 function renderDirtyStatus() {
@@ -977,7 +1005,9 @@ function syncGraphToDslEditor({ markDirty = true, force = false } = {}) {
 
   const dsl = generateCanonicalDslFromState();
 
-  setDslText(dsl);
+  if (getDslText() !== dsl) {
+    setDslText(dsl);
+  }
 
   store.setState({
     sourceText: dsl,
@@ -992,6 +1022,8 @@ function syncGraphToDslEditor({ markDirty = true, force = false } = {}) {
   if (markDirty) {
     setDirty(true);
   }
+
+  renderAutoSyncGraphToDslStatus('ok');
 
   return dsl;
 }
@@ -1909,10 +1941,12 @@ function loadSceneSyncPreset(name, source) {
 
   setDslText(source);
   hasUnsyncedDslText = true;
+  setDirty(true);
+  scheduleAutoApplyDsl();
 
   appendOutput({
     level: 'info',
-    message: `Loaded Scene Sync preset: ${name}. Apply DSL to preview it, then use Scene Sync Apply Behavior.`
+    message: `Loaded Scene Sync preset: ${name}.`
   });
 }
 
@@ -2505,6 +2539,8 @@ function setupEventListeners() {
 
   elements.autoSyncGraphToDslToggle?.addEventListener('change', () => {
     autoSyncGraphToDslEnabled = Boolean(elements.autoSyncGraphToDslToggle.checked);
+    saveAutoSyncGraphToDslSetting();
+    renderAutoSyncGraphToDslStatus();
 
     if (autoSyncGraphToDslEnabled && !hasUnsyncedDslText) {
       syncGraphToDslEditor({ markDirty: false });
@@ -2679,11 +2715,13 @@ async function init() {
   loadEditorSplitLayout();
   loadActiveBottomTab();
   loadAutoApplyDslSetting();
+  loadAutoSyncGraphToDslSetting();
   loadEditorMaximizeMode();
   loadSceneSyncSettings();
   renderFileStatus();
   renderDirtyStatus();
   renderAutoApplyStatus();
+  renderAutoSyncGraphToDslStatus();
   renderUndoRedoState();
   renderNodePaletteCategories();
   renderNodePalette();
@@ -2693,6 +2731,9 @@ async function init() {
 
   if (elements.autoApplyDslToggle) {
     elements.autoApplyDslToggle.checked = autoApplyDslEnabled;
+  }
+  if (elements.autoSyncGraphToDslToggle) {
+    elements.autoSyncGraphToDslToggle.checked = autoSyncGraphToDslEnabled;
   }
 
   applyEditorMaximizeMode();
