@@ -82,7 +82,8 @@ export function applyNodeEditorOperationState(state, operation) {
       change: {
         operation,
         graphChanged: true,
-        shouldRerenderView: operation.type !== 'moveNode'
+        shouldRerenderView: operation.type !== 'moveNode',
+        affectsDsl: operation.type !== 'moveNode'
       },
       error: null
     };

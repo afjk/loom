@@ -76,6 +76,7 @@
       assert(result.error === null, 'result.error should be null');
       assert(result.change.graphChanged === true, 'result.change.graphChanged should be true');
       assert(result.change.shouldRerenderView === true, 'result.change.shouldRerenderView should be true');
+      assert(result.change.affectsDsl === true, 'updateParam should affect DSL');
       assert(result.state.editorModel.nodesById.wave.params.freq === 0.9, 'freq param should be updated to 0.9');
 
       const graphNode = result.state.graph.nodes.find(n => n.id === 'wave');
@@ -97,6 +98,7 @@
       assert(result.error === null, 'result.error should be null');
       assert(result.change.graphChanged === true, 'result.change.graphChanged should be true');
       assert(result.change.shouldRerenderView === false, 'result.change.shouldRerenderView should be false');
+      assert(result.change.affectsDsl === false, 'moveNode should not rewrite DSL source');
 
       const editorNode = result.state.editorModel.nodesById.wave;
       assert(editorNode.position.x === 123, 'position.x should be 123');

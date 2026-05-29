@@ -10,6 +10,7 @@
   <script type="module">
     import { graphToCanonicalDSL } from "../src/canonical-dsl.js";
     import { parseDSLToAST, compileToGraph } from "../src/loom-dsl.js";
+    import { applyNodeEditorOperationState } from "../src/node-editor-core.js";
     import { graphToEditorModel, editorModelToGraph, applyEditorOperation } from "../src/loom-editor-model.js";
     import {
       connectionToAddEdgeOp,
@@ -197,6 +198,62 @@
       assertEqual(newGraph.render.type, graph.render.type, 'render type should be preserved');
       // compileToGraph resolves identifiers to nodeId.portName references
       assertEqual(newGraph.render.width, graph.render.width, 'render width ref should round-trip to width.out');
+    });
+
+    test('15. Node edit → canonical DSL → Graph preserves updated params', () => {
+      const graph = sampleGraph();
+      const state = {
+        graph,
+        editorModel: graphToEditorModel(graph),
+        errors: []
+      };
+
+      const result = applyNodeEditorOperationState(state, {
+        type: 'updateParam',
+        id: 'wave',
+        key: 'freq',
+        value: 0.5
+      });
+
+      if (result.error) throw result.error;
+      assert(result.change.affectsDsl === true, 'param edit should regenerate DSL');
+
+      const dsl = graphToCanonicalDSL(result.state.graph);
+      assert(dsl.includes('freq: 0.5'), 'canonical DSL should contain updated param');
+
+      const { ast, errors } = parseDSLToAST(dsl);
+      assert(errors.length === 0, 'canonical DSL should parse after node edit');
+
+      const { graph: roundTripped, errors: compileErrors } = compileToGraph(ast);
+      assert(compileErrors.length === 0, 'canonical DSL should compile after node edit');
+
+      const wave = roundTripped.nodes.find((node) => node.id === 'wave');
+      assert(wave.params.freq === 0.5, 'round-tripped graph should preserve edited param');
+    });
+
+    test('16. Node move updates layout graph but does not affect canonical DSL source', () => {
+      const graph = sampleGraph();
+      const beforeDsl = graphToCanonicalDSL(graph);
+      const state = {
+        graph,
+        editorModel: graphToEditorModel(graph),
+        errors: []
+      };
+
+      const result = applyNodeEditorOperationState(state, {
+        type: 'moveNode',
+        id: 'wave',
+        position: { x: 500, y: 240 }
+      });
+
+      if (result.error) throw result.error;
+      assert(result.change.affectsDsl === false, 'node movement should not regenerate DSL body');
+
+      const movedWave = result.state.graph.nodes.find((node) => node.id === 'wave');
+      assertEqual(movedWave.meta.position, { x: 500, y: 240 }, 'layout metadata should update in graph');
+
+      const afterDsl = graphToCanonicalDSL(result.state.graph);
+      assertEqual(afterDsl, beforeDsl, 'layout-only edits should not change canonical DSL');
     });
 
     // Run tests
