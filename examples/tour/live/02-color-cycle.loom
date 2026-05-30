@@ -8,15 +8,14 @@
 #   - Link Loomlet with `loomlet scenesync redeem <code> --save`.
 #   - Ensure an object named `color-target` exists in the scene.
 # Requires:
-#   - time.serverClock
+#   - clock (host-provided time)
 #   - math.sine
 #   - math.add
 #   - scene.setColor (not yet available end-to-end in Scene Sync target)
-import time
 import math
 import scene
 
-t = time.serverClock()
+t = clock()
 r = math.sine(t, freq: 0.1, amplitude: 0.5, offset: 0.5)
 g = math.sine(math.add(t, 2.0), freq: 0.1, amplitude: 0.5, offset: 0.5)
 b = math.sine(math.add(t, 4.0), freq: 0.1, amplitude: 0.5, offset: 0.5)

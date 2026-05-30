@@ -1,22 +1,21 @@
 # Tour: Orbit
-# Goal: Animate circular motion using cosine/sine on X/Z.
+# Goal: Circular orbit with sine/cosine.
 # Status: runnable
 # Run:
 #   loomlet scenesync dev examples/tour/scenesync/03-orbit.loom
 # Setup:
 #   - Open a Scene Sync room.
 #   - Link Loomlet with `loomlet scenesync redeem <code> --save`.
-#   - Ensure an object named `sample-cube` exists in the scene.
+#   - Ensure an object named `orbit-target` exists in the scene.
 # Requires:
-#   - time.serverClock
-#   - math.cosine
-#   - math.sine
-#   - scene.setPosition
-import time
+#   - clock (host-provided time)
+#   - math.cosine, math.sine
+#   - scene.offsetPosition
 import math
 import scene
 
-t = time.serverClock()
-x = math.cosine(t, freq: 0.15, amplitude: 2, offset: 0)
-z = math.sine(t, freq: 0.15, amplitude: 2, offset: 0)
-scene.setPosition(objectId: "sample-cube", x: x, y: 1.2, z: z)
+t = clock()
+dx = math.cosine(t, freq: 0.2, amplitude: 1.5)
+dz = math.sine(t, freq: 0.2, amplitude: 1.5)
+
+scene.offsetPosition(objectId: "orbit-target", x: dx, z: dz)

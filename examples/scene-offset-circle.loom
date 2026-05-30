@@ -1,9 +1,7 @@
-import time
 import math
 import scene
 
-t = time.serverClock()
-
+t = clock()
 dx = math.cosine(t, freq: 0.2, amplitude: 1.5)
 dz = math.sine(t, freq: 0.2, amplitude: 1.5)
 

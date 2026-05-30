@@ -39,7 +39,7 @@ Environment は、graph を評価するために外部から与えられる入�
 
 Environment には次のものが含まれる。
 
-- 共有 clock によって同期された時刻
+- host が供給する時刻 (`env.time`)
 - 入力値
 - 入力イベント
 
@@ -121,7 +121,7 @@ Loomlet は、連続的な結果ではなく原因を同期する。
 
 - 入力イベントは、発生したときに environment event として同期する
 - 入力値は、変化したときに environment value として同期する
-- 時刻は、同期された clock に基づく
+- 時刻は host が供給する (`env.time`)
 
 連続的な振る舞いは、各クライアントがローカルで計算する。
 
@@ -332,16 +332,16 @@ Object の生成や削除は、graph 評価中に即座に反映しない方が�
 これにより、同じ tick 内で生成順や評価順に依存する挙動を避けられる。
 
 Projectile など、生成された瞬間から進行しているように見せたい object では、spawnTime を environment に含める。  
-Object-level graph は serverTime - spawnTime を使って現在位置を計算できる。
+Object-level graph は env.time - spawnTime を使って現在位置を計算できる。
 
 ## Loomlet tick と host frame
 
 Loomlet runtime は、host frame ごとに 1 回だけ graph を評価する必要はない。
 
 Host の frame loop と Loomlet の evaluation tick は、異なる周期で動作してよい。  
-決定論的な振る舞いのために、Loomlet は同期された時刻に基づく固定 timestep で評価されるべきである。
+決定論的な振る舞いのために、Loomlet は host-supplied な `env.time` に基づく固定 timestep で評価されるべきである。
 
-Runtime は、現在の同期時刻に追いつくために、1 つの host frame 内で Loomlet を複数回評価してよい。
+Runtime は、現在の host time に追いつくために、1 つの host frame 内で Loomlet を複数回評価してよい。
 
 Unity の場合、Unity Update と Loomlet tick は次のように分離できる。
 
@@ -371,7 +371,7 @@ Environment 同期モデルが成立するためには、Loomlet の評価が決
 - 純粋な計算ノードは、隠れた副作用を持たない
 - state を持つ振る舞いは、明示的な state ノードとして表現する
 - state ノードは安定した識別子を持つ
-- 時刻に依存する振る舞いは、ローカルの wall-clock time ではなく、同期された時刻を使用する
+- 時刻に依存する振る舞いは、ローカルの wall-clock time ではなく、host-supplied な `env.time` を使用する
 - 入力イベントは timestamp を持つ
 - 評価順序は明確に定義する
 - graph 評価中に host object を直接変更しない
@@ -1882,28 +1882,11 @@ Three.js Object3D のマテリアルの色を RGB（0..1 範囲）で設定し�
 
 Three.js Object3D の表示・非表示を切り替えます。`visible = !!inputs.visible` として設定されます。
 
-## 5.22-5.27 SceneSync アダプタノード
+## 5.22-5.26 SceneSync アダプタノード
 
 **注：** 以下のノードは、`src/loom-scenesync.js` のアダプタを通じて登録されます。コアには含まれず、`new LoomSceneSync(...)` で利用可能になります。
 
-### 5.22 serverClock
-
-**カテゴリ：** ソース部品
-
-**入力：** なし
-
-**出力：**
-- `t`（サーバ同期済み時刻、秒）
-  - 型：`number`
-
-**パラメータ：**
-- `adapterId`（型：`string`、自動注入）：アダプタインスタンス ID
-
-**説明：**
-
-全クライアント同期済みのサーバ時刻を出力します。コンストラクタで渡された `getServerTime()` の戻り値を返します。
-
-### 5.23 sceneSetPosition
+### 5.22 sceneSetPosition
 
 **カテゴリ：** シンク部品
 
@@ -2515,7 +2498,7 @@ Loomlet は単一の JSON グラフ表現を真の単一ソースとし、複数
 
 ### 12.5 SceneSync 連携時の時刻同期
 
-複数クライアントで結果を揃えるには、共有された時刻ソースが必要となる。これは `serverClock` ノード（SceneSync アダプタの `src/loom-scenesync.js` で実装済み）で実現する。`evaluateAt({ time, ... })` の `time` を全クライアントで揃えれば、ステートレスグラフの結果は揃う。
+複数クライアントで結果を揃えるには、共有された時刻ソースが必要となる。Loomlet は時刻同期を行わないため、host 側で同期済みの時刻を `env.time` として供給する必要がある。`evaluateAt({ time, ... })` の `time` を全クライアントで揃えれば、ステートレスグラフの結果は揃う。
 
 ## 13. ロードマップ
 
@@ -2578,7 +2561,7 @@ Loomlet は単一の JSON グラフ表現を真の単一ソースとし、複数
 See [Scene Sync Workflow Guide](./SCENESYNC_WORKFLOW.md) for user-facing documentation of the `run`, `behavior compile`, `behavior set`, `behavior clear`, and `dev` commands.
 
 - ✅ `src/loom-scenesync.js` の追加（Loomlet リポジトリ側のアダプタ層）
-- ✅ `serverClock` ノード追加（クロスクライアント時刻同期）
+- ✅ `clock` ノード：host から供給される時刻を読む
 - ✅ Sink ノード 5 種：`sceneSetPosition`、`sceneSetRotation`、`sceneSetScale`、`sceneSetColor`、`sceneSetVisible`
 - ✅ CLI: `redeem` / `objects` / `probe` / `graph-compile` / `graph-run` / `dev` watch
 - ✅ `sample-cube` に対する behavior graph 適用

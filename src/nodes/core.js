@@ -410,11 +410,4 @@ export function registerCoreNodes(registry) {
       return { event: sampled };
     }
   });
-  registry.registerNodeType('time.serverClock', {
-    category: 'source',
-    inputs: [],
-    outputs: [{ name: 't', type: 'number', kind: 'behavior' }],
-    params: [],
-    evaluate: (inputs, params, ctx) => ({ t: ctx.time })
-  });
 }

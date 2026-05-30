@@ -370,25 +370,6 @@ export const LIBRARY_METADATA = {
       }
     }
   },
-  time: {
-    name: 'time',
-    description: LIBRARY_COMPATIBILITY.time.description,
-    targets: LIBRARY_COMPATIBILITY.time.targets,
-    functions: {
-      serverClock: {
-        name: 'serverClock',
-        signature: 'time.serverClock()',
-        description: 'Returns the current server time.',
-        args: [],
-        returns: 'number',
-        targets: LIBRARY_COMPATIBILITY.time.targets,
-        examples: [
-          't = time.serverClock()',
-          'console.log(t)'
-        ]
-      }
-    }
-  },
   math: {
     name: 'math',
     description: LIBRARY_COMPATIBILITY.math.description,

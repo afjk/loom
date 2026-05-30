@@ -470,29 +470,6 @@
       ]
     },
     {
-      "name": "time",
-      "status": "implemented",
-      "description": "Time-based source nodes",
-      "targets": [
-        "cli",
-        "web",
-        "scenesync",
-        "unity"
-      ],
-      "functions": [
-        {
-          "name": "serverClock",
-          "fullName": "time.serverClock",
-          "status": "implemented",
-          "signature": "time.serverClock()",
-          "description": "Returns the current server time.",
-          "returns": "number",
-          "allowsTwoPositionalArgs": false,
-          "inputs": []
-        }
-      ]
-    },
-    {
       "name": "math",
       "status": "implemented",
       "description": "Pure math and numeric transform nodes",

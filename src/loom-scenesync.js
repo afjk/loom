@@ -11,11 +11,14 @@ let nextAdapterId = 0;
 const registeredLoomClasses = new WeakSet();
 
 export class LoomSceneSync {
-  constructor({ LoomClass, send, getServerTime, resolveTarget }) {
+  constructor({ LoomClass, send, resolveTarget, getEnv }) {
+    if (typeof getEnv !== 'function') {
+      throw new LoomError('MISSING_GET_ENV', 'LoomSceneSync requires getEnv callback');
+    }
     this.LoomClass = LoomClass;
     this.send = send;
-    this.getServerTime = getServerTime;
     this.resolveTarget = resolveTarget;
+    this.getEnv = getEnv;
 
     // このアダプタの一意ID
     this.adapterId = `adapter-${nextAdapterId++}`;
@@ -39,19 +42,6 @@ export class LoomSceneSync {
     }
 
     const LoomClass = this.LoomClass;
-
-    // serverClock ノード
-    LoomClass.registerNodeType("serverClock", {
-      category: "source",
-      inputs: [],
-      outputs: [{ name: "t", type: "number", kind: "behavior" }],
-      params: [{ name: "adapterId", type: "string", default: "" }],
-      evaluate: (inputs, params) => {
-        const adapter = adapterRegistry.get(params.adapterId);
-        const t = adapter ? adapter.getServerTime() : 0;
-        return { t };
-      }
-    });
 
     // SceneSync sink ノード：setPosition
     LoomClass.registerNodeType("sceneSetPosition", {
@@ -223,7 +213,7 @@ export class LoomSceneSync {
     // グラフをコピー（元を破壊しない）
     const nodes = graph.nodes.map(node => {
       const nodeId = node.type;
-      if (!["serverClock", "sceneSetPosition", "sceneSetRotation", "sceneSetScale", "sceneSetColor", "sceneSetVisible"].includes(nodeId)) {
+      if (!["sceneSetPosition", "sceneSetRotation", "sceneSetScale", "sceneSetColor", "sceneSetVisible"].includes(nodeId)) {
         return node;
       }
 
@@ -267,7 +257,9 @@ export class LoomSceneSync {
       this._sceneGraph.stop();
       this._sceneGraph = new this.LoomClass(injectedGraph);
       if (this._started) {
-        this._sceneGraph.start();
+        this._sceneGraph.start({
+          getEnv: this._makeEnvProvider({ type: 'scene' })
+        });
       }
     } else {
       // オブジェクト単位グラフ
@@ -278,7 +270,9 @@ export class LoomSceneSync {
       const engine = new this.LoomClass(injectedGraph);
       this._objectGraphs.set(targetId, engine);
       if (this._started) {
-        engine.start();
+        engine.start({
+          getEnv: this._makeEnvProvider({ type: 'object', id: targetId })
+        });
       }
     }
   }
@@ -320,11 +314,29 @@ export class LoomSceneSync {
     console.warn("scene-graph-input is not yet supported. Phase 2 での実装予定です。");
   }
 
+  _makeEnvProvider(scope) {
+    return ({ elapsed, timestamp, engine }) => {
+      const env = this.getEnv({ scope, elapsed, timestamp, engine });
+      if (!env || typeof env !== 'object') {
+        throw new LoomError('INVALID_ENV', 'getEnv must return an environment object', { reason: 'getEnv' });
+      }
+      return {
+        ...env,
+        scope: env.scope ?? scope,
+        events: Array.isArray(env.events) ? env.events : []
+      };
+    };
+  }
+
   start() {
     this._started = true;
-    this._sceneGraph.start();
-    for (const engine of this._objectGraphs.values()) {
-      engine.start();
+    this._sceneGraph.start({
+      getEnv: this._makeEnvProvider({ type: 'scene' })
+    });
+    for (const [targetId, engine] of this._objectGraphs.entries()) {
+      engine.start({
+        getEnv: this._makeEnvProvider({ type: 'object', id: targetId })
+      });
     }
   }
 

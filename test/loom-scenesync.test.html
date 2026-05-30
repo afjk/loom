@@ -35,6 +35,11 @@
       }
     }
 
+    // Default getEnv callback for tests
+    function getDefaultEnv() {
+      return { time: 0 };
+    }
+
     // Mock Object3D
     function createMockObject() {
       return {
@@ -54,8 +59,8 @@
 
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: (msg) => sendCalls.push(msg),
-        getServerTime: () => serverTime.value,
         resolveTarget: (id) => objects[id] ?? null
       });
 
@@ -85,8 +90,8 @@
 
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: (msg) => sendCalls.push(msg),
-        getServerTime: () => serverTime.value,
         resolveTarget: (id) => objects[id] ?? null
       });
 
@@ -127,8 +132,8 @@
 
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        getServerTime: () => serverTime.value,
         resolveTarget: (id) => objects[id] ?? null
       });
 
@@ -158,8 +163,8 @@
 
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        getServerTime: () => serverTime.value,
         resolveTarget: (id) => objects[id] ?? null
       });
 
@@ -185,8 +190,8 @@
 
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        getServerTime: () => serverTime.value,
         resolveTarget: (id) => objects[id] ?? null
       });
 
@@ -206,8 +211,9 @@
     test('存在しない object scope を clear してもエラーにならない', () => {
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        getServerTime: () => 0,
+        
         resolveTarget: () => null
       });
 
@@ -219,8 +225,9 @@
     test('resolveTarget が null を返しても sink がエラーを投げない', () => {
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        getServerTime: () => 0,
+        
         resolveTarget: () => null
       });
 
@@ -237,29 +244,27 @@
       assert(true, 'no error thrown');
     });
 
-    // Test 8: serverClock.t が getServerTime() の戻り値と一致する
-    test('serverClock.t が getServerTime() の戻り値と一致する', () => {
-      const serverTime = { value: 42.5 };
-
+    // Test 8: clock.t returns env.time
+    test('clock.t returns env.time', () => {
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        getServerTime: () => serverTime.value,
         resolveTarget: () => null
       });
 
       const graph = {
         nodes: [
-          { id: 'clock', type: 'serverClock' }
+          { id: 'clock', type: 'clock' }
         ],
         edges: []
       };
 
       adapter.handleMessage({ type: 'scene-graph-set', scope: 'scene', graph });
-      adapter._sceneGraph.evaluateAt({ time: 0 });
+      adapter._sceneGraph.evaluateAt({ time: 42.5 });
 
       const t = adapter._sceneGraph.getValue('clock.t');
-      assertEqual(t, 42.5, 'serverClock.t should match getServerTime()');
+      assertEqual(t, 42.5, 'clock.t should equal env.time');
     });
 
     // Test 9: sceneSetPosition が position.set(x,y,z) を呼ぶ
@@ -267,8 +272,8 @@
       const obj = createMockObject();
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        getServerTime: () => 0,
         resolveTarget: (id) => id === 'obj' ? obj : null
       });
 
@@ -299,8 +304,8 @@
       const obj = createMockObject();
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        getServerTime: () => 0,
         resolveTarget: (id) => id === 'obj' ? obj : null
       });
 
@@ -331,8 +336,8 @@
       const obj = createMockObject();
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        getServerTime: () => 0,
         resolveTarget: (id) => id === 'obj' ? obj : null
       });
 
@@ -363,8 +368,8 @@
       const obj = createMockObject();
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        getServerTime: () => 0,
         resolveTarget: (id) => id === 'obj' ? obj : null
       });
 
@@ -395,8 +400,8 @@
       const obj = createMockObject();
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        getServerTime: () => 0,
         resolveTarget: (id) => id === 'obj' ? obj : null
       });
 
@@ -420,8 +425,9 @@
     test('scene-graph-input 受信時は no-op', () => {
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        getServerTime: () => 0,
+        
         resolveTarget: () => null
       });
 
@@ -434,8 +440,8 @@
       const obj = createMockObject();
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        getServerTime: () => 0,
         resolveTarget: (id) => id === 'obj' ? obj : null
       });
 
@@ -457,8 +463,9 @@
     test('不正な scope で INVALID_SCOPE', () => {
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        getServerTime: () => 0,
+        
         resolveTarget: () => null
       });
 
@@ -474,8 +481,9 @@
     test('不明な type で INVALID_MESSAGE', () => {
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        getServerTime: () => 0,
+        
         resolveTarget: () => null
       });
 
@@ -491,8 +499,9 @@
     test('scene-graph-patch に graph がない場合 INVALID_GRAPH', () => {
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        getServerTime: () => 0,
+        
         resolveTarget: () => null
       });
 
@@ -508,64 +517,65 @@
     test('new LoomSceneSync(...) を複数回呼んでも重複登録エラーにならない', () => {
       const adapter1 = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        getServerTime: () => 0,
+        
         resolveTarget: () => null
       });
 
       const adapter2 = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        getServerTime: () => 0,
+        
         resolveTarget: () => null
       });
 
       assert(true, 'no error thrown');
     });
 
-    // Test 20: 複数 adapter がそれぞれ異なる getServerTime / resolveTarget を使える
-    test('複数 adapter が異なる getServerTime / resolveTarget を使える', () => {
-      const serverTime1 = { value: 1.0 };
-      const serverTime2 = { value: 2.0 };
+    // Test 20: 複数 adapter がそれぞれ異なるグラフを独立に動かせる
+    test('複数 adapter が独立にグラフを実行できる', () => {
       const obj1 = createMockObject();
       const obj2 = createMockObject();
 
       const adapter1 = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        getServerTime: () => serverTime1.value,
         resolveTarget: (id) => id === 'obj1' ? obj1 : null
       });
 
       const adapter2 = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        getServerTime: () => serverTime2.value,
         resolveTarget: (id) => id === 'obj2' ? obj2 : null
       });
 
-      const graph1 = { nodes: [{ id: 'clock', type: 'serverClock' }], edges: [] };
-      const graph2 = { nodes: [{ id: 'clock', type: 'serverClock' }], edges: [] };
+      const graph1 = { nodes: [{ id: 'clock', type: 'clock' }], edges: [] };
+      const graph2 = { nodes: [{ id: 'clock', type: 'clock' }], edges: [] };
 
       adapter1.handleMessage({ type: 'scene-graph-set', scope: 'scene', graph: graph1 });
       adapter2.handleMessage({ type: 'scene-graph-set', scope: 'scene', graph: graph2 });
 
-      adapter1._sceneGraph.evaluateAt({ time: 0 });
-      adapter2._sceneGraph.evaluateAt({ time: 0 });
+      adapter1._sceneGraph.evaluateAt({ time: 1.0 });
+      adapter2._sceneGraph.evaluateAt({ time: 2.0 });
 
       const t1 = adapter1._sceneGraph.getValue('clock.t');
       const t2 = adapter2._sceneGraph.getValue('clock.t');
 
-      assertEqual(t1, 1.0, 'adapter1 should use its own getServerTime');
-      assertEqual(t2, 2.0, 'adapter2 should use its own getServerTime');
+      assertEqual(t1, 1.0, 'adapter1 should evaluate with time 1.0');
+      assertEqual(t2, 2.0, 'adapter2 should evaluate with time 2.0');
     });
 
     // Test 21: createGraphSetMessage は scope/graph を検証し複製を返す
     test('createGraphSetMessage は scope/graph を検証し複製を返す', () => {
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        getServerTime: () => 0,
+        
         resolveTarget: () => null
       });
 
@@ -587,8 +597,8 @@
       const sent = [];
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: (msg) => sent.push(msg),
-        getServerTime: () => 0,
         resolveTarget: () => null
       });
 
@@ -617,8 +627,9 @@
     test('createGraphInputMessage は ref/payload を検証する', () => {
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        getServerTime: () => 0,
+        
         resolveTarget: () => null
       });
 
@@ -641,8 +652,9 @@
     test('scope helper は ownership キーとして使える', () => {
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        getServerTime: () => 0,
+        
         resolveTarget: () => null
       });
 

@@ -1,20 +1,9 @@
 # Tour: Breathing Scale
-# Goal: Pulse object scale for live visual emphasis.
+# Goal: Scale pulsing with sine wave.
 # Status: runnable
-# Run:
-#   loomlet scenesync dev examples/tour/scenesync/04-breathing-scale.loom
-# Setup:
-#   - Open a Scene Sync room.
-#   - Link Loomlet with `loomlet scenesync redeem <code> --save`.
-#   - Ensure an object named `sample-cube` exists in the scene.
-# Requires:
-#   - time.serverClock
-#   - math.sine
-#   - scene.setScale
-import time
 import math
 import scene
 
-t = time.serverClock()
-s = math.sine(t, freq: 0.4, amplitude: 0.25, offset: 1.25)
-scene.setScale(objectId: "sample-cube", x: s, y: s, z: s)
+t = clock()
+s = math.sine(t, freq: 1.0, amplitude: 0.3, offset: 1.0)
+scene.setScale(objectId: "breathing-target", x: s, y: s, z: s)

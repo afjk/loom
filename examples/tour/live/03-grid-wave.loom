@@ -8,15 +8,14 @@
 #   - Link Loomlet with `loomlet scenesync redeem <code> --save`.
 #   - Ensure objects `grid-1` through `grid-9` exist in the scene.
 # Requires:
-#   - time.serverClock
+#   - clock (host-provided time)
 #   - math.sine
 #   - math.add
 #   - scene.setPosition
-import time
 import math
 import scene
 
-t = time.serverClock()
+t = clock()
 y1 = math.sine(math.add(t, 0.0), freq: 0.25, amplitude: 0.5, offset: 1.0)
 y2 = math.sine(math.add(t, 0.3), freq: 0.25, amplitude: 0.5, offset: 1.0)
 y3 = math.sine(math.add(t, 0.6), freq: 0.25, amplitude: 0.5, offset: 1.0)

@@ -470,8 +470,7 @@ function buildNodeTypes() {
     sceneSetRotation: 'scene.setRotation',
     sceneSetScale: 'scene.setScale',
     sceneSetVisible: 'scene.setVisible',
-    sceneSetColor: 'scene.setColor',
-    serverClock: 'clock'
+    sceneSetColor: 'scene.setColor'
   };
   for (const [alias, canonical] of Object.entries(adapterAliases)) {
     nodes[alias] = nodes[canonical];

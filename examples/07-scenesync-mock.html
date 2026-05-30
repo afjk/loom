@@ -168,16 +168,23 @@
       };
     }
 
-    // Synced server clock simulation
+    // Local playback clock
     const startTime = performance.now() / 1000;
-    function getServerTime() {
+    function getLocalTime() {
       return (performance.now() / 1000) - startTime;
+    }
+
+    // Environment provider for Loom graphs
+    function getEnv() {
+      return {
+        time: getLocalTime()
+      };
     }
 
     // Message log
     const logs = [];
     function addLog(msg, type = 'event') {
-      const timestamp = getServerTime().toFixed(2);
+      const timestamp = getLocalTime().toFixed(2);
       logs.push({ timestamp, msg, type });
       updateLog();
     }
@@ -197,11 +204,11 @@
 
     const adapter = new LoomSceneSync({
       LoomClass: Loom,
+      getEnv: getEnv,
       send: (msg) => {
         const body = msg.payload ?? msg.graph ?? {};
         addLog(`SEND: ${msg.type} scope=${JSON.stringify(msg.scope)} body=${JSON.stringify(body)}`);
       },
-      getServerTime,
       resolveTarget: (id) => objects[id] ?? null
     });
 
@@ -210,14 +217,14 @@
 
     // Timeline: 1s - start scene graph
     setTimeout(() => {
-      addLog('Sending scene-graph-set (serverClock → sine → sceneSetPosition)');
+      addLog('Sending scene-graph-set (clock → sine → sceneSetPosition)');
       const scopeKey = adapter.getScopeKey('scene');
       ownership.set(scopeKey, 'loom-authoritative');
       addLog(`Scope ${scopeKey} owned by Loom graph`);
 
       const graph = {
         nodes: [
-          { id: 'clock', type: 'serverClock' },
+          { id: 'clock', type: 'clock' },
           { id: 'sine', type: 'sine', params: { freq: 1, amplitude: 50 } },
           { id: 'pos', type: 'sceneSetPosition', params: { target: 'cube1' } }
         ],
@@ -254,7 +261,7 @@
 
       const graph = {
         nodes: [
-          { id: 'clock', type: 'serverClock' },
+          { id: 'clock', type: 'clock' },
           { id: 'sine_x', type: 'sine', params: { freq: 0.5, amplitude: 40 } },
           { id: 'sine_y', type: 'sine', params: { freq: 0.3, amplitude: 30, phase: 1.57 } },
           { id: 'scale_sin', type: 'sine', params: { freq: 1, amplitude: 0.5, offset: 1.5 } },
@@ -305,7 +312,7 @@
 
     // Update status display
     function updateStatus() {
-      const elapsed = getServerTime().toFixed(2);
+      const elapsed = getLocalTime().toFixed(2);
       const status = document.getElementById('status');
       status.innerHTML = `
         <div class="status">Elapsed: <strong>${elapsed}s</strong></div>

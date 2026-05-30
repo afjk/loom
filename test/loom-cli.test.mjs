@@ -765,7 +765,7 @@ test('scenesync behavior compile with offsetPosition example outputs scene-graph
   assert.ok(Array.isArray(payload.graph.nodes));
   assert.ok(payload.graph.nodes.some((n) => n.type === 'sceneOffsetPosition'));
   assert.ok(payload.graph.nodes.some((n) => n.type === 'sine'));
-  assert.ok(payload.graph.nodes.some((n) => n.type === 'serverClock'));
+  assert.ok(payload.graph.nodes.some((n) => n.type === 'clock'));
 });
 
 test('scenesync behavior compile with circle offsetPosition example outputs multiple nodes', () => {

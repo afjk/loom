@@ -36,7 +36,6 @@ namespace Afjk.Loom
 
         private readonly string _id;
         private readonly Func<object, bool> _send;
-        private readonly Func<double> _getServerTime;
 
         private LoomEngine _sceneEngine;
         private readonly Dictionary<string, LoomEngine> _objectEngines =
@@ -55,16 +54,13 @@ namespace Afjk.Loom
         /// Create a new SceneSync adapter.
         /// </summary>
         /// <param name="send">Callback for sending messages (may be a no-op).</param>
-        /// <param name="getServerTime">Returns the current server clock in seconds.</param>
         /// <param name="targetResolver">Resolves target identifiers to Unity objects.</param>
         public LoomSceneSyncAdapter(
             Func<object, bool> send,
-            Func<double> getServerTime,
             ILoomTargetResolver targetResolver)
         {
             _id = $"adapter-{_nextId++}";
             _send = send ?? (_ => false);
-            _getServerTime = getServerTime ?? (() => 0.0);
             TargetResolver = targetResolver;
 
             _sceneEngine = CreateEmptyEngine();
@@ -76,9 +72,6 @@ namespace Afjk.Loom
         // -------------------------------------------------------------------------
         // Public API
         // -------------------------------------------------------------------------
-
-        /// <summary>Returns the current server time.</summary>
-        public double GetServerTime() => _getServerTime();
 
         /// <summary>
         /// Handle an incoming SceneSync message.

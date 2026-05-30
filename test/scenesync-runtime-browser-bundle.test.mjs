@@ -125,7 +125,7 @@ test('Scene Sync browser runtime supports legacy adapter node aliases with targe
   };
   const runtime = runtimeModule.createSceneSyncRuntime({
     nodes: [
-      { id: 'clock', type: 'serverClock' },
+      { id: 'clock', type: 'clock' },
       { id: 'sink', type: 'sceneSetPosition', params: { target: 'legacy-cube', y: 2, z: 3 } }
     ],
     edges: [{ from: 'clock.t', to: 'sink.x' }]

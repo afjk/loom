@@ -22,16 +22,7 @@ const libraries = [
 ];
 
 const libraryMembers = {
-  time: [
-    {
-      label: 'serverClock()',
-      insertText: 'serverClock()',
-      topLevelInsertText: 'time.serverClock()',
-      detail: 'time.serverClock()',
-      documentation: 'Synchronized scene/server clock source.',
-      namedArgs: []
-    }
-  ],
+  time: [],
   math: [
     {
       label: 'sine(...)',

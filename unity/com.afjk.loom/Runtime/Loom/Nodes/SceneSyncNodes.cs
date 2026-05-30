@@ -8,7 +8,7 @@ using UnityEngine;
 namespace Afjk.Loom
 {
     /// <summary>
-    /// SceneSync nodes: serverClock, sceneSetPosition, sceneSetRotation, sceneSetScale,
+    /// SceneSync nodes: sceneSetPosition, sceneSetRotation, sceneSetScale,
     /// sceneSetColor, sceneSetVisible.
     ///
     /// Unity-specific operations are wrapped in #if UNITY_2019_1_OR_NEWER so that the
@@ -25,30 +25,6 @@ namespace Afjk.Loom
         {
             if (_registered) return;
             _registered = true;
-
-            // ------------------------------------------------------------------
-            // serverClock: outputs getServerTime() as behavior
-            // ------------------------------------------------------------------
-            registry["serverClock"] = new LoomNodeTypeDef
-            {
-                Category = "source",
-                Inputs = new List<LoomPortDef>(),
-                Outputs = new List<LoomPortDef>
-                {
-                    new LoomPortDef { Name = "t", Type = "number", Kind = "behavior" }
-                },
-                Params = new List<LoomParamDef>
-                {
-                    new LoomParamDef { Name = "adapterId", Type = "string", Default = "" }
-                },
-                Evaluate = (inputs, @params, ctx) =>
-                {
-                    var adapterId = LoomNodeHelpers.GetParam(@params, "adapterId");
-                    var adapter   = LoomSceneSyncAdapter.GetById(adapterId);
-                    var t         = adapter?.GetServerTime() ?? 0.0;
-                    return new Dictionary<string, object> { ["t"] = (object)t };
-                }
-            };
 
             // ------------------------------------------------------------------
             // sceneSetPosition: set Transform.position

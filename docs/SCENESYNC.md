@@ -9,7 +9,7 @@ Loom SceneSync アダプタ（`src/loom-scenesync.js`）は、Loom のステー�
 - **WebSocket / サーバ非依存**: メッセージの送受信は外部注入（`send` 関数）
 - **複数グラフ対応**: シーン全体グラフとオブジェクト単位グラフを独立管理
 - **クライアント評価**: ステートレスなグラフ定義は broadcast、入力は各クライアントでローカル評価
-- **拡張可能**: `serverClock` と 5 種の SceneSync sink ノードを提供
+- **拡張可能**: 5 種の SceneSync sink ノードを提供
 
 ### 使用例
 
@@ -20,7 +20,11 @@ import { LoomSceneSync } from "./loom-scenesync.js";
 const adapter = new LoomSceneSync({
   LoomClass: Loom,
   send: (msg) => socket.send(JSON.stringify(msg)),
-  getServerTime: () => syncedClock.now(),
+  getEnv: ({ scope, elapsed, timestamp, engine }) => ({
+    time: elapsed,
+    events: [],
+    scope
+  }),
   resolveTarget: (targetId) => objects.get(targetId) ?? null
 });
 
@@ -42,7 +46,7 @@ const graphMsg = adapter.createGraphSetMessage(
   { object: "cube1" },
   {
     nodes: [
-      { id: "clock", type: "serverClock" },
+      { id: "clock", type: "clock" },
       { id: "pos", type: "sceneSetPosition", params: { target: "cube1" } }
     ],
     edges: [{ from: "clock.t", to: "pos.x" }]
@@ -68,7 +72,7 @@ adapter.sendInput("scene", "pointer.move", { x: 120, y: 80 });
   "scope": "scene",
   "graph": {
     "nodes": [
-      { "id": "clock", "type": "serverClock" },
+      { "id": "clock", "type": "clock" },
       { "id": "pos", "type": "sceneSetPosition", "params": { "target": "cube1" } }
     ],
     "edges": [
@@ -181,7 +185,7 @@ Phase 2 では、サーバから各クライアントへ入力イベントを配
 const adapter = new LoomSceneSync({
   LoomClass,
   send,
-  getServerTime,
+  getEnv,
   resolveTarget
 });
 ```
@@ -190,7 +194,7 @@ const adapter = new LoomSceneSync({
 
 - `LoomClass` (Class): Loom クラス本体。インスタンスではなくクラスを渡すこと。
 - `send` (Function): メッセージ送信関数。`(msg: Object) => void`
-- `getServerTime` (Function): サーバ同期済み時刻を秒で返す。`() => number`
+- `getEnv` (Function): environment snapshot を返す関数。`(frame: { scope, elapsed, timestamp, engine }) => { time: number, deltaTime?: number, events?: Array, scope?: object }`
 - `resolveTarget` (Function): targetId から対象オブジェクトを取得。`(targetId: string) => Object | null`
 
 ### `handleMessage(msg)`
