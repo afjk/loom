@@ -346,6 +346,26 @@
       "expected": 8
     },
     {
+      "id": "math.abs.basic",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.abs",
+            "params": {
+              "value": -5
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 5
+    },
+    {
       "id": "math.sine.at_zero",
       "library": "math",
       "level": "portable",
@@ -385,6 +405,209 @@
               "amplitude": 1,
               "phase": 0,
               "offset": 0
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 1,
+      "tolerance": 1e-9
+    },
+    {
+      "id": "math.tan.at_zero",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.tan",
+            "params": {
+              "value": 0
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 0,
+      "tolerance": 1e-9
+    },
+    {
+      "id": "math.tan.pi_over_4",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.tan",
+            "params": {
+              "value": 0.7853981633974483
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 1,
+      "tolerance": 1e-12
+    },
+    {
+      "id": "math.smoothstep.midpoint",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.smoothstep",
+            "params": {
+              "x": 0.5,
+              "edge0": 0,
+              "edge1": 1
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 0.5,
+      "tolerance": 1e-9
+    },
+    {
+      "id": "math.smoothstep.below_range",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.smoothstep",
+            "params": {
+              "x": -0.5,
+              "edge0": 0,
+              "edge1": 1
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 0,
+      "tolerance": 1e-9
+    },
+    {
+      "id": "math.smoothstep.above_range",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.smoothstep",
+            "params": {
+              "x": 1.5,
+              "edge0": 0,
+              "edge1": 1
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 1,
+      "tolerance": 1e-9
+    },
+    {
+      "id": "math.smoothstep.at_edge0",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.smoothstep",
+            "params": {
+              "x": 0,
+              "edge0": 0,
+              "edge1": 1
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 0,
+      "tolerance": 1e-9
+    },
+    {
+      "id": "math.smoothstep.at_edge1",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.smoothstep",
+            "params": {
+              "x": 1,
+              "edge0": 0,
+              "edge1": 1
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 1,
+      "tolerance": 1e-9
+    },
+    {
+      "id": "math.smoothstep.equal_edges_below",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.smoothstep",
+            "params": {
+              "x": 0.5,
+              "edge0": 1,
+              "edge1": 1
+            }
+          }
+        ],
+        "edges": []
+      },
+      "evaluate": {},
+      "get": "n.out",
+      "expected": 0,
+      "tolerance": 1e-9
+    },
+    {
+      "id": "math.smoothstep.equal_edges_at_edge",
+      "library": "math",
+      "level": "portable",
+      "graph": {
+        "nodes": [
+          {
+            "id": "n",
+            "type": "math.smoothstep",
+            "params": {
+              "x": 1,
+              "edge0": 1,
+              "edge1": 1
             }
           }
         ],
