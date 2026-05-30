@@ -12,6 +12,9 @@ const registeredLoomClasses = new WeakSet();
 
 export class LoomSceneSync {
   constructor({ LoomClass, send, resolveTarget, getEnv }) {
+    if (typeof getEnv !== 'function') {
+      throw new LoomError('MISSING_GET_ENV', 'LoomSceneSync requires getEnv callback');
+    }
     this.LoomClass = LoomClass;
     this.send = send;
     this.resolveTarget = resolveTarget;

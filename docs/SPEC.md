@@ -39,7 +39,7 @@ Environment は、graph を評価するために外部から与えられる入�
 
 Environment には次のものが含まれる。
 
-- 共有 clock によって同期された時刻
+- host が供給する時刻 (`env.time`)
 - 入力値
 - 入力イベント
 
@@ -121,7 +121,7 @@ Loomlet は、連続的な結果ではなく原因を同期する。
 
 - 入力イベントは、発生したときに environment event として同期する
 - 入力値は、変化したときに environment value として同期する
-- 時刻は、同期された clock に基づく
+- 時刻は host が供給する (`env.time`)
 
 連続的な振る舞いは、各クライアントがローカルで計算する。
 
@@ -339,9 +339,9 @@ Object-level graph は env.time - spawnTime を使って現在位置を計算で
 Loomlet runtime は、host frame ごとに 1 回だけ graph を評価する必要はない。
 
 Host の frame loop と Loomlet の evaluation tick は、異なる周期で動作してよい。  
-決定論的な振る舞いのために、Loomlet は同期された時刻に基づく固定 timestep で評価されるべきである。
+決定論的な振る舞いのために、Loomlet は host-supplied な `env.time` に基づく固定 timestep で評価されるべきである。
 
-Runtime は、現在の同期時刻に追いつくために、1 つの host frame 内で Loomlet を複数回評価してよい。
+Runtime は、現在の host time に追いつくために、1 つの host frame 内で Loomlet を複数回評価してよい。
 
 Unity の場合、Unity Update と Loomlet tick は次のように分離できる。
 
@@ -371,7 +371,7 @@ Environment 同期モデルが成立するためには、Loomlet の評価が決
 - 純粋な計算ノードは、隠れた副作用を持たない
 - state を持つ振る舞いは、明示的な state ノードとして表現する
 - state ノードは安定した識別子を持つ
-- 時刻に依存する振る舞いは、ローカルの wall-clock time ではなく、同期された時刻を使用する
+- 時刻に依存する振る舞いは、ローカルの wall-clock time ではなく、host-supplied な `env.time` を使用する
 - 入力イベントは timestamp を持つ
 - 評価順序は明確に定義する
 - graph 評価中に host object を直接変更しない

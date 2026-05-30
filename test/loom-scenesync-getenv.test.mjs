@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Loom } from '../src/loom.js';
 import { LoomSceneSync } from '../src/loom-scenesync.js';
+import { LoomError } from '../src/loom.js';
 
 test('LoomSceneSync.start() passes getEnv provider to scene graph', () => {
   let sceneGraphStarted = false;
@@ -142,6 +143,27 @@ test('LoomSceneSync evaluateAt passes time through getEnv', (t) => {
 
   // Verify that evaluateAt would use the provided time
   adapter._sceneGraph.evaluateAt({ time: 55.5 });
+});
+
+test('LoomSceneSync constructor throws if getEnv is not provided', () => {
+  const mockGraphClass = function() {
+    this.nodes = [];
+    this.edges = [];
+    this.start = function() {};
+    this.stop = function() {};
+  };
+  mockGraphClass.registerNodeType = function() {};
+
+  assert.throws(
+    () => new LoomSceneSync({
+      LoomClass: mockGraphClass,
+      getEnv: undefined,  // Missing getEnv
+      send: () => {},
+      resolveTarget: () => null
+    }),
+    (err) => err.code === 'MISSING_GET_ENV',
+    'should throw MISSING_GET_ENV when getEnv is not provided'
+  );
 });
 
 test('LoomSceneSync._makeEnvProvider throws on invalid getEnv return', () => {
