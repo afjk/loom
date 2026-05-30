@@ -12,11 +12,10 @@ function assertEdgesReferToExistingNodes(graph) {
 
 test('compiles lissajous example to Scene Sync graph', () => {
   const source = `
-import time
 import math
 import scene
 
-t = time.serverClock()
+t = clock()
 
 x = math.sine(t, freq: 0.2, amplitude: 2, offset: 0)
 y = math.sine(t, freq: 0.3, amplitude: 0.5, offset: 1.2)
@@ -35,11 +34,10 @@ scene.setPosition("sample-cube", x: x, y: y, z: 0)
 
 test('--object option overrides DSL object id', () => {
   const source = `
-import time
 import math
 import scene
 
-t = time.serverClock()
+t = clock()
 
 x = math.sine(t, freq: 0.2, amplitude: 2, offset: 0)
 y = math.sine(t, freq: 0.3, amplitude: 0.5, offset: 1.2)
@@ -182,11 +180,10 @@ scene.setScale("sample-cube", x: 1.2, y: 1.2, z: 1.2)
 
 test('multiple sine nodes receive unique IDs and valid edges', () => {
   const source = `
-import time
 import math
 import scene
 
-t = time.serverClock()
+t = clock()
 x = math.sine(t, freq: 0.2, amplitude: 2, offset: 0)
 y = math.sine(t, freq: 0.3, amplitude: 0.5, offset: 1.2)
 scene.setPosition("sample-cube", x: x, y: y, z: 0)
@@ -213,11 +210,10 @@ scene.setPosition("sample-cube", x: 1, y: 1, z: 1)
 
 test('math.multiply converts to multiply node', () => {
   const source = `
-import time
 import math
 import scene
 
-t = time.serverClock()
+t = clock()
 y = math.multiply(t, 2)
 
 scene.setPosition("sample-cube", x: 0, y: y, z: 0)
@@ -232,11 +228,10 @@ scene.setPosition("sample-cube", x: 0, y: y, z: 0)
 
 test('math.add still converts to add', () => {
   const source = `
-import time
 import math
 import scene
 
-t = time.serverClock()
+t = clock()
 y = math.add(t, 2)
 
 scene.setPosition("sample-cube", x: 0, y: y, z: 0)
@@ -250,11 +245,10 @@ scene.setPosition("sample-cube", x: 0, y: y, z: 0)
 
 test('math.cosine still converts to cosine', () => {
   const source = `
-import time
 import math
 import scene
 
-t = time.serverClock()
+t = clock()
 y = math.cosine(t)
 
 scene.setPosition("sample-cube", x: 0, y: y, z: 0)
@@ -268,11 +262,10 @@ scene.setPosition("sample-cube", x: 0, y: y, z: 0)
 
 test('scene.offsetPosition compiles without target to sceneOffsetPosition', () => {
   const source = `
-import time
 import math
 import scene
 
-t = time.serverClock()
+t = clock()
 dy = math.sine(t, freq: 0.8, amplitude: 0.5)
 
 scene.offsetPosition(y: dy)
@@ -289,11 +282,10 @@ scene.offsetPosition(y: dy)
 
 test('scene.offsetPosition explicit target maps to sceneOffsetPosition target param', () => {
   const source = `
-import time
 import math
 import scene
 
-t = time.serverClock()
+t = clock()
 dy = math.sine(t, freq: 0.8, amplitude: 0.5)
 
 scene.offsetPosition("sample-cube", y: dy)
@@ -311,11 +303,10 @@ scene.offsetPosition("sample-cube", y: dy)
 
 test('scene.offsetPosition with x and z offsets creates edges to both', () => {
   const source = `
-import time
 import math
 import scene
 
-t = time.serverClock()
+t = clock()
 dx = math.cosine(t, freq: 0.2, amplitude: 1.5)
 dz = math.sine(t, freq: 0.2, amplitude: 1.5)
 
@@ -334,11 +325,10 @@ scene.offsetPosition(x: dx, z: dz)
 
 test('scene.offsetPosition explicit target works with scene scope', () => {
   const source = `
-import time
 import math
 import scene
 
-t = time.serverClock()
+t = clock()
 dy = math.sine(t, freq: 0.8, amplitude: 0.5)
 
 scene.offsetPosition("sample-cube", y: dy)
@@ -355,11 +345,10 @@ scene.offsetPosition("sample-cube", y: dy)
 
 test('render point with scene.offsetPosition compiles without preview nodes', () => {
   const source = `
-import time
 import math
 import scene
 
-t = time.serverClock()
+t = clock()
 dy = math.sine(t, freq: 0.8, amplitude: 0.5)
 
 scene.offsetPosition(y: dy)
@@ -385,11 +374,10 @@ render point(x: 300, y: previewY, radius: 8, color: "#ff70a6", trail: 0.08)
 
 test('circle preview DSL includes only Scene Sync dependencies', () => {
   const source = `
-import time
 import math
 import scene
 
-t = time.serverClock()
+t = clock()
 
 dx = math.cosine(t, freq: 0.2, amplitude: 1.5)
 dz = math.sine(t, freq: 0.2, amplitude: 1.5)

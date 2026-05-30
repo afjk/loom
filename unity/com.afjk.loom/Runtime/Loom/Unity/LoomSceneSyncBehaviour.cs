@@ -19,7 +19,7 @@ namespace Afjk.Loom
     ///   "scope": "scene",
     ///   "graph": {
     ///     "nodes": [
-    ///       { "id": "clock", "type": "serverClock" },
+    ///       { "id": "clock", "type": "clock" },
     ///       { "id": "wave",  "type": "sine", "params": { "freq": 1, "amplitude": 2 } },
     ///       { "id": "move",  "type": "sceneSetPosition", "params": { "target": "Cube" } }
     ///     ],
@@ -39,7 +39,6 @@ namespace Afjk.Loom
         {
             _adapter = new LoomSceneSyncAdapter(
                 send: _ => true,
-                getServerTime: () => (double)Time.time,
                 targetResolver: new LoomUnityTargetResolver()
             );
         }

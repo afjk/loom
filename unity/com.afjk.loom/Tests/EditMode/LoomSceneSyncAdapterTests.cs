@@ -47,24 +47,10 @@ namespace Afjk.Loom.Tests
         // -------------------------------------------------------------------------
 
         private static LoomSceneSyncAdapter CreateAdapter(
-            MockTargetResolver resolver = null,
-            double serverTime = 0.0)
-        {
-            double t = serverTime;
-            return new LoomSceneSyncAdapter(
-                send: _ => true,
-                getServerTime: () => t,
-                targetResolver: resolver ?? new MockTargetResolver()
-            );
-        }
-
-        private static LoomSceneSyncAdapter CreateAdapter(
-            Func<double> getServerTime,
             MockTargetResolver resolver = null)
         {
             return new LoomSceneSyncAdapter(
                 send: _ => true,
-                getServerTime: getServerTime,
                 targetResolver: resolver ?? new MockTargetResolver()
             );
         }
@@ -74,83 +60,6 @@ namespace Afjk.Loom.Tests
 
         private static string SimpleSceneGraphJson(string nodeId, string nodeType, string paramsJson = "{}") =>
             $"{{\"nodes\":[{{\"id\":\"{nodeId}\",\"type\":\"{nodeType}\",\"params\":{paramsJson}}}],\"edges\":[]}}";
-
-        // -------------------------------------------------------------------------
-        // Test 19: serverClock returns getServerTime()
-        // -------------------------------------------------------------------------
-        [Test]
-        public void Test19_ServerClock_ReturnsGetServerTime()
-        {
-            double serverT = 0.0;
-            using var adapter = CreateAdapter(() => serverT);
-
-            var json = SceneSetMsg("scene-graph-set", "\"scene\"",
-                "{\"nodes\":[{\"id\":\"sc\",\"type\":\"serverClock\",\"params\":{}}],\"edges\":[]}");
-            adapter.HandleMessage(SceneGraphMessage.FromJson(json));
-
-            serverT = 42.5;
-            adapter.Update(0.0); // time arg doesn't affect serverClock
-
-            // serverClock outputs server time, not engine time
-            // We can verify indirectly by wiring to a constant test:
-            // Build a graph with serverClock and verify its output via checking the engine value
-            // Use a fresh adapter with a custom serverTime
-
-            double myServerTime = 100.0;
-            using var adapter2 = new LoomSceneSyncAdapter(
-                send: _ => true,
-                getServerTime: () => myServerTime,
-                targetResolver: new MockTargetResolver()
-            );
-
-            var graphJson = "{\"nodes\":[{\"id\":\"sc\",\"type\":\"serverClock\",\"params\":{}}],\"edges\":[]}";
-            var msg = SceneGraphMessage.FromJson(
-                $"{{\"type\":\"scene-graph-set\",\"scope\":\"scene\",\"graph\":{graphJson}}}");
-            adapter2.HandleMessage(msg);
-            adapter2.Update(0.0);
-
-            // Access internal engine for test — done via GetValue reflection or by using
-            // the public API indirectly through an additional wiring. Here we verify via
-            // watching that serverClock is a registered node type and behaves correctly.
-            // We verify the serverClock node is registered (no exception = pass).
-            Assert.Pass("serverClock node was accepted and graph loaded without error");
-        }
-
-        // -------------------------------------------------------------------------
-        // Test 19b: serverClock result can be sampled (deeper test)
-        // -------------------------------------------------------------------------
-        [Test]
-        public void Test19b_ServerClock_ExposesServerTime()
-        {
-            double serverT = 55.0;
-            using var adapter = new LoomSceneSyncAdapter(
-                send: _ => true,
-                getServerTime: () => serverT,
-                targetResolver: new MockTargetResolver()
-            );
-
-            // Build a graph where serverClock feeds into a constant-wired add to expose the value
-            // serverClock.t → add.a, constant(0) → add.b → readable as add.out
-            var graphJson = @"{
-                ""nodes"": [
-                    { ""id"": ""sc"",  ""type"": ""serverClock"" },
-                    { ""id"": ""c0"",  ""type"": ""constant"",  ""params"": { ""value"": 0 } },
-                    { ""id"": ""sum"", ""type"": ""add"" }
-                ],
-                ""edges"": [
-                    { ""from"": ""sc.t"",    ""to"": ""sum.a"" },
-                    { ""from"": ""c0.out"",  ""to"": ""sum.b"" }
-                ]
-            }";
-            var msg = SceneGraphMessage.FromJson(
-                $"{{\"type\":\"scene-graph-set\",\"scope\":\"scene\",\"graph\":{graphJson}}}");
-            adapter.HandleMessage(msg);
-            adapter.Update(0.0);
-
-            // We can't directly access internal engine without making it public, but we verify
-            // the graph evaluated without error. Exposing sceneEngine for test:
-            Assert.Pass("serverClock graph loaded and evaluated without error; full value check requires Unity.");
-        }
 
         // -------------------------------------------------------------------------
         // Tests 20-24: Unity-specific sceneSet* nodes
@@ -170,7 +79,7 @@ namespace Afjk.Loom.Tests
 
                 using var adapter = new LoomSceneSyncAdapter(
                     send: _ => true,
-                    getServerTime: () => 0.0,
+                    
                     targetResolver: resolver
                 );
 
@@ -216,7 +125,7 @@ namespace Afjk.Loom.Tests
 
                 using var adapter = new LoomSceneSyncAdapter(
                     send: _ => true,
-                    getServerTime: () => 0.0,
+                    
                     targetResolver: resolver
                 );
 
@@ -263,7 +172,7 @@ namespace Afjk.Loom.Tests
 
                 using var adapter = new LoomSceneSyncAdapter(
                     send: _ => true,
-                    getServerTime: () => 0.0,
+                    
                     targetResolver: resolver
                 );
 
@@ -312,7 +221,7 @@ namespace Afjk.Loom.Tests
 
                 using var adapter = new LoomSceneSyncAdapter(
                     send: _ => true,
-                    getServerTime: () => 0.0,
+                    
                     targetResolver: resolver
                 );
 
@@ -359,7 +268,7 @@ namespace Afjk.Loom.Tests
 
                 using var adapter = new LoomSceneSyncAdapter(
                     send: _ => true,
-                    getServerTime: () => 0.0,
+                    
                     targetResolver: resolver
                 );
 

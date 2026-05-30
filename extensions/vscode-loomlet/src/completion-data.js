@@ -22,16 +22,7 @@ const libraries = [
 ];
 
 const libraryMembers = {
-  time: [
-    {
-      label: 'serverClock()',
-      insertText: 'serverClock()',
-      topLevelInsertText: 'time.serverClock()',
-      detail: 'time.serverClock()',
-      documentation: 'Returns the host-provided graph-local time (env.time).',
-      namedArgs: []
-    }
-  ],
+  time: [],
   math: [
     {
       label: 'sine(...)',

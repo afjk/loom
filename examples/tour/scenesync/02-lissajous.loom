@@ -1,21 +1,21 @@
 # Tour: Lissajous
-# Goal: Animate one object with time-driven X/Y motion.
+# Goal: Two-axis oscillation with different frequencies.
 # Status: runnable
 # Run:
 #   loomlet scenesync dev examples/tour/scenesync/02-lissajous.loom
 # Setup:
 #   - Open a Scene Sync room.
 #   - Link Loomlet with `loomlet scenesync redeem <code> --save`.
-#   - Ensure an object named `sample-cube` exists in the scene.
+#   - Ensure an object named `lissajous-target` exists in the scene.
 # Requires:
-#   - time.serverClock
+#   - clock (host-provided time)
 #   - math.sine
 #   - scene.setPosition
-import time
 import math
 import scene
 
-t = time.serverClock()
+t = clock()
 x = math.sine(t, freq: 0.2, amplitude: 2, offset: 0)
 y = math.sine(t, freq: 0.3, amplitude: 0.5, offset: 1.2)
-scene.setPosition(objectId: "sample-cube", x: x, y: y, z: 0)
+
+scene.setPosition(objectId: "lissajous-target", x: x, y: y, z: 0)

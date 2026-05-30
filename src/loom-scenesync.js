@@ -254,7 +254,9 @@ export class LoomSceneSync {
       this._sceneGraph.stop();
       this._sceneGraph = new this.LoomClass(injectedGraph);
       if (this._started) {
-        this._sceneGraph.start();
+        this._sceneGraph.start({
+          getEnv: this._makeEnvProvider({ type: 'scene' })
+        });
       }
     } else {
       // オブジェクト単位グラフ
@@ -265,7 +267,9 @@ export class LoomSceneSync {
       const engine = new this.LoomClass(injectedGraph);
       this._objectGraphs.set(targetId, engine);
       if (this._started) {
-        engine.start();
+        engine.start({
+          getEnv: this._makeEnvProvider({ type: 'object', id: targetId })
+        });
       }
     }
   }
@@ -307,11 +311,29 @@ export class LoomSceneSync {
     console.warn("scene-graph-input is not yet supported. Phase 2 での実装予定です。");
   }
 
+  _makeEnvProvider(scope) {
+    return ({ elapsed, timestamp, engine }) => {
+      const env = this.getEnv({ scope, elapsed, timestamp, engine });
+      if (!env || typeof env !== 'object') {
+        throw new LoomError('INVALID_ENV', 'getEnv must return an environment object', { reason: 'getEnv' });
+      }
+      return {
+        ...env,
+        scope: env.scope ?? scope,
+        events: Array.isArray(env.events) ? env.events : []
+      };
+    };
+  }
+
   start() {
     this._started = true;
-    this._sceneGraph.start();
-    for (const engine of this._objectGraphs.values()) {
-      engine.start();
+    this._sceneGraph.start({
+      getEnv: this._makeEnvProvider({ type: 'scene' })
+    });
+    for (const [targetId, engine] of this._objectGraphs.entries()) {
+      engine.start({
+        getEnv: this._makeEnvProvider({ type: 'object', id: targetId })
+      });
     }
   }
 

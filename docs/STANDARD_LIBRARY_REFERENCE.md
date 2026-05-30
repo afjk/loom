@@ -352,24 +352,6 @@ Arguments:
 | y | number | no | Y offset. |
 | z | number | no | Z offset. |
 
-## time
-
-Time-based source nodes
-
-Targets: cli, web, scenesync, unity
-Status: implemented
-
-### time.serverClock
-
-Signature: `time.serverClock()`
-
-Returns: `number`
-Status: `implemented`
-
-Returns the host-provided graph-local time (env.time).
-
-Arguments: none
-
 ## math
 
 Pure math and numeric transform nodes

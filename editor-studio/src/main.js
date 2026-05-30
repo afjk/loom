@@ -50,12 +50,10 @@ render bar(width: width, color: "#80ed99", height: 48)
 `;
 
 // Scene Sync Presets
-const SCENE_SYNC_JUMP_PRESET = `import time
-import math
+const SCENE_SYNC_JUMP_PRESET = `import math
 import scene
 
-t = time.serverClock()
-dy = math.sine(t, freq: 0.8, amplitude: 0.5)
+dy = math.sine(0, freq: 0.8, amplitude: 0.5)
 
 scene.offsetPosition(y: dy)
 
@@ -63,14 +61,11 @@ previewY = math.add(200, math.multiply(dy, -120))
 render point(x: 300, y: previewY, radius: 8, color: "#ff70a6", trail: 0.08)
 `;
 
-const SCENE_SYNC_CIRCLE_PRESET = `import time
-import math
+const SCENE_SYNC_CIRCLE_PRESET = `import math
 import scene
 
-t = time.serverClock()
-
-dx = math.cosine(t, freq: 0.2, amplitude: 1.5)
-dz = math.sine(t, freq: 0.2, amplitude: 1.5)
+dx = math.cosine(0, freq: 0.2, amplitude: 1.5)
+dz = math.sine(0, freq: 0.2, amplitude: 1.5)
 
 scene.offsetPosition(x: dx, z: dz)
 

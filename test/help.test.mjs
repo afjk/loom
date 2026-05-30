@@ -198,11 +198,6 @@ test('scene.setPosition is documented', () => {
   assert.equal(func.name, 'setPosition');
 });
 
-test('time.serverClock is documented', () => {
-  const func = getFunctionHelp('time.serverClock');
-  assert.equal(func.name, 'serverClock');
-});
-
 test('console.log is documented', () => {
   const func = getFunctionHelp('console.log');
   assert.equal(func.name, 'log');

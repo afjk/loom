@@ -1,25 +1,12 @@
 # Tour: Model Choreography
-# Goal: Animate an existing GLB model with position and scale.
+# Goal: Multi-parameter choreography.
 # Status: runnable
-# Run:
-#   loomlet scenesync dev examples/tour/scenesync/06-model-choreography.loom
-# Setup:
-#   - Open a Scene Sync room.
-#   - Link Loomlet with `loomlet scenesync redeem <code> --save`.
-#   - Add a GLB model and ensure objectId `dancer` exists.
-# Requires:
-#   - time.serverClock
-#   - math.sine
-#   - scene.setPosition
-#   - scene.setScale
-#   - scene.setRotation
-import time
 import math
 import scene
 
-t = time.serverClock()
-x = math.sine(t, freq: 0.12, amplitude: 1.5, offset: 0)
-scale = math.sine(t, freq: 0.25, amplitude: 0.15, offset: 1.0)
-scene.setPosition(objectId: "dancer", x: x, y: 0, z: 0)
-scene.setScale(objectId: "dancer", x: scale, y: scale, z: scale)
-scene.setRotation(objectId: "dancer", x: 0, y: 0, z: 0, w: 1)
+t = clock()
+x = math.sine(t, freq: 0.3, amplitude: 1.0)
+y = math.cosine(t, freq: 0.4, amplitude: 0.5)
+z = math.sine(t, freq: 0.2, amplitude: 1.5)
+
+scene.setPosition(objectId: "model-target", x: x, y: y, z: z)
