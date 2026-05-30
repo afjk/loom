@@ -28,7 +28,7 @@ const libraryMembers = {
       insertText: 'serverClock()',
       topLevelInsertText: 'time.serverClock()',
       detail: 'time.serverClock()',
-      documentation: 'Synchronized scene/server clock source.',
+      documentation: 'Returns the host-provided graph-local time (env.time).',
       namedArgs: []
     }
   ],

@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Loom Editor Studio MVP</title>
-  <script type="module" crossorigin src="./assets/index-DT2bsyyN.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-Bp0aN222.css">
+  <script type="module" crossorigin src="./assets/index-DeMhONq5.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-CXOd0Sd1.css">
 </head>
 <body>
   <canvas id="preview-canvas" class="preview-canvas"></canvas>
@@ -13,10 +13,33 @@
   <div class="studio-overlay">
     <div class="studio-toolbar">
       <button id="toggle-panels">Hide Editors</button>
+      <button id="openFileBtn" class="btn">Open .loom</button>
+      <button id="saveFileBtn" class="btn btn-primary">Save .loom</button>
+      <button id="saveAsFileBtn" class="btn">Save As</button>
+      <span id="file-status" class="file-status">No file</span>
       <button id="runPreviewBtn" class="btn btn-success">Run Preview</button>
       <button id="resetSampleBtn" class="btn">Reset Sample</button>
+      <button id="undo-btn" class="btn" title="Undo graph edit (Ctrl/Cmd+Z)" disabled>
+        Undo
+      </button>
+      <button id="redo-btn" class="btn" title="Redo graph edit (Ctrl/Cmd+Shift+Z)" disabled>
+        Redo
+      </button>
       <button id="applyDslBtn" class="btn btn-primary">Apply DSL → Node</button>
-      <button id="generateDslBtn" class="btn btn-primary">Generate DSL ← Node</button>
+      <button id="generateDslBtn" class="btn btn-primary">Generate Canonical DSL</button>
+      <div class="toolbar-status" aria-label="Editor status">
+        <span id="dirty-status" class="status-pill">Saved</span>
+        <span
+          id="auto-sync-status-pill"
+          class="status-pill is-on"
+          title="Node edits rewrite DSL as canonical text. Layout-only node moves preserve the current DSL text."
+        >Node-&gt;DSL: live</span>
+      </div>
+      <span
+        id="auto-apply-status"
+        class="auto-apply-status"
+        title="DSL edits apply to the node editor automatically. Fix DSL errors before editing the graph."
+      >DSL-&gt;Node: live</span>
     </div>
 
     <div id="editor-panels" class="editor-panels">
@@ -24,23 +47,48 @@
       <div class="panel dsl-pane">
         <div class="pane-header">
           <h2>DSL Editor</h2>
+          <div class="pane-controls">
+            <button class="btn-icon" data-action="maximize-dsl" title="Maximize DSL Editor" style="display: none;">↗</button>
+            <button class="btn-icon" data-action="restore-split" title="Restore Split View" style="display: none;">↙</button>
+          </div>
         </div>
         <div id="dsl-editor-host" class="dsl-editor-host"></div>
       </div>
+
+      <!-- Vertical splitter -->
+      <div
+        id="editor-split-resize-handle"
+        class="editor-split-resize-handle"
+        title="Drag to resize editor split"
+      ></div>
 
       <!-- Right pane: Node Editor -->
       <div class="panel node-pane">
         <div class="pane-header">
           <h2>Node Editor</h2>
+          <div class="pane-controls">
+            <button class="btn-icon" data-action="maximize-node" title="Maximize Node Editor" style="display: none;">↗</button>
+            <button class="btn-icon" data-action="restore-split" title="Restore Split View" style="display: none;">↙</button>
+          </div>
         </div>
         <div id="node-editor" class="node-editor-canvas"></div>
       </div>
 
-      <!-- Bottom area: GraphJSON and Errors -->
-      <div class="panel graph-errors-panel">
-        <div class="tabs">
-          <button class="tab-btn active" data-tab="graph">GraphJSON</button>
-          <button class="tab-btn" data-tab="errors">Errors</button>
+      <!-- Bottom area: GraphJSON, Errors, and Inspector -->
+      <div id="bottom-panel-resize-handle" class="bottom-panel-resize-handle" title="Drag to resize bottom panel"></div>
+
+      <div class="panel graph-errors-panel" id="bottom-panel">
+        <div class="tab-header">
+          <div class="tab-buttons">
+            <button class="tab-btn active" data-tab="graph">GraphJSON</button>
+            <button class="tab-btn" data-tab="errors">Errors</button>
+            <button class="tab-btn" data-tab="inspector">Inspector</button>
+            <button class="tab-btn" data-tab="nodes">Nodes</button>
+            <button class="tab-btn" data-tab="palette">Palette</button>
+            <button class="tab-btn" data-tab="output">Output</button>
+            <button class="tab-btn" data-tab="scene-sync">Scene Sync</button>
+          </div>
+          <button id="bottom-panel-collapse-btn" class="bottom-panel-collapse-btn" title="Collapse bottom panel">Collapse</button>
         </div>
         <div class="tab-content">
           <div id="graph-tab" class="tab-pane active">
@@ -48,6 +96,100 @@
           </div>
           <div id="errors-tab" class="tab-pane">
             <div id="errors-list" class="errors-list"></div>
+          </div>
+          <div id="inspector-tab" class="tab-pane">
+            <div id="inspector-panel" class="inspector-panel"></div>
+          </div>
+          <div id="nodes-tab" class="tab-pane">
+            <div class="node-list-panel">
+              <div class="node-list-toolbar">
+                <input
+                  id="node-list-search"
+                  class="node-list-search"
+                  type="text"
+                  placeholder="Search nodes..."
+                />
+                <select id="node-list-category" class="node-list-category">
+                  <option value="">All categories</option>
+                </select>
+              </div>
+              <div id="node-list" class="node-list"></div>
+            </div>
+          </div>
+          <div id="palette-tab" class="tab-pane">
+            <div class="palette-panel">
+              <div class="palette-toolbar">
+                <input id="node-palette-search" class="palette-search" type="text" placeholder="Search node types..." />
+                <select id="node-palette-category" class="palette-category">
+                  <option value="">All categories</option>
+                </select>
+              </div>
+              <div id="node-palette-list" class="node-palette-list"></div>
+            </div>
+          </div>
+          <div id="output-tab" class="tab-pane">
+            <div class="output-panel">
+              <div class="output-toolbar">
+                <button id="clear-output-btn" class="btn">Clear</button>
+              </div>
+              <pre id="output-log" class="output-log"></pre>
+            </div>
+          </div>
+          <div id="scene-sync-tab" class="tab-pane">
+            <div class="scene-sync-panel">
+              <div class="scene-sync-form-grid">
+                <label>
+                  Endpoint
+                  <input id="sceneSyncEndpoint" type="url" />
+                </label>
+
+                <label>
+                  Room
+                  <input id="sceneSyncRoom" type="text" placeholder="Scene Sync room id" />
+                </label>
+
+                <label>
+                  Scope
+                  <select id="sceneSyncScope">
+                    <option value="object">Object Behavior Graph</option>
+                    <option value="scene">Scene Behavior Graph</option>
+                  </select>
+                </label>
+
+                <label>
+                  Object ID
+                  <input id="sceneSyncObjectId" type="text" placeholder="sample-cube" />
+                </label>
+
+                <label>
+                  Nickname
+                  <input id="sceneSyncNickname" type="text" placeholder="Loomlet Editor" />
+                </label>
+              </div>
+
+              <div class="scene-sync-actions">
+                <button id="compileSceneSyncPayloadBtn" type="button" class="btn">Compile Payload</button>
+                <button id="applySceneSyncBehaviorBtn" type="button" class="btn btn-primary">Apply Behavior</button>
+                <button id="clearSceneSyncBehaviorBtn" type="button" class="btn btn-danger">Clear Behavior</button>
+              </div>
+
+              <div class="scene-sync-preset-actions">
+                <button id="loadSceneSyncJumpPresetBtn" type="button" class="btn">Load Jump Preview</button>
+                <button id="loadSceneSyncCirclePresetBtn" type="button" class="btn">Load Circle Preview</button>
+              </div>
+
+              <p class="scene-sync-note">
+                Prototype: this panel sends Scene Sync Behavior Graph payloads by REST broadcast.
+                It does not integrate with Scene Sync undo/redo or object selection yet.
+              </p>
+
+              <p class="scene-sync-note">
+                Note: sceneSetPosition currently writes absolute world positions.
+                Use explicit base values in your graph if you want to keep the object near its current location.
+              </p>
+
+              <pre id="sceneSyncPayloadPreview" class="scene-sync-payload-preview"></pre>
+            </div>
           </div>
         </div>
       </div>

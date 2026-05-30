@@ -1,6 +1,7 @@
 import { compileLoomSource } from '../toolchain/compile.js';
 
 const SUPPORTED_NODES = new Set([
+  'clock',
   'time.serverClock',
   'math.sine',
   'math.cosine',
@@ -15,7 +16,8 @@ const SUPPORTED_NODES = new Set([
 ]);
 
 const NODE_TYPE_MAPPING = {
-  'time.serverClock': 'serverClock',
+  'clock': 'clock',
+  'time.serverClock': 'clock',
   'math.sine': 'sine',
   'math.cosine': 'cosine',
   'math.add': 'add',
@@ -30,7 +32,7 @@ const NODE_TYPE_MAPPING = {
 
 const OUTPUT_PORT_MAPPING = {
   'time.serverClock': 't',
-  'serverClock': 't',
+  'clock': 't',
   'math.sine': 'out',
   'sine': 'out',
   'math.cosine': 'out',
@@ -55,7 +57,7 @@ const OUTPUT_PORT_MAPPING = {
 
 function generateStableNodeBase(nodeType) {
   const mapped = NODE_TYPE_MAPPING[nodeType] || nodeType;
-  if (mapped === 'serverClock') return 'clock';
+  if (mapped === 'clock') return 'clock';
   if (mapped === 'sine') return 'sine';
   if (mapped === 'cosine') return 'cosine';
   if (mapped === 'add') return 'add';

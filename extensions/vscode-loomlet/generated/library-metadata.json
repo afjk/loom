@@ -485,7 +485,7 @@
           "fullName": "time.serverClock",
           "status": "implemented",
           "signature": "time.serverClock()",
-          "description": "Returns the current server time.",
+          "description": "Returns the host-provided graph-local time (env.time).",
           "returns": "number",
           "allowsTwoPositionalArgs": false,
           "inputs": []

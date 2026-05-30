@@ -366,7 +366,7 @@ Signature: `time.serverClock()`
 Returns: `number`
 Status: `implemented`
 
-Returns the current server time.
+Returns the host-provided graph-local time (env.time).
 
 Arguments: none
 

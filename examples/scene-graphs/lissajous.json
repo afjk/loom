@@ -1,6 +1,6 @@
 {
   "nodes": [
-    { "id": "clock", "type": "serverClock" },
+    { "id": "clock", "type": "clock" },
     {
       "id": "sine_x",
       "type": "sine",

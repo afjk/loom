@@ -11,11 +11,11 @@ let nextAdapterId = 0;
 const registeredLoomClasses = new WeakSet();
 
 export class LoomSceneSync {
-  constructor({ LoomClass, send, getServerTime, resolveTarget }) {
+  constructor({ LoomClass, send, resolveTarget, getEnv }) {
     this.LoomClass = LoomClass;
     this.send = send;
-    this.getServerTime = getServerTime;
     this.resolveTarget = resolveTarget;
+    this.getEnv = getEnv;
 
     // このアダプタの一意ID
     this.adapterId = `adapter-${nextAdapterId++}`;
@@ -39,19 +39,6 @@ export class LoomSceneSync {
     }
 
     const LoomClass = this.LoomClass;
-
-    // serverClock ノード
-    LoomClass.registerNodeType("serverClock", {
-      category: "source",
-      inputs: [],
-      outputs: [{ name: "t", type: "number", kind: "behavior" }],
-      params: [{ name: "adapterId", type: "string", default: "" }],
-      evaluate: (inputs, params) => {
-        const adapter = adapterRegistry.get(params.adapterId);
-        const t = adapter ? adapter.getServerTime() : 0;
-        return { t };
-      }
-    });
 
     // SceneSync sink ノード：setPosition
     LoomClass.registerNodeType("sceneSetPosition", {
@@ -223,7 +210,7 @@ export class LoomSceneSync {
     // グラフをコピー（元を破壊しない）
     const nodes = graph.nodes.map(node => {
       const nodeId = node.type;
-      if (!["serverClock", "sceneSetPosition", "sceneSetRotation", "sceneSetScale", "sceneSetColor", "sceneSetVisible"].includes(nodeId)) {
+      if (!["sceneSetPosition", "sceneSetRotation", "sceneSetScale", "sceneSetColor", "sceneSetVisible"].includes(nodeId)) {
         return node;
       }
 

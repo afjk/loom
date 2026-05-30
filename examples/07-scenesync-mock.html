@@ -201,7 +201,6 @@
         const body = msg.payload ?? msg.graph ?? {};
         addLog(`SEND: ${msg.type} scope=${JSON.stringify(msg.scope)} body=${JSON.stringify(body)}`);
       },
-      getServerTime,
       resolveTarget: (id) => objects[id] ?? null
     });
 
@@ -210,14 +209,14 @@
 
     // Timeline: 1s - start scene graph
     setTimeout(() => {
-      addLog('Sending scene-graph-set (serverClock → sine → sceneSetPosition)');
+      addLog('Sending scene-graph-set (clock → sine → sceneSetPosition)');
       const scopeKey = adapter.getScopeKey('scene');
       ownership.set(scopeKey, 'loom-authoritative');
       addLog(`Scope ${scopeKey} owned by Loom graph`);
 
       const graph = {
         nodes: [
-          { id: 'clock', type: 'serverClock' },
+          { id: 'clock', type: 'clock' },
           { id: 'sine', type: 'sine', params: { freq: 1, amplitude: 50 } },
           { id: 'pos', type: 'sceneSetPosition', params: { target: 'cube1' } }
         ],
@@ -254,7 +253,7 @@
 
       const graph = {
         nodes: [
-          { id: 'clock', type: 'serverClock' },
+          { id: 'clock', type: 'clock' },
           { id: 'sine_x', type: 'sine', params: { freq: 0.5, amplitude: 40 } },
           { id: 'sine_y', type: 'sine', params: { freq: 0.3, amplitude: 30, phase: 1.57 } },
           { id: 'scale_sin', type: 'sine', params: { freq: 1, amplitude: 0.5, offset: 1.5 } },

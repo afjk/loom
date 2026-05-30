@@ -378,7 +378,7 @@ export const LIBRARY_METADATA = {
       serverClock: {
         name: 'serverClock',
         signature: 'time.serverClock()',
-        description: 'Returns the current server time.',
+        description: 'Returns the host-provided graph-local time (env.time).',
         args: [],
         returns: 'number',
         targets: LIBRARY_COMPATIBILITY.time.targets,
