@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>Node Palette Helpers Tests</title>
-  <script src="./test-runner.js"></script>
 </head>
 <body>
   <h1>Node Palette Helpers Tests</h1>
@@ -19,8 +18,13 @@
       getNodeTypeEntries
     } from '../editor-studio/src/node-palette-model.js';
 
-    const test = window.test || function() {};
-    const assert = window.assert || (() => {});
+    const tests = [];
+    function test(name, fn) {
+      tests.push({ name, fn });
+    }
+    function assert(cond, msg) {
+      if (!cond) throw new Error(msg || 'assertion failed');
+    }
 
     // Mock NODE_TYPES for testing
     const mockNodeTypes = {
@@ -182,7 +186,24 @@
       }
     });
 
-    console.log('All node palette helper tests completed');
+    async function run() {
+      let pass = 0;
+      let fail = 0;
+      const failures = [];
+      for (const t of tests) {
+        try {
+          await t.fn();
+          pass++;
+        } catch (error) {
+          fail++;
+          failures.push({ name: t.name, error: error.message });
+        }
+      }
+      window.__loomTestResults = { pass, fail, failures };
+      document.getElementById('test-results').textContent = `${pass} passed, ${fail} failed`;
+    }
+
+    run();
   </script>
 </body>
 </html>

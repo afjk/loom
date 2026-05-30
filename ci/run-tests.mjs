@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
+let useMacSandboxChromiumFallback = false;
 
 async function runTests() {
   let server = null;
@@ -24,7 +25,7 @@ async function runTests() {
 
     // Launch Chromium
     console.log('Launching Chromium...');
-    browser = await chromium.launch();
+    browser = await launchChromium();
 
     // Find all test files
     const testDir = path.join(projectRoot, 'test');
@@ -44,7 +45,18 @@ async function runTests() {
     for (const testFile of testFiles) {
       console.log(`\nRunning ${testFile}...`);
       const url = `http://localhost:8080/${testFile}`;
-      const page = await browser.newPage();
+      if (!browser?.isConnected()) {
+        browser = await launchChromium();
+      }
+
+      let page;
+      try {
+        page = await browser.newPage();
+      } catch (error) {
+        if (!isClosedBrowserError(error)) throw error;
+        browser = await launchChromium();
+        page = await browser.newPage();
+      }
 
       try {
         await page.goto(url, { waitUntil: 'networkidle' });
@@ -85,7 +97,7 @@ async function runTests() {
         totalFail++;
         failures.push({ file: testFile, error: error.message });
       } finally {
-        await page.close();
+        await page.close().catch(() => {});
       }
     }
 
@@ -112,6 +124,30 @@ async function runTests() {
     if (browser) {
       await browser.close();
     }
+  }
+}
+
+function isClosedBrowserError(error) {
+  return /Target page, context or browser has been closed/.test(String(error?.message ?? error));
+}
+
+async function launchChromium() {
+  if (useMacSandboxChromiumFallback) {
+    return chromium.launch({ args: ['--single-process', '--disable-gpu'] });
+  }
+
+  try {
+    return await chromium.launch();
+  } catch (error) {
+    const message = String(error?.message ?? error);
+    const canRetryForMacSandbox =
+      process.platform === 'darwin' &&
+      /MachPortRendezvous|bootstrap_check_in|Permission denied/.test(message);
+    if (!canRetryForMacSandbox) throw error;
+
+    console.warn('Default Chromium launch failed in macOS sandbox; retrying with --single-process.');
+    useMacSandboxChromiumFallback = true;
+    return chromium.launch({ args: ['--single-process', '--disable-gpu'] });
   }
 }
 

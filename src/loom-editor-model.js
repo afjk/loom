@@ -214,6 +214,9 @@ export function editorModelToGraph(em, originalGraph = null) {
   });
 
   const graph = { nodes, edges };
+  if (originalGraph?.imports) {
+    graph.imports = [...originalGraph.imports];
+  }
   if (originalGraph && originalGraph.render) {
     graph.render = originalGraph.render;
   }

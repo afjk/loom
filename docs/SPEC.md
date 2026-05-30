@@ -691,9 +691,9 @@ Level 7: 任意の Graph AST から DSL を再生成
 当初は Level 1〜2 から始める方針だったが、現在の Editor Studio では、param 編集、node 追加/削除/rename、connection 編集、canonical DSL 再生成、Graph → DSL auto sync まで実験的に実装している。
 
 ただし、任意の DSL 構文を完全に保持したまま双方向編集することは、まだ保証しない。  
-Graph 側の編集は、必要に応じて canonical DSL として再生成される。
+Graph 側の編集は、まず安全な source-preserving patch として適用される。patch が曖昧な場合や、pipe / function / cross-scope rewrite などで安全に局所編集できない場合は canonical DSL として再生成される。
 
-source map を使った最小差分 patch（Level 1〜6 相当）は設計思想として残すが、現在の実装では canonical regeneration を主経路としている。
+source map を使った最小差分 patch（Level 1〜6 相当）は、top-level assignment を中心とした限定的な実装として利用される。完全な任意構文保持は将来作業である。
 
 例:
 
@@ -701,7 +701,7 @@ source map を使った最小差分 patch（Level 1〜6 相当）は設計思想
 x = math.sine(t, freq: 0.2, amplitude: 2, offset: 0)
 ```
 
-`freq` をノードエディタで `0.5` に変更した場合、現在の実装では canonical DSL を再生成する（source map patch ではなく）。
+`freq` をノードエディタで `0.5` に変更した場合、現在の実装では値の span だけを patch できる場合は元のコメントや周辺書式を保持して更新する。
 
 ```loom
 x = math.sine(t, freq: 0.5, amplitude: 2, offset: 0)
@@ -2553,7 +2553,7 @@ Loomlet は単一の JSON グラフ表現を真の単一ソースとし、複数
 - ✅ 専用テキスト記法（DSL）の設計とパーサ
 - ✅ DSL ↔ JSON の相互変換
 - ✅ canonical DSL 再生成
-- 部分更新用の source map patch（AI による差分編集を想定）は設計思想として残すが、現在は canonical regeneration を主経路とする
+- ✅ 部分更新用の source-preserving patch（安全な top-level edit は patch、曖昧な edit は canonical regeneration に fallback）
 
 ### 第五段階：ビジュアルエディタとプリセット（実装済み）
 
@@ -2798,14 +2798,14 @@ Canonical DSL round-trip v1 の比較は、実装詳細のテキスト一致よ�
 
 ### v1 の非目標 / 将来作業
 
-次は semantic round-trip が十分に安定した後の将来作業とする。
+次は安全な top-level patch の範囲を超える将来作業とする。
 
-- source-preserving DSL <-> Node Editor round-trip
-- comments と formatting の保持
-- 元の pipe style の保持
+- arbitrary source-preserving DSL <-> Node Editor round-trip
+- 任意構文での comments と formatting の保持
+- fallback が必要なケースでの元の pipe style の保持
 - 正確な import order の保持
 - editor layout positions の保持
-- 編集済み DSL text と既存 node layout の双方向 patching
+- 複雑な編集済み DSL text と既存 node layout の双方向 patching
 - function/subgraph の完全な source-preserving
 - package-aware source-preserving
 

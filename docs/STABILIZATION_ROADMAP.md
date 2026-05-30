@@ -33,7 +33,7 @@ This release connects Loomlet, Scene Sync, the Node Editor, packages, and export
 - Loomlet evaluates graphs against a host-provided environment.
 - Scene Sync live rooms may provide synchronized room time and committed shared events.
 - Scene Sync Export provides local playback time so exported scenes can run without afjk.jp, CDN, or the presence server at runtime.
-- Node Editor and DSL workflows stabilize around semantic round-trips before attempting complete source-preserving round-trips.
+- Node Editor and DSL workflows stabilize around semantic round-trips with safe source-preserving patches for common top-level edits before attempting complete arbitrary source-preserving round-trips.
 
 See [`docs/RELEASE_NOTES_NEXT.md`](RELEASE_NOTES_NEXT.md) for the release-note draft.
 
@@ -57,7 +57,8 @@ See [`docs/RELEASE_NOTES_NEXT.md`](RELEASE_NOTES_NEXT.md) for the release-note d
    - Semantic equivalence is stabilized for `Graph -> Canonical DSL -> Graph`.
    - Generated DSL is parseable and compiles back to a semantically equivalent graph.
    - Exact preservation of original formatting, comments, pipe style, import order, or named-vs-positional style is not guaranteed.
-   - This is a semantic round-trip foundation, not a complete source-preserving editor round-trip.
+   - Editor Studio additionally applies safe source-preserving patches for common top-level Node Editor edits, falling back to canonical DSL when patching would be ambiguous.
+   - This is still not a complete arbitrary source-preserving editor round-trip.
 
 4. **Done (v0 compatibility foundation)**: Scene Sync Export v0 compatibility
    - Exported scenes do not require the afjk.jp presence server at runtime.
@@ -114,8 +115,9 @@ These remain future work and should not block the next release.
   - DSL functions should eventually lower to reusable subgraphs.
   - Function calls should become subgraph references or expanded graph fragments.
   - Node Editor should represent functions as collapsible groups or reusable graph units.
-- **Future**: Full DSL <-> Node Editor source-preserving round-trip
-  - Preserve comments, formatting, pipe syntax, import order, editor layout metadata, and source patches only after semantic round-trip behavior is stable.
+- **Partial**: DSL <-> Node Editor source-preserving round-trip
+  - Safe top-level patches are available for common Node Editor operations such as param edits, renames, simple node insertion/removal, and simple edge argument edits.
+  - Arbitrary source-preserving edits remain future work, especially pipe-style preservation, package-aware source edits, function/subgraph source edits, and complex cross-scope rewrites.
 - **Future**: npm / remote package loading
   - Defer until trusted local packages, manifests, target compatibility, and security model are stable.
 - **Future**: Package sandboxing and permissions
@@ -263,16 +265,15 @@ Generated canonical DSL may use a normalized style rather than the user's origin
 
 Avoid strict golden snapshots for areas that are still experimental or visual-only:
 
-- Node Editor real-time synchronization
-- complete DSL <-> Node Editor bidirectional editing
-- comment-preserving source patches
-- original formatting preservation
-- pipe syntax preservation
-- named vs positional argument preservation
+- complete arbitrary DSL <-> Node Editor bidirectional editing
+- source patches outside supported top-level edit shapes
+- full original formatting preservation
+- pipe syntax preservation beyond canonical fallback cases
+- named vs positional argument preservation beyond patched top-level args
 - import ordering preservation
 - editor layout metadata round-trip
 - hidden editor metadata exact format
-- bidirectional patching between edited DSL text and existing node layout
+- arbitrary bidirectional patching between edited DSL text and existing node layout
 - full function/subgraph source preservation
 - package-aware source preservation
 - node coordinates and visual layout
