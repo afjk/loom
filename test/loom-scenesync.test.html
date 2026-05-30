@@ -35,6 +35,11 @@
       }
     }
 
+    // Default getEnv callback for tests
+    function getDefaultEnv() {
+      return { time: 0 };
+    }
+
     // Mock Object3D
     function createMockObject() {
       return {
@@ -54,8 +59,8 @@
 
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: (msg) => sendCalls.push(msg),
-        
         resolveTarget: (id) => objects[id] ?? null
       });
 
@@ -85,8 +90,8 @@
 
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: (msg) => sendCalls.push(msg),
-        
         resolveTarget: (id) => objects[id] ?? null
       });
 
@@ -127,8 +132,8 @@
 
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        
         resolveTarget: (id) => objects[id] ?? null
       });
 
@@ -158,8 +163,8 @@
 
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        
         resolveTarget: (id) => objects[id] ?? null
       });
 
@@ -185,8 +190,8 @@
 
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        
         resolveTarget: (id) => objects[id] ?? null
       });
 
@@ -206,6 +211,7 @@
     test('存在しない object scope を clear してもエラーにならない', () => {
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
         
         resolveTarget: () => null
@@ -219,6 +225,7 @@
     test('resolveTarget が null を返しても sink がエラーを投げない', () => {
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
         
         resolveTarget: () => null
@@ -241,6 +248,7 @@
     test('clock.t returns env.time', () => {
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
         resolveTarget: () => null
       });
@@ -264,8 +272,8 @@
       const obj = createMockObject();
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        
         resolveTarget: (id) => id === 'obj' ? obj : null
       });
 
@@ -296,8 +304,8 @@
       const obj = createMockObject();
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        
         resolveTarget: (id) => id === 'obj' ? obj : null
       });
 
@@ -328,8 +336,8 @@
       const obj = createMockObject();
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        
         resolveTarget: (id) => id === 'obj' ? obj : null
       });
 
@@ -360,8 +368,8 @@
       const obj = createMockObject();
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        
         resolveTarget: (id) => id === 'obj' ? obj : null
       });
 
@@ -392,8 +400,8 @@
       const obj = createMockObject();
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        
         resolveTarget: (id) => id === 'obj' ? obj : null
       });
 
@@ -417,6 +425,7 @@
     test('scene-graph-input 受信時は no-op', () => {
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
         
         resolveTarget: () => null
@@ -431,8 +440,8 @@
       const obj = createMockObject();
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
-        
         resolveTarget: (id) => id === 'obj' ? obj : null
       });
 
@@ -454,6 +463,7 @@
     test('不正な scope で INVALID_SCOPE', () => {
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
         
         resolveTarget: () => null
@@ -471,6 +481,7 @@
     test('不明な type で INVALID_MESSAGE', () => {
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
         
         resolveTarget: () => null
@@ -488,6 +499,7 @@
     test('scene-graph-patch に graph がない場合 INVALID_GRAPH', () => {
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
         
         resolveTarget: () => null
@@ -505,6 +517,7 @@
     test('new LoomSceneSync(...) を複数回呼んでも重複登録エラーにならない', () => {
       const adapter1 = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
         
         resolveTarget: () => null
@@ -512,6 +525,7 @@
 
       const adapter2 = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
         
         resolveTarget: () => null
@@ -527,12 +541,14 @@
 
       const adapter1 = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
         resolveTarget: (id) => id === 'obj1' ? obj1 : null
       });
 
       const adapter2 = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
         resolveTarget: (id) => id === 'obj2' ? obj2 : null
       });
@@ -557,6 +573,7 @@
     test('createGraphSetMessage は scope/graph を検証し複製を返す', () => {
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
         
         resolveTarget: () => null
@@ -580,8 +597,8 @@
       const sent = [];
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: (msg) => sent.push(msg),
-        
         resolveTarget: () => null
       });
 
@@ -610,6 +627,7 @@
     test('createGraphInputMessage は ref/payload を検証する', () => {
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
         
         resolveTarget: () => null
@@ -634,6 +652,7 @@
     test('scope helper は ownership キーとして使える', () => {
       const adapter = new LoomSceneSync({
         LoomClass: Loom,
+        getEnv: getDefaultEnv,
         send: () => {},
         
         resolveTarget: () => null
