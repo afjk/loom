@@ -17,6 +17,7 @@ namespace Loomlet.Runtime
 
         private static void RegisterMath(LoomletFunctionRegistry r)
         {
+            r.Register("math.abs", new[] { "value" }, (i, c) => Out(Math.Abs(LoomletValues.Number(i["value"]))));
             r.Register("math.add", new[] { "a", "b" }, (i, c) => Out(LoomletValues.Number(i["a"]) + LoomletValues.Number(i["b"])));
             r.Register("math.subtract", new[] { "a", "b" }, (i, c) => Out(LoomletValues.Number(i["a"]) - LoomletValues.Number(i["b"])));
             r.Register("math.multiply", new[] { "a", "b" }, (i, c) => Out(LoomletValues.Number(i["a"], 1) * LoomletValues.Number(i["b"], 1)));
@@ -44,6 +45,17 @@ namespace Loomlet.Runtime
             r.Register("math.pow", new[] { "value", "exponent" }, (i, c) => Out(Math.Pow(LoomletValues.Number(i["value"]), LoomletValues.Number(i["exponent"], 1))));
             r.Register("math.sine", new[] { "t", "freq", "amplitude", "phase", "offset" }, (i, c) => Out(Math.Sin(LoomletValues.Number(i["t"]) * LoomletValues.Number(i["freq"], 1) * 2 * Math.PI + LoomletValues.Number(i["phase"])) * LoomletValues.Number(i["amplitude"], 1) + LoomletValues.Number(i["offset"])));
             r.Register("math.cosine", new[] { "t", "freq", "amplitude", "phase", "offset" }, (i, c) => Out(Math.Cos(LoomletValues.Number(i["t"]) * LoomletValues.Number(i["freq"], 1) * 2 * Math.PI + LoomletValues.Number(i["phase"])) * LoomletValues.Number(i["amplitude"], 1) + LoomletValues.Number(i["offset"])));
+            r.Register("math.tan", new[] { "value" }, (i, c) => Out(Math.Tan(LoomletValues.Number(i["value"]))));
+            r.Register("math.smoothstep", new[] { "x", "edge0", "edge1" }, (i, c) =>
+            {
+                var x = LoomletValues.Number(i["x"]);
+                var edge0 = LoomletValues.Number(i["edge0"]);
+                var edge1 = LoomletValues.Number(i["edge1"], 1);
+                if (edge0 == edge1) return Out(x < edge0 ? 0.0 : 1.0);
+                var t = (x - edge0) / (edge1 - edge0);
+                t = Math.Max(0, Math.Min(1, t));
+                return Out(t * t * (3 - 2 * t));
+            });
         }
 
         private static void RegisterLogic(LoomletFunctionRegistry r)
