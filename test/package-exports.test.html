@@ -16,7 +16,7 @@
         results.push('✓ Main export (src/index.js)');
 
         // Verify main exports exist
-        const mainExports = ['Loom', 'NODE_TYPES', 'parseDSLToAST', 'compileToGraph', 'graphToEditorModel', 'editorModelToGraph', 'applyEditorOperation'];
+        const mainExports = ['Loom', 'NODE_TYPES', 'parseDSLToAST', 'compileToGraph', 'graphToEditorModel', 'editorModelToGraph', 'applyEditorOperation', 'patchDslSourceForEditorOperation', 'patchOrCanonicalDslSource'];
         for (const exp of mainExports) {
           if (main[exp] !== undefined) {
             results.push(`  ✓ export ${exp}`);
@@ -78,6 +78,14 @@
       }
 
       document.getElementById('results').textContent = results.join('\n');
+      const failures = results
+        .filter((line) => line.trim().startsWith('✗'))
+        .map((line) => ({ error: line.trim() }));
+      window.__loomTestResults = {
+        pass: results.filter((line) => line.trim().startsWith('✓')).length,
+        fail: failures.length,
+        failures
+      };
     }
 
     runTests();

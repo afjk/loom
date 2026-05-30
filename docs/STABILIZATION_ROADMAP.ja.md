@@ -74,7 +74,7 @@ DSL fixture -> compile -> graph semantic snapshot
 Runtime graph -> evaluation result for deterministic examples
 ```
 
-これらのテストでは、examplesが意図通りにparse、compile、evaluateできることを検証します。作者が書いた元の空白、コメント、pipe style、argument style、editor layoutの保持は要求しません。
+これらのテストでは、examplesが意図通りにparse、compile、evaluateできることを検証します。作者が書いた元の空白、コメント、pipe style、argument style、editor layoutの保持は基本的には要求しません。ただし、Editor Studio では安全な top-level Node Editor 編集について、限定的な source-preserving patch を使います。
 
 ### Canonical DSL round-trip v1（意味的境界）
 
@@ -98,6 +98,8 @@ Graph -> Canonical DSL -> Source AST -> Graph
 - コメント、formatting、pipe syntax、import順序、named-vs-positional argument styleの保持は保証しない
 - editor layout metadata と hidden metadata の正確な形式の保持は保証しない
 
+Editor Studio ではこれとは別に、param編集、rename、単純なnode追加/削除、単純なedge argument編集に対して、まず安全な source-preserving patch を試します。patchが曖昧な場合や、pipe / function / cross-scope rewrite など局所編集が安全でない場合は canonical DSL へfallbackします。
+
 semantic比較では、次の差分を正規化または無視する場合があります。
 
 - 意味的に無関係な node 順序
@@ -110,16 +112,15 @@ semantic比較では、次の差分を正規化または無視する場合があ
 
 まだ実験中、または視覚表現に関する領域には、厳密なgolden snapshotを避けます。
 
-- Node Editorのリアルタイム同期
-- 完全な DSL <-> Node Editor の双方向編集
-- コメントを保持するsource patch
-- 元のformattingの保持
-- pipe syntaxの保持
-- named argument と positional argument の保持
+- 任意構文での完全な DSL <-> Node Editor の双方向編集
+- サポート済み top-level edit 形状の外にあるsource patch
+- 任意構文での完全なformatting保持
+- fallbackが必要なケースでのpipe syntax保持
+- patched top-level argsを超えるnamed argument と positional argument の保持
 - import順序の保持
 - editor layout metadataのround-trip
 - hidden editor metadataの正確な形式
-- 編集済みDSLテキストと既存node layout間の双方向patch
+- 任意の編集済みDSLテキストと既存node layout間の双方向patch
 - function/subgraph の完全なsource保持
 - package-aware source保持
 - node coordinates と visual layout
@@ -154,10 +155,10 @@ graphをcanonical DSLへcompileし、再度parse、compileして、semantic grap
 editor modelを通したround-tripです。
 
 ```text
-Node Editor model -> Graph -> Canonical DSL -> Graph -> Editor model
+Node Editor operation -> Graph -> Source patch or Canonical DSL -> Graph -> Editor model
 ```
 
-これは将来の作業であり、まだ安定したものとして扱いません。
+現在は一部実装済みです。param編集、rename、単純なnode追加/削除、単純なedge argument編集は、source-preserving patchを試したうえでsemantic equivalenceを検証します。任意構文での完全なsource保持はまだ将来作業です。
 
 ### リリース文言ガイダンス
 
@@ -168,12 +169,14 @@ Node Editor model -> Graph -> Canonical DSL -> Graph -> Editor model
 ```text
 Canonical DSL round-trip v1
 DSL / Node Editor semantic round-trip foundation
+Safe top-level Node Editor source patch foundation
 ```
 
 避ける:
 
 ```text
 Complete DSL <-> Node Graph round-trip
+Complete source-preserving DSL <-> Node Graph round-trip
 ```
 
 ### 推奨される次のステップ
@@ -182,4 +185,4 @@ Complete DSL <-> Node Graph round-trip
 2. semantic round-trip向けgraph normalizationの意図を、実装詳細を固定しすぎない形で文書化し続ける。
 3. semantic graph snapshot testsを追加する。
 4. Canonical DSL round-trip v1 のsemantic fixture coverageを、安定化したノード群へ段階的に広げる。
-5. source-preservingな editor round-trip testsは将来作業として扱う。
+5. サポート済みsource-preserving editor patch testsを維持し、pipe / function / package-aware sourceなどへ段階的に広げる。

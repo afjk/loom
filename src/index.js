@@ -20,6 +20,11 @@ export {
 export {
   graphToCanonicalDSL
 } from './canonical-dsl.js';
+
+export {
+  patchDslSourceForEditorOperation,
+  patchOrCanonicalDslSource
+} from './source-dsl-patch.js';
 export {
   extractEditorMetadataFromDsl,
   appendEditorMetadataToDsl,

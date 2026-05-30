@@ -21,6 +21,7 @@ import {
   NODE_LAYOUT_STEP_Y
 } from '../../src/node-editor-core.js';
 import { graphToCanonicalDSL } from '../../src/canonical-dsl.js';
+import { patchOrCanonicalDslSource } from '../../src/source-dsl-patch.js';
 import { createStore } from './studio-store.js';
 import { NodeEditorView } from './node-editor-view.js';
 import { syncPendingDslBeforeNodeOperation } from './live-sync-guards.js';
@@ -972,10 +973,15 @@ function generateCanonicalDslFromState() {
   return graphToCanonicalDSL(graph);
 }
 
-function syncGraphToDslEditor({ markDirty = true, force = false } = {}) {
+function syncGraphToDslEditor({ markDirty = true, force = false, operation = null, graph = null } = {}) {
   if (!force && !AUTO_SYNC_GRAPH_TO_DSL_ENABLED) return null;
 
-  const dsl = generateCanonicalDslFromState();
+  const state = store.getState();
+  const nextGraph = graph || (state.editorModel ? editorModelToGraph(state.editorModel, state.graph) : state.graph);
+  const syncResult = !force && operation && nextGraph
+    ? patchOrCanonicalDslSource(getDslText(), operation, nextGraph)
+    : { ok: true, source: generateCanonicalDslFromState(), strategy: 'canonical' };
+  const dsl = syncResult.source;
 
   if (getDslText() !== dsl) {
     setDslText(dsl);
@@ -2635,7 +2641,11 @@ async function handleOperation(operation) {
       runPreview(result.state.graph);
       hasUnsyncedDslText = false;
       cancelPendingAutoApplyDsl();
-      syncGraphToDslEditor({ markDirty: true });
+      syncGraphToDslEditor({
+        markDirty: true,
+        operation: result.change.operation,
+        graph: result.state.graph
+      });
     } else {
       renderGraphJSON(result.state.graph);
     }

@@ -48,11 +48,12 @@ Graph -> Canonical DSL -> Graph
 
 This means generated DSL should be parseable and compile back to a semantically equivalent graph.
 
-This is **not** a full source-preserving editor round-trip. The following remain future work:
+Editor Studio now also uses source-preserving patches for common top-level Node Editor edits before falling back to canonical DSL regeneration. Supported patch shapes include simple parameter edits, renames, simple node insertion/removal, and simple edge argument edits.
 
-- comments
-- original formatting
-- pipe style
+This is **not** a full arbitrary source-preserving editor round-trip. The following remain future work:
+
+- comments and original formatting outside the supported patch shapes
+- pipe style in fallback cases
 - import order
 - named-vs-positional authoring style
 - exact editor layout metadata
@@ -136,7 +137,7 @@ The portable runtime boundary is now documented for Scene Sync Export and future
 
 The following are intentionally not part of the stable next-release promise:
 
-- full source-preserving DSL <-> Node Editor round-trip
+- full arbitrary source-preserving DSL <-> Node Editor round-trip
 - function definition as subgraph
 - npm / remote package loading
 - package sandboxing and permissions
