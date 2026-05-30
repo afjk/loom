@@ -53,9 +53,10 @@ render bar(width: width, color: "#80ed99", height: 48)
 const SCENE_SYNC_JUMP_PRESET = `import math
 import scene
 
-dy = math.sine(0, freq: 0.8, amplitude: 0.5)
+t = clock()
+dy = math.sine(t, freq: 0.8, amplitude: 0.5)
 
-scene.offsetPosition(y: dy)
+scene.offsetPosition(objectId: "sample-cube", y: dy)
 
 previewY = math.add(200, math.multiply(dy, -120))
 render point(x: 300, y: previewY, radius: 8, color: "#ff70a6", trail: 0.08)
@@ -64,10 +65,11 @@ render point(x: 300, y: previewY, radius: 8, color: "#ff70a6", trail: 0.08)
 const SCENE_SYNC_CIRCLE_PRESET = `import math
 import scene
 
-dx = math.cosine(0, freq: 0.2, amplitude: 1.5)
-dz = math.sine(0, freq: 0.2, amplitude: 1.5)
+t = clock()
+dx = math.cosine(t, freq: 0.2, amplitude: 1.5)
+dz = math.sine(t, freq: 0.2, amplitude: 1.5)
 
-scene.offsetPosition(x: dx, z: dz)
+scene.offsetPosition(objectId: "sample-cube", x: dx, z: dz)
 
 previewX = math.add(300, math.multiply(dx, 80))
 previewY = math.add(200, math.multiply(dz, 80))

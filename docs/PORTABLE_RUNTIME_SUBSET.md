@@ -47,7 +47,7 @@ Scene Sync live and Scene Sync Export should differ by host-provided environment
 
 ### Scene Sync live
 
-- May provide server-synchronized room time as `env.time` / `env.deltaTime`.
+- May provide host-supplied room time (synchronized by the host) as `env.time` / `env.deltaTime`.
 - May provide committed shared events via `env.events`.
 - Requires a Scene Sync presence server or compatible live host at runtime.
 - The default public deployment may be afjk.jp, but the Loomlet graph must not depend on afjk.jp specifically.

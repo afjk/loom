@@ -1,7 +1,8 @@
 import math
 import scene
 
-x = math.sine(0, freq: 0.2, amplitude: 2, offset: 0)
-y = math.sine(0, freq: 0.3, amplitude: 0.5, offset: 1.2)
+t = clock()
+x = math.sine(t, freq: 0.2, amplitude: 2, offset: 0)
+y = math.sine(t, freq: 0.3, amplitude: 0.5, offset: 1.2)
 
 scene.setPosition("sample-cube", x: x, y: y, z: 0)

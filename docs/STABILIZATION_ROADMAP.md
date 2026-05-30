@@ -39,12 +39,12 @@ See [`docs/RELEASE_NOTES_NEXT.md`](RELEASE_NOTES_NEXT.md) for the release-note d
 
 ### P0: release foundations
 
-1. **Done (v0 foundation)**: Host-provided time / Scene Sync server time sync
+1. **Done (v0 foundation)**: Host-provided time (no Loomlet time sync)
    - Loomlet does not own the clock or call afjk.jp directly.
    - Loomlet evaluates against `env.time`, `env.deltaTime`, and host-provided time values.
-   - Scene Sync live rooms may provide server-synchronized time as the host clock.
+   - Scene Sync live rooms may provide time as the host clock (synchronized or not by the host).
    - Scene Sync Export / standalone playback can provide a local playback clock instead.
-   - Self-hosted or compatible Scene Sync live hosts can provide their own synchronized clock.
+   - Self-hosted or compatible Scene Sync live hosts can provide their own clock.
 
 2. **Done (v0 foundation)**: Event envelope v0
    - Minimal event envelope semantics are documented for committed environment events.

@@ -1,0 +1,19 @@
+# Tour: Pulse
+# Goal: Drive scale pulsing for performance timing.
+# Status: runnable
+# Run:
+#   loomlet scenesync dev examples/tour/live/01-pulse.loom
+# Setup:
+#   - Open a Scene Sync room.
+#   - Link Loomlet with `loomlet scenesync redeem <code> --save`.
+#   - Ensure an object named `pulse-target` exists in the scene.
+# Requires:
+#   - clock (host-provided time)
+#   - math.sine
+#   - scene.setScale
+import math
+import scene
+
+t = clock()
+s = math.sine(t, freq: 1.0, amplitude: 0.3, offset: 1.0)
+scene.setScale(objectId: "pulse-target", x: s, y: s, z: s)

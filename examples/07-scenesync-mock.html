@@ -168,16 +168,23 @@
       };
     }
 
-    // Synced server clock simulation
+    // Local playback clock
     const startTime = performance.now() / 1000;
-    function getServerTime() {
+    function getLocalTime() {
       return (performance.now() / 1000) - startTime;
+    }
+
+    // Environment provider for Loom graphs
+    function getEnv() {
+      return {
+        time: getLocalTime()
+      };
     }
 
     // Message log
     const logs = [];
     function addLog(msg, type = 'event') {
-      const timestamp = getServerTime().toFixed(2);
+      const timestamp = getLocalTime().toFixed(2);
       logs.push({ timestamp, msg, type });
       updateLog();
     }
@@ -197,6 +204,7 @@
 
     const adapter = new LoomSceneSync({
       LoomClass: Loom,
+      getEnv: getEnv,
       send: (msg) => {
         const body = msg.payload ?? msg.graph ?? {};
         addLog(`SEND: ${msg.type} scope=${JSON.stringify(msg.scope)} body=${JSON.stringify(body)}`);
@@ -304,7 +312,7 @@
 
     // Update status display
     function updateStatus() {
-      const elapsed = getServerTime().toFixed(2);
+      const elapsed = getLocalTime().toFixed(2);
       const status = document.getElementById('status');
       status.innerHTML = `
         <div class="status">Elapsed: <strong>${elapsed}s</strong></div>
