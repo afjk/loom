@@ -81,6 +81,14 @@
       assertEqual(out.render, g.render);
     });
 
+    test('6b. editorModelToGraph は imports を継承', () => {
+      const g = sampleGraph();
+      g.imports = ['time', 'math', 'scene'];
+      const em = graphToEditorModel(g);
+      const out = editorModelToGraph(em, g);
+      assertEqual(out.imports, g.imports);
+    });
+
     test('7. addNode は order 末尾に追加', () => {
       const em = graphToEditorModel(sampleGraph());
       const next = applyEditorOperation(em, { type: 'addNode', node: { id: 'n1', type: 'add', category: 'transform', params: {}, position: { x: 1, y: 2 } } });

@@ -10,7 +10,7 @@ export function patchDslSourceForEditorOperation(source, operation, graph) {
   }
 
   const ast = parsed.ast;
-  const result = patchAstSource(text, ast, operation, graph);
+  const result = patchAstSource(text, ast, operation);
   if (!result.ok) return result;
 
   const validation = validatePatchedSource(result.source, graph);
@@ -35,7 +35,7 @@ export function patchOrCanonicalDslSource(source, operation, graph) {
   };
 }
 
-function patchAstSource(source, ast, operation, graph) {
+function patchAstSource(source, ast, operation) {
   if (!operation || !operation.type) return fail('MISSING_OPERATION');
 
   if (operation.type === 'updateParam') {
@@ -59,7 +59,7 @@ function patchAstSource(source, ast, operation, graph) {
   }
 
   if (operation.type === 'removeNode') {
-    return patchRemoveNode(source, ast, operation, graph);
+    return patchRemoveNode(source, ast, operation);
   }
 
   return fail('UNSUPPORTED_OPERATION');
@@ -144,12 +144,9 @@ function patchAddNode(source, operation) {
   return ok(`${source}${prefix}${line}\n`, 'source-patch');
 }
 
-function patchRemoveNode(source, ast, operation, graph) {
+function patchRemoveNode(source, ast, operation) {
   const stmt = findAssignment(ast, operation.id);
   if (!stmt) return fail('REMOVE_TARGET_NOT_FOUND');
-
-  const stillReferenced = (graph?.edges || []).some((edge) => edge.from.startsWith(`${operation.id}.`) || edge.to.startsWith(`${operation.id}.`));
-  if (stillReferenced) return fail('REMOVE_TARGET_STILL_REFERENCED');
 
   const range = lineRangeForSpan(source, stmt.span);
   return ok(`${source.slice(0, range.start)}${source.slice(range.end)}`, 'source-patch');

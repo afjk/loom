@@ -2,6 +2,14 @@ import { NODE_TYPES } from './loom.js';
 
 export function graphToCanonicalDSL(graph) {
   const lines = [];
+  const imports = graph.imports || [];
+
+  for (const name of imports) {
+    lines.push(`import ${name}`);
+  }
+  if (imports.length && ((graph.nodes || []).length || graph.render)) {
+    lines.push('');
+  }
 
   for (const node of graph.nodes || []) {
     const nodeType = NODE_TYPES[node.type];

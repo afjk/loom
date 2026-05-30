@@ -63,6 +63,18 @@
       assert(ast, 'should produce valid AST');
     });
 
+    test('2b. graphToCanonicalDSL preserves imports', () => {
+      const graph = {
+        ...sampleGraph(),
+        imports: ['time', 'math', 'scene']
+      };
+      const dsl = graphToCanonicalDSL(graph);
+      assert(dsl.startsWith('import time\nimport math\nimport scene\n\n'), 'should emit imports at top');
+      const { ast } = parseDSLToAST(dsl);
+      const { graph: newGraph } = compileToGraph(ast);
+      assertEqual(newGraph.imports, graph.imports, 'should preserve imports after round-trip');
+    });
+
     test('3. graphToCanonicalDSL → DSL → Graph preserves node count', () => {
       const graph = sampleGraph();
       const dsl = graphToCanonicalDSL(graph);

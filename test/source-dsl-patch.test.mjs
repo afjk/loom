@@ -60,6 +60,26 @@ test('source patch: updateParam inserts a missing named argument', () => {
   assert.equal(patched, 'wave = sine(freq: 0.25)\n');
 });
 
+test('source patch: updateParam preserves imports while patching source', () => {
+  const source = [
+    'import math',
+    '',
+    '# oscillator',
+    'wave = sine(freq: 0.35, amplitude: 2)',
+    ''
+  ].join('\n');
+
+  const patched = applyOperation(source, {
+    type: 'updateParam',
+    id: 'wave',
+    key: 'freq',
+    value: 0.5
+  });
+
+  assert.match(patched, /^import math\n\n# oscillator\n/);
+  assert.match(patched, /wave = sine\(freq: 0.5, amplitude: 2\)/);
+});
+
 test('source patch: renameNode updates assignment targets and references without canonicalizing', () => {
   const source = [
     '# keep this comment',
@@ -170,8 +190,37 @@ test('source patch: removeNode removes only the assignment line', () => {
   assert.equal(patched, '# keep this standalone comment\nclk = clock()\nwave = sine(freq: 0.5)\n');
 });
 
+test('source patch: removeNode with connected references falls back to canonical DSL', () => {
+  const source = [
+    'import math',
+    '',
+    'clk = clock()',
+    'wave = sine(t: clk, freq: 0.3)',
+    ''
+  ].join('\n');
+  const graph = compileSource(source);
+  const result = applyNodeEditorOperationState({
+    graph,
+    editorModel: graphToEditorModel(graph),
+    errors: []
+  }, {
+    type: 'removeNode',
+    id: 'clk'
+  });
+  if (result.error) throw result.error;
+
+  const patched = patchDslSourceForEditorOperation(source, result.change.operation, result.state.graph);
+  assert.equal(patched.ok, false);
+
+  const fallback = patchOrCanonicalDslSource(source, result.change.operation, result.state.graph);
+  assert.equal(fallback.ok, true);
+  assert.equal(fallback.strategy, 'canonical');
+  assert.match(fallback.source, /^import math\n\n/);
+  assert.match(fallback.source, /wave = sine\(freq: 0.3\)/);
+});
+
 test('source patch: unsupported structures fall back to canonical DSL', () => {
-  const source = 'clk = clock()\nwave = clk |> sine(freq: 0.3)\n';
+  const source = 'import math\n\nclk = clock()\nwave = clk |> sine(freq: 0.3)\n';
   const graph = compileSource(source);
   const result = applyNodeEditorOperationState({
     graph,
@@ -191,5 +240,6 @@ test('source patch: unsupported structures fall back to canonical DSL', () => {
   const fallback = patchOrCanonicalDslSource(source, result.change.operation, result.state.graph);
   assert.equal(fallback.ok, true);
   assert.equal(fallback.strategy, 'canonical');
+  assert.match(fallback.source, /^import math\n\n/);
   assert.match(fallback.source, /wave = sine\(t: clk, freq: 0.7\)/);
 });
