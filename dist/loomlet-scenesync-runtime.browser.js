@@ -149,6 +149,13 @@ function defaultApplySceneEffect(effect, host) {
     if (typeof material?.color?.setRGB === 'function') {
       material.color.setRGB(effect.color[0], effect.color[1], effect.color[2]);
     }
+  } else if (effect.type === 'scene.setAudio') {
+    object.userData = object.userData || {};
+    object.userData.audio = {
+      url: effect.url,
+      playOnAwake: effect.playOnAwake !== false,
+      loop: effect.loop !== false
+    };
   }
 }
 
@@ -163,6 +170,14 @@ function makeSceneEffect(type, inputs, params, ctx) {
   if (type === 'scene.setScale') return { ...base, scale: [inputs.x, inputs.y, inputs.z].map(Number) };
   if (type === 'scene.setVisible') return { ...base, visible: Boolean(inputs.visible) };
   if (type === 'scene.setColor') return { ...base, color: [inputs.r, inputs.g, inputs.b].map(Number) };
+  if (type === 'scene.setAudio') {
+    return {
+      ...base,
+      url: stringifyText(inputs.url),
+      playOnAwake: inputs.playOnAwake !== false,
+      loop: inputs.loop !== false
+    };
+  }
   return base;
 }
 
@@ -453,7 +468,7 @@ function buildNodeTypes() {
     }
   });
 
-  const sceneTypes = ['scene.setPosition', 'scene.offsetPosition', 'scene.setRotation', 'scene.setScale', 'scene.setVisible', 'scene.setColor'];
+  const sceneTypes = ['scene.setPosition', 'scene.offsetPosition', 'scene.setRotation', 'scene.setScale', 'scene.setVisible', 'scene.setColor', 'scene.setAudio'];
   for (const type of sceneTypes) {
     register(type, {
       inputs: sceneInputsFor(type),
@@ -470,7 +485,8 @@ function buildNodeTypes() {
     sceneSetRotation: 'scene.setRotation',
     sceneSetScale: 'scene.setScale',
     sceneSetVisible: 'scene.setVisible',
-    sceneSetColor: 'scene.setColor'
+    sceneSetColor: 'scene.setColor',
+    sceneSetAudio: 'scene.setAudio'
   };
   for (const [alias, canonical] of Object.entries(adapterAliases)) {
     nodes[alias] = nodes[canonical];
@@ -485,6 +501,7 @@ function sceneInputsFor(type) {
   if (type === 'scene.setScale') return [objectId, { name: 'x', default: 1 }, { name: 'y', default: 1 }, { name: 'z', default: 1 }];
   if (type === 'scene.setVisible') return [objectId, { name: 'visible', default: true }];
   if (type === 'scene.setColor') return [objectId, { name: 'r', default: 1 }, { name: 'g', default: 1 }, { name: 'b', default: 1 }];
+  if (type === 'scene.setAudio') return [objectId, { name: 'url', default: '' }, { name: 'playOnAwake', default: true }, { name: 'loop', default: true }];
   return [objectId, { name: 'x', default: 0 }, { name: 'y', default: 0 }, { name: 'z', default: 0 }];
 }
 

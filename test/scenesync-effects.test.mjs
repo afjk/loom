@@ -37,6 +37,18 @@ test('isSceneSyncEffect returns true for scene.setScale', () => {
   assert.equal(isSceneSyncEffect(effect), true);
 });
 
+test('isSceneSyncEffect returns true for scene.setAudio', () => {
+  const effect = {
+    type: 'scene.setAudio',
+    target: 'scenesync',
+    objectId: 'sample-cube',
+    url: 'https://example.com/sound.mp3',
+    playOnAwake: true,
+    loop: true
+  };
+  assert.equal(isSceneSyncEffect(effect), true);
+});
+
 test('isSceneSyncEffect returns false for non-scenesync target', () => {
   const effect = {
     type: 'scene.setPosition',
@@ -98,6 +110,27 @@ test('sceneEffectToBroadcastOp converts scale', () => {
     kind: 'scene-delta',
     objectId: 'sample-cube',
     scale: [2, 2, 2]
+  });
+});
+
+test('sceneEffectToBroadcastOp converts audio', () => {
+  const effect = {
+    type: 'scene.setAudio',
+    objectId: 'sample-cube',
+    url: 'https://example.com/sound.mp3',
+    playOnAwake: true,
+    loop: false
+  };
+
+  const op = sceneEffectToBroadcastOp(effect);
+  assert.deepEqual(op, {
+    kind: 'scene-delta',
+    objectId: 'sample-cube',
+    audio: {
+      url: 'https://example.com/sound.mp3',
+      playOnAwake: true,
+      loop: false
+    }
   });
 });
 
