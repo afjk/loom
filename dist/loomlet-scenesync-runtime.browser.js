@@ -175,8 +175,7 @@ function makeSceneEffect(type, inputs, params, ctx) {
       ...base,
       url: stringifyText(inputs.url),
       playOnAwake: inputs.playOnAwake !== false,
-      loop: inputs.loop !== false,
-      time: Number.isFinite(ctx.env.time) ? ctx.env.time : 0
+      loop: inputs.loop !== false
     };
   }
   return base;

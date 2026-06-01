@@ -352,6 +352,24 @@ Arguments:
 | y | number | no | Y offset. |
 | z | number | no | Z offset. |
 
+### scene.setAudio
+
+Signature: `scene.setAudio(objectId: "...", url: "https://...", playOnAwake: true, loop: true)`
+
+Returns: `void`
+Status: `implemented`
+
+Sets an audio component on a Scene Sync object.
+
+Arguments:
+
+| Name | Type | Positional | Description |
+|---|---|---:|---|
+| objectId | string | yes | ID of the object. |
+| url | string | no | HTTP(S) URL for an audio file. |
+| playOnAwake | boolean | no | Whether playback starts when the component is applied. |
+| loop | boolean | no | Whether playback loops. |
+
 ## math
 
 Pure math and numeric transform nodes

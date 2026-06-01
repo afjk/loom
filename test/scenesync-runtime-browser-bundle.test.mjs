@@ -172,7 +172,6 @@ test('Scene Sync browser runtime emits object audio effects', async () => {
     nodeId: 'audio',
     url: 'https://example.com/sound.mp3',
     playOnAwake: true,
-    loop: true,
-    time: 12.5
+    loop: true
   });
 });
