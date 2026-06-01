@@ -367,6 +367,42 @@ export const LIBRARY_METADATA = {
         examples: [
           'scene.offsetPosition("sample-cube", x: 1, y: 0.5, z: 0)'
         ]
+      },
+      setAudio: {
+        name: 'setAudio',
+        signature: 'scene.setAudio(objectId: "...", url: "https://...", playOnAwake: true, loop: true)',
+        description: 'Sets an audio component on a Scene Sync object.',
+        args: [
+          {
+            name: 'objectId',
+            type: 'string',
+            positional: true,
+            description: 'ID of the object.'
+          },
+          {
+            name: 'url',
+            type: 'string',
+            positional: false,
+            description: 'HTTP(S) URL for an audio file.'
+          },
+          {
+            name: 'playOnAwake',
+            type: 'boolean',
+            positional: false,
+            description: 'Whether playback starts when the component is applied.'
+          },
+          {
+            name: 'loop',
+            type: 'boolean',
+            positional: false,
+            description: 'Whether playback loops.'
+          }
+        ],
+        returns: 'void',
+        targets: LIBRARY_COMPATIBILITY.scene.targets,
+        examples: [
+          'scene.setAudio("sample-cube", url: "https://example.com/sound.mp3", playOnAwake: true, loop: true)'
+        ]
       }
     }
   },

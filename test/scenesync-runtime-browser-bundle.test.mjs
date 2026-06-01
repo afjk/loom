@@ -140,3 +140,39 @@ test('Scene Sync browser runtime supports legacy adapter node aliases with targe
   assert.equal(object.position.y, 2);
   assert.equal(object.position.z, 3);
 });
+
+test('Scene Sync browser runtime emits object audio effects', async () => {
+  const runtimeModule = await import(`${pathToFileURL(bundlePath).href}?case=audio-${Date.now()}`);
+  const effects = [];
+  const runtime = runtimeModule.createSceneSyncRuntime({
+    nodes: [
+      {
+        id: 'audio',
+        type: 'scene.setAudio',
+        params: {
+          objectId: 'speaker',
+          url: 'https://example.com/sound.mp3',
+          playOnAwake: true,
+          loop: true
+        }
+      }
+    ],
+    edges: []
+  }, {
+    applyEffects: false,
+    onEffect: (effect) => effects.push(effect)
+  });
+
+  runtime.evaluateAt({ time: 12.5, events: [] });
+
+  assert.deepEqual(effects[0], {
+    type: 'scene.setAudio',
+    objectId: 'speaker',
+    target: 'scenesync',
+    nodeId: 'audio',
+    url: 'https://example.com/sound.mp3',
+    playOnAwake: true,
+    loop: true,
+    time: 12.5
+  });
+});

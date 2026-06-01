@@ -11,7 +11,8 @@ const SUPPORTED_NODES = new Set([
   'scene.setRotation',
   'scene.setScale',
   'scene.setColor',
-  'scene.setVisible'
+  'scene.setVisible',
+  'scene.setAudio'
 ]);
 
 const NODE_TYPE_MAPPING = {
@@ -25,7 +26,8 @@ const NODE_TYPE_MAPPING = {
   'scene.setRotation': 'sceneSetRotation',
   'scene.setScale': 'sceneSetScale',
   'scene.setColor': 'sceneSetColor',
-  'scene.setVisible': 'sceneSetVisible'
+  'scene.setVisible': 'sceneSetVisible',
+  'scene.setAudio': 'sceneSetAudio'
 };
 
 const OUTPUT_PORT_MAPPING = {
@@ -49,7 +51,9 @@ const OUTPUT_PORT_MAPPING = {
   'scene.setColor': undefined,
   'sceneSetColor': undefined,
   'scene.setVisible': undefined,
-  'sceneSetVisible': undefined
+  'sceneSetVisible': undefined,
+  'scene.setAudio': undefined,
+  'sceneSetAudio': undefined
 };
 
 function generateStableNodeBase(nodeType) {
@@ -65,6 +69,7 @@ function generateStableNodeBase(nodeType) {
   if (mapped === 'sceneSetScale') return 'scale';
   if (mapped === 'sceneSetColor') return 'color';
   if (mapped === 'sceneSetVisible') return 'visible';
+  if (mapped === 'sceneSetAudio') return 'audio';
   return mapped;
 }
 
@@ -131,6 +136,14 @@ function pickParams(nodeType, params = {}) {
   }
   if (nodeType === 'scene.setVisible') {
     return { ...(params.visible !== undefined ? { visible: params.visible } : {}) };
+  }
+  if (nodeType === 'scene.setAudio') {
+    return {
+      ...(params.objectId ? { target: params.objectId } : {}),
+      ...(params.url !== undefined ? { url: params.url } : {}),
+      ...(params.playOnAwake !== undefined ? { playOnAwake: params.playOnAwake } : {}),
+      ...(params.loop !== undefined ? { loop: params.loop } : {})
+    };
   }
   if (nodeType === 'math.sine' || nodeType === 'math.cosine') {
     return {

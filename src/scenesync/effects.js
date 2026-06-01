@@ -6,7 +6,8 @@ function isSceneSyncEffect(effect) {
   const validTypes = new Set([
     'scene.setPosition',
     'scene.setRotation',
-    'scene.setScale'
+    'scene.setScale',
+    'scene.setAudio'
   ]);
 
   return validTypes.has(effect.type) && effect.target === 'scenesync';
@@ -48,6 +49,15 @@ function sceneEffectToBroadcastOp(effect) {
   } else if (effect.type === 'scene.setScale') {
     validateVector(effect.scale, 3, 'scale');
     op.scale = effect.scale;
+  } else if (effect.type === 'scene.setAudio') {
+    if (typeof effect.url !== 'string' || effect.url.trim().length === 0) {
+      throw new Error('Invalid scene effect: audio url is required');
+    }
+    op.audio = {
+      url: effect.url,
+      playOnAwake: effect.playOnAwake !== false,
+      loop: effect.loop !== false
+    };
   } else {
     throw new Error(`Invalid scene effect: unknown type ${effect.type}`);
   }

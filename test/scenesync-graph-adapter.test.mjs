@@ -177,6 +177,21 @@ scene.setScale("sample-cube", x: 1.2, y: 1.2, z: 1.2)
   assert.deepEqual(result.scope, { object: 'sample-cube' });
 });
 
+test('supports object audio scene sink', () => {
+  const source = `
+import scene
+scene.setAudio("speaker", url: "https://example.com/sound.mp3")
+`;
+
+  const result = compileLoomToSceneSyncGraph(source);
+  const audioNode = result.graph.nodes.find((n) => n.type === 'sceneSetAudio');
+
+  assert.ok(audioNode);
+  assert.equal(audioNode.params.target, 'speaker');
+  assert.equal(audioNode.params.url, 'https://example.com/sound.mp3');
+  assert.deepEqual(result.scope, { object: 'speaker' });
+});
+
 
 test('multiple sine nodes receive unique IDs and valid edges', () => {
   const source = `
