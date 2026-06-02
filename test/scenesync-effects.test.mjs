@@ -37,14 +37,14 @@ test('isSceneSyncEffect returns true for scene.setScale', () => {
   assert.equal(isSceneSyncEffect(effect), true);
 });
 
-test('isSceneSyncEffect returns true for audioSource.play', () => {
+test('isSceneSyncEffect returns false for audioSource.play (handled via graph runtime, not broadcast ops)', () => {
   const effect = {
     type: 'audioSource.play',
     target: 'scenesync',
     objectId: 'speaker',
     name: 'music'
   };
-  assert.equal(isSceneSyncEffect(effect), true);
+  assert.equal(isSceneSyncEffect(effect), false);
 });
 
 test('isSceneSyncEffect returns false for legacy scene.setAudio', () => {
@@ -121,129 +121,14 @@ test('sceneEffectToBroadcastOp converts scale', () => {
   });
 });
 
-test('sceneEffectToBroadcastOp converts audioSource.play to an audio-command', () => {
-  const op = sceneEffectToBroadcastOp({
-    type: 'audioSource.play',
-    objectId: 'speaker',
-    name: 'music'
-  });
-  assert.deepEqual(op, {
-    kind: 'audio-command',
-    objectId: 'speaker',
-    name: 'music',
-    command: 'play'
-  });
-});
-
-test('sceneEffectToBroadcastOp defaults the source name to "default"', () => {
-  const op = sceneEffectToBroadcastOp({
-    type: 'audioSource.stop',
-    objectId: 'speaker'
-  });
-  assert.deepEqual(op, {
-    kind: 'audio-command',
-    objectId: 'speaker',
-    name: 'default',
-    command: 'stop'
-  });
-});
-
-test('sceneEffectToBroadcastOp converts audioSource.seek with time', () => {
-  const op = sceneEffectToBroadcastOp({
-    type: 'audioSource.seek',
-    objectId: 'speaker',
-    name: 'music',
-    time: 12.5
-  });
-  assert.deepEqual(op, {
-    kind: 'audio-command',
-    objectId: 'speaker',
-    name: 'music',
-    command: 'seek',
-    time: 12.5
-  });
-});
-
-test('sceneEffectToBroadcastOp converts audioSource.setVolume with volume', () => {
-  const op = sceneEffectToBroadcastOp({
-    type: 'audioSource.setVolume',
-    objectId: 'speaker',
-    name: 'music',
-    volume: 0.5
-  });
-  assert.deepEqual(op, {
-    kind: 'audio-command',
-    objectId: 'speaker',
-    name: 'music',
-    command: 'setVolume',
-    volume: 0.5
-  });
-});
-
-test('sceneEffectToBroadcastOp converts audioSource.setClip with url', () => {
-  const op = sceneEffectToBroadcastOp({
-    type: 'audioSource.setClip',
-    objectId: 'speaker',
-    name: 'music',
-    url: 'https://example.com/song.mp3'
-  });
-  assert.deepEqual(op, {
-    kind: 'audio-command',
-    objectId: 'speaker',
-    name: 'music',
-    command: 'setClip',
-    url: 'https://example.com/song.mp3'
-  });
-});
-
-test('sceneEffectToBroadcastOp converts audioSource.playOneShot', () => {
-  const op = sceneEffectToBroadcastOp({
-    type: 'audioSource.playOneShot',
-    objectId: 'cube-01',
-    name: 'click'
-  });
-  assert.deepEqual(op, {
-    kind: 'audio-command',
-    objectId: 'cube-01',
-    name: 'click',
-    command: 'playOneShot'
-  });
-});
-
-test('sceneEffectToBroadcastOp converts audioSource.syncToAnimation with defaults', () => {
-  const op = sceneEffectToBroadcastOp({
-    type: 'audioSource.syncToAnimation',
-    objectId: 'dancer',
-    name: 'music',
-    animation: 'Dance'
-  });
-  assert.deepEqual(op, {
-    kind: 'audio-command',
-    objectId: 'dancer',
-    name: 'music',
-    command: 'syncToAnimation',
-    animation: 'Dance',
-    offset: 0,
-    resyncOnLoop: true
-  });
-});
-
-test('sceneEffectToBroadcastOp throws for audioSource.seek with non-finite time', () => {
-  assert.throws(() => sceneEffectToBroadcastOp({
-    type: 'audioSource.seek',
-    objectId: 'speaker',
-    name: 'music',
-    time: Number.NaN
-  }), /time/);
-});
-
-test('sceneEffectToBroadcastOp throws for audioSource.setClip with empty url', () => {
-  assert.throws(() => sceneEffectToBroadcastOp({
-    type: 'audioSource.setClip',
-    objectId: 'speaker',
-    name: 'music',
-    url: ''
-  }), /url/);
+test('sceneEffectsToBroadcastOps ignores audioSource effects', () => {
+  const ops = sceneEffectsToBroadcastOps([
+    { type: 'scene.setPosition', target: 'scenesync', objectId: 'cube', position: [1, 0, 0] },
+    { type: 'audioSource.play', target: 'scenesync', objectId: 'speaker', name: 'music' }
+  ]);
+  assert.deepEqual(ops, [
+    { kind: 'scene-delta', objectId: 'cube', position: [1, 0, 0] }
+  ]);
 });
 
 test('sceneEffectToBroadcastOp throws for missing objectId', () => {

@@ -514,7 +514,16 @@ function buildNodeTypes() {
     sceneSetRotation: 'scene.setRotation',
     sceneSetScale: 'scene.setScale',
     sceneSetVisible: 'scene.setVisible',
-    sceneSetColor: 'scene.setColor'
+    sceneSetColor: 'scene.setColor',
+    audioSourcePlay: 'audioSource.play',
+    audioSourcePause: 'audioSource.pause',
+    audioSourceStop: 'audioSource.stop',
+    audioSourceSeek: 'audioSource.seek',
+    audioSourcePlayOneShot: 'audioSource.playOneShot',
+    audioSourceSetVolume: 'audioSource.setVolume',
+    audioSourceSetClip: 'audioSource.setClip',
+    audioSourceSyncToAnimation: 'audioSource.syncToAnimation',
+    audioSourceUnsync: 'audioSource.unsync'
   };
   for (const [alias, canonical] of Object.entries(adapterAliases)) {
     nodes[alias] = nodes[canonical];

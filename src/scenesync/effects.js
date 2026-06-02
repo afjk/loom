@@ -1,29 +1,20 @@
+// AudioSource playback is handled through the Scene Sync graph runtime path
+// (see graph-adapter.js): audioSource.* nodes run on the host and their
+// runtime effects are passed to the host AudioSource API directly. They are
+// intentionally NOT converted into broadcast ops here — the direct-broadcast
+// path only carries scene transform deltas.
 const SCENE_DELTA_TYPES = new Set([
   'scene.setPosition',
   'scene.setRotation',
   'scene.setScale'
 ]);
 
-// Maps an AudioSource effect type to the host playback command name.
-const AUDIO_COMMAND_TYPES = {
-  'audioSource.play': 'play',
-  'audioSource.pause': 'pause',
-  'audioSource.stop': 'stop',
-  'audioSource.seek': 'seek',
-  'audioSource.playOneShot': 'playOneShot',
-  'audioSource.setVolume': 'setVolume',
-  'audioSource.setClip': 'setClip',
-  'audioSource.syncToAnimation': 'syncToAnimation',
-  'audioSource.unsync': 'unsync'
-};
-
 function isSceneSyncEffect(effect) {
   if (!effect || typeof effect !== 'object') {
     return false;
   }
 
-  const isSupported = SCENE_DELTA_TYPES.has(effect.type) || Object.hasOwn(AUDIO_COMMAND_TYPES, effect.type);
-  return isSupported && effect.target === 'scenesync';
+  return SCENE_DELTA_TYPES.has(effect.type) && effect.target === 'scenesync';
 }
 
 function validateObjectId(objectId) {
@@ -41,56 +32,12 @@ function validateVector(value, length, fieldName) {
   }
 }
 
-function resolveSourceName(name) {
-  return typeof name === 'string' && name.length > 0 ? name : 'default';
-}
-
-function audioEffectToBroadcastOp(effect, command) {
-  const op = {
-    kind: 'audio-command',
-    objectId: effect.objectId,
-    name: resolveSourceName(effect.name),
-    command
-  };
-
-  if (command === 'seek') {
-    if (!Number.isFinite(effect.time)) {
-      throw new Error('Invalid audio effect: seek time must be a finite number');
-    }
-    op.time = effect.time;
-  } else if (command === 'setVolume') {
-    if (!Number.isFinite(effect.volume)) {
-      throw new Error('Invalid audio effect: setVolume volume must be a finite number');
-    }
-    op.volume = effect.volume;
-  } else if (command === 'setClip') {
-    if (typeof effect.url !== 'string' || effect.url.trim().length === 0) {
-      throw new Error('Invalid audio effect: setClip url is required');
-    }
-    op.url = effect.url;
-  } else if (command === 'syncToAnimation') {
-    if (typeof effect.animation !== 'string' || effect.animation.trim().length === 0) {
-      throw new Error('Invalid audio effect: syncToAnimation animation is required');
-    }
-    op.animation = effect.animation;
-    op.offset = Number.isFinite(effect.offset) ? effect.offset : 0;
-    op.resyncOnLoop = effect.resyncOnLoop !== false;
-  }
-
-  return op;
-}
-
 function sceneEffectToBroadcastOp(effect) {
   if (!effect || typeof effect !== 'object') {
     throw new Error('Invalid scene effect: effect must be an object');
   }
 
   validateObjectId(effect.objectId);
-
-  const audioCommand = AUDIO_COMMAND_TYPES[effect.type];
-  if (audioCommand) {
-    return audioEffectToBroadcastOp(effect, audioCommand);
-  }
 
   const op = {
     kind: 'scene-delta',

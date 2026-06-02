@@ -11,7 +11,16 @@ const SUPPORTED_NODES = new Set([
   'scene.setRotation',
   'scene.setScale',
   'scene.setColor',
-  'scene.setVisible'
+  'scene.setVisible',
+  'audioSource.play',
+  'audioSource.pause',
+  'audioSource.stop',
+  'audioSource.seek',
+  'audioSource.playOneShot',
+  'audioSource.setVolume',
+  'audioSource.setClip',
+  'audioSource.syncToAnimation',
+  'audioSource.unsync'
 ]);
 
 const NODE_TYPE_MAPPING = {
@@ -25,8 +34,22 @@ const NODE_TYPE_MAPPING = {
   'scene.setRotation': 'sceneSetRotation',
   'scene.setScale': 'sceneSetScale',
   'scene.setColor': 'sceneSetColor',
-  'scene.setVisible': 'sceneSetVisible'
+  'scene.setVisible': 'sceneSetVisible',
+  'audioSource.play': 'audioSourcePlay',
+  'audioSource.pause': 'audioSourcePause',
+  'audioSource.stop': 'audioSourceStop',
+  'audioSource.seek': 'audioSourceSeek',
+  'audioSource.playOneShot': 'audioSourcePlayOneShot',
+  'audioSource.setVolume': 'audioSourceSetVolume',
+  'audioSource.setClip': 'audioSourceSetClip',
+  'audioSource.syncToAnimation': 'audioSourceSyncToAnimation',
+  'audioSource.unsync': 'audioSourceUnsync'
 };
+
+function isSceneSyncSink(nodeType) {
+  return typeof nodeType === 'string'
+    && (nodeType.startsWith('scene.') || nodeType.startsWith('audioSource.'));
+}
 
 const OUTPUT_PORT_MAPPING = {
   'clock': 't',
@@ -49,7 +72,25 @@ const OUTPUT_PORT_MAPPING = {
   'scene.setColor': undefined,
   'sceneSetColor': undefined,
   'scene.setVisible': undefined,
-  'sceneSetVisible': undefined
+  'sceneSetVisible': undefined,
+  'audioSource.play': undefined,
+  'audioSourcePlay': undefined,
+  'audioSource.pause': undefined,
+  'audioSourcePause': undefined,
+  'audioSource.stop': undefined,
+  'audioSourceStop': undefined,
+  'audioSource.seek': undefined,
+  'audioSourceSeek': undefined,
+  'audioSource.playOneShot': undefined,
+  'audioSourcePlayOneShot': undefined,
+  'audioSource.setVolume': undefined,
+  'audioSourceSetVolume': undefined,
+  'audioSource.setClip': undefined,
+  'audioSourceSetClip': undefined,
+  'audioSource.syncToAnimation': undefined,
+  'audioSourceSyncToAnimation': undefined,
+  'audioSource.unsync': undefined,
+  'audioSourceUnsync': undefined
 };
 
 function generateStableNodeBase(nodeType) {
@@ -65,6 +106,9 @@ function generateStableNodeBase(nodeType) {
   if (mapped === 'sceneSetScale') return 'scale';
   if (mapped === 'sceneSetColor') return 'color';
   if (mapped === 'sceneSetVisible') return 'visible';
+  if (typeof mapped === 'string' && mapped.startsWith('audioSource')) {
+    return 'audio' + mapped.slice('audioSource'.length);
+  }
   return mapped;
 }
 
@@ -132,6 +176,18 @@ function pickParams(nodeType, params = {}) {
   if (nodeType === 'scene.setVisible') {
     return { ...(params.visible !== undefined ? { visible: params.visible } : {}) };
   }
+  if (nodeType.startsWith('audioSource.')) {
+    return {
+      ...(params.objectId ? { target: params.objectId } : {}),
+      ...(params.name !== undefined ? { name: params.name } : {}),
+      ...(params.time !== undefined ? { time: params.time } : {}),
+      ...(params.volume !== undefined ? { volume: params.volume } : {}),
+      ...(params.url !== undefined ? { url: params.url } : {}),
+      ...(params.animation !== undefined ? { animation: params.animation } : {}),
+      ...(params.offset !== undefined ? { offset: params.offset } : {}),
+      ...(params.resyncOnLoop !== undefined ? { resyncOnLoop: params.resyncOnLoop } : {})
+    };
+  }
   if (nodeType === 'math.sine' || nodeType === 'math.cosine') {
     return {
       ...(params.freq !== undefined ? { freq: params.freq } : {}),
@@ -151,19 +207,19 @@ export function compileLoomToSceneSyncGraph(source, options = {}) {
 export function loomGraphToSceneSyncGraph(loomGraph, options = {}) {
   if (!loomGraph || !loomGraph.nodes || !loomGraph.edges) throw new Error('loomGraph must have nodes and edges arrays');
 
-  // Phase 1: Find all Scene Sync sink nodes (scene.* nodes)
+  // Phase 1: Find all Scene Sync sink nodes (scene.* and audioSource.* nodes)
   const sinkNodeIds = new Set();
   let sceneSyncNodeIds = new Set();
 
-  // Find all scene.* sink nodes
+  // Find all scene.* / audioSource.* sink nodes
   for (const node of loomGraph.nodes) {
-    if (node.type.startsWith('scene.')) {
+    if (isSceneSyncSink(node.type)) {
       sinkNodeIds.add(node.id);
       sceneSyncNodeIds.add(node.id);
     }
   }
 
-  // Phase 2: If scene.* nodes found, recursively find their dependencies
+  // Phase 2: If sink nodes found, recursively find their dependencies
   if (sinkNodeIds.size > 0) {
     function findDependencies(nodeId, visited = new Set()) {
       if (visited.has(nodeId)) return;
@@ -227,7 +283,7 @@ export function loomGraphToSceneSyncGraph(loomGraph, options = {}) {
   let scope = normalizeScope(options);
   if (!scope) {
     for (const node of loomGraph.nodes) {
-      if ((node.type.startsWith('scene.set') || node.type === 'scene.offsetPosition') && node.params?.objectId) {
+      if ((node.type.startsWith('scene.set') || node.type === 'scene.offsetPosition' || node.type.startsWith('audioSource.')) && node.params?.objectId) {
         scope = { object: node.params.objectId };
         break;
       }

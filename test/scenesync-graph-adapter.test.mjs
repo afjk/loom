@@ -177,6 +177,25 @@ scene.setScale("sample-cube", x: 1.2, y: 1.2, z: 1.2)
   assert.deepEqual(result.scope, { object: 'sample-cube' });
 });
 
+test('supports audioSource playback sinks', () => {
+  const source = `
+import audioSource
+audioSource.play("speaker", name: "music")
+audioSource.setVolume("speaker", name: "music", volume: 0.5)
+`;
+
+  const result = compileLoomToSceneSyncGraph(source);
+  const playNode = result.graph.nodes.find((n) => n.type === 'audioSourcePlay');
+  const volumeNode = result.graph.nodes.find((n) => n.type === 'audioSourceSetVolume');
+
+  assert.ok(playNode);
+  assert.equal(playNode.params.target, 'speaker');
+  assert.equal(playNode.params.name, 'music');
+  assert.ok(volumeNode);
+  assert.equal(volumeNode.params.volume, 0.5);
+  assert.deepEqual(result.scope, { object: 'speaker' });
+});
+
 test('multiple sine nodes receive unique IDs and valid edges', () => {
   const source = `
 import math
