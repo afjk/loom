@@ -367,41 +367,144 @@ export const LIBRARY_METADATA = {
         examples: [
           'scene.offsetPosition("sample-cube", x: 1, y: 0.5, z: 0)'
         ]
-      },
-      setAudio: {
-        name: 'setAudio',
-        signature: 'scene.setAudio(objectId: "...", url: "https://...", playOnAwake: true, loop: true)',
-        description: 'Sets an audio component on a Scene Sync object.',
+      }
+    }
+  },
+  audioSource: {
+    name: 'audioSource',
+    description: LIBRARY_COMPATIBILITY.audioSource.description,
+    targets: LIBRARY_COMPATIBILITY.audioSource.targets,
+    functions: {
+      play: {
+        name: 'play',
+        signature: 'audioSource.play(objectId: "...", name: "default")',
+        description: 'Starts playback of an AudioSource component on a Scene Sync object.',
         args: [
-          {
-            name: 'objectId',
-            type: 'string',
-            positional: true,
-            description: 'ID of the object.'
-          },
-          {
-            name: 'url',
-            type: 'string',
-            positional: false,
-            description: 'HTTP(S) URL for an audio file.'
-          },
-          {
-            name: 'playOnAwake',
-            type: 'boolean',
-            positional: false,
-            description: 'Whether playback starts when the component is applied.'
-          },
-          {
-            name: 'loop',
-            type: 'boolean',
-            positional: false,
-            description: 'Whether playback loops.'
-          }
+          { name: 'objectId', type: 'string', positional: true, description: 'ID of the object.' },
+          { name: 'name', type: 'string', positional: false, description: 'AudioSource component name.' }
         ],
         returns: 'void',
-        targets: LIBRARY_COMPATIBILITY.scene.targets,
+        targets: LIBRARY_COMPATIBILITY.audioSource.targets,
         examples: [
-          'scene.setAudio("sample-cube", url: "https://example.com/sound.mp3", playOnAwake: true, loop: true)'
+          'audioSource.play("speaker", name: "music")'
+        ]
+      },
+      pause: {
+        name: 'pause',
+        signature: 'audioSource.pause(objectId: "...", name: "default")',
+        description: 'Pauses playback of an AudioSource component, preserving its position.',
+        args: [
+          { name: 'objectId', type: 'string', positional: true, description: 'ID of the object.' },
+          { name: 'name', type: 'string', positional: false, description: 'AudioSource component name.' }
+        ],
+        returns: 'void',
+        targets: LIBRARY_COMPATIBILITY.audioSource.targets,
+        examples: [
+          'audioSource.pause("speaker", name: "music")'
+        ]
+      },
+      stop: {
+        name: 'stop',
+        signature: 'audioSource.stop(objectId: "...", name: "default")',
+        description: 'Stops playback of an AudioSource component and resets its position.',
+        args: [
+          { name: 'objectId', type: 'string', positional: true, description: 'ID of the object.' },
+          { name: 'name', type: 'string', positional: false, description: 'AudioSource component name.' }
+        ],
+        returns: 'void',
+        targets: LIBRARY_COMPATIBILITY.audioSource.targets,
+        examples: [
+          'audioSource.stop("speaker", name: "music")'
+        ]
+      },
+      seek: {
+        name: 'seek',
+        signature: 'audioSource.seek(objectId: "...", name: "default", time: 0)',
+        description: 'Seeks playback of an AudioSource component to a given time in seconds.',
+        args: [
+          { name: 'objectId', type: 'string', positional: true, description: 'ID of the object.' },
+          { name: 'name', type: 'string', positional: false, description: 'AudioSource component name.' },
+          { name: 'time', type: 'number', positional: false, description: 'Target playback time in seconds.' }
+        ],
+        returns: 'void',
+        targets: LIBRARY_COMPATIBILITY.audioSource.targets,
+        examples: [
+          'audioSource.seek("speaker", name: "music", time: 12.5)'
+        ]
+      },
+      playOneShot: {
+        name: 'playOneShot',
+        signature: 'audioSource.playOneShot(objectId: "...", name: "default")',
+        description: 'Plays an AudioSource component once without interrupting its looping playback.',
+        args: [
+          { name: 'objectId', type: 'string', positional: true, description: 'ID of the object.' },
+          { name: 'name', type: 'string', positional: false, description: 'AudioSource component name.' }
+        ],
+        returns: 'void',
+        targets: LIBRARY_COMPATIBILITY.audioSource.targets,
+        examples: [
+          'audioSource.playOneShot(self, name: "click")'
+        ]
+      },
+      setVolume: {
+        name: 'setVolume',
+        signature: 'audioSource.setVolume(objectId: "...", name: "default", volume: 1)',
+        description: 'Sets the volume of an AudioSource component (0 to 1).',
+        args: [
+          { name: 'objectId', type: 'string', positional: true, description: 'ID of the object.' },
+          { name: 'name', type: 'string', positional: false, description: 'AudioSource component name.' },
+          { name: 'volume', type: 'number', positional: false, description: 'Volume from 0 (silent) to 1 (full).' }
+        ],
+        returns: 'void',
+        targets: LIBRARY_COMPATIBILITY.audioSource.targets,
+        examples: [
+          'audioSource.setVolume("speaker", name: "music", volume: 0.5)'
+        ]
+      },
+      setClip: {
+        name: 'setClip',
+        signature: 'audioSource.setClip(objectId: "...", name: "default", url: "https://...")',
+        description: 'Replaces the clip URL of an AudioSource component while preserving other settings.',
+        args: [
+          { name: 'objectId', type: 'string', positional: true, description: 'ID of the object.' },
+          { name: 'name', type: 'string', positional: false, description: 'AudioSource component name.' },
+          { name: 'url', type: 'string', positional: false, description: 'HTTP(S) URL for an audio file.' }
+        ],
+        returns: 'void',
+        targets: LIBRARY_COMPATIBILITY.audioSource.targets,
+        examples: [
+          'audioSource.setClip("speaker", name: "music", url: "https://example.com/song.mp3")'
+        ]
+      },
+      syncToAnimation: {
+        name: 'syncToAnimation',
+        signature: 'audioSource.syncToAnimation(objectId: "...", name: "default", animation: "...", offset: 0, resyncOnLoop: true)',
+        description: 'Synchronizes an AudioSource component to an animation clip using a host helper API.',
+        args: [
+          { name: 'objectId', type: 'string', positional: true, description: 'ID of the object.' },
+          { name: 'name', type: 'string', positional: false, description: 'AudioSource component name.' },
+          { name: 'animation', type: 'string', positional: false, description: 'Animation clip name that drives playback time.' },
+          { name: 'offset', type: 'number', positional: false, description: 'Offset in seconds applied to the animation time.' },
+          { name: 'resyncOnLoop', type: 'boolean', positional: false, description: 'Whether to re-sync when the animation loops.' }
+        ],
+        returns: 'void',
+        targets: LIBRARY_COMPATIBILITY.audioSource.targets,
+        examples: [
+          'audioSource.syncToAnimation("dancer", name: "music", animation: "Dance", offset: 0.25, resyncOnLoop: true)'
+        ]
+      },
+      unsync: {
+        name: 'unsync',
+        signature: 'audioSource.unsync(objectId: "...", name: "default")',
+        description: 'Stops animation synchronization for an AudioSource component.',
+        args: [
+          { name: 'objectId', type: 'string', positional: true, description: 'ID of the object.' },
+          { name: 'name', type: 'string', positional: false, description: 'AudioSource component name.' }
+        ],
+        returns: 'void',
+        targets: LIBRARY_COMPATIBILITY.audioSource.targets,
+        examples: [
+          'audioSource.unsync("dancer", name: "music")'
         ]
       }
     }

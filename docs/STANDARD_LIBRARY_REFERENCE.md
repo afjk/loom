@@ -352,23 +352,162 @@ Arguments:
 | y | number | no | Y offset. |
 | z | number | no | Z offset. |
 
-### scene.setAudio
+## audioSource
 
-Signature: `scene.setAudio(objectId: "...", url: "https://...", playOnAwake: true, loop: true)`
+AudioSource component playback control through a host adapter
+
+Targets: web, scenesync, unity
+Status: implemented
+
+### audioSource.play
+
+Signature: `audioSource.play(objectId: "...", name: "default")`
 
 Returns: `void`
 Status: `implemented`
 
-Sets an audio component on a Scene Sync object.
+Starts playback of an AudioSource component on a Scene Sync object.
 
 Arguments:
 
 | Name | Type | Positional | Description |
 |---|---|---:|---|
 | objectId | string | yes | ID of the object. |
+| name | string | no | AudioSource component name. |
+
+### audioSource.pause
+
+Signature: `audioSource.pause(objectId: "...", name: "default")`
+
+Returns: `void`
+Status: `implemented`
+
+Pauses playback of an AudioSource component, preserving its position.
+
+Arguments:
+
+| Name | Type | Positional | Description |
+|---|---|---:|---|
+| objectId | string | yes | ID of the object. |
+| name | string | no | AudioSource component name. |
+
+### audioSource.stop
+
+Signature: `audioSource.stop(objectId: "...", name: "default")`
+
+Returns: `void`
+Status: `implemented`
+
+Stops playback of an AudioSource component and resets its position.
+
+Arguments:
+
+| Name | Type | Positional | Description |
+|---|---|---:|---|
+| objectId | string | yes | ID of the object. |
+| name | string | no | AudioSource component name. |
+
+### audioSource.seek
+
+Signature: `audioSource.seek(objectId: "...", name: "default", time: 0)`
+
+Returns: `void`
+Status: `implemented`
+
+Seeks playback of an AudioSource component to a given time in seconds.
+
+Arguments:
+
+| Name | Type | Positional | Description |
+|---|---|---:|---|
+| objectId | string | yes | ID of the object. |
+| name | string | no | AudioSource component name. |
+| time | number | no | Target playback time in seconds. |
+
+### audioSource.playOneShot
+
+Signature: `audioSource.playOneShot(objectId: "...", name: "default")`
+
+Returns: `void`
+Status: `implemented`
+
+Plays an AudioSource component once without interrupting its looping playback.
+
+Arguments:
+
+| Name | Type | Positional | Description |
+|---|---|---:|---|
+| objectId | string | yes | ID of the object. |
+| name | string | no | AudioSource component name. |
+
+### audioSource.setVolume
+
+Signature: `audioSource.setVolume(objectId: "...", name: "default", volume: 1)`
+
+Returns: `void`
+Status: `implemented`
+
+Sets the volume of an AudioSource component (0 to 1).
+
+Arguments:
+
+| Name | Type | Positional | Description |
+|---|---|---:|---|
+| objectId | string | yes | ID of the object. |
+| name | string | no | AudioSource component name. |
+| volume | number | no | Volume from 0 (silent) to 1 (full). |
+
+### audioSource.setClip
+
+Signature: `audioSource.setClip(objectId: "...", name: "default", url: "https://...")`
+
+Returns: `void`
+Status: `implemented`
+
+Replaces the clip URL of an AudioSource component while preserving other settings.
+
+Arguments:
+
+| Name | Type | Positional | Description |
+|---|---|---:|---|
+| objectId | string | yes | ID of the object. |
+| name | string | no | AudioSource component name. |
 | url | string | no | HTTP(S) URL for an audio file. |
-| playOnAwake | boolean | no | Whether playback starts when the component is applied. |
-| loop | boolean | no | Whether playback loops. |
+
+### audioSource.syncToAnimation
+
+Signature: `audioSource.syncToAnimation(objectId: "...", name: "default", animation: "...", offset: 0, resyncOnLoop: true)`
+
+Returns: `void`
+Status: `implemented`
+
+Synchronizes an AudioSource component to an animation clip using a host helper API.
+
+Arguments:
+
+| Name | Type | Positional | Description |
+|---|---|---:|---|
+| objectId | string | yes | ID of the object. |
+| name | string | no | AudioSource component name. |
+| animation | string | no | Animation clip name that drives playback time. |
+| offset | number | no | Offset in seconds applied to the animation time. |
+| resyncOnLoop | boolean | no | Whether to re-sync when the animation loops. |
+
+### audioSource.unsync
+
+Signature: `audioSource.unsync(objectId: "...", name: "default")`
+
+Returns: `void`
+Status: `implemented`
+
+Stops animation synchronization for an AudioSource component.
+
+Arguments:
+
+| Name | Type | Positional | Description |
+|---|---|---:|---|
+| objectId | string | yes | ID of the object. |
+| name | string | no | AudioSource component name. |
 
 ## math
 

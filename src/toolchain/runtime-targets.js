@@ -76,6 +76,11 @@ export const LIBRARY_COMPATIBILITY = {
     kind: 'effect',
     description: 'Scene object control through a host adapter'
   },
+  audioSource: {
+    targets: ['web', 'scenesync', 'unity'],
+    kind: 'effect',
+    description: 'AudioSource component playback control through a host adapter'
+  },
   three: {
     targets: ['web'],
     kind: 'adapter',

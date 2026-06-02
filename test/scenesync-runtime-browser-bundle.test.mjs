@@ -141,20 +141,25 @@ test('Scene Sync browser runtime supports legacy adapter node aliases with targe
   assert.equal(object.position.z, 3);
 });
 
-test('Scene Sync browser runtime emits object audio effects', async () => {
+test('Scene Sync browser runtime emits AudioSource playback effects', async () => {
   const runtimeModule = await import(`${pathToFileURL(bundlePath).href}?case=audio-${Date.now()}`);
   const effects = [];
   const runtime = runtimeModule.createSceneSyncRuntime({
     nodes: [
       {
-        id: 'audio',
-        type: 'scene.setAudio',
-        params: {
-          objectId: 'speaker',
-          url: 'https://example.com/sound.mp3',
-          playOnAwake: true,
-          loop: true
-        }
+        id: 'play',
+        type: 'audioSource.play',
+        params: { objectId: 'speaker', name: 'music' }
+      },
+      {
+        id: 'seek',
+        type: 'audioSource.seek',
+        params: { objectId: 'speaker', name: 'music', time: 4.5 }
+      },
+      {
+        id: 'oneShot',
+        type: 'audioSource.playOneShot',
+        params: { objectId: 'speaker' }
       }
     ],
     edges: []
@@ -165,13 +170,28 @@ test('Scene Sync browser runtime emits object audio effects', async () => {
 
   runtime.evaluateAt({ time: 12.5, events: [] });
 
-  assert.deepEqual(effects[0], {
-    type: 'scene.setAudio',
-    objectId: 'speaker',
-    target: 'scenesync',
-    nodeId: 'audio',
-    url: 'https://example.com/sound.mp3',
-    playOnAwake: true,
-    loop: true
-  });
+  assert.deepEqual(effects, [
+    {
+      type: 'audioSource.play',
+      objectId: 'speaker',
+      name: 'music',
+      target: 'scenesync',
+      nodeId: 'play'
+    },
+    {
+      type: 'audioSource.seek',
+      objectId: 'speaker',
+      name: 'music',
+      target: 'scenesync',
+      nodeId: 'seek',
+      time: 4.5
+    },
+    {
+      type: 'audioSource.playOneShot',
+      objectId: 'speaker',
+      name: 'default',
+      target: 'scenesync',
+      nodeId: 'oneShot'
+    }
+  ]);
 });
