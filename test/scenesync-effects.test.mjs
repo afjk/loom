@@ -37,16 +37,24 @@ test('isSceneSyncEffect returns true for scene.setScale', () => {
   assert.equal(isSceneSyncEffect(effect), true);
 });
 
-test('isSceneSyncEffect returns true for scene.setAudio', () => {
+test('isSceneSyncEffect returns false for audioSource.play (handled via graph runtime, not broadcast ops)', () => {
+  const effect = {
+    type: 'audioSource.play',
+    target: 'scenesync',
+    objectId: 'speaker',
+    name: 'music'
+  };
+  assert.equal(isSceneSyncEffect(effect), false);
+});
+
+test('isSceneSyncEffect returns false for legacy scene.setAudio', () => {
   const effect = {
     type: 'scene.setAudio',
     target: 'scenesync',
     objectId: 'sample-cube',
-    url: 'https://example.com/sound.mp3',
-    playOnAwake: true,
-    loop: true
+    url: 'https://example.com/sound.mp3'
   };
-  assert.equal(isSceneSyncEffect(effect), true);
+  assert.equal(isSceneSyncEffect(effect), false);
 });
 
 test('isSceneSyncEffect returns false for non-scenesync target', () => {
@@ -113,25 +121,14 @@ test('sceneEffectToBroadcastOp converts scale', () => {
   });
 });
 
-test('sceneEffectToBroadcastOp converts audio', () => {
-  const effect = {
-    type: 'scene.setAudio',
-    objectId: 'sample-cube',
-    url: 'https://example.com/sound.mp3',
-    playOnAwake: true,
-    loop: false
-  };
-
-  const op = sceneEffectToBroadcastOp(effect);
-  assert.deepEqual(op, {
-    kind: 'scene-delta',
-    objectId: 'sample-cube',
-    audio: {
-      url: 'https://example.com/sound.mp3',
-      playOnAwake: true,
-      loop: false
-    }
-  });
+test('sceneEffectsToBroadcastOps ignores audioSource effects', () => {
+  const ops = sceneEffectsToBroadcastOps([
+    { type: 'scene.setPosition', target: 'scenesync', objectId: 'cube', position: [1, 0, 0] },
+    { type: 'audioSource.play', target: 'scenesync', objectId: 'speaker', name: 'music' }
+  ]);
+  assert.deepEqual(ops, [
+    { kind: 'scene-delta', objectId: 'cube', position: [1, 0, 0] }
+  ]);
 });
 
 test('sceneEffectToBroadcastOp throws for missing objectId', () => {

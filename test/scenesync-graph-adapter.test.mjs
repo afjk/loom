@@ -177,21 +177,24 @@ scene.setScale("sample-cube", x: 1.2, y: 1.2, z: 1.2)
   assert.deepEqual(result.scope, { object: 'sample-cube' });
 });
 
-test('supports object audio scene sink', () => {
+test('supports audioSource playback sinks', () => {
   const source = `
-import scene
-scene.setAudio("speaker", url: "https://example.com/sound.mp3")
+import audioSource
+audioSource.play("speaker", name: "music")
+audioSource.setVolume("speaker", name: "music", volume: 0.5)
 `;
 
   const result = compileLoomToSceneSyncGraph(source);
-  const audioNode = result.graph.nodes.find((n) => n.type === 'sceneSetAudio');
+  const playNode = result.graph.nodes.find((n) => n.type === 'audioSourcePlay');
+  const volumeNode = result.graph.nodes.find((n) => n.type === 'audioSourceSetVolume');
 
-  assert.ok(audioNode);
-  assert.equal(audioNode.params.target, 'speaker');
-  assert.equal(audioNode.params.url, 'https://example.com/sound.mp3');
+  assert.ok(playNode);
+  assert.equal(playNode.params.target, 'speaker');
+  assert.equal(playNode.params.name, 'music');
+  assert.ok(volumeNode);
+  assert.equal(volumeNode.params.volume, 0.5);
   assert.deepEqual(result.scope, { object: 'speaker' });
 });
-
 
 test('multiple sine nodes receive unique IDs and valid edges', () => {
   const source = `

@@ -149,13 +149,6 @@ function defaultApplySceneEffect(effect, host) {
     if (typeof material?.color?.setRGB === 'function') {
       material.color.setRGB(effect.color[0], effect.color[1], effect.color[2]);
     }
-  } else if (effect.type === 'scene.setAudio') {
-    object.userData = object.userData || {};
-    object.userData.audio = {
-      url: effect.url,
-      playOnAwake: effect.playOnAwake !== false,
-      loop: effect.loop !== false
-    };
   }
 }
 
@@ -170,15 +163,40 @@ function makeSceneEffect(type, inputs, params, ctx) {
   if (type === 'scene.setScale') return { ...base, scale: [inputs.x, inputs.y, inputs.z].map(Number) };
   if (type === 'scene.setVisible') return { ...base, visible: Boolean(inputs.visible) };
   if (type === 'scene.setColor') return { ...base, color: [inputs.r, inputs.g, inputs.b].map(Number) };
-  if (type === 'scene.setAudio') {
-    return {
-      ...base,
-      url: stringifyText(inputs.url),
-      playOnAwake: inputs.playOnAwake !== false,
-      loop: inputs.loop !== false
-    };
-  }
   return base;
+}
+
+const AUDIO_OPERATION_INPUTS = {
+  'audioSource.play': [],
+  'audioSource.pause': [],
+  'audioSource.stop': [],
+  'audioSource.playOneShot': [],
+  'audioSource.unsync': [],
+  'audioSource.seek': [{ name: 'time', default: 0, coerce: Number }],
+  'audioSource.setVolume': [{ name: 'volume', default: 1, coerce: Number }],
+  'audioSource.setClip': [{ name: 'url', default: '', coerce: stringifyText }],
+  'audioSource.syncToAnimation': [
+    { name: 'animation', default: '', coerce: stringifyText },
+    { name: 'offset', default: 0, coerce: Number },
+    { name: 'resyncOnLoop', default: true, coerce: (value) => value !== false }
+  ]
+};
+
+function makeAudioEffect(type, inputs, params, ctx) {
+  const inputObjectId = stringifyText(inputs.objectId ?? params.objectId ?? '');
+  const objectId = inputObjectId || stringifyText(params.target ?? ctx.scopeObjectId ?? '');
+  const rawName = stringifyText(inputs.name ?? params.name ?? '');
+  const effect = {
+    type,
+    objectId,
+    name: rawName.length > 0 ? rawName : 'default',
+    target: 'scenesync',
+    nodeId: ctx.currentNodeId
+  };
+  for (const input of AUDIO_OPERATION_INPUTS[type] ?? []) {
+    effect[input.name] = input.coerce(inputs[input.name]);
+  }
+  return effect;
 }
 
 function eventTargetMatches(event, mode, target, scope) {
@@ -468,13 +486,24 @@ function buildNodeTypes() {
     }
   });
 
-  const sceneTypes = ['scene.setPosition', 'scene.offsetPosition', 'scene.setRotation', 'scene.setScale', 'scene.setVisible', 'scene.setColor', 'scene.setAudio'];
+  const sceneTypes = ['scene.setPosition', 'scene.offsetPosition', 'scene.setRotation', 'scene.setScale', 'scene.setVisible', 'scene.setColor'];
   for (const type of sceneTypes) {
     register(type, {
       inputs: sceneInputsFor(type),
       params: sceneParamsFor(type),
       evaluate: (inputs, params, ctx) => {
         ctx.recordEffect(makeSceneEffect(type, inputs, params, ctx));
+        return {};
+      }
+    });
+  }
+  for (const [type, extraInputs] of Object.entries(AUDIO_OPERATION_INPUTS)) {
+    const inputs = [{ name: 'objectId', default: '' }, { name: 'name', default: 'default' }, ...extraInputs.map((input) => ({ name: input.name, default: input.default }))];
+    register(type, {
+      inputs,
+      params: inputs.map((input) => ({ name: input.name, default: input.default })).concat({ name: 'target', default: '' }),
+      evaluate: (inputs, params, ctx) => {
+        ctx.recordEffect(makeAudioEffect(type, inputs, params, ctx));
         return {};
       }
     });
@@ -486,7 +515,15 @@ function buildNodeTypes() {
     sceneSetScale: 'scene.setScale',
     sceneSetVisible: 'scene.setVisible',
     sceneSetColor: 'scene.setColor',
-    sceneSetAudio: 'scene.setAudio'
+    audioSourcePlay: 'audioSource.play',
+    audioSourcePause: 'audioSource.pause',
+    audioSourceStop: 'audioSource.stop',
+    audioSourceSeek: 'audioSource.seek',
+    audioSourcePlayOneShot: 'audioSource.playOneShot',
+    audioSourceSetVolume: 'audioSource.setVolume',
+    audioSourceSetClip: 'audioSource.setClip',
+    audioSourceSyncToAnimation: 'audioSource.syncToAnimation',
+    audioSourceUnsync: 'audioSource.unsync'
   };
   for (const [alias, canonical] of Object.entries(adapterAliases)) {
     nodes[alias] = nodes[canonical];
@@ -501,7 +538,6 @@ function sceneInputsFor(type) {
   if (type === 'scene.setScale') return [objectId, { name: 'x', default: 1 }, { name: 'y', default: 1 }, { name: 'z', default: 1 }];
   if (type === 'scene.setVisible') return [objectId, { name: 'visible', default: true }];
   if (type === 'scene.setColor') return [objectId, { name: 'r', default: 1 }, { name: 'g', default: 1 }, { name: 'b', default: 1 }];
-  if (type === 'scene.setAudio') return [objectId, { name: 'url', default: '' }, { name: 'playOnAwake', default: true }, { name: 'loop', default: true }];
   return [objectId, { name: 'x', default: 0 }, { name: 'y', default: 0 }, { name: 'z', default: 0 }];
 }
 

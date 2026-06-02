@@ -5,9 +5,10 @@ import { registerLogicNodes } from './logic.js';
 import { registerTextNodes } from './text.js';
 import { registerListNodes } from './list.js';
 import { registerSceneNodes } from './scene.js';
+import { registerAudioNodes } from './audio.js';
 import { registerDomNodes } from './dom.js';
 
-export { registerCoreNodes, registerFunctionNodes, registerMathNodes, registerLogicNodes, registerTextNodes, registerListNodes, registerSceneNodes, registerDomNodes };
+export { registerCoreNodes, registerFunctionNodes, registerMathNodes, registerLogicNodes, registerTextNodes, registerListNodes, registerSceneNodes, registerAudioNodes, registerDomNodes };
 
 export function registerBuiltinNodes(registry) {
   registerCoreNodes(registry);
@@ -17,6 +18,7 @@ export function registerBuiltinNodes(registry) {
   registerTextNodes(registry);
   registerListNodes(registry);
   registerSceneNodes(registry);
+  registerAudioNodes(registry);
   registerDomNodes(registry);
   return registry;
 }
