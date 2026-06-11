@@ -190,7 +190,11 @@ const elements = {
   clearSceneSyncBehaviorBtn: document.getElementById('clearSceneSyncBehaviorBtn'),
   sceneSyncPayloadPreview: document.getElementById('sceneSyncPayloadPreview'),
   loadSceneSyncJumpPresetBtn: document.getElementById('loadSceneSyncJumpPresetBtn'),
-  loadSceneSyncCirclePresetBtn: document.getElementById('loadSceneSyncCirclePresetBtn')
+  loadSceneSyncCirclePresetBtn: document.getElementById('loadSceneSyncCirclePresetBtn'),
+  nodeZoomInBtn: document.getElementById('node-zoom-in-btn'),
+  nodeZoomOutBtn: document.getElementById('node-zoom-out-btn'),
+  nodeZoomFitBtn: document.getElementById('node-zoom-fit-btn'),
+  nodeAddBtn: document.getElementById('node-add-btn')
 };
 
 function setPanelsVisible(visible) {
@@ -1713,16 +1717,31 @@ function attachInspectorActionListeners() {
 async function deleteSelectedNode() {
   const node = getSelectedEditorNode();
   if (!node) return;
+  await deleteNodes([node.id]);
+}
 
-  const message = `Delete node '${node.id}'? Connected edges will also be removed.`;
+async function deleteNodes(nodeIds) {
+  const state = store.getState();
+  const existing = (nodeIds || []).filter((id) => state.editorModel?.nodesById?.[id]);
+  if (existing.length === 0) return;
+
+  const message = existing.length === 1
+    ? `Delete node '${existing[0]}'? Connected edges will also be removed.`
+    : `Delete ${existing.length} nodes (${existing.join(', ')})? Connected edges will also be removed.`;
   if (!window.confirm(message)) return;
 
-  const result = await handleOperation({
-    type: 'removeNode',
-    id: node.id
-  });
+  let removedSelected = false;
+  for (const id of existing) {
+    const result = await handleOperation({
+      type: 'removeNode',
+      id
+    });
+    if (result && !result.error && id === selectedNodeId) {
+      removedSelected = true;
+    }
+  }
 
-  if (result && !result.error) {
+  if (removedSelected) {
     selectedNodeId = null;
     renderInspector();
   }
@@ -2070,7 +2089,7 @@ function renderNodePaletteItem(entry) {
   const params = entry.params.map((param) => param.name).join(', ') || 'none';
 
   return `
-    <div class="node-palette-item">
+    <div class="node-palette-item" draggable="true" data-drag-node-type="${escapeHtml(entry.typeName)}" title="Drag onto the canvas to place this node">
       <div class="node-palette-main">
         <div class="node-palette-title">${escapeHtml(entry.typeName)}</div>
         <div class="node-palette-category-label">${escapeHtml(entry.category)}</div>
@@ -2110,6 +2129,14 @@ function renderNodePalette() {
       addNodeFromPalette(typeName);
     });
   });
+
+  list.querySelectorAll('[data-drag-node-type]').forEach((item) => {
+    item.addEventListener('dragstart', (event) => {
+      const typeName = item.getAttribute('data-drag-node-type');
+      event.dataTransfer.setData(NODE_DRAG_MIME, typeName);
+      event.dataTransfer.effectAllowed = 'copy';
+    });
+  });
 }
 
 function renderNodePaletteCategories() {
@@ -2126,7 +2153,7 @@ function renderNodePaletteCategories() {
   ].join('');
 }
 
-async function addNodeFromPalette(typeName) {
+async function addNodeFromPalette(typeName, position = null) {
   const def = NODE_TYPES[typeName];
   if (!def) {
     setEditorError(`Unknown node type: ${typeName}`);
@@ -2144,7 +2171,9 @@ async function addNodeFromPalette(typeName) {
     type: typeName,
     category,
     params: createDefaultParamsForNodeType(typeName, NODE_TYPES),
-    position: createPositionForNewNode(category, nodes, findNonOverlappingPosition, NODE_LAYOUT_STEP_Y)
+    position: position
+      ? { x: Math.round(position.x), y: Math.round(position.y) }
+      : createPositionForNewNode(category, nodes, findNonOverlappingPosition, NODE_LAYOUT_STEP_Y)
   };
 
   await handleOperation({
@@ -2153,6 +2182,178 @@ async function addNodeFromPalette(typeName) {
   });
 
   setSelectedNodeId(id);
+}
+
+/* Canvas context menu (right-click to add/manage nodes) */
+
+const NODE_DRAG_MIME = 'application/x-loomlet-node-type';
+let canvasContextMenuEl = null;
+
+function closeCanvasContextMenu() {
+  if (canvasContextMenuEl) {
+    canvasContextMenuEl.remove();
+    canvasContextMenuEl = null;
+  }
+}
+
+function clampMenuToViewport(menu, clientX, clientY) {
+  const rect = menu.getBoundingClientRect();
+  const left = Math.min(clientX, window.innerWidth - rect.width - 8);
+  const top = Math.min(clientY, window.innerHeight - rect.height - 8);
+  menu.style.left = `${Math.max(8, left)}px`;
+  menu.style.top = `${Math.max(8, top)}px`;
+}
+
+function openCanvasContextMenu({ clientX, clientY, graphPosition, nodeId }) {
+  closeCanvasContextMenu();
+
+  const menu = document.createElement('div');
+  menu.className = 'canvas-context-menu';
+  menu.style.left = `${clientX}px`;
+  menu.style.top = `${clientY}px`;
+
+  if (nodeId) {
+    renderNodeActionsMenu(menu, nodeId);
+  } else {
+    renderAddNodeMenu(menu, graphPosition);
+  }
+
+  document.body.appendChild(menu);
+  clampMenuToViewport(menu, clientX, clientY);
+  canvasContextMenuEl = menu;
+
+  if (!nodeId) {
+    menu.querySelector('.canvas-context-menu-search')?.focus();
+  }
+}
+
+function renderNodeActionsMenu(menu, nodeId) {
+  const state = store.getState();
+  const node = state.editorModel?.nodesById?.[nodeId];
+  if (!node) return;
+
+  const header = document.createElement('div');
+  header.className = 'canvas-context-menu-header';
+  header.textContent = node.label || node.id;
+  menu.appendChild(header);
+
+  const inspectItem = document.createElement('button');
+  inspectItem.className = 'canvas-context-menu-item';
+  inspectItem.textContent = 'Inspect';
+  inspectItem.addEventListener('click', () => {
+    closeCanvasContextMenu();
+    setSelectedNodeId(nodeId);
+    selectBottomTab('inspector');
+  });
+  menu.appendChild(inspectItem);
+
+  const deleteItem = document.createElement('button');
+  deleteItem.className = 'canvas-context-menu-item is-danger';
+  deleteItem.textContent = 'Delete node';
+  deleteItem.addEventListener('click', () => {
+    closeCanvasContextMenu();
+    setSelectedNodeId(nodeId);
+    deleteSelectedNode();
+  });
+  menu.appendChild(deleteItem);
+}
+
+function renderAddNodeMenu(menu, graphPosition) {
+  const header = document.createElement('div');
+  header.className = 'canvas-context-menu-header';
+  header.textContent = 'Add node';
+  menu.appendChild(header);
+
+  const search = document.createElement('input');
+  search.type = 'text';
+  search.className = 'canvas-context-menu-search';
+  search.placeholder = 'Search node types...';
+  menu.appendChild(search);
+
+  const list = document.createElement('div');
+  list.className = 'canvas-context-menu-list';
+  menu.appendChild(list);
+
+  const entries = getNodeTypeEntries(NODE_TYPES);
+
+  const renderEntries = () => {
+    const query = search.value.trim().toLowerCase();
+    const filtered = entries.filter((entry) => {
+      if (!query) return true;
+      return (
+        entry.typeName.toLowerCase().includes(query) ||
+        entry.category.toLowerCase().includes(query)
+      );
+    });
+
+    list.innerHTML = '';
+
+    if (filtered.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'canvas-context-menu-empty';
+      empty.textContent = 'No matching node types';
+      list.appendChild(empty);
+      return;
+    }
+
+    let lastCategory = null;
+    for (const entry of filtered) {
+      if (entry.category !== lastCategory) {
+        const label = document.createElement('div');
+        label.className = 'canvas-context-menu-category';
+        label.textContent = entry.category;
+        list.appendChild(label);
+        lastCategory = entry.category;
+      }
+
+      const item = document.createElement('button');
+      item.className = 'canvas-context-menu-item';
+      item.textContent = entry.typeName;
+      item.addEventListener('click', async () => {
+        closeCanvasContextMenu();
+        await addNodeFromPalette(entry.typeName, graphPosition);
+      });
+      list.appendChild(item);
+    }
+  };
+
+  search.addEventListener('input', renderEntries);
+  search.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeCanvasContextMenu();
+    } else if (event.key === 'Enter') {
+      list.querySelector('.canvas-context-menu-item')?.click();
+    }
+  });
+
+  renderEntries();
+}
+
+function getCanvasCenterGraphPosition() {
+  const host = elements.nodeEditorHost;
+  if (!host || !nodeEditor) return null;
+  const rect = host.getBoundingClientRect();
+  return nodeEditor.clientPointToGraph(rect.left + rect.width / 2, rect.top + rect.height / 2);
+}
+
+function setupNodeCanvasDragAndDrop() {
+  const host = elements.nodeEditorHost;
+  if (!host) return;
+
+  host.addEventListener('dragover', (event) => {
+    if (event.dataTransfer?.types?.includes(NODE_DRAG_MIME)) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'copy';
+    }
+  });
+
+  host.addEventListener('drop', async (event) => {
+    const typeName = event.dataTransfer?.getData(NODE_DRAG_MIME);
+    if (!typeName) return;
+    event.preventDefault();
+    const position = nodeEditor?.clientPointToGraph(event.clientX, event.clientY);
+    await addNodeFromPalette(typeName, position);
+  });
 }
 
 function isTextEditingTarget(target) {
@@ -2190,13 +2391,23 @@ function handleGlobalKeyDown(event) {
     }
   }
 
+  if (event.key === 'Escape') {
+    closeCanvasContextMenu();
+    return;
+  }
+
   // Handle node deletion with Delete/Backspace
   if (event.key !== 'Delete' && event.key !== 'Backspace') return;
-  if (!selectedNodeId) return;
   if (isTextEditingTarget(event.target)) return;
 
+  const canvasSelectedIds = nodeEditor?.getSelectedNodeIds?.() || [];
+  const targetIds = canvasSelectedIds.length > 0
+    ? canvasSelectedIds
+    : (selectedNodeId ? [selectedNodeId] : []);
+  if (targetIds.length === 0) return;
+
   event.preventDefault();
-  deleteSelectedNode();
+  deleteNodes(targetIds);
 }
 
 function cloneJson(value) {
@@ -2472,6 +2683,26 @@ function clearEditorHistory() {
 }
 
 function setupEventListeners() {
+  elements.nodeZoomInBtn?.addEventListener('click', () => nodeEditor?.zoomBy(1.25));
+  elements.nodeZoomOutBtn?.addEventListener('click', () => nodeEditor?.zoomBy(0.8));
+  elements.nodeZoomFitBtn?.addEventListener('click', () => nodeEditor?.zoomToFit());
+  elements.nodeAddBtn?.addEventListener('click', (event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    openCanvasContextMenu({
+      clientX: rect.left,
+      clientY: rect.bottom + 4,
+      graphPosition: getCanvasCenterGraphPosition() || { x: 0, y: 0 },
+      nodeId: null
+    });
+    event.stopPropagation();
+  });
+
+  document.addEventListener('pointerdown', (event) => {
+    if (canvasContextMenuEl && !canvasContextMenuEl.contains(event.target)) {
+      closeCanvasContextMenu();
+    }
+  });
+
   elements.applyDslBtn.addEventListener('click', applyDsl);
   elements.generateDslBtn.addEventListener('click', generateDsl);
   elements.runPreviewBtn.addEventListener('click', () => {
@@ -2692,10 +2923,12 @@ async function init() {
       store.setState({ errors: [{ message: `Editor error: ${error.message}`, code: 'EDITOR_ERROR' }] });
       renderErrors();
     },
-    onSelectNode: setSelectedNodeId
+    onSelectNode: setSelectedNodeId,
+    onContextMenu: openCanvasContextMenu
   });
 
   setupEventListeners();
+  setupNodeCanvasDragAndDrop();
   loadBottomPanelLayout();
   loadEditorSplitLayout();
   loadActiveBottomTab();

@@ -1129,3 +1129,142 @@ button:disabled:hover,
   padding: 8px;
   color: rgba(255, 255, 255, 0.7);
 }
+
+/* Node canvas toolbar and hint */
+
+.node-pane {
+  position: relative;
+}
+
+.node-canvas-toolbar {
+  position: absolute;
+  top: 44px;
+  right: 12px;
+  display: flex;
+  gap: 4px;
+  z-index: 20;
+}
+
+.node-canvas-btn {
+  background: var(--panel-bg-strong);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.node-canvas-btn:hover {
+  border-color: var(--primary-color);
+  background: rgba(74, 144, 226, 0.2);
+}
+
+.node-canvas-hint {
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  z-index: 20;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.45);
+  pointer-events: none;
+}
+
+/* Canvas context menu */
+
+.canvas-context-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 220px;
+  max-width: 280px;
+  background: rgba(24, 24, 24, 0.97);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.canvas-context-menu-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 6px 2px;
+}
+
+.canvas-context-menu-search {
+  background: #111;
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 12px;
+  outline: none;
+}
+
+.canvas-context-menu-search:focus {
+  border-color: var(--primary-color);
+}
+
+.canvas-context-menu-list {
+  max-height: 280px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.canvas-context-menu-category {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 6px 6px 2px;
+}
+
+.canvas-context-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: var(--text-color);
+  border: none;
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.canvas-context-menu-item:hover {
+  background: rgba(74, 144, 226, 0.25);
+}
+
+.canvas-context-menu-item.is-danger {
+  color: #f08080;
+}
+
+.canvas-context-menu-item.is-danger:hover {
+  background: rgba(220, 80, 80, 0.2);
+}
+
+.canvas-context-menu-empty {
+  padding: 8px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* Draggable palette items */
+
+.node-palette-item[draggable="true"] {
+  cursor: grab;
+}
+
+.node-palette-item[draggable="true"]:active {
+  cursor: grabbing;
+}
