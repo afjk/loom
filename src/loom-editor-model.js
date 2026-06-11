@@ -37,6 +37,7 @@ export const NODE_LAYOUT_MAX_COLS = 50;
  * @typedef {
  *   | { type: 'addNode',     node: EditorNode }
  *   | { type: 'removeNode',  id: string }
+ *   | { type: 'removeNodes', ids: string[] }
  *   | { type: 'updateParam', id: string, key: string, value: any }
  *   | { type: 'moveNode',    id: string, position: { x: number, y: number } }
  *   | { type: 'addEdge',     edge: EditorEdge }
@@ -281,6 +282,22 @@ export function applyEditorOperation(em, op) {
     for (const id of Object.keys(next.edgesById)) {
       const edge = next.edgesById[id];
       if (edge.fromNodeId === op.id || edge.toNodeId === op.id) {
+        delete next.edgesById[id];
+      }
+    }
+    return next;
+  }
+
+  if (op.type === 'removeNodes') {
+    const ids = new Set((op.ids || []).filter((id) => next.nodesById[id]));
+    if (ids.size === 0) return next;
+    for (const id of ids) {
+      delete next.nodesById[id];
+    }
+    next.order = next.order.filter((id) => !ids.has(id));
+    for (const id of Object.keys(next.edgesById)) {
+      const edge = next.edgesById[id];
+      if (ids.has(edge.fromNodeId) || ids.has(edge.toNodeId)) {
         delete next.edgesById[id];
       }
     }

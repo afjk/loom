@@ -62,6 +62,10 @@ function patchAstSource(source, ast, operation) {
     return patchRemoveNode(source, ast, operation);
   }
 
+  if (operation.type === 'removeNodes') {
+    return patchRemoveNodes(source, ast, operation);
+  }
+
   return fail('UNSUPPORTED_OPERATION');
 }
 
@@ -150,6 +154,26 @@ function patchRemoveNode(source, ast, operation) {
 
   const range = lineRangeForSpan(source, stmt.span);
   return ok(`${source.slice(0, range.start)}${source.slice(range.end)}`, 'source-patch');
+}
+
+function patchRemoveNodes(source, ast, operation) {
+  const ids = operation.ids || [];
+  if (!ids.length) return fail('MISSING_REMOVE_IDS');
+
+  let currentSource = source;
+  let currentAst = ast;
+
+  for (const id of ids) {
+    const result = patchRemoveNode(currentSource, currentAst, { id });
+    if (!result.ok) return result;
+
+    currentSource = result.source;
+    const parsed = parseDSLToAST(currentSource);
+    if (parsed.errors.length || !parsed.ast) return fail('PATCHED_SOURCE_PARSE_ERROR');
+    currentAst = parsed.ast;
+  }
+
+  return ok(currentSource, 'source-patch');
 }
 
 function validatePatchedSource(source, expectedGraph) {

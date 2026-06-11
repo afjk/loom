@@ -190,6 +190,54 @@ test('source patch: removeNode removes only the assignment line', () => {
   assert.equal(patched, '# keep this standalone comment\nclk = clock()\nwave = sine(freq: 0.5)\n');
 });
 
+test('source patch: removeNodes removes all assignment lines in one operation', () => {
+  const source = [
+    '# keep this standalone comment',
+    'clk = clock()',
+    'unused_a = sine(freq: 0.3)',
+    'unused_b = sine(freq: 0.7)',
+    'wave = sine(freq: 0.5)',
+    ''
+  ].join('\n');
+
+  const patched = applyOperation(source, {
+    type: 'removeNodes',
+    ids: ['unused_a', 'unused_b']
+  });
+
+  assert.equal(patched, '# keep this standalone comment\nclk = clock()\nwave = sine(freq: 0.5)\n');
+});
+
+test('source patch: removeNodes with connected references falls back to canonical DSL', () => {
+  const source = [
+    'clk = clock()',
+    'wave = sine(t: clk, freq: 0.3)',
+    'wave2 = sine(t: wave, freq: 0.2)',
+    ''
+  ].join('\n');
+  const graph = compileSource(source);
+  const result = applyNodeEditorOperationState({
+    graph,
+    editorModel: graphToEditorModel(graph),
+    errors: []
+  }, {
+    type: 'removeNodes',
+    ids: ['clk', 'wave']
+  });
+  if (result.error) throw result.error;
+
+  assert.equal(result.state.editorModel.nodesById.clk, undefined);
+  assert.equal(result.state.editorModel.nodesById.wave, undefined);
+  assert.equal(
+    Object.values(result.state.editorModel.edgesById)
+      .some((edge) => edge.fromNodeId === 'wave' || edge.toNodeId === 'wave'),
+    false
+  );
+
+  const fallback = patchOrCanonicalDslSource(source, result.change.operation, result.state.graph);
+  assert.equal(fallback.ok, true);
+});
+
 test('source patch: removeNode with connected references falls back to canonical DSL', () => {
   const source = [
     'import math',

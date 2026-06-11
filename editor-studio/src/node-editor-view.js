@@ -192,6 +192,23 @@ export class NodeEditorView {
     return this.editor.getNodes().filter((node) => node.selected).map((node) => node.id);
   }
 
+  async setSelection(nodeIds = []) {
+    const ids = new Set(nodeIds);
+
+    for (const node of this.editor.getNodes()) {
+      if (node.selected && !ids.has(node.id)) {
+        await this.nodeSelector.unselect(node.id);
+      }
+    }
+
+    for (const id of ids) {
+      const node = this.editor.getNode(id);
+      if (node && !node.selected) {
+        await this.nodeSelector.select(id, true);
+      }
+    }
+  }
+
   async zoomToFit() {
     const nodes = this.editor.getNodes();
     if (nodes.length === 0) return false;

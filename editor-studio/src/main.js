@@ -1158,8 +1158,27 @@ function setSelectedNodeId(nodeId) {
   } else {
     selectedNodeId = nodeId || null;
   }
+  syncCanvasSelection();
   renderInspector();
   renderNodeList();
+}
+
+// Keep the Rete canvas selection consistent with the inspector selection so
+// that Delete always targets what the UI shows as selected. When the picked
+// node is already part of a canvas multi-selection (Ctrl+click flow), the
+// existing selection is preserved.
+function syncCanvasSelection() {
+  if (!nodeEditor?.setSelection) return;
+
+  if (!selectedNodeId) {
+    nodeEditor.setSelection([]);
+    return;
+  }
+
+  const canvasSelectedIds = nodeEditor.getSelectedNodeIds();
+  if (!canvasSelectedIds.includes(selectedNodeId)) {
+    nodeEditor.setSelection([selectedNodeId]);
+  }
 }
 
 function setEditorError(message) {
@@ -1730,18 +1749,15 @@ async function deleteNodes(nodeIds) {
     : `Delete ${existing.length} nodes (${existing.join(', ')})? Connected edges will also be removed.`;
   if (!window.confirm(message)) return;
 
-  let removedSelected = false;
-  for (const id of existing) {
-    const result = await handleOperation({
-      type: 'removeNode',
-      id
-    });
-    if (result && !result.error && id === selectedNodeId) {
-      removedSelected = true;
-    }
-  }
+  const removesSelected = selectedNodeId && existing.includes(selectedNodeId);
 
-  if (removedSelected) {
+  const result = await handleOperation(
+    existing.length === 1
+      ? { type: 'removeNode', id: existing[0] }
+      : { type: 'removeNodes', ids: existing }
+  );
+
+  if (result && !result.error && removesSelected) {
     selectedNodeId = null;
     renderInspector();
   }
