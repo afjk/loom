@@ -92,11 +92,12 @@ function findReteConnectionIdByEdgeId(connectionMap, edgeId) {
 // --- NodeEditorView ---
 
 export class NodeEditorView {
-  constructor(container, { onOperation, onError, onSelectNode } = {}) {
+  constructor(container, { onOperation, onError, onSelectNode, onContextMenu } = {}) {
     this.container = container;
     this.onOperation = onOperation || (() => {});
     this.onError = onError || ((e) => console.error('NodeEditorView:', e));
     this.onSelectNode = onSelectNode || (() => {});
+    this.onContextMenu = onContextMenu || (() => {});
     this.isRendering = false;
     this.connectionMap = new Map();
     this._renderLock = null;
@@ -116,7 +117,14 @@ export class NodeEditorView {
     this.area.use(this.connectionPlugin);
     this.area.use(this.renderPlugin);
 
+    this.selector = AreaExtensions.selector();
+    this.nodeSelector = AreaExtensions.selectableNodes(this.area, this.selector, {
+      accumulating: AreaExtensions.accumulateOnCtrl()
+    });
+    AreaExtensions.simpleNodesOrder(this.area);
+
     this._setupPipes();
+    this._setupContextMenu();
   }
 
   _setupPipes() {
@@ -145,6 +153,87 @@ export class NodeEditorView {
 
       return context;
     });
+  }
+
+  _setupContextMenu() {
+    this._contextMenuHandler = (event) => {
+      event.preventDefault();
+      const nodeId = this._findNodeIdFromEventTarget(event.target);
+      this.onContextMenu({
+        clientX: event.clientX,
+        clientY: event.clientY,
+        graphPosition: this.clientPointToGraph(event.clientX, event.clientY),
+        nodeId
+      });
+    };
+    this.container.addEventListener('contextmenu', this._contextMenuHandler);
+  }
+
+  _findNodeIdFromEventTarget(target) {
+    if (!target || !this.area?.nodeViews) return null;
+    for (const [nodeId, view] of this.area.nodeViews) {
+      if (view.element === target || view.element.contains(target)) {
+        return nodeId;
+      }
+    }
+    return null;
+  }
+
+  clientPointToGraph(clientX, clientY) {
+    const rect = this.container.getBoundingClientRect();
+    const { x, y, k } = this.area.area.transform;
+    return {
+      x: (clientX - rect.left - x) / k,
+      y: (clientY - rect.top - y) / k
+    };
+  }
+
+  getSelectedNodeIds() {
+    return this.editor.getNodes().filter((node) => node.selected).map((node) => node.id);
+  }
+
+  async setSelection(nodeIds = []) {
+    const ids = new Set(nodeIds);
+
+    for (const node of this.editor.getNodes()) {
+      if (node.selected && !ids.has(node.id)) {
+        await this.nodeSelector.unselect(node.id);
+      }
+    }
+
+    for (const id of ids) {
+      const node = this.editor.getNode(id);
+      if (node && !node.selected) {
+        await this.nodeSelector.select(id, true);
+      }
+    }
+  }
+
+  async zoomToFit() {
+    const nodes = this.editor.getNodes();
+    if (nodes.length === 0) return false;
+
+    try {
+      await AreaExtensions.zoomAt(this.area, nodes);
+      return true;
+    } catch (e) {
+      console.warn('zoomToFit failed:', e.message);
+      return false;
+    }
+  }
+
+  async zoomBy(factor) {
+    const area = this.area.area;
+    const { x, y, k } = area.transform;
+    const nextK = Math.min(2.5, Math.max(0.1, k * factor));
+    if (nextK === k) return;
+
+    const rect = this.container.getBoundingClientRect();
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+
+    await area.zoom(nextK, 0, 0);
+    await area.translate(cx - ((cx - x) * nextK) / k, cy - ((cy - y) * nextK) / k);
   }
 
   _onConnectionCreated(connection) {
@@ -427,6 +516,10 @@ export class NodeEditorView {
   }
 
   destroy() {
+    if (this._contextMenuHandler) {
+      this.container.removeEventListener('contextmenu', this._contextMenuHandler);
+      this._contextMenuHandler = null;
+    }
     this.area.destroy();
     this.container.innerHTML = '';
     this.currentEditorModel = null;
