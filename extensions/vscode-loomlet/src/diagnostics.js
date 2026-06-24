@@ -1,4 +1,5 @@
 let parseDSLToAST, compileToGraph, stripEditorMetadataFromDsl;
+let NODE_TYPES, checkHostCompatibility, listHostProfiles;
 let modulesLoaded = false;
 let loadPromise = null;
 
@@ -85,6 +86,9 @@ async function ensureModulesLoaded() {
       const indexModule = await importLoomletIndex();
       parseDSLToAST = indexModule.parseDSLToAST;
       compileToGraph = indexModule.compileToGraph;
+      NODE_TYPES = indexModule.NODE_TYPES;
+      checkHostCompatibility = indexModule.checkHostCompatibility;
+      listHostProfiles = indexModule.listHostProfiles;
 
       const metadataModule = await importLoomletMetadata();
       stripEditorMetadataFromDsl = metadataModule.stripEditorMetadataFromDsl;
@@ -125,10 +129,70 @@ function toZeroBased(value, fallback = 0) {
   return Math.max(0, value - 1);
 }
 
+function getKnownHostProfiles() {
+  return typeof listHostProfiles === 'function' ? listHostProfiles() : [];
+}
+
+// Build host-compatibility diagnostic items for a configured target host.
+// Returns warning-style items: { message, code, capability, nodes }.
+// Returns [] when diagnostics are disabled, the host is unknown, the modules
+// are unavailable, or the source does not parse/compile (regular diagnostics
+// already report parse/compile errors, so we do not double-report here).
+function collectCompatibilityDiagnosticItems(sourceText, targetHost) {
+  if (!targetHost || targetHost === 'none') {
+    return [];
+  }
+  if (!modulesLoaded || !stripEditorMetadataFromDsl || !parseDSLToAST || !compileToGraph) {
+    return [];
+  }
+  if (typeof checkHostCompatibility !== 'function' || !NODE_TYPES) {
+    return [];
+  }
+  if (!getKnownHostProfiles().includes(targetHost)) {
+    return [];
+  }
+
+  const cleanText = preprocessPreviewOnlyRender(
+    preprocessPreviewHostInputs(stripEditorMetadataFromDsl(sourceText || ''))
+  );
+  if (cleanText.trim() === '') {
+    return [];
+  }
+
+  const { ast, errors: parseErrors } = parseDSLToAST(cleanText);
+  if (parseErrors.length > 0) {
+    return [];
+  }
+
+  const { graph, errors: compileErrors } = compileToGraph(ast);
+  if (compileErrors.length > 0 || !graph) {
+    return [];
+  }
+
+  let report;
+  try {
+    report = checkHostCompatibility(graph, NODE_TYPES, targetHost);
+  } catch {
+    return [];
+  }
+
+  return report.unsupported.map((entry) => {
+    const nodes = entry.nodes.length > 0 ? ` (required by: ${entry.nodes.join(', ')})` : '';
+    return {
+      message: `Target host '${targetHost}' does not provide ${entry.capability}${nodes}.`,
+      code: 'HOST_INCOMPATIBLE',
+      capability: entry.capability,
+      nodes: entry.nodes
+    };
+  });
+}
+
 module.exports = {
   isLoomletDocument,
   normalizeLoomletErrorLocation,
   collectLoomletDiagnosticItems,
+  collectCompatibilityDiagnosticItems,
+  getKnownHostProfiles,
   ensureModulesLoaded,
   preprocessPreviewHostInputs,
   preprocessPreviewOnlyRender

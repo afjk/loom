@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 
 const require = createRequire(import.meta.url);
-const { isLoomletDocument, normalizeLoomletErrorLocation, collectLoomletDiagnosticItems, ensureModulesLoaded } = require('../src/diagnostics.js');
+const { isLoomletDocument, normalizeLoomletErrorLocation, collectLoomletDiagnosticItems, collectCompatibilityDiagnosticItems, getKnownHostProfiles, ensureModulesLoaded } = require('../src/diagnostics.js');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -194,6 +194,54 @@ await ensureModulesLoaded();
     assert.equal(clamped.startLine, 0, 'Start line should be 0');
     assert.equal(clamped.endLine, 0, 'End line should be clamped to last line (0)');
   }
+}
+
+// Compatibility diagnostics
+const SCENE_COLOR_DSL = 'import scene\nscene.setColor("box", r: 1, g: 0, b: 0)';
+
+// Test: known host profiles are available
+{
+  const hosts = getKnownHostProfiles();
+  assert.deepEqual(hosts, ['cli', 'export-viewer', 'unity-runtime', 'web-scenesync'], 'Should list the known host profiles');
+}
+
+// Test: disabled (none) target produces no compatibility diagnostics
+{
+  const items = collectCompatibilityDiagnosticItems(SCENE_COLOR_DSL, 'none');
+  assert.equal(items.length, 0, "Target 'none' should disable compatibility diagnostics");
+}
+
+// Test: unknown host produces no diagnostics
+{
+  const items = collectCompatibilityDiagnosticItems(SCENE_COLOR_DSL, 'bogus-host');
+  assert.equal(items.length, 0, 'Unknown host should produce no diagnostics');
+}
+
+// Test: a host that lacks the required capability is flagged
+{
+  const items = collectCompatibilityDiagnosticItems(SCENE_COLOR_DSL, 'cli');
+  assert.ok(items.length > 0, 'cli should be flagged for scene color');
+  assert.ok(items.some((i) => i.capability === 'scene.object.material.write@1'), 'Should name the missing capability');
+  assert.equal(items[0].code, 'HOST_INCOMPATIBLE', 'Should use the HOST_INCOMPATIBLE code');
+  assert.ok(items[0].message.includes('cli'), 'Message should mention the target host');
+}
+
+// Test: a fully-supported host produces no diagnostics
+{
+  const items = collectCompatibilityDiagnosticItems(SCENE_COLOR_DSL, 'web-scenesync');
+  assert.equal(items.length, 0, 'web-scenesync supports scene color, so no diagnostics');
+}
+
+// Test: source that does not compile produces no compatibility diagnostics (errors are handled separately)
+{
+  const items = collectCompatibilityDiagnosticItems('x = math.sine(t, frequency:', 'cli');
+  assert.equal(items.length, 0, 'Parse errors should not yield compatibility diagnostics');
+}
+
+// Test: empty source produces no compatibility diagnostics
+{
+  const items = collectCompatibilityDiagnosticItems('', 'cli');
+  assert.equal(items.length, 0, 'Empty source should produce no compatibility diagnostics');
 }
 
 console.log('All diagnostics tests passed!');

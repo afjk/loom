@@ -110,6 +110,25 @@
           "type": "boolean",
           "default": true,
           "description": "Open the Node Preview automatically after inserting a Loomlet example."
+        },
+        "loomlet.targetHost": {
+          "type": "string",
+          "enum": [
+            "none",
+            "web-scenesync",
+            "unity-runtime",
+            "export-viewer",
+            "cli"
+          ],
+          "enumDescriptions": [
+            "Disable host compatibility diagnostics.",
+            "Scene Sync Web live host.",
+            "Unity runtime package.",
+            "Scene Sync export viewer.",
+            "Command-line evaluation."
+          ],
+          "default": "none",
+          "description": "Target host to check graph capability compatibility against. When set, nodes that require a capability the host does not provide are reported as warnings. 'none' disables these diagnostics."
         }
       }
     }
