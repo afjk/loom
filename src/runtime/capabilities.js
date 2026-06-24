@@ -34,10 +34,10 @@ export const HOST_CAPABILITIES = {
     'scene.object.audio.control@1'
   ],
   'unity-runtime': [
+    // No audio: the runtime-only Unity package has no AudioSource control yet.
     'pure.compute@1',
     'env.time.seconds@1',
-    'scene.object.transform.write@1',
-    'scene.object.audio.control@1'
+    'scene.object.transform.write@1'
   ],
   'export-viewer': [
     'pure.compute@1',

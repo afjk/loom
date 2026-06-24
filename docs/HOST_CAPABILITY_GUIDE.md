@@ -18,9 +18,15 @@ authors) can see at a glance:
 For the machine-checkable, per-graph version of "will this run here", see the
 capability metadata and `checkHostCompatibility()` from
 [Graph Capability Metadata v0](./design/graph-capability-metadata-v0.md) (#286).
-That contract currently covers the time / transform / audio / event / input
-rows below; this guide is broader and includes features that have no executable
-nodes yet.
+
+The #286 profiles are a **coarse, declared capability contract** (the tokens a
+host is expected to provide). This guide is **finer-grained and reflects current
+implementation maturity**, which is sometimes more conservative than a declared
+token — a host can run a capability path that is still being wired up, or expose
+a host-specific surface that the JS contract does not model. Where the two
+differ, the per-host notes call it out. This guide is the authority on "how
+finished is it today"; the profiles are the authority on the coarse machine
+check.
 
 ## Hosts
 
@@ -51,8 +57,8 @@ nodes yet.
 | Host-provided time | full | full | planned | full | full |
 | Transform write (position/rotation/scale) | full | experimental | planned | full | none |
 | Audio playback (AudioSource) | full | planned | planned | partial | none |
-| Color change | planned | planned | planned | planned | none |
-| Visibility change | planned | planned | planned | planned | none |
+| Color change | full | planned | planned | full | none |
+| Visibility change | full | planned | planned | full | none |
 | Object / scene graph scope | full | partial | planned | full | partial |
 | Events (`onEvent` / `sendEvent`) | full | partial | planned | partial | full |
 | Named input values | full | partial | planned | partial | full |
@@ -64,12 +70,17 @@ nodes yet.
 
 ### Scene Sync Web (`web-scenesync`)
 
-- **full**: host-provided time, transform write, audio playback, object/scene
-  graph scope, events, named inputs.
+- **full**: host-provided time, transform write, audio playback, color change
+  (`scene.setColor`), visibility change (`scene.setVisible`), object/scene graph
+  scope, events, named inputs.
 - **partial**: Edit / Interact mode — selection, edit lock, and `t=0` neutral
   behavior are designed (see [Output Conflict Policy v0](./design/output-conflict-policy-v0.md)),
   but some Scene Sync-side edit-override behavior is still deferred.
-- **planned**: color, visibility, viewer/distance input, hover/activate/gaze.
+- **planned**: viewer/distance input, hover/activate/gaze.
+- Note: `scene.setColor` / `scene.setVisible` are implemented on the Scene Sync
+  path (graph adapter + browser runtime), but are not yet in the portable JS
+  node registry (`src/nodes/scene.js`) and have no #286 capability token. The
+  capability check therefore does not model color/visibility yet.
 
 ### Unity Runtime (`unity-runtime`)
 
@@ -77,10 +88,16 @@ nodes yet.
 - **experimental**: transform write — the runtime package and parity fixtures
   exist, but full scene-write host integration is still being built. See
   [Unity Runtime Compatibility](./UNITY_RUNTIME_COMPATIBILITY.md).
-- **partial**: events and named inputs via read-only host context
-  (`host.input`, `host.event`); object/scene graph scope.
+- **partial**: events and named inputs via the C# read-only host context
+  (`host.input`, `host.event` in `unity/com.afjk.loomlet-runtime`); object/scene
+  graph scope.
 - **planned**: audio playback, color, visibility, interaction inputs.
 - **none**: Edit / Interact mode (runtime-only scope).
+- Note (contract divergence): the `unity-runtime` profile in `capabilities.js`
+  does not grant `env.input@1` / `env.events@1`, so a JS-side compatibility check
+  is conservative and reports `onEvent` / `sendEvent` as unsupported, even though
+  the Unity package exposes read-only host input/event nodes. The profile also
+  no longer grants audio (no Unity AudioSource control exists yet).
 
 ### Godot Runtime (experimental)
 
@@ -91,12 +108,13 @@ nodes yet.
 
 ### Export Viewer (`export-viewer`)
 
-- **full**: host-provided local clock, transform write playback, object/scene
-  graph scope. Runs without the afjk.jp presence server.
-- **partial**: audio playback (depends on the exported host's audio surface);
-  events/inputs are limited to what the export bakes in — live interaction is
-  not provided.
-- **planned**: color, visibility, interaction inputs.
+- **full**: host-provided local clock, transform write playback, color and
+  visibility playback (same Scene Sync browser runtime), object/scene graph
+  scope. Runs without the afjk.jp presence server.
+- **partial**: audio playback (the browser runtime handles AudioSource ops, but
+  standalone export audio asset playback is less proven); events/inputs are
+  limited to what the export bakes in — live interaction is not provided.
+- **planned**: interaction inputs.
 - **none**: Edit / Interact mode (viewer is playback, not authoring).
 
 ### CLI (`cli`)
@@ -109,10 +127,13 @@ nodes yet.
 
 ## Notes on unsupported items
 
-- **Color / Visibility**: no `scene.setColor` / `scene.setVisible` nodes exist
-  yet. Once added, hosts with a material/renderer adapter (Scene Sync Web,
-  Unity, Export) become candidates for `full`. Tracked under the scene node gap
-  work (see `docs/NODE_GAPS.md`).
+- **Color / Visibility**: `scene.setColor` / `scene.setVisible` run today on the
+  Scene Sync path (Scene Sync Web and Export Viewer), but only there — they live
+  in the Scene Sync graph adapter and browser runtime, not in the portable JS
+  node registry (`src/nodes/scene.js`), and they have no #286 capability token.
+  Promoting them to portable nodes with `scene.object.material.write@1` /
+  `scene.object.visibility.write@1` tokens would make Unity a candidate and let
+  the compatibility check model them (see `docs/NODE_GAPS.md`).
 - **Viewer / distance input** and **Hover / activate / gaze**: these are host
   interaction facts. There are DOM `pointerClick` / `pointerPosition` nodes for
   the simple web editor, but no portable viewer/interaction input vocabulary in
@@ -128,8 +149,10 @@ nodes yet.
 
 - Add `godot-runtime` as a real (initially minimal) host once a runtime exists,
   and give it a capability profile in `src/runtime/capabilities.js`.
-- Add `scene.setColor` / `scene.setVisible` nodes with `scene.object.material.write@1`
-  / `scene.object.visibility.write@1` capabilities, then update this matrix.
+- Promote `scene.setColor` / `scene.setVisible` from the Scene Sync-only path to
+  portable JS nodes with `scene.object.material.write@1` /
+  `scene.object.visibility.write@1` capabilities, then extend host support
+  (Unity) and update this matrix.
 - Define a portable viewer/distance and hover/activate/gaze input vocabulary,
   then map it onto host capabilities.
 - Promote Unity transform write from `experimental` to `full` after host-side

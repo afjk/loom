@@ -133,3 +133,10 @@ test('host profiles are listed and stable', () => {
     assert.ok(Array.isArray(HOST_CAPABILITIES[profile]));
   }
 });
+
+test('unity-runtime does not declare audio control (no runtime implementation yet)', () => {
+  assert.ok(!HOST_CAPABILITIES['unity-runtime'].includes('scene.object.audio.control@1'));
+  // Scene Sync Web and Export Viewer do provide audio control.
+  assert.ok(HOST_CAPABILITIES['web-scenesync'].includes('scene.object.audio.control@1'));
+  assert.ok(HOST_CAPABILITIES['export-viewer'].includes('scene.object.audio.control@1'));
+});
