@@ -7,6 +7,7 @@ import { closeBrackets, closeBracketsKeymap, completionKeymap } from '@codemirro
 import { forceLinting } from '@codemirror/lint';
 
 import { Loom, NODE_TYPES } from '../../src/loom.js';
+import { describeGraphHostCompatibility } from '../../src/runtime/capabilities.js';
 import { getLatestNodeValues } from '../../src/value-preview.js';
 import { loomletDslExtensions } from './loomlet-codemirror.js';
 import { parseDSLToAST, compileToGraph } from '../../src/loom-dsl.js';
@@ -150,6 +151,7 @@ const elements = {
   previewCanvas: document.getElementById('preview-canvas'),
   graphJson: document.getElementById('graph-json'),
   errorsList: document.getElementById('errors-list'),
+  compatPanel: document.getElementById('compat-panel'),
   inspectorPanel: document.getElementById('inspector-panel'),
   applyDslBtn: document.getElementById('applyDslBtn'),
   generateDslBtn: document.getElementById('generateDslBtn'),
@@ -1104,6 +1106,54 @@ function renderOutput() {
 function renderGraphJSON(graph) {
   const json = JSON.stringify(graph, null, 2);
   elements.graphJson.textContent = json;
+  renderCompatibility(graph);
+}
+
+function renderCompatibility(graph) {
+  if (!elements.compatPanel) {
+    return;
+  }
+  if (!graph || !Array.isArray(graph.nodes) || graph.nodes.length === 0) {
+    elements.compatPanel.innerHTML = '<div class="empty-state">No graph to check</div>';
+    return;
+  }
+
+  let view;
+  try {
+    view = describeGraphHostCompatibility(graph, NODE_TYPES);
+  } catch (error) {
+    elements.compatPanel.innerHTML =
+      `<div class="empty-state">Compatibility unavailable: ${escapeHtml(error.message)}</div>`;
+    return;
+  }
+
+  const requiresText = view.requires.length > 0
+    ? view.requires.map(escapeHtml).join(', ')
+    : '(none)';
+
+  const hostRows = view.hosts.map((report) => {
+    const detail = [];
+    for (const entry of report.unsupported) {
+      const nodes = entry.nodes.length > 0 ? ` (${entry.nodes.map(escapeHtml).join(', ')})` : '';
+      detail.push(`<li class="compat-unsupported">missing ${escapeHtml(entry.capability)}${nodes}</li>`);
+    }
+    for (const entry of report.unclassified) {
+      detail.push(`<li class="compat-unclassified">unclassified: ${escapeHtml(entry.nodeId)} (${escapeHtml(entry.type)})</li>`);
+    }
+    const detailHtml = detail.length > 0 ? `<ul class="compat-detail">${detail.join('')}</ul>` : '';
+    return `
+      <div class="compat-host">
+        <div class="compat-host-head">
+          <span class="compat-badge compat-${report.status}">${report.status}</span>
+          <span class="compat-host-name">${escapeHtml(report.targetHost)}</span>
+        </div>
+        ${detailHtml}
+      </div>`;
+  }).join('');
+
+  elements.compatPanel.innerHTML = `
+    <div class="compat-requires"><strong>Requires:</strong> ${requiresText}</div>
+    <div class="compat-hosts">${hostRows}</div>`;
 }
 
 function renderErrors() {

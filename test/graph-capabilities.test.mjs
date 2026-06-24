@@ -7,6 +7,7 @@ import {
   checkHostCompatibility,
   resolveNodeCapabilities,
   listHostProfiles,
+  describeGraphHostCompatibility,
   HOST_CAPABILITIES
 } from '../src/runtime/capabilities.js';
 
@@ -146,6 +147,28 @@ test('host profiles are listed and stable', () => {
   for (const profile of listHostProfiles()) {
     assert.ok(Array.isArray(HOST_CAPABILITIES[profile]));
   }
+});
+
+test('describeGraphHostCompatibility returns requires plus a report per host', () => {
+  const graph = compileGraph('import scene\nscene.setColor("box", r: 1, g: 0, b: 0)\nscene.setPosition("box", x: clock())');
+  const view = describeGraphHostCompatibility(graph, NODE_TYPES);
+
+  assert.ok(view.requires.includes('scene.object.material.write@1'));
+  assert.deepEqual(view.hosts.map((h) => h.targetHost), listHostProfiles());
+
+  const web = view.hosts.find((h) => h.targetHost === 'web-scenesync');
+  assert.equal(web.status, 'full');
+  const unity = view.hosts.find((h) => h.targetHost === 'unity-runtime');
+  assert.equal(unity.status, 'partial');
+  assert.ok(unity.unsupported.some((u) => u.capability === 'scene.object.material.write@1'));
+});
+
+test('describeGraphHostCompatibility surfaces unclassified nodes once at the top level', () => {
+  const graph = { nodes: [{ id: 'c1', type: 'my.customNode' }], edges: [] };
+  const view = describeGraphHostCompatibility(graph, NODE_TYPES);
+  assert.deepEqual(view.requires, []);
+  assert.equal(view.unclassified.length, 1);
+  assert.equal(view.unclassified[0].nodeId, 'c1');
 });
 
 test('unity-runtime does not declare audio control (no runtime implementation yet)', () => {

@@ -40,5 +40,6 @@ export {
   listHostProfiles,
   resolveNodeCapabilities,
   summarizeGraphCapabilities,
-  checkHostCompatibility
+  checkHostCompatibility,
+  describeGraphHostCompatibility
 } from './runtime/capabilities.js';
