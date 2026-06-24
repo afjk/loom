@@ -121,4 +121,60 @@ export function registerSceneNodes(registry) {
       return {};
     }
   });
+  registry.registerNodeType('scene.setVisible', {
+    category: 'sink',
+    effects: ['SceneWrite'],
+    requires: ['scene.object.visibility.write@1'],
+    writes: ['object.self.visible'],
+    determinism: 'deterministic-with-env',
+    inputs: [
+      { name: 'objectId', type: 'string', default: '', kind: 'behavior' },
+      { name: 'visible', type: 'boolean', default: true, kind: 'behavior' }
+    ],
+    outputs: [],
+    params: [
+      { name: 'objectId', type: 'string', default: '' },
+      { name: 'visible', type: 'boolean', default: true }
+    ],
+    evaluate: (inputs, params, ctx) => {
+      ctx.engine?._recordEffect({
+        type: 'scene.setVisible',
+        objectId: inputs.objectId,
+        visible: Boolean(inputs.visible),
+        target: 'scenesync',
+        nodeId: ctx.currentNodeId
+      });
+      return {};
+    }
+  });
+  registry.registerNodeType('scene.setColor', {
+    category: 'sink',
+    effects: ['SceneWrite'],
+    requires: ['scene.object.material.write@1'],
+    writes: ['object.self.material.color'],
+    determinism: 'deterministic-with-env',
+    inputs: [
+      { name: 'objectId', type: 'string', default: '', kind: 'behavior' },
+      { name: 'r', type: 'number', default: 1, kind: 'behavior' },
+      { name: 'g', type: 'number', default: 1, kind: 'behavior' },
+      { name: 'b', type: 'number', default: 1, kind: 'behavior' }
+    ],
+    outputs: [],
+    params: [
+      { name: 'objectId', type: 'string', default: '' },
+      { name: 'r', type: 'number', default: 1 },
+      { name: 'g', type: 'number', default: 1 },
+      { name: 'b', type: 'number', default: 1 }
+    ],
+    evaluate: (inputs, params, ctx) => {
+      ctx.engine?._recordEffect({
+        type: 'scene.setColor',
+        objectId: inputs.objectId,
+        color: [inputs.r, inputs.g, inputs.b].map(Number),
+        target: 'scenesync',
+        nodeId: ctx.currentNodeId
+      });
+      return {};
+    }
+  });
 }

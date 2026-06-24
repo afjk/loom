@@ -367,6 +367,66 @@ export const LIBRARY_METADATA = {
         examples: [
           'scene.offsetPosition("sample-cube", x: 1, y: 0.5, z: 0)'
         ]
+      },
+      setVisible: {
+        name: 'setVisible',
+        signature: 'scene.setVisible(objectId: "...", visible: true)',
+        description: 'Shows or hides a scene object.',
+        args: [
+          {
+            name: 'objectId',
+            type: 'string',
+            positional: true,
+            description: 'ID of the object.'
+          },
+          {
+            name: 'visible',
+            type: 'boolean',
+            positional: false,
+            description: 'Whether the object is visible.'
+          }
+        ],
+        returns: 'void',
+        targets: LIBRARY_COMPATIBILITY.scene.targets,
+        examples: [
+          'scene.setVisible("sample-cube", visible: false)'
+        ]
+      },
+      setColor: {
+        name: 'setColor',
+        signature: 'scene.setColor(objectId: "...", r: 1, g: 1, b: 1)',
+        description: 'Sets the material color of a scene object (RGB, 0..1).',
+        args: [
+          {
+            name: 'objectId',
+            type: 'string',
+            positional: true,
+            description: 'ID of the object.'
+          },
+          {
+            name: 'r',
+            type: 'number',
+            positional: false,
+            description: 'Red channel, 0..1.'
+          },
+          {
+            name: 'g',
+            type: 'number',
+            positional: false,
+            description: 'Green channel, 0..1.'
+          },
+          {
+            name: 'b',
+            type: 'number',
+            positional: false,
+            description: 'Blue channel, 0..1.'
+          }
+        ],
+        returns: 'void',
+        targets: LIBRARY_COMPATIBILITY.scene.targets,
+        examples: [
+          'scene.setColor("sample-cube", r: 1, g: 0, b: 0)'
+        ]
       }
     }
   },
