@@ -108,6 +108,35 @@ export function validateNodeTypeDefinition(nodeType, definition) {
   validatePortArray(nodeType, 'input', inputs);
   validatePortArray(nodeType, 'param', params);
   validatePortArray(nodeType, 'output', outputs);
+
+  validateCapabilityMetadata(nodeType, definition);
+}
+
+const KNOWN_DETERMINISM = new Set(['pure', 'deterministic-with-env', 'nondeterministic']);
+
+function validateCapabilityMetadata(nodeType, definition) {
+  for (const field of ['effects', 'requires', 'reads', 'writes']) {
+    if (!(field in definition) || definition[field] === undefined) {
+      continue;
+    }
+    const value = definition[field];
+    if (!Array.isArray(value)) {
+      throw new TypeError(`Invalid node type ${nodeType}: ${field} must be an array of strings`);
+    }
+    for (const item of value) {
+      if (typeof item !== 'string' || item.length === 0) {
+        throw new TypeError(`Invalid node type ${nodeType}: ${field} entries must be non-empty strings`);
+      }
+    }
+  }
+
+  if ('determinism' in definition && definition.determinism !== undefined) {
+    if (!KNOWN_DETERMINISM.has(definition.determinism)) {
+      throw new TypeError(
+        `Invalid node type ${nodeType}: determinism must be one of ${Array.from(KNOWN_DETERMINISM).join(', ')}`
+      );
+    }
+  }
 }
 
 function validatePortArray(nodeType, portCategory, ports) {

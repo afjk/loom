@@ -15,6 +15,10 @@ function readSemanticComponent(value, component) {
 export function registerCoreNodes(registry) {
   registry.registerNodeType('input', {
     category: 'source',
+    effects: ['InputRead'],
+    requires: ['env.input@1'],
+    reads: ['env.input'],
+    determinism: 'deterministic-with-env',
     inputs: [
       { name: 'name', type: 'string', default: '', kind: 'behavior' },
       { name: 'default', type: 'any', default: null, kind: 'behavior' }
@@ -33,6 +37,10 @@ export function registerCoreNodes(registry) {
   });
   registry.registerNodeType('clock', {
     category: 'source',
+    effects: ['TimeRead'],
+    requires: ['env.time.seconds@1'],
+    reads: ['env.time.seconds'],
+    determinism: 'deterministic-with-env',
     inputs: [],
     outputs: [{ name: 't', type: 'number', kind: 'behavior' }],
     params: [],
@@ -45,6 +53,10 @@ export function registerCoreNodes(registry) {
   });
   registry.registerNodeType('onEvent', {
     category: 'source',
+    effects: ['EventRead'],
+    requires: ['env.events@1'],
+    reads: ['env.events'],
+    determinism: 'deterministic-with-env',
     inputs: [],
     outputs: [{ name: 'event', type: 'event<any>', kind: 'event' }],
     params: [
@@ -127,6 +139,10 @@ export function registerCoreNodes(registry) {
   });
   registry.registerNodeType('sendEvent', {
     category: 'sink',
+    effects: ['EventWrite'],
+    requires: ['event.emit@1'],
+    writes: ['event.outbound'],
+    determinism: 'deterministic-with-env',
     inputs: [
       { name: 'trigger', type: 'event<any>', kind: 'event' },
       { name: 'payload', type: 'any', default: undefined, kind: 'behavior' }

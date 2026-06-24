@@ -296,4 +296,5 @@ Use levels so tests can be added without accidentally freezing unstable behavior
 3. Add compile-time single-writer warnings where target paths are statically visible.
 4. Add `run --events` / `--events-file` or equivalent playback tooling if it proves useful beyond REPL.
 5. Plan browser runtime bundle generation and versioned vendoring into Scene Sync.
-6. Continue tracking stretch goals in #212.
+6. Build on the v0 graph capability metadata and host compatibility check (see [Graph Capability Metadata v0](./design/graph-capability-metadata-v0.md), #286): surface compatibility in the Node Editor / CLI and feed the Host Capability Guide (#290).
+7. Continue tracking stretch goals in #212.

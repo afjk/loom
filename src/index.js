@@ -32,3 +32,13 @@ export {
   applyLayoutMetadataToEditorModel,
   stripEditorMetadataFromDsl
 } from './editor-metadata.js';
+export {
+  CAPABILITY_VERSION,
+  KNOWN_CAPABILITIES,
+  HOST_CAPABILITIES,
+  DETERMINISM_LEVELS,
+  listHostProfiles,
+  resolveNodeCapabilities,
+  summarizeGraphCapabilities,
+  checkHostCompatibility
+} from './runtime/capabilities.js';
