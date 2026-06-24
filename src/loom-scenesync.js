@@ -2,6 +2,7 @@
 // SceneSync メッセージプロトコルを処理し、複数グラフの独立評価をサポート
 
 import { LoomError } from "./loom.js";
+import { expandSubgraphs } from "./runtime/subgraph-expand.js";
 
 // グローバル registry でアダプタインスタンスを管理
 const adapterRegistry = new Map();
@@ -209,6 +210,8 @@ export class LoomSceneSync {
 
   _injectAdapterId(graph) {
     this._validateGraph(graph);
+    // 共有サブグラフをフラット化してからアダプタへ渡す
+    graph = expandSubgraphs(graph);
 
     // グラフをコピー（元を破壊しない）
     const nodes = graph.nodes.map(node => {
@@ -234,6 +237,8 @@ export class LoomSceneSync {
 
   _cloneGraph(graph) {
     this._validateGraph(graph);
+    // 共有サブグラフをフラット化してから複製する（アダプタは展開後のグラフを扱う）
+    graph = expandSubgraphs(graph);
     return {
       nodes: graph.nodes.map(node => ({
         ...node,

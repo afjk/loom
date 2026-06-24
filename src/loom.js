@@ -2,6 +2,7 @@
 
 import { createNodeRegistry } from './runtime/node-registry.js';
 import { registerBuiltinNodes } from './nodes/index.js';
+import { expandSubgraphs } from './runtime/subgraph-expand.js';
 
 let nodeFs = null;
 let nodePath = null;
@@ -1024,6 +1025,8 @@ export class Loom {
   }
 
   load(graph) {
+    // 共有サブグラフをフラットなグラフへ展開してから検証する
+    graph = expandSubgraphs(graph);
     // グラフを検証（エラーなら LoomError をスロー）
     this._validateGraph(graph);
 
@@ -1132,6 +1135,8 @@ export class Loom {
 
   // 内部メソッド：グラフの検証とソート
   _loadGraphInternal(graph) {
+    // 共有サブグラフをフラットなグラフへ展開してから検証・評価する
+    graph = expandSubgraphs(graph);
     // グラフを検証
     this._validateGraph(graph);
 

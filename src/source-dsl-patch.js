@@ -207,7 +207,8 @@ function normalizeGraph(graph) {
     edges: (graph.edges || [])
       .map((edge) => ({ from: edge.from, to: edge.to }))
       .sort((a, b) => `${a.from}->${a.to}`.localeCompare(`${b.from}->${b.to}`)),
-    render: normalizeValue(graph.render || null)
+    render: normalizeValue(graph.render || null),
+    subgraphs: normalizeValue(graph.subgraphs || null)
   };
 }
 

@@ -1,5 +1,6 @@
 export { Loom, NODE_TYPES } from './loom.js';
 export { parseDSLToAST, compileToGraph } from './loom-dsl.js';
+export { expandSubgraphs } from './runtime/subgraph-expand.js';
 export {
   graphToEditorModel,
   editorModelToGraph,

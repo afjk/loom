@@ -308,7 +308,7 @@ export function compileToGraph(ast, options = {}) { /* bridge via existing shape
   try {
     const nodeTypes = resolveNodeTypesOption(options);
     const textAst = astToLegacy(ast);
-    const graph = buildGraph(textAst.statements, { nodeTypes, functions: textAst.functions });
+    const graph = buildGraph(textAst.statements, { nodeTypes, functions: textAst.functions, functionLowering: options.functionLowering });
     if (textAst.imports.length > 0) {
       graph.imports = textAst.imports;
     }
@@ -379,6 +379,9 @@ function astToLegacy(program) {
 
 function buildGraph(stmts, options = {}) { /* mostly original */
   const nodeTypes = options.nodeTypes ?? NODE_TYPES;
+  const functionLowering = options.functionLowering ?? 'inline';
+  const subgraphs = options.subgraphs ?? new Map();
+  const isTopLevel = !options.subgraphs;
   const functionDefs = new Map();
   const nodes = []; const edges = []; let renderConfig = null; let anonCounter = 0; let effectCounter = 0; const scope = {};
   const anonId = () => `_anon_${++anonCounter}`;
@@ -393,6 +396,13 @@ function buildGraph(stmts, options = {}) { /* mostly original */
     functionDefs.set(fn.name, fn);
   }
   const hasFunctionDefinitions = functionDefs.size > 0;
+  // Subgraph mode: seed each function parameter as a `subgraph.param` source node
+  // so the reused builder resolves param identifiers to those nodes via `scope`.
+  for (const param of options.params || []) {
+    const pid = `_param_${param.name}`;
+    nodes.push({ id: pid, type: 'subgraph.param', params: { name: param.name } });
+    scope[param.name] = pid;
+  }
   const resolveIdent = (name, line, col, locals = null) => {
     if (locals?.has(name)) {
       const expr = locals.get(name);
@@ -447,7 +457,7 @@ function buildGraph(stmts, options = {}) { /* mostly original */
       return;
     }
   }
-  for (const fn of functionDefs.values()) validateFunctionExpr(fn.body, fn, new Set([fn.name]));
+  if (isTopLevel) for (const fn of functionDefs.values()) validateFunctionExpr(fn.body, fn, new Set([fn.name]));
   function buildFunctionLiteral(fn, resultId) {
     const id = resultId || anonId();
     nodes.push({ id, type: 'function.literal', params: { params: fn.params, body: fn.body, closureRefs: scopedRefs() } });
@@ -476,7 +486,34 @@ function buildGraph(stmts, options = {}) { /* mostly original */
     }
     throw new LoomDSLError(`Unsupported semantic component access: ${expr.property}`, expr.line, expr.col, 'UNKNOWN_ARGUMENT');
   }
+  function ensureSubgraph(name) {
+    if (subgraphs.has(name)) return;
+    const fn = functionDefs.get(name);
+    subgraphs.set(name, null); // reserve before recursing (non-recursive by validation)
+    const sub = buildGraph(
+      [{ type: 'assign', name: '__out', expr: fn.body }],
+      { nodeTypes, functions: options.functions, functionLowering: 'subgraph', params: fn.params, subgraphs, captureOutput: '__out' }
+    );
+    subgraphs.set(name, { params: fn.params.map((p) => p.name), nodes: sub.nodes, edges: sub.edges, output: sub.output });
+  }
+  function buildSubgraphCall(call, resultId, pipeFrom, locals) {
+    const fn = functionDefs.get(call.name);
+    const pos = call.args.filter(a => !a.named);
+    if (call.args.length !== pos.length) throw new LoomDSLError(`Function '${call.name}' only accepts positional arguments`, call.line, call.col, 'MISSING_ARGUMENT_NAME');
+    const suppliedArity = pos.length + (pipeFrom ? 1 : 0);
+    if (suppliedArity !== fn.params.length) {
+      throw new LoomDSLError(`Function '${call.name}' expected ${fn.params.length} argument(s), got ${suppliedArity}`, call.line, call.col, 'WRONG_ARITY');
+    }
+    ensureSubgraph(call.name);
+    const id = resultId || anonId();
+    nodes.push({ id, type: 'subgraph.call', params: { subgraph: call.name } });
+    let k = 0;
+    if (pipeFrom) edges.push({ from: pipeFrom, to: `${id}.arg${++k}` });
+    for (const a of pos) wireToNode(a.value, id, `arg${++k}`, locals);
+    return id;
+  }
   function buildFunctionDefinitionCall(call, resultId, pipeFrom, locals) {
+    if (functionLowering === 'subgraph') return buildSubgraphCall(call, resultId, pipeFrom, locals);
     const fn = functionDefs.get(call.name);
     const pos = call.args.filter(a => !a.named);
     if (call.args.length !== pos.length) throw new LoomDSLError(`Function '${call.name}' only accepts positional arguments`, call.line, call.col, 'MISSING_ARGUMENT_NAME');
@@ -523,7 +560,13 @@ function buildGraph(stmts, options = {}) { /* mostly original */
     else if (s.type === 'effect') buildExpr(s.expr, `_effect${++effectCounter}`, null);
     else { const id = buildExpr(s.expr, s.name, null); scope[s.name] = id; }
   }
-  const r = { nodes, edges }; if (renderConfig) r.render = renderConfig; return r;
+  const r = { nodes, edges }; if (renderConfig) r.render = renderConfig;
+  if (options.captureOutput && scope[options.captureOutput] !== undefined) {
+    const outNode = nodes.find((n) => n.id === scope[options.captureOutput]);
+    r.output = `${scope[options.captureOutput]}.${defaultOutputPort(outNode.type, nodeTypes)}`;
+  }
+  if (isTopLevel && subgraphs.size > 0) r.subgraphs = Object.fromEntries(subgraphs);
+  return r;
 }
 
 export function formatDSL(ast, options = {}) {
