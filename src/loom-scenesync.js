@@ -234,13 +234,15 @@ export class LoomSceneSync {
 
   _cloneGraph(graph) {
     this._validateGraph(graph);
-    return {
+    const clone = {
       nodes: graph.nodes.map(node => ({
         ...node,
         params: node.params ? { ...node.params } : node.params
       })),
       edges: graph.edges.map(edge => ({ ...edge }))
     };
+    if (graph.subgraphs) clone.subgraphs = graph.subgraphs;
+    return clone;
   }
 
   _handleGraphSet(msg) {
