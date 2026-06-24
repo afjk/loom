@@ -74,12 +74,14 @@ function normalizeStringArray(value) {
 // scene/io effect is treated as pure compute. Unknown custom nodes are NOT
 // covered here and remain unclassified.
 const PURE_BUILTIN_PREFIXES = ['math.', 'logic.', 'text.', 'list.', 'json.'];
+// Only genuinely pure event/value transforms. Effectful or stateful nodes
+// (e.g. `log` writes a runtime effect, `lowpass`/`integrate` carry state) are
+// deliberately excluded so they stay unclassified rather than reported pure.
 const PURE_BUILTIN_TYPES = new Set([
   'constant',
   'getComponent',
   'swizzle',
   'merge',
-  'log',
   'sample',
   'filter'
 ]);
@@ -115,19 +117,30 @@ export function resolveNodeCapabilities(type, definition) {
     definition &&
     (Array.isArray(definition.effects) ||
       Array.isArray(definition.requires) ||
+      Array.isArray(definition.reads) ||
+      Array.isArray(definition.writes) ||
       typeof definition.determinism === 'string');
 
   if (hasExplicit) {
+    const effects = normalizeStringArray(definition.effects);
+    const requires = normalizeStringArray(definition.requires);
+    let determinism;
+    if (typeof definition.determinism === 'string') {
+      determinism = definition.determinism;
+    } else if (effects.length === 0 && requires.every((cap) => cap === 'pure.compute@1')) {
+      // No declared effects and only pure-compute requirements: treat as pure
+      // rather than weakening the graph to deterministic-with-env.
+      determinism = 'pure';
+    } else {
+      determinism = 'deterministic-with-env';
+    }
     return {
       classified: true,
-      effects: normalizeStringArray(definition.effects),
-      requires: normalizeStringArray(definition.requires),
+      effects,
+      requires,
       reads: normalizeStringArray(definition.reads),
       writes: normalizeStringArray(definition.writes),
-      determinism:
-        typeof definition.determinism === 'string'
-          ? definition.determinism
-          : 'deterministic-with-env'
+      determinism
     };
   }
 
@@ -146,25 +159,13 @@ export function resolveNodeCapabilities(type, definition) {
   };
 }
 
-function resolveNodeTypesMap(nodeTypes) {
-  if (!nodeTypes) {
-    return {};
+// Look up a node definition from either a registry (has getNodeType) or a
+// plain node-types map such as NODE_TYPES.
+function lookupDefinition(nodeTypes, type) {
+  if (nodeTypes && typeof nodeTypes.getNodeType === 'function') {
+    return nodeTypes.getNodeType(type);
   }
-  if (typeof nodeTypes.toObject === 'function') {
-    return nodeTypes.toObject();
-  }
-  if (typeof nodeTypes.getNodeType === 'function') {
-    // Registry-like object without toObject: wrap lookups lazily.
-    return nodeTypes;
-  }
-  return nodeTypes;
-}
-
-function lookupDefinition(nodeTypesMap, type) {
-  if (nodeTypesMap && typeof nodeTypesMap.getNodeType === 'function') {
-    return nodeTypesMap.getNodeType(type);
-  }
-  return nodeTypesMap ? nodeTypesMap[type] : undefined;
+  return nodeTypes ? nodeTypes[type] : undefined;
 }
 
 function weakestDeterminism(levels) {
@@ -180,7 +181,6 @@ function weakestDeterminism(levels) {
 
 // Build a static capability summary for a graph.
 export function summarizeGraphCapabilities(graph, nodeTypes) {
-  const nodeTypesMap = resolveNodeTypesMap(nodeTypes);
   const nodes = Array.isArray(graph?.nodes) ? graph.nodes : [];
 
   const perNode = [];
@@ -195,7 +195,7 @@ export function summarizeGraphCapabilities(graph, nodeTypes) {
     if (!node || typeof node.type !== 'string') {
       continue;
     }
-    const definition = lookupDefinition(nodeTypesMap, node.type);
+    const definition = lookupDefinition(nodeTypes, node.type);
     const caps = resolveNodeCapabilities(node.type, definition);
 
     perNode.push({

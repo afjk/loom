@@ -38,6 +38,29 @@ test('unknown custom nodes are left unclassified', () => {
   assert.deepEqual(caps.requires, []);
 });
 
+test('a node annotated with only reads is treated as explicitly classified', () => {
+  const caps = resolveNodeCapabilities('sensor.read', {
+    category: 'source',
+    reads: ['env.sensor']
+  });
+  assert.equal(caps.classified, true);
+  assert.deepEqual(caps.reads, ['env.sensor']);
+});
+
+test('an explicitly pure node without a determinism string is reported pure', () => {
+  const caps = resolveNodeCapabilities('pure.custom', {
+    category: 'transform',
+    effects: [],
+    requires: ['pure.compute@1']
+  });
+  assert.equal(caps.determinism, 'pure');
+});
+
+test('effectful log node is not classified pure', () => {
+  const caps = resolveNodeCapabilities('log', NODE_TYPES.log);
+  assert.equal(caps.classified, false);
+});
+
 test('summarizeGraphCapabilities aggregates requirements and weakest determinism', () => {
   const graph = compileGraph('import scene\nscene.setPosition("box", x: clock())');
   const summary = summarizeGraphCapabilities(graph, NODE_TYPES);
