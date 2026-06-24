@@ -19,7 +19,8 @@ For the machine-checkable, per-graph version of "will this run here", see the
 capability metadata and `checkHostCompatibility()` from
 [Graph Capability Metadata v0](./design/graph-capability-metadata-v0.md) (#286),
 run `loomlet check-compat <file> --target <host>` (see the [CLI guide](./cli.md)),
-or open the **Compatibility** tab in the Web Node Editor.
+open the **Compatibility** tab in the Web Node Editor, or set `loomlet.targetHost`
+in the VS Code extension to get inline compatibility warnings.
 
 The #286 profiles are a **coarse, declared capability contract** (the tokens a
 host is expected to provide). This guide is **finer-grained and reflects current

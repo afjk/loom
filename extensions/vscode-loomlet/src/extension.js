@@ -7,7 +7,7 @@ const { getCompletionContext } = require('./completion-context');
 const { buildCompletions: buildRawCompletions, getIncludePlanned } = require('./completion-engine');
 const { VSCODE_EXAMPLES } = require('./examples.js');
 const { LIBRARY_REFERENCE, getLibraryReference } = require('./library-reference.js');
-const { isLoomletDocument, normalizeLoomletErrorLocation, collectLoomletDiagnosticItems, ensureModulesLoaded } = require('./diagnostics.js');
+const { isLoomletDocument, normalizeLoomletErrorLocation, collectLoomletDiagnosticItems, collectCompatibilityDiagnosticItems, ensureModulesLoaded } = require('./diagnostics.js');
 const { clampCoordinates } = require('./range-utils.js');
 const { ensurePreviewModulesLoaded, buildPreviewModelFromDsl } = require('./preview-model.js');
 
@@ -671,14 +671,17 @@ function validateLoomletDocument(document, diagnosticCollection) {
     const sourceText = document.getText();
     const errorItems = collectLoomletDiagnosticItems(sourceText);
 
-    if (errorItems.length === 0) {
-      diagnosticCollection.set(document.uri, []);
-      return;
-    }
-
     const diagnostics = errorItems
       .map((error) => diagnosticFromLoomletError(error, document))
       .filter((d) => d !== null);
+
+    const targetHost = vscode.workspace
+      .getConfiguration()
+      .get('loomlet.targetHost', 'none');
+    const compatItems = collectCompatibilityDiagnosticItems(sourceText, targetHost);
+    for (const item of compatItems) {
+      diagnostics.push(diagnosticFromCompatItem(item, document));
+    }
 
     diagnosticCollection.set(document.uri, diagnostics);
   } catch (err) {
@@ -716,6 +719,29 @@ function diagnosticFromLoomletError(error, document) {
   if (normalized.code) {
     diagnostic.code = normalized.code;
   }
+
+  return diagnostic;
+}
+
+function diagnosticFromCompatItem(item, document) {
+  // Capability requirements are graph-level, not tied to a source span, so
+  // anchor compatibility warnings at the start of the document.
+  const clamped = clampCoordinates(0, 0, 0, 1, document);
+  const range = new vscode.Range(
+    clamped.startLine,
+    clamped.startColumn,
+    clamped.endLine,
+    clamped.endColumn
+  );
+
+  const diagnostic = new vscode.Diagnostic(
+    range,
+    item.message,
+    vscode.DiagnosticSeverity.Warning
+  );
+
+  diagnostic.source = 'loomlet';
+  diagnostic.code = item.code || 'HOST_INCOMPATIBLE';
 
   return diagnostic;
 }
