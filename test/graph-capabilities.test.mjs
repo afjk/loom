@@ -22,7 +22,21 @@ test('built-in MVP nodes carry explicit capability metadata', () => {
   assert.deepEqual(NODE_TYPES.onEvent.requires, ['env.events@1']);
   assert.deepEqual(NODE_TYPES.sendEvent.requires, ['event.emit@1']);
   assert.deepEqual(NODE_TYPES['scene.setPosition'].requires, ['scene.object.transform.write@1']);
+  assert.deepEqual(NODE_TYPES['scene.setVisible'].requires, ['scene.object.visibility.write@1']);
+  assert.deepEqual(NODE_TYPES['scene.setColor'].requires, ['scene.object.material.write@1']);
   assert.deepEqual(NODE_TYPES['audioSource.play'].requires, ['scene.object.audio.control@1']);
+});
+
+test('color/visibility graphs are full on web-scenesync and export-viewer, unsupported on unity/cli', () => {
+  const graph = compileGraph('import scene\nscene.setColor("box", r: 1, g: 0, b: 0)\nscene.setVisible("box", visible: false)');
+  for (const host of ['web-scenesync', 'export-viewer']) {
+    assert.equal(checkHostCompatibility(graph, NODE_TYPES, host).status, 'full', host);
+  }
+  const unity = checkHostCompatibility(graph, NODE_TYPES, 'unity-runtime');
+  assert.equal(unity.status, 'unsupported');
+  const unityCaps = unity.unsupported.map((u) => u.capability).sort();
+  assert.deepEqual(unityCaps, ['scene.object.material.write@1', 'scene.object.visibility.write@1']);
+  assert.equal(checkHostCompatibility(graph, NODE_TYPES, 'cli').status, 'unsupported');
 });
 
 test('pure library nodes resolve to pure.compute via the built-in default', () => {

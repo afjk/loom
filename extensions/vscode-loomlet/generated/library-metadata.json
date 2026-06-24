@@ -466,6 +466,64 @@
               "description": "Z offset."
             }
           ]
+        },
+        {
+          "name": "setVisible",
+          "fullName": "scene.setVisible",
+          "status": "implemented",
+          "signature": "scene.setVisible(objectId: \"...\", visible: true)",
+          "description": "Shows or hides a scene object.",
+          "returns": "void",
+          "allowsTwoPositionalArgs": false,
+          "inputs": [
+            {
+              "name": "objectId",
+              "type": "string",
+              "positional": true,
+              "description": "ID of the object."
+            },
+            {
+              "name": "visible",
+              "type": "boolean",
+              "positional": false,
+              "description": "Whether the object is visible."
+            }
+          ]
+        },
+        {
+          "name": "setColor",
+          "fullName": "scene.setColor",
+          "status": "implemented",
+          "signature": "scene.setColor(objectId: \"...\", r: 1, g: 1, b: 1)",
+          "description": "Sets the material color of a scene object (RGB, 0..1).",
+          "returns": "void",
+          "allowsTwoPositionalArgs": false,
+          "inputs": [
+            {
+              "name": "objectId",
+              "type": "string",
+              "positional": true,
+              "description": "ID of the object."
+            },
+            {
+              "name": "r",
+              "type": "number",
+              "positional": false,
+              "description": "Red channel, 0..1."
+            },
+            {
+              "name": "g",
+              "type": "number",
+              "positional": false,
+              "description": "Green channel, 0..1."
+            },
+            {
+              "name": "b",
+              "type": "number",
+              "positional": false,
+              "description": "Blue channel, 0..1."
+            }
+          ]
         }
       ]
     },

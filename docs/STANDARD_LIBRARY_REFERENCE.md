@@ -352,6 +352,40 @@ Arguments:
 | y | number | no | Y offset. |
 | z | number | no | Z offset. |
 
+### scene.setVisible
+
+Signature: `scene.setVisible(objectId: "...", visible: true)`
+
+Returns: `void`
+Status: `implemented`
+
+Shows or hides a scene object.
+
+Arguments:
+
+| Name | Type | Positional | Description |
+|---|---|---:|---|
+| objectId | string | yes | ID of the object. |
+| visible | boolean | no | Whether the object is visible. |
+
+### scene.setColor
+
+Signature: `scene.setColor(objectId: "...", r: 1, g: 1, b: 1)`
+
+Returns: `void`
+Status: `implemented`
+
+Sets the material color of a scene object (RGB, 0..1).
+
+Arguments:
+
+| Name | Type | Positional | Description |
+|---|---|---:|---|
+| objectId | string | yes | ID of the object. |
+| r | number | no | Red channel, 0..1. |
+| g | number | no | Green channel, 0..1. |
+| b | number | no | Blue channel, 0..1. |
+
 ## audioSource
 
 AudioSource component playback control through a host adapter

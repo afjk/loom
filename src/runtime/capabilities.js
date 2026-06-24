@@ -19,6 +19,8 @@ export const KNOWN_CAPABILITIES = [
   'env.events@1',
   'event.emit@1',
   'scene.object.transform.write@1',
+  'scene.object.visibility.write@1',
+  'scene.object.material.write@1',
   'scene.object.audio.control@1'
 ];
 
@@ -31,6 +33,8 @@ export const HOST_CAPABILITIES = {
     'env.events@1',
     'event.emit@1',
     'scene.object.transform.write@1',
+    'scene.object.visibility.write@1',
+    'scene.object.material.write@1',
     'scene.object.audio.control@1'
   ],
   'unity-runtime': [
@@ -43,6 +47,8 @@ export const HOST_CAPABILITIES = {
     'pure.compute@1',
     'env.time.seconds@1',
     'scene.object.transform.write@1',
+    'scene.object.visibility.write@1',
+    'scene.object.material.write@1',
     'scene.object.audio.control@1'
   ],
   cli: [

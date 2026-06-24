@@ -70,6 +70,8 @@ Capability tokens are `name@version` strings. v0 set:
 | `env.events@1` | Host-provided committed events (`onEvent`) |
 | `event.emit@1` | Emitting events back to the host (`sendEvent`) |
 | `scene.object.transform.write@1` | Writing object transform (position/rotation/scale) |
+| `scene.object.visibility.write@1` | Writing object visibility (`scene.setVisible`) |
+| `scene.object.material.write@1` | Writing object material color (`scene.setColor`) |
 | `scene.object.audio.control@1` | Controlling an object AudioSource component |
 
 Effect classes (v0): `TimeRead`, `InputRead`, `EventRead`, `EventWrite`,
@@ -120,14 +122,17 @@ Each host declares the capability tokens it provides. v0 profiles:
 | `env.events@1` | ✅ | – | – | ✅ |
 | `event.emit@1` | ✅ | – | – | ✅ |
 | `scene.object.transform.write@1` | ✅ | ✅ | ✅ | – |
-| `scene.object.audio.control@1` | ✅ | ✅ | ✅ | – |
+| `scene.object.visibility.write@1` | ✅ | – | ✅ | – |
+| `scene.object.material.write@1` | ✅ | – | ✅ | – |
+| `scene.object.audio.control@1` | ✅ | – | ✅ | – |
 
 Notes:
 
 - `cli` has no scene/audio host, so `SceneWrite` / `AudioControl` are meaningless
   there.
-- `unity-runtime` and `export-viewer` are conservative for live input/events in
-  v0; promote tokens as those runtimes mature.
+- `unity-runtime` is conservative in v0: no live input/events, and no audio or
+  material/visibility writes until the Unity runtime implements them. `export-viewer`
+  is conservative for live input/events. Promote tokens as those runtimes mature.
 - These sets are intentionally editable data, not a frozen contract.
 
 ## Compatibility report

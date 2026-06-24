@@ -77,10 +77,10 @@ check.
   behavior are designed (see [Output Conflict Policy v0](./design/output-conflict-policy-v0.md)),
   but some Scene Sync-side edit-override behavior is still deferred.
 - **planned**: viewer/distance input, hover/activate/gaze.
-- Note: `scene.setColor` / `scene.setVisible` are implemented on the Scene Sync
-  path (graph adapter + browser runtime), but are not yet in the portable JS
-  node registry (`src/nodes/scene.js`) and have no #286 capability token. The
-  capability check therefore does not model color/visibility yet.
+- Note: `scene.setColor` / `scene.setVisible` are portable JS nodes with
+  `scene.object.material.write@1` / `scene.object.visibility.write@1` capability
+  tokens, so the #286 compatibility check models them. Scene Sync Web and Export
+  Viewer grant both tokens; Unity and CLI do not.
 
 ### Unity Runtime (`unity-runtime`)
 
@@ -127,13 +127,11 @@ check.
 
 ## Notes on unsupported items
 
-- **Color / Visibility**: `scene.setColor` / `scene.setVisible` run today on the
-  Scene Sync path (Scene Sync Web and Export Viewer), but only there — they live
-  in the Scene Sync graph adapter and browser runtime, not in the portable JS
-  node registry (`src/nodes/scene.js`), and they have no #286 capability token.
-  Promoting them to portable nodes with `scene.object.material.write@1` /
-  `scene.object.visibility.write@1` tokens would make Unity a candidate and let
-  the compatibility check model them (see `docs/NODE_GAPS.md`).
+- **Color / Visibility**: `scene.setColor` / `scene.setVisible` are portable JS
+  nodes carrying `scene.object.material.write@1` /
+  `scene.object.visibility.write@1` capabilities, and run today on Scene Sync Web
+  and Export Viewer. Unity is the remaining candidate: it needs host-side
+  material/visibility write support before its cells move off `planned`.
 - **Viewer / distance input** and **Hover / activate / gaze**: these are host
   interaction facts. There are DOM `pointerClick` / `pointerPosition` nodes for
   the simple web editor, but no portable viewer/interaction input vocabulary in
@@ -149,10 +147,10 @@ check.
 
 - Add `godot-runtime` as a real (initially minimal) host once a runtime exists,
   and give it a capability profile in `src/runtime/capabilities.js`.
-- Promote `scene.setColor` / `scene.setVisible` from the Scene Sync-only path to
-  portable JS nodes with `scene.object.material.write@1` /
-  `scene.object.visibility.write@1` capabilities, then extend host support
-  (Unity) and update this matrix.
+- Add Unity host-side material/visibility write support so `scene.setColor` /
+  `scene.setVisible` (already portable nodes with
+  `scene.object.material.write@1` / `scene.object.visibility.write@1`) can move
+  off `planned` for Unity, then update this matrix.
 - Define a portable viewer/distance and hover/activate/gaze input vocabulary,
   then map it onto host capabilities.
 - Promote Unity transform write from `experimental` to `full` after host-side
