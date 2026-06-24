@@ -33,6 +33,10 @@ export function registerAudioNodes(registry) {
     const slots = [objectIdInput, nameInput, ...extraInputs];
     registry.registerNodeType(type, {
       category: 'sink',
+      effects: ['AudioControl'],
+      requires: ['scene.object.audio.control@1'],
+      writes: ['object.self.audioSource'],
+      determinism: 'deterministic-with-env',
       inputs: slots,
       outputs: [],
       params: slots.map((slot) => ({ name: slot.name, type: slot.type, default: slot.default })),

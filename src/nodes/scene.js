@@ -1,6 +1,10 @@
 export function registerSceneNodes(registry) {
   registry.registerNodeType('scene.offsetPosition', {
     category: 'sink',
+    effects: ['SceneWrite'],
+    requires: ['scene.object.transform.write@1'],
+    writes: ['object.self.position'],
+    determinism: 'deterministic-with-env',
     inputs: [
       { name: 'objectId', type: 'string', default: '', kind: 'behavior' },
       { name: 'x', type: 'number', default: 0, kind: 'behavior' },
@@ -27,6 +31,10 @@ export function registerSceneNodes(registry) {
   });
   registry.registerNodeType('scene.setPosition', {
     category: 'sink',
+    effects: ['SceneWrite'],
+    requires: ['scene.object.transform.write@1'],
+    writes: ['object.self.position'],
+    determinism: 'deterministic-with-env',
     inputs: [
       { name: 'objectId', type: 'string', default: '', kind: 'behavior' },
       { name: 'x', type: 'number', default: 0, kind: 'behavior' },
@@ -53,6 +61,10 @@ export function registerSceneNodes(registry) {
   });
   registry.registerNodeType('scene.setRotation', {
     category: 'sink',
+    effects: ['SceneWrite'],
+    requires: ['scene.object.transform.write@1'],
+    writes: ['object.self.rotation'],
+    determinism: 'deterministic-with-env',
     inputs: [
       { name: 'objectId', type: 'string', default: '', kind: 'behavior' },
       { name: 'x', type: 'number', default: 0, kind: 'behavior' },
@@ -81,6 +93,10 @@ export function registerSceneNodes(registry) {
   });
   registry.registerNodeType('scene.setScale', {
     category: 'sink',
+    effects: ['SceneWrite'],
+    requires: ['scene.object.transform.write@1'],
+    writes: ['object.self.scale'],
+    determinism: 'deterministic-with-env',
     inputs: [
       { name: 'objectId', type: 'string', default: '', kind: 'behavior' },
       { name: 'x', type: 'number', default: 1, kind: 'behavior' },
