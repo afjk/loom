@@ -2344,6 +2344,9 @@ async function handleCheckCompat(args) {
       index += 1;
     } else if (arg.startsWith('--target=')) {
       targetHost = arg.slice('--target='.length);
+      if (!targetHost) {
+        throw new Error('--target requires a host profile name');
+      }
     } else if (arg === '--json') {
       asJson = true;
     } else {

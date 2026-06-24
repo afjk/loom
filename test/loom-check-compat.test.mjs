@@ -83,3 +83,10 @@ test('check-compat requires a file argument', () => {
   assert.equal(result.status, 1);
   assert.match(result.stderr, /check-compat requires <file>/);
 });
+
+test('check-compat rejects an empty --target= value instead of silently passing', () => {
+  const file = writeTemp('scene.loom', SCENE_SOURCE);
+  const result = runCli(['check-compat', file, '--target=']);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /--target requires a host profile name/);
+});
