@@ -15,6 +15,7 @@ import { compileLoomToSceneSyncGraph } from '../../src/scenesync/graph-adapter.j
 import { createSceneGraphSetPayload, createSceneGraphClearPayload } from '../../src/scenesync/graphs.js';
 import {
   graphToEditorModel,
+  subgraphBodyToEditorModel,
   editorModelToGraph,
   applyNodeEditorOperationState,
   preserveEditorModelLayout,
@@ -153,6 +154,10 @@ const elements = {
   errorsList: document.getElementById('errors-list'),
   compatPanel: document.getElementById('compat-panel'),
   functionsPanel: document.getElementById('functions-panel'),
+  fnSubviewOverlay: document.getElementById('fn-subview-overlay'),
+  fnSubviewTitle: document.getElementById('fn-subview-title'),
+  fnSubviewClose: document.getElementById('fn-subview-close'),
+  fnSubviewCanvas: document.getElementById('fn-subview-canvas'),
   inspectorPanel: document.getElementById('inspector-panel'),
   applyDslBtn: document.getElementById('applyDslBtn'),
   generateDslBtn: document.getElementById('generateDslBtn'),
@@ -1129,11 +1134,14 @@ function renderFunctions() {
   try {
     const { graph, errors } = compileToGraph(ast, { functionLowering: 'subgraph' });
     if (errors && errors.length) {
+      subgraphGraphCache = null;
       elements.functionsPanel.innerHTML = emptyState;
       return;
     }
+    subgraphGraphCache = graph;
     defs = subgraphsToFnDefinitions(graph);
   } catch (error) {
+    subgraphGraphCache = null;
     elements.functionsPanel.innerHTML =
       `<div class="empty-state">Functions unavailable: ${escapeHtml(error.message)}</div>`;
     return;
@@ -1145,11 +1153,48 @@ function renderFunctions() {
   }
 
   const rows = defs.map((fn) => `
-    <div class="fn-item">
+    <div class="fn-item" data-fn-name="${escapeHtml(fn.name)}" role="button" tabindex="0" title="Open function body">
       <div class="fn-sig"><span class="fn-keyword">fn</span> ${escapeHtml(fn.name)}(${fn.params.map(escapeHtml).join(', ')})</div>
       <div class="fn-body">=&gt; ${escapeHtml(fn.body)}</div>
     </div>`).join('');
   elements.functionsPanel.innerHTML = `<div class="fn-list">${rows}</div>`;
+}
+
+// --- Function body drill-in subview (read-only) ---
+let subgraphGraphCache = null;
+let fnSubviewEditor = null;
+
+async function openFunctionSubview(name) {
+  if (!elements.fnSubviewOverlay || !subgraphGraphCache) {
+    return;
+  }
+  const model = subgraphBodyToEditorModel(subgraphGraphCache, name);
+  if (!model) {
+    return;
+  }
+  const def = subgraphGraphCache.subgraphs?.[name];
+  const params = def ? def.params.join(', ') : '';
+  if (elements.fnSubviewTitle) {
+    elements.fnSubviewTitle.textContent = `ƒ ${name}(${params})`;
+  }
+  elements.fnSubviewOverlay.hidden = false;
+
+  try {
+    if (!fnSubviewEditor) {
+      // Read-only: no operation/context-menu callbacks are wired.
+      fnSubviewEditor = new NodeEditorView(elements.fnSubviewCanvas, {});
+    }
+    await fnSubviewEditor.renderModel(model, { force: true });
+    fnSubviewEditor.zoomToFit?.();
+  } catch (error) {
+    console.error('Failed to render function subview:', error);
+  }
+}
+
+function closeFunctionSubview() {
+  if (elements.fnSubviewOverlay) {
+    elements.fnSubviewOverlay.hidden = true;
+  }
 }
 
 function renderCompatibility(graph) {
@@ -2849,6 +2894,35 @@ function setupEventListeners() {
   });
 
   elements.clearOutputBtn?.addEventListener('click', clearOutput);
+
+  // Function drill-in subview
+  elements.functionsPanel?.addEventListener('click', (event) => {
+    const item = event.target.closest('.fn-item[data-fn-name]');
+    if (item) {
+      openFunctionSubview(item.getAttribute('data-fn-name'));
+    }
+  });
+  elements.functionsPanel?.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+    const item = event.target.closest('.fn-item[data-fn-name]');
+    if (item) {
+      event.preventDefault();
+      openFunctionSubview(item.getAttribute('data-fn-name'));
+    }
+  });
+  elements.fnSubviewClose?.addEventListener('click', closeFunctionSubview);
+  elements.fnSubviewOverlay?.addEventListener('click', (event) => {
+    if (event.target === elements.fnSubviewOverlay) {
+      closeFunctionSubview();
+    }
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && elements.fnSubviewOverlay && !elements.fnSubviewOverlay.hidden) {
+      closeFunctionSubview();
+    }
+  });
 
   // Scene Sync event listeners
   elements.sceneSyncEndpoint?.addEventListener('input', saveSceneSyncSettings);
