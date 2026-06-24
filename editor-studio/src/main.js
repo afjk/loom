@@ -21,7 +21,7 @@ import {
   findNonOverlappingPosition,
   NODE_LAYOUT_STEP_Y
 } from '../../src/node-editor-core.js';
-import { graphToCanonicalDSL } from '../../src/canonical-dsl.js';
+import { graphToCanonicalDSL, subgraphsToFnDefinitions } from '../../src/canonical-dsl.js';
 import { patchOrCanonicalDslSource } from '../../src/source-dsl-patch.js';
 import { createStore } from './studio-store.js';
 import { NodeEditorView } from './node-editor-view.js';
@@ -152,6 +152,7 @@ const elements = {
   graphJson: document.getElementById('graph-json'),
   errorsList: document.getElementById('errors-list'),
   compatPanel: document.getElementById('compat-panel'),
+  functionsPanel: document.getElementById('functions-panel'),
   inspectorPanel: document.getElementById('inspector-panel'),
   applyDslBtn: document.getElementById('applyDslBtn'),
   generateDslBtn: document.getElementById('generateDslBtn'),
@@ -1107,6 +1108,48 @@ function renderGraphJSON(graph) {
   const json = JSON.stringify(graph, null, 2);
   elements.graphJson.textContent = json;
   renderCompatibility(graph);
+  renderFunctions();
+}
+
+// Read-only "Functions" panel: list the `fn` definitions the current source
+// declares as reusable units. Derived from a subgraph-mode compile of the
+// stored AST, so the node canvas (compiled inline) is untouched.
+function renderFunctions() {
+  if (!elements.functionsPanel) {
+    return;
+  }
+  const emptyState = '<div class="empty-state">No functions defined</div>';
+  const ast = store.getState().sourceAst;
+  if (!ast) {
+    elements.functionsPanel.innerHTML = emptyState;
+    return;
+  }
+
+  let defs;
+  try {
+    const { graph, errors } = compileToGraph(ast, { functionLowering: 'subgraph' });
+    if (errors && errors.length) {
+      elements.functionsPanel.innerHTML = emptyState;
+      return;
+    }
+    defs = subgraphsToFnDefinitions(graph);
+  } catch (error) {
+    elements.functionsPanel.innerHTML =
+      `<div class="empty-state">Functions unavailable: ${escapeHtml(error.message)}</div>`;
+    return;
+  }
+
+  if (!defs.length) {
+    elements.functionsPanel.innerHTML = emptyState;
+    return;
+  }
+
+  const rows = defs.map((fn) => `
+    <div class="fn-item">
+      <div class="fn-sig"><span class="fn-keyword">fn</span> ${escapeHtml(fn.name)}(${fn.params.map(escapeHtml).join(', ')})</div>
+      <div class="fn-body">=&gt; ${escapeHtml(fn.body)}</div>
+    </div>`).join('');
+  elements.functionsPanel.innerHTML = `<div class="fn-list">${rows}</div>`;
 }
 
 function renderCompatibility(graph) {

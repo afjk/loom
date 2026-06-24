@@ -1345,3 +1345,39 @@ button:disabled:hover,
 .compat-detail .compat-unclassified {
   color: #b0b0b0;
 }
+
+/* Functions panel (fn definitions) */
+.functions-panel {
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow: auto;
+}
+
+.fn-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fn-item {
+  background: var(--editor-bg-subtle);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-family: var(--mono-font, monospace);
+}
+
+.fn-sig {
+  color: var(--text-color);
+}
+
+.fn-keyword {
+  color: #80ed99;
+  font-weight: 600;
+}
+
+.fn-body {
+  margin-top: 2px;
+  color: var(--text-dim);
+  word-break: break-word;
+}
