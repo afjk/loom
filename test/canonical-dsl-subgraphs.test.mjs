@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseDSLToAST, compileToGraph, graphToCanonicalDSL, Loom } from '../src/index.js';
+import { parseDSLToAST, compileToGraph, graphToCanonicalDSL, subgraphsToFnDefinitions, Loom } from '../src/index.js';
 
 function compileSubgraph(src) {
   const { ast, errors } = parseDSLToAST(src);
@@ -15,6 +15,30 @@ function evalRef(graph, ref, env = { time: 5 }) {
   engine.evaluateOnce({ env });
   return engine.getValue(ref);
 }
+
+test('subgraphsToFnDefinitions lists each function as a reusable unit', () => {
+  const defs = subgraphsToFnDefinitions(compileSubgraph('fn double(x) => add(x, x)\na = double(5)'));
+  assert.equal(defs.length, 1);
+  assert.equal(defs[0].name, 'double');
+  assert.deepEqual(defs[0].params, ['x']);
+  assert.match(defs[0].signature, /^fn double\(x\) => add\(/);
+});
+
+test('subgraphsToFnDefinitions covers nested function references', () => {
+  const defs = subgraphsToFnDefinitions(
+    compileSubgraph('fn double(x) => add(x, x)\nfn quadruple(x) => double(double(x))\nv = quadruple(3)')
+  );
+  const names = defs.map((d) => d.name).sort();
+  assert.deepEqual(names, ['double', 'quadruple']);
+  const quad = defs.find((d) => d.name === 'quadruple');
+  assert.match(quad.body, /double\(double\(x\)\)/);
+});
+
+test('subgraphsToFnDefinitions returns [] for a graph with no functions', () => {
+  const { ast } = parseDSLToAST('a = add(1, 2)');
+  const { graph } = compileToGraph(ast);
+  assert.deepEqual(subgraphsToFnDefinitions(graph), []);
+});
 
 test('canonical DSL renders subgraphs as fn definitions', () => {
   const dsl = graphToCanonicalDSL(compileSubgraph('fn double(x) => add(x, x)\na = double(5)'));

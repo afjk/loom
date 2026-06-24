@@ -19,7 +19,8 @@ export {
   NODE_LAYOUT_MAX_COLS
 } from './node-editor-core.js';
 export {
-  graphToCanonicalDSL
+  graphToCanonicalDSL,
+  subgraphsToFnDefinitions
 } from './canonical-dsl.js';
 
 export {

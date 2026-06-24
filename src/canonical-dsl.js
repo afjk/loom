@@ -76,6 +76,24 @@ function renderSubgraphBody(def, subgraphs) {
   return renderNode(splitRef(def.output)[0]);
 }
 
+// Describe each shared subgraph definition in a graph as a reusable function
+// unit: { name, params, body, signature }. Intended for UI surfaces (the Node
+// Editor "Functions" panel) that list the functions a graph defines without
+// re-implementing body rendering. Returns [] when the graph defines none.
+export function subgraphsToFnDefinitions(graph) {
+  const subgraphs = (graph && graph.subgraphs) || {};
+  return Object.entries(subgraphs).map(([name, def]) => {
+    const params = [...def.params];
+    const body = renderSubgraphBody(def, subgraphs);
+    return {
+      name,
+      params,
+      body,
+      signature: `fn ${name}(${params.join(', ')}) => ${body}`
+    };
+  });
+}
+
 // Order nodes so that a node's dependencies (the `from` endpoints of its
 // incoming edges) are emitted before it. Canonical DSL references nodes by name,
 // and the compiler requires definition-before-use, so creation order is not
