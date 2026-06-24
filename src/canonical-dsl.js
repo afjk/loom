@@ -1,17 +1,146 @@
 import { NODE_TYPES } from './loom.js';
 
+function splitRef(ref) {
+  const dot = ref.indexOf('.');
+  return dot === -1 ? [ref, ''] : [ref.slice(0, dot), ref.slice(dot + 1)];
+}
+
+// Count argN entries a subgraph.call node carries (edges + literal params),
+// used as a fallback when the referenced definition is unavailable.
+function subgraphCallArity(node, edges) {
+  let arity = 0;
+  for (let k = 1; ; k += 1) {
+    const hasEdge = edges.some((e) => e.to === `${node.id}.arg${k}`);
+    const hasParam = node.params && Object.prototype.hasOwnProperty.call(node.params, `arg${k}`);
+    if (!hasEdge && !hasParam) break;
+    arity = k;
+  }
+  return arity;
+}
+
+// Render a subgraph definition body ({nodes, edges, output}) back into a single
+// nested expression. `subgraph.param` nodes become parameter names; nested
+// `subgraph.call` nodes become positional function calls; regular nodes become
+// named calls whose arguments are recursively rendered source expressions.
+function renderSubgraphBody(def, subgraphs) {
+  const byId = new Map(def.nodes.map((n) => [n.id, n]));
+
+  const inEdges = (nodeId) => {
+    const map = {};
+    for (const edge of def.edges || []) {
+      const [toNode, toPort] = splitRef(edge.to);
+      if (toNode === nodeId) map[toPort] = edge.from;
+    }
+    return map;
+  };
+
+  function renderNode(nodeId) {
+    const node = byId.get(nodeId);
+    if (!node) return 'null';
+    if (node.type === 'subgraph.param') return node.params.name;
+    const incoming = inEdges(nodeId);
+
+    if (node.type === 'subgraph.call') {
+      const calledDef = subgraphs[node.params.subgraph];
+      const arity = calledDef ? calledDef.params.length : subgraphCallArity(node, def.edges || []);
+      const args = [];
+      for (let k = 1; k <= arity; k += 1) {
+        const port = `arg${k}`;
+        if (incoming[port]) args.push(renderNode(splitRef(incoming[port])[0]));
+        else if (node.params && node.params[port] !== undefined) args.push(formatValue(node.params[port]));
+        else args.push('null');
+      }
+      return `${node.params.subgraph}(${args.join(', ')})`;
+    }
+
+    const nodeType = NODE_TYPES[node.type];
+    const params = { ...node.params };
+    const inputNames = (nodeType?.inputs || []).map((inp) => inp.name || inp);
+    const args = [];
+    for (const inputName of inputNames) {
+      if (incoming[inputName]) {
+        args.push(`${inputName}: ${renderNode(splitRef(incoming[inputName])[0])}`);
+      } else if (params[inputName] !== undefined) {
+        args.push(formatParam(inputName, params[inputName]));
+        delete params[inputName];
+      }
+    }
+    for (const paramName of Object.keys(params)) {
+      if ((nodeType?.params || []).some((p) => (p.name || p) === paramName)) {
+        args.push(formatParam(paramName, params[paramName]));
+      }
+    }
+    return `${node.type}(${args.join(', ')})`;
+  }
+
+  return renderNode(splitRef(def.output)[0]);
+}
+
+// Order nodes so that a node's dependencies (the `from` endpoints of its
+// incoming edges) are emitted before it. Canonical DSL references nodes by name,
+// and the compiler requires definition-before-use, so creation order is not
+// enough for nested/anonymous subexpressions. Falls back to original order for
+// any nodes left over (e.g. unexpected cycles).
+function dependencyOrderedNodes(nodes, edges) {
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const deps = new Map(nodes.map((n) => [n.id, new Set()]));
+  for (const edge of edges || []) {
+    const [toNode] = splitRef(edge.to);
+    const [fromNode] = splitRef(edge.from);
+    if (deps.has(toNode) && byId.has(fromNode) && fromNode !== toNode) {
+      deps.get(toNode).add(fromNode);
+    }
+  }
+  const ordered = [];
+  const emitted = new Set();
+  const visiting = new Set();
+  const visit = (id) => {
+    if (emitted.has(id) || visiting.has(id)) return;
+    visiting.add(id);
+    for (const dep of deps.get(id)) visit(dep);
+    visiting.delete(id);
+    emitted.add(id);
+    ordered.push(byId.get(id));
+  };
+  for (const node of nodes) visit(node.id);
+  return ordered;
+}
+
 export function graphToCanonicalDSL(graph) {
   const lines = [];
   const imports = graph.imports || [];
+  const subgraphs = graph.subgraphs || {};
 
   for (const name of imports) {
     lines.push(`import ${name}`);
   }
-  if (imports.length && ((graph.nodes || []).length || graph.render)) {
+  if (imports.length && (Object.keys(subgraphs).length || (graph.nodes || []).length || graph.render)) {
     lines.push('');
   }
 
-  for (const node of graph.nodes || []) {
+  for (const [name, def] of Object.entries(subgraphs)) {
+    lines.push(`fn ${name}(${def.params.join(', ')}) => ${renderSubgraphBody(def, subgraphs)}`);
+  }
+  if (Object.keys(subgraphs).length && ((graph.nodes || []).length || graph.render)) {
+    lines.push('');
+  }
+
+  for (const node of dependencyOrderedNodes(graph.nodes || [], graph.edges || [])) {
+    if (node.type === 'subgraph.call') {
+      const def = subgraphs[node.params && node.params.subgraph];
+      const arity = def ? def.params.length : subgraphCallArity(node, graph.edges || []);
+      const args = [];
+      for (let k = 1; k <= arity; k += 1) {
+        const port = `arg${k}`;
+        const edge = (graph.edges || []).find((e) => e.to === `${node.id}.${port}`);
+        if (edge) args.push(splitRef(edge.from)[0]);
+        else if (node.params && node.params[port] !== undefined) args.push(formatValue(node.params[port]));
+        else args.push('null');
+      }
+      lines.push(`${node.id} = ${node.params.subgraph}(${args.join(', ')})`);
+      continue;
+    }
+
     const nodeType = NODE_TYPES[node.type];
     if (!nodeType) continue;
 
