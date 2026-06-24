@@ -180,7 +180,7 @@ Status rules:
 
 ## Future extensions
 
-- `loomlet check-compat graph.json --target unity` CLI.
+- ✅ `loomlet check-compat <file> [--target <host>]` CLI (implemented; see [CLI guide](../cli.md)).
 - Node Editor target-host compatibility badge and VS Code diagnostics.
 - Feed Host Capability Guide ([#290](https://github.com/afjk/loomlet/issues/290)).
 - `wasm.call.pure@1` / `wasm.call.component@1`, coordinate/unit semantic profiles.
