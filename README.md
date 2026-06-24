@@ -115,6 +115,7 @@ Search for `Loomlet` in the VS Code Marketplace.
 - [Stabilization roadmap](docs/STABILIZATION_ROADMAP.md)
 - [設計ノート（日本語）](docs/concepts.ja.md)
 - [Scene Sync integration](docs/scene-sync.md)
+- [Host Capability Guide](docs/HOST_CAPABILITY_GUIDE.md)
 - [Release and maintainer notes](docs/RELEASE.md)
 - [Standard library reference](docs/STANDARD_LIBRARY_REFERENCE.md)
 - [Runtime node registration](docs/RUNTIME_NODE_REGISTRATION.md)
