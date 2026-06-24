@@ -35,9 +35,13 @@ dynamic node reference (not a literal) and is read directly by its own binding
 name — e.g. `fn id(x) => x` then `v = id(clock())` read as `v.t` — does not
 materialize a node named `v` in subgraph mode. Literal passthroughs
 (`v = first(3, 9)`) and passthroughs feeding a downstream consumer behave
-identically to inline mode. Node Editor collapsible-group rendering, canonical-DSL
-rendering of `graph.subgraphs`, and making subgraph the default lowering are
-tracked as follow-ups under issue #306.
+identically to inline mode.
+
+Canonical DSL rendering supports subgraph-lowered graphs: `graphToCanonicalDSL`
+emits `fn name(params) => body` definitions and renders `subgraph.call` nodes as
+function calls, with nodes ordered so references resolve on reparse. Node Editor
+collapsible-group rendering and making subgraph the default lowering are tracked
+as follow-ups under issue #306.
 
 ## Supported
 
