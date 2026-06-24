@@ -17,7 +17,8 @@ authors) can see at a glance:
 
 For the machine-checkable, per-graph version of "will this run here", see the
 capability metadata and `checkHostCompatibility()` from
-[Graph Capability Metadata v0](./design/graph-capability-metadata-v0.md) (#286).
+[Graph Capability Metadata v0](./design/graph-capability-metadata-v0.md) (#286),
+or run `loomlet check-compat <file> --target <host>` (see the [CLI guide](./cli.md)).
 
 The #286 profiles are a **coarse, declared capability contract** (the tokens a
 host is expected to provide). This guide is **finer-grained and reflects current

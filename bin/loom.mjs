@@ -25,6 +25,12 @@ import {
 } from '../src/toolchain/index.js';
 import { createNodeRegistry } from '../src/runtime/node-registry.js';
 import { registerBuiltinNodes } from '../src/nodes/index.js';
+import { NODE_TYPES } from '../src/loom.js';
+import {
+  summarizeGraphCapabilities,
+  checkHostCompatibility,
+  listHostProfiles
+} from '../src/runtime/capabilities.js';
 import {
   DEFAULT_ENDPOINT as DEFAULT_SCENESYNC_ENDPOINT,
   SceneSyncClient,
@@ -159,6 +165,7 @@ Commands:
   format <file>    Format Loomlet DSL
   inspect <file>   Inspect Loomlet DSL and print a summary
   run <file>       Evaluate a Loomlet graph once
+  check-compat <file>  Check graph host compatibility
   repl             Start an interactive Loomlet REPL
   docs             Browse library documentation
   scenesync        Probe Scene Sync rooms
@@ -169,6 +176,7 @@ Examples:
   loomlet format examples/cli-basic.loom --check
   loomlet inspect examples/cli-basic.loom --json
   loomlet run examples/cli-basic.loom --get x.out --time 0.25
+  loomlet check-compat examples/cli-basic.loom --target unity-runtime
   loomlet docs
   loomlet docs text
   loomlet docs text.upper
@@ -186,6 +194,25 @@ Options:
   --pretty false      Print compact JSON
   --target <target>   Validate imports for a runtime target. Default: any
   --package <path>    Load a trusted local package file or manifest directory (repeatable)`;
+}
+
+function getCheckCompatHelp() {
+  return `Usage:
+  loomlet check-compat <file> [--target <host>] [--json] [--package <path>]
+
+Reports whether a Loomlet graph can run on a host, and which capabilities or
+nodes are unsupported. <file> may be a .loom source (compiled first) or a
+GraphJSON .json file.
+
+Options:
+  --target <host>   Check a single host profile. When omitted, every host is checked.
+                    Known hosts: ${listHostProfiles().join(', ')}
+  --json            Print the report(s) as JSON.
+  --package <path>  Load a trusted local package file or manifest directory (repeatable)
+
+Exit code:
+  Non-zero when --target is given and the graph requires a capability that host
+  does not provide. Unclassified custom nodes are reported as warnings only.`;
 }
 
 function getFormatHelp() {
@@ -2276,6 +2303,107 @@ async function handleDocs(args) {
   }
 }
 
+function formatCompatReport(report) {
+  const lines = [`${report.targetHost}: ${report.status}`];
+  if (report.supported.length > 0) {
+    lines.push(`  supported: ${report.supported.join(', ')}`);
+  }
+  for (const entry of report.unsupported) {
+    const nodes = entry.nodes.length > 0 ? ` (nodes: ${entry.nodes.join(', ')})` : '';
+    lines.push(`  unsupported: ${entry.capability}${nodes}`);
+  }
+  for (const entry of report.unclassified) {
+    lines.push(`  unclassified node: ${entry.nodeId} (${entry.type})`);
+  }
+  return lines.join('\n');
+}
+
+async function handleCheckCompat(args) {
+  if (args.includes('--help')) {
+    print(getCheckCompatHelp());
+    return 0;
+  }
+
+  const { file, rest } = parseCommonCommandArgs(args);
+  if (!file) {
+    throw new Error('check-compat requires <file>');
+  }
+
+  const { packages, rest: rest2 } = parsePackageArgs(rest);
+
+  let targetHost = null;
+  let asJson = false;
+  for (let index = 0; index < rest2.length; index += 1) {
+    const arg = rest2[index];
+    if (arg === '--target') {
+      const next = rest2[index + 1];
+      if (!next || next.startsWith('-')) {
+        throw new Error('--target requires a host profile name');
+      }
+      targetHost = next;
+      index += 1;
+    } else if (arg.startsWith('--target=')) {
+      targetHost = arg.slice('--target='.length);
+    } else if (arg === '--json') {
+      asJson = true;
+    } else {
+      throw new Error(`Unknown option: ${arg}`);
+    }
+  }
+
+  if (targetHost && !listHostProfiles().includes(targetHost)) {
+    throw new Error(
+      `Unknown host profile: ${targetHost}. Known hosts: ${listHostProfiles().join(', ')}`
+    );
+  }
+
+  const registries = await createCliRegistries({ packages });
+  const nodeTypes = registries.nodeRegistry ?? NODE_TYPES;
+
+  const source = await readSourceFile(file);
+  let graph;
+  if (file.toLowerCase().endsWith('.json')) {
+    try {
+      graph = JSON.parse(source);
+    } catch (error) {
+      throw new Error(`Failed to parse graph JSON from ${file}: ${error.message}`);
+    }
+  } else {
+    const result = compileLoomSource(source, {
+      filename: file,
+      target: 'any',
+      nodeRegistry: registries.nodeRegistry,
+      metadataRegistry: registries.metadataRegistry
+    });
+    if (!result.ok) {
+      printToolErrors(result.errors);
+      return 1;
+    }
+    graph = result.graph;
+  }
+
+  const summary = summarizeGraphCapabilities(graph, nodeTypes);
+  const targets = targetHost ? [targetHost] : listHostProfiles();
+  const reports = targets.map((host) => checkHostCompatibility(graph, nodeTypes, host));
+
+  if (asJson) {
+    const payload = targetHost
+      ? { requires: summary.requires, report: reports[0] }
+      : { requires: summary.requires, reports };
+    print(stringifyJson(payload, true));
+  } else {
+    print(`requires: ${summary.requires.length > 0 ? summary.requires.join(', ') : '(none)'}`);
+    print('');
+    print(reports.map(formatCompatReport).join('\n'));
+  }
+
+  // Non-zero exit when a specific target is missing a required capability.
+  if (targetHost && reports[0].unsupported.length > 0) {
+    return 1;
+  }
+  return 0;
+}
+
 async function handleRepl(args) {
   if (args.includes('--help')) {
     print(getReplHelp());
@@ -3264,6 +3392,8 @@ async function main() {
       exitCode = await handleInspect(args.slice(1));
     } else if (command === 'run') {
       exitCode = await handleRun(args.slice(1));
+    } else if (command === 'check-compat') {
+      exitCode = await handleCheckCompat(args.slice(1));
     } else if (command === 'repl') {
       exitCode = await handleRepl(args.slice(1));
     } else if (command === 'docs') {

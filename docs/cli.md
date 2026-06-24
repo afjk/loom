@@ -25,6 +25,32 @@ Related docs:
 - [REPL reference](REPL.md)
 - [Scene Sync integration](scene-sync.md)
 
+## Host compatibility check
+
+`loomlet check-compat` reports whether a graph can run on a host, and which
+capabilities or nodes are unsupported, without executing the graph. The input
+may be a `.loom` source (compiled first) or a GraphJSON `.json` file.
+
+```bash
+# Check every known host
+loomlet check-compat behavior.loom
+
+# Check a single host; exits non-zero if a required capability is missing
+loomlet check-compat behavior.loom --target unity-runtime
+
+# Machine-readable report
+loomlet check-compat behavior.loom --target unity-runtime --json
+```
+
+Known hosts: `web-scenesync`, `unity-runtime`, `export-viewer`, `cli`.
+
+The exit code is non-zero only when `--target` is given and the graph requires a
+capability that host does not provide. Unclassified custom nodes (no capability
+metadata) are reported as warnings and do not change the exit code. See the
+[Host Capability Guide](HOST_CAPABILITY_GUIDE.md) and
+[Graph Capability Metadata v0](design/graph-capability-metadata-v0.md) for the
+underlying model.
+
 ## Events-file playback
 
 `loomlet run` can replay a deterministic host-input/event script:
