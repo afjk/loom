@@ -192,6 +192,49 @@ export function graphToEditorModel(graph) {
   };
 }
 
+// Build a read-only editor model for a single function body, given a
+// subgraph-lowered graph and a function name. Used by the Node Editor's
+// function drill-in subview. `subgraph.param` nodes become labeled input nodes
+// and `subgraph.call` nodes get a "ƒ name" label. Returns null when the named
+// subgraph is absent.
+export function subgraphBodyToEditorModel(graph, name) {
+  const def = graph && graph.subgraphs && graph.subgraphs[name];
+  if (!def) {
+    return null;
+  }
+  const model = graphToEditorModel({ nodes: def.nodes || [], edges: def.edges || [] });
+
+  // Unregistered node types (subgraph.param / subgraph.call) have no NODE_TYPES
+  // definition, so derive their ports from the body's edges so the subview can
+  // draw connections. Each subgraph.param also exposes an `out` output.
+  const inPorts = new Map();
+  const outPorts = new Map();
+  for (const edge of def.edges || []) {
+    const [fromNode, fromPort] = edge.from.split('.');
+    const [toNode, toPort] = edge.to.split('.');
+    if (fromPort) (outPorts.get(fromNode) || outPorts.set(fromNode, new Set()).get(fromNode)).add(fromPort);
+    if (toPort) (inPorts.get(toNode) || inPorts.set(toNode, new Set()).get(toNode)).add(toPort);
+  }
+
+  for (const node of Object.values(model.nodesById)) {
+    if (NODE_TYPES[node.type]) {
+      continue;
+    }
+    const outs = new Set(outPorts.get(node.id) || []);
+    if (node.type === 'subgraph.param') {
+      node.category = 'input';
+      node.label = node.params?.name || 'param';
+      outs.add('out');
+    } else if (node.type === 'subgraph.call') {
+      node.label = `ƒ ${node.params?.subgraph || 'fn'}`;
+      outs.add('out');
+    }
+    node.inputPorts = [...(inPorts.get(node.id) || [])];
+    node.outputPorts = [...outs];
+  }
+  return model;
+}
+
 export function editorModelToGraph(em, originalGraph = null) {
   const nodes = em.order.map((id) => {
     const node = em.nodesById[id];

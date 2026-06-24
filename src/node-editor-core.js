@@ -1,6 +1,7 @@
 export {
   layoutFallback,
   graphToEditorModel,
+  subgraphBodyToEditorModel,
   editorModelToGraph,
   applyEditorOperation,
   preserveEditorModelLayout,

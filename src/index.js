@@ -3,6 +3,7 @@ export { parseDSLToAST, compileToGraph } from './loom-dsl.js';
 export { expandSubgraphs } from './runtime/subgraph-expand.js';
 export {
   graphToEditorModel,
+  subgraphBodyToEditorModel,
   editorModelToGraph,
   applyEditorOperation,
   preserveEditorModelLayout,

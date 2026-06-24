@@ -53,6 +53,15 @@ function createReteNode(editorNode, onControl, previewText) {
       const name = getPortName(output);
       node.addOutput(name, new ClassicPreset.Output(socket, name));
     }
+  } else if (editorNode.inputPorts || editorNode.outputPorts) {
+    // Unregistered types (e.g. subgraph.param / subgraph.call in the function
+    // drill-in subview) carry explicit port names derived from their edges.
+    for (const name of editorNode.inputPorts || []) {
+      node.addInput(name, new ClassicPreset.Input(socket, name));
+    }
+    for (const name of editorNode.outputPorts || []) {
+      node.addOutput(name, new ClassicPreset.Output(socket, name));
+    }
   }
 
   const paramDefs = nodeTypeDef?.params || [];

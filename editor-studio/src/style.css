@@ -1381,3 +1381,72 @@ button:disabled:hover,
   color: var(--text-dim);
   word-break: break-word;
 }
+
+/* Function drill-in: clickable rows */
+.fn-item[data-fn-name] {
+  cursor: pointer;
+}
+
+.fn-item[data-fn-name]:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.fn-item[data-fn-name]:focus-visible {
+  outline: 1px solid var(--primary-color);
+  outline-offset: 1px;
+}
+
+/* Function body subview overlay */
+.fn-subview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.fn-subview-overlay[hidden] {
+  display: none;
+}
+
+.fn-subview-dialog {
+  width: min(900px, 88vw);
+  height: min(620px, 82vh);
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-bg-strong, rgba(20, 20, 20, 0.96));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.fn-subview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.fn-subview-title {
+  font-family: var(--mono-font, monospace);
+  color: var(--text-color);
+  font-size: 14px;
+}
+
+.fn-subview-canvas {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: var(--editor-bg-subtle, rgba(20, 20, 20, 0.18));
+}
+
+.fn-subview-hint {
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
