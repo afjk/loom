@@ -102,10 +102,24 @@ export function expandSubgraphs(graph) {
       }
     }
 
-    // The call's output as seen by outer consumers.
-    const outSource = outIsParam
-      ? argSourceByName.get(paramNodeName.get(outNode))
-      : { ref: `${call.id}.${outPort}` };
+    // Resolve how the call's output is materialized for outer consumers.
+    let consumerSource;
+    if (!outIsParam) {
+      // The body output node was renamed to the call id (port may differ from 'out').
+      consumerSource = { ref: `${call.id}.${outPort}` };
+    } else {
+      const paramSrc = argSourceByName.get(paramNodeName.get(outNode));
+      if (paramSrc && 'literal' in paramSrc) {
+        // Passthrough of a literal: inline mode emits a `constant` node named
+        // after the call site, so reads by name still resolve. Mirror that.
+        newNodes.push({ id: call.id, type: 'constant', params: { value: paramSrc.literal } });
+        consumerSource = { ref: `${call.id}.out` };
+      } else {
+        // Passthrough of a port ref (or missing arg): consumers read it directly,
+        // exactly as inline mode aliases the assignment to the source node.
+        consumerSource = paramSrc;
+      }
+    }
 
     const keptEdges = [];
     for (const e of edges) {
@@ -113,13 +127,7 @@ export function expandSubgraphs(graph) {
       const [toNode, toPort] = splitRef(e.to);
       if (toNode === call.id) continue; // drop argument edges into the call
       if (fromNode === call.id) {
-        if (outIsParam) {
-          applySource(outSource, toNode, toPort, keptEdges, nodes);
-        } else if (outPort !== 'out') {
-          keptEdges.push({ from: `${call.id}.${outPort}`, to: e.to });
-        } else {
-          keptEdges.push(e);
-        }
+        applySource(consumerSource, toNode, toPort, keptEdges, nodes);
         continue;
       }
       keptEdges.push(e);

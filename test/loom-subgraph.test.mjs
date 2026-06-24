@@ -45,7 +45,13 @@ test('subgraph mode evaluates identically to inline mode', () => {
     ['fn double(x) => add(x, x)\nfn quadruple(x) => double(double(x))\nv = quadruple(3)', 'v.out'],
     ['fn id(x) => x\nv = add(id(4), 10)', 'v.out'],
     ['fn sq(x) => math.multiply(x, x)\nv = sq(7) |> add(1)', 'v.out'],
-    ['fn scale(x) => math.multiply(x, 2)\nv = clock() |> scale()', 'v.out']
+    ['fn scale(x) => math.multiply(x, 2)\nv = clock() |> scale()', 'v.out'],
+    // Literal passthrough / projection read by the binding name (constant materialization).
+    ['fn first(a, b) => a\nv = first(3, 9)', 'v.out'],
+    ['fn second(a, b) => b\nv = second(3, 9)', 'v.out'],
+    ['fn id(x) => x\nv = id(7)', 'v.out'],
+    // Passthrough feeding a downstream consumer.
+    ['fn id(x) => x\nt = id(7)\nv = add(t, 1)', 'v.out']
   ];
   for (const [src, ref] of cases) {
     const inline = evalValue(compile(src), ref, { time: 4 });
@@ -64,6 +70,14 @@ test('unknown function still errors in subgraph mode', () => {
   const { ast } = parseDSLToAST('v = missing(1)');
   const { errors } = compileToGraph(ast, { functionLowering: 'subgraph' });
   assert.ok(errors.length > 0);
+});
+
+test('subgraph graphs flatten correctly when they feed scene sinks', () => {
+  // Pure subgraph calls feeding a scene sink must expand to a flat graph.
+  const compact = compile('fn double(x) => add(x, x)\nscene.setPosition("box", x: double(2))', 'subgraph');
+  const flat = expandSubgraphs(compact);
+  assert.equal(flat.nodes.some((n) => n.type.startsWith('subgraph.')), false);
+  assert.ok(flat.nodes.some((n) => n.type === 'scene.setPosition'));
 });
 
 test('arity errors are preserved in subgraph mode', () => {
