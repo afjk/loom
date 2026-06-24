@@ -1268,3 +1268,80 @@ button:disabled:hover,
 .node-palette-item[draggable="true"]:active {
   cursor: grabbing;
 }
+
+/* Host compatibility panel */
+.compat-panel {
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow: auto;
+}
+
+.compat-requires {
+  margin-bottom: 12px;
+  color: var(--text-dim);
+  word-break: break-all;
+}
+
+.compat-requires strong {
+  color: var(--text-color);
+}
+
+.compat-hosts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.compat-host {
+  background: var(--editor-bg-subtle);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.compat-host-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.compat-host-name {
+  font-family: var(--mono-font, monospace);
+  color: var(--text-color);
+}
+
+.compat-badge {
+  display: inline-block;
+  min-width: 84px;
+  text-align: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #111;
+}
+
+.compat-full { background: #80ed99; }
+.compat-partial { background: #ffd166; }
+.compat-unsupported { background: #ff70a6; }
+
+.compat-detail {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--text-dim);
+}
+
+.compat-detail li {
+  margin: 2px 0;
+}
+
+.compat-detail .compat-unsupported {
+  background: none;
+  color: #ff9ec4;
+}
+
+.compat-detail .compat-unclassified {
+  color: #b0b0b0;
+}

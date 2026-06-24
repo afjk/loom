@@ -181,6 +181,7 @@ Status rules:
 ## Future extensions
 
 - ✅ `loomlet check-compat <file> [--target <host>]` CLI (implemented; see [CLI guide](../cli.md)).
-- Node Editor target-host compatibility badge and VS Code diagnostics.
+- ✅ Node Editor compatibility panel (implemented; `describeGraphHostCompatibility` powers the Compatibility tab).
+- VS Code diagnostics for target-host compatibility.
 - Feed Host Capability Guide ([#290](https://github.com/afjk/loomlet/issues/290)).
 - `wasm.call.pure@1` / `wasm.call.component@1`, coordinate/unit semantic profiles.

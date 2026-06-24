@@ -310,3 +310,17 @@ export function checkHostCompatibility(graph, nodeTypes, host) {
     unclassified
   };
 }
+
+// Presentation helper: describe a graph's required capabilities and its
+// compatibility status against every known host profile. Intended for UI
+// surfaces (Node Editor compatibility panel, etc.) that want a single, sorted
+// view without re-implementing the host loop.
+export function describeGraphHostCompatibility(graph, nodeTypes) {
+  const summary = summarizeGraphCapabilities(graph, nodeTypes);
+  const hosts = listHostProfiles().map((host) => checkHostCompatibility(graph, nodeTypes, host));
+  return {
+    requires: summary.requires,
+    unclassified: summary.unclassified,
+    hosts
+  };
+}
