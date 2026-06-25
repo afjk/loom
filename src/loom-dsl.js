@@ -303,6 +303,13 @@ function defaultOutputPort(nodeTypeName, nodeTypes = NODE_TYPES) {
   return def.outputs.find(o => o.name === 'out') ? 'out' : def.outputs[0].name;
 }
 
+// A trivial projection returns one of its parameters unchanged (body is a bare
+// parameter identifier). It has no shareable body, so subgraph lowering inlines
+// it like inline mode does.
+function isTrivialProjection(fn) {
+  return Boolean(fn && fn.body && fn.body.type === 'ident' && fn.params.some((p) => p.name === fn.body.name));
+}
+
 export function compileToGraph(ast, options = {}) { /* bridge via existing shape */
   const errors = []; if (!ast) return { graph: { nodes: [], edges: [] }, errors };
   try {
@@ -513,8 +520,15 @@ function buildGraph(stmts, options = {}) { /* mostly original */
     return id;
   }
   function buildFunctionDefinitionCall(call, resultId, pipeFrom, locals) {
-    if (functionLowering === 'subgraph') return buildSubgraphCall(call, resultId, pipeFrom, locals);
     const fn = functionDefs.get(call.name);
+    // Trivial projections (body is just a parameter, e.g. `fn id(x) => x` or
+    // `fn first(a, b) => a`) have no shareable body, so inline them even in
+    // subgraph mode. This matches inline semantics exactly and avoids the
+    // passthrough-read-by-name divergence (a projection bound to a name and read
+    // by that name now materializes the same node inline mode would).
+    if (functionLowering === 'subgraph' && !isTrivialProjection(fn)) {
+      return buildSubgraphCall(call, resultId, pipeFrom, locals);
+    }
     const pos = call.args.filter(a => !a.named);
     if (call.args.length !== pos.length) throw new LoomDSLError(`Function '${call.name}' only accepts positional arguments`, call.line, call.col, 'MISSING_ARGUMENT_NAME');
     const suppliedArity = pos.length + (pipeFrom ? 1 : 0);

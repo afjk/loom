@@ -30,12 +30,11 @@ The runtime expands subgraphs back into an equivalent flat graph on load
 (`expandSubgraphs`, exported from the package index), so evaluation is identical
 to inline mode. Scene Sync also flattens compact graphs before evaluation.
 
-Known Phase 1 limitation: a pure passthrough/projection function whose result is a
-dynamic node reference (not a literal) and is read directly by its own binding
-name — e.g. `fn id(x) => x` then `v = id(clock())` read as `v.t` — does not
-materialize a node named `v` in subgraph mode. Literal passthroughs
-(`v = first(3, 9)`) and passthroughs feeding a downstream consumer behave
-identically to inline mode.
+Trivial projection functions whose body is a bare parameter (e.g. `fn id(x) => x`
+or `fn first(a, b) => a`) have no shareable body, so subgraph mode inlines them
+exactly like inline mode — including reads of the binding by its own name
+(`v = id(clock())` read as `v.t`). Only functions with a real body are emitted as
+shared `graph.subgraphs` entries.
 
 Canonical DSL rendering supports subgraph-lowered graphs: `graphToCanonicalDSL`
 emits `fn name(params) => body` definitions and renders `subgraph.call` nodes as

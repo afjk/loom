@@ -60,6 +60,24 @@ test('subgraph mode evaluates identically to inline mode', () => {
   }
 });
 
+test('trivial projection functions are inlined, matching inline reads by name', () => {
+  // A projection bound to a name and read by that name must resolve identically
+  // to inline mode (previously diverged for dynamic ref passthroughs).
+  const cases = [
+    ['fn id(x) => x\nv = id(clock())', 'v.t'],
+    ['fn first(a, b) => a\nv = first(3, 9)', 'v.out'],
+    ['fn second(a, b) => b\nv = second(3, 9)', 'v.out']
+  ];
+  for (const [src, ref] of cases) {
+    const inline = evalValue(compile(src), ref, { time: 5 });
+    const sub = evalValue(compile(src, 'subgraph'), ref, { time: 5 });
+    assert.deepEqual(sub, inline, `mismatch for: ${src}`);
+  }
+  // A trivial projection has no shareable body, so it is not emitted as a subgraph.
+  const graph = compile('fn id(x) => x\nfn double(x) => add(x, x)\na = id(double(3))', 'subgraph');
+  assert.deepEqual(Object.keys(graph.subgraphs || {}), ['double']);
+});
+
 test('subgraph graph survives JSON round-trip and runs', () => {
   const compact = compile('fn double(x) => add(x, x)\nv = double(21)', 'subgraph');
   const roundTripped = JSON.parse(JSON.stringify(compact));
