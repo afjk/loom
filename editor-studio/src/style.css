@@ -224,6 +224,11 @@ body.panels-hidden .editor-panels {
   border: none;
   overflow: hidden;
   position: relative;
+  /* Suppress the native touch callout / text selection so a long-press opens
+     the node context menu instead of the browser selection UI. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* Rete.js v2 dark theme overrides */
@@ -270,6 +275,9 @@ body.panels-hidden .editor-panels {
   border: 1px solid var(--border-color) !important;
   border-radius: 3px !important;
   padding: 2px 4px !important;
+  /* Re-enable selection/editing inside node param fields. */
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* Graph/Errors panel */
