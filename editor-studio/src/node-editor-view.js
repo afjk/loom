@@ -222,11 +222,15 @@ export class NodeEditorView {
       }
     };
 
+    // Capture phase: rete's NodeView drag handler calls stopPropagation() on the
+    // node element's pointerdown, so a bubble-phase listener on the container
+    // would never see a press that lands on a node. Capturing runs the container
+    // listener first, so long-press works on nodes (Inspect/Delete) too.
     this._longPress = { onPointerDown, onPointerMove, clear };
-    this.container.addEventListener('pointerdown', onPointerDown);
-    this.container.addEventListener('pointermove', onPointerMove);
-    this.container.addEventListener('pointerup', clear);
-    this.container.addEventListener('pointercancel', clear);
+    this.container.addEventListener('pointerdown', onPointerDown, true);
+    this.container.addEventListener('pointermove', onPointerMove, true);
+    this.container.addEventListener('pointerup', clear, true);
+    this.container.addEventListener('pointercancel', clear, true);
   }
 
   _findNodeIdFromEventTarget(target) {
@@ -582,10 +586,10 @@ export class NodeEditorView {
     }
     if (this._longPress) {
       this._longPress.clear();
-      this.container.removeEventListener('pointerdown', this._longPress.onPointerDown);
-      this.container.removeEventListener('pointermove', this._longPress.onPointerMove);
-      this.container.removeEventListener('pointerup', this._longPress.clear);
-      this.container.removeEventListener('pointercancel', this._longPress.clear);
+      this.container.removeEventListener('pointerdown', this._longPress.onPointerDown, true);
+      this.container.removeEventListener('pointermove', this._longPress.onPointerMove, true);
+      this.container.removeEventListener('pointerup', this._longPress.clear, true);
+      this.container.removeEventListener('pointercancel', this._longPress.clear, true);
       this._longPress = null;
     }
     this.area.destroy();
