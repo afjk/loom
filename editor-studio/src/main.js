@@ -198,6 +198,8 @@ const elements = {
   sceneSyncObjectId: document.getElementById('sceneSyncObjectId'),
   sceneSyncNickname: document.getElementById('sceneSyncNickname'),
   compileSceneSyncPayloadBtn: document.getElementById('compileSceneSyncPayloadBtn'),
+  copySceneSyncPayloadBtn: document.getElementById('copySceneSyncPayloadBtn'),
+  copySceneSyncGraphBtn: document.getElementById('copySceneSyncGraphBtn'),
   applySceneSyncBehaviorBtn: document.getElementById('applySceneSyncBehaviorBtn'),
   clearSceneSyncBehaviorBtn: document.getElementById('clearSceneSyncBehaviorBtn'),
   sceneSyncPayloadPreview: document.getElementById('sceneSyncPayloadPreview'),
@@ -1511,6 +1513,71 @@ async function handleCompileSceneSyncPayload() {
     appendOutput({
       level: 'error',
       message: `Scene Sync compile failed: ${error.message}`
+    });
+  }
+}
+
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  // Fallback for non-secure contexts where the async clipboard API is absent.
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  try {
+    const ok = document.execCommand('copy');
+    if (!ok) {
+      throw new Error('Clipboard copy was rejected by the browser.');
+    }
+  } finally {
+    textarea.remove();
+  }
+}
+
+async function handleCopySceneSyncPayload() {
+  try {
+    saveSceneSyncSettings();
+
+    const payload = compileCurrentSceneSyncPayload();
+    renderSceneSyncPayloadPreview(payload);
+
+    await copyTextToClipboard(JSON.stringify(payload, null, 2));
+
+    appendOutput({
+      level: 'info',
+      message: 'Copied Scene Sync payload (scene-graph-set) to clipboard. Paste it onto your Scene Sync object.'
+    });
+  } catch (error) {
+    appendOutput({
+      level: 'error',
+      message: `Copy Scene Sync payload failed: ${error.message}`
+    });
+  }
+}
+
+async function handleCopySceneSyncGraphJson() {
+  try {
+    saveSceneSyncSettings();
+
+    const payload = compileCurrentSceneSyncPayload();
+    renderSceneSyncPayloadPreview(payload);
+
+    await copyTextToClipboard(JSON.stringify(payload.graph, null, 2));
+
+    appendOutput({
+      level: 'info',
+      message: 'Copied Scene Sync behavior graph (nodes/edges) to clipboard.'
+    });
+  } catch (error) {
+    appendOutput({
+      level: 'error',
+      message: `Copy Scene Sync graph failed: ${error.message}`
     });
   }
 }
@@ -3001,6 +3068,8 @@ function setupEventListeners() {
   });
 
   elements.compileSceneSyncPayloadBtn?.addEventListener('click', handleCompileSceneSyncPayload);
+  elements.copySceneSyncPayloadBtn?.addEventListener('click', handleCopySceneSyncPayload);
+  elements.copySceneSyncGraphBtn?.addEventListener('click', handleCopySceneSyncGraphJson);
   elements.applySceneSyncBehaviorBtn?.addEventListener('click', handleApplySceneSyncBehavior);
   elements.clearSceneSyncBehaviorBtn?.addEventListener('click', handleClearSceneSyncBehavior);
 
