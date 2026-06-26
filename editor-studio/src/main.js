@@ -13,6 +13,8 @@ import { loomletDslExtensions } from './loomlet-codemirror.js';
 import { parseDSLToAST, compileToGraph } from '../../src/loom-dsl.js';
 import { compileLoomToSceneSyncGraph } from '../../src/scenesync/graph-adapter.js';
 import { createSceneGraphSetPayload, createSceneGraphClearPayload } from '../../src/scenesync/graphs.js';
+import { reduceSceneEffectsToObjects, graphHasSceneNodes } from '../../src/scenesync/preview-transform.js';
+import { Scene3DPreview } from './scene3d-preview.js';
 import {
   graphToEditorModel,
   subgraphBodyToEditorModel,
@@ -117,6 +119,8 @@ let dslEditor = null;
 let nodeEditor = null;
 let engine = null;
 let animationFrameId = null;
+let scene3dPreview = null;
+let is3DPreviewActive = false;
 let panelsVisible = true;
 let selectedNodeId = null;
 let currentFileHandle = null;
@@ -150,6 +154,7 @@ const elements = {
   dslEditorHost: document.getElementById('dsl-editor-host'),
   nodeEditorHost: document.getElementById('node-editor'),
   previewCanvas: document.getElementById('preview-canvas'),
+  scene3dHost: document.getElementById('scene3d-host'),
   graphJson: document.getElementById('graph-json'),
   errorsList: document.getElementById('errors-list'),
   compatPanel: document.getElementById('compat-panel'),
@@ -509,6 +514,28 @@ function resizePreviewCanvas() {
   canvas.height = window.innerHeight;
   canvas.style.width = `${window.innerWidth}px`;
   canvas.style.height = `${window.innerHeight}px`;
+
+  if (scene3dPreview) {
+    scene3dPreview.resize();
+  }
+}
+
+// Show/hide the 3D Scene Preview. Graphs that drive scene.* objects render in
+// the three.js viewport; everything else uses the 2D point/bar canvas.
+function setScene3DActive(active) {
+  is3DPreviewActive = active;
+
+  if (elements.scene3dHost) {
+    elements.scene3dHost.hidden = !active;
+  }
+
+  if (active && !scene3dPreview && elements.scene3dHost) {
+    scene3dPreview = new Scene3DPreview(elements.scene3dHost);
+  }
+
+  if (active && scene3dPreview) {
+    scene3dPreview.resize();
+  }
 }
 
 function initDslEditor() {
@@ -2070,10 +2097,12 @@ function runPreview(graph) {
   }
   lastNodeValuePreviewAtMs = 0;
 
-  resizePreviewCanvas();
-
   const state = store.getState();
   if (!graph) graph = state.graph;
+
+  setScene3DActive(graphHasSceneNodes(graph));
+  resizePreviewCanvas();
+
   if (!graph) return;
 
   try {
@@ -2111,6 +2140,16 @@ function tick(engine, graph) {
       if (effect.type === 'log' && effect.message) {
         appendOutput({ level: 'log', message: effect.message });
       }
+    }
+
+    if (is3DPreviewActive && scene3dPreview) {
+      const objects = reduceSceneEffectsToObjects(effects);
+      scene3dPreview.applyObjects(objects);
+      scene3dPreview.retainObjects(Object.keys(objects));
+      scene3dPreview.render();
+      postNodeValuePreviews(engine, graph);
+      animationFrameId = requestAnimationFrame(() => tick(engine, graph));
+      return;
     }
 
     const currentRender = graph?.render;

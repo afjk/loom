@@ -25,6 +25,13 @@ export {
 } from './canonical-dsl.js';
 
 export {
+  isScenePreviewEffect,
+  createDefaultObjectState,
+  reduceSceneEffectsToObjects,
+  graphHasSceneNodes
+} from './scenesync/preview-transform.js';
+
+export {
   patchDslSourceForEditorOperation,
   patchOrCanonicalDslSource
 } from './source-dsl-patch.js';
