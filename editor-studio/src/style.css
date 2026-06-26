@@ -1488,3 +1488,62 @@ button:disabled:hover,
   justify-content: flex-end;
   gap: 8px;
 }
+
+/* --- Mobile / small-screen layout --- */
+@media (max-width: 720px) {
+  /* Toolbar: keep a single row but let it scroll horizontally instead of
+     clipping the many actions. */
+  .studio-toolbar {
+    left: 6px;
+    right: 6px;
+    gap: 6px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+  .studio-toolbar > * {
+    flex: 0 0 auto;
+  }
+  .studio-toolbar .btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  /* Stack the DSL editor, node editor, and bottom panel vertically. Using a
+     flex column keeps the maximize modes working: a pane hidden via
+     display:none simply drops out and the remaining flex pane fills. */
+  .editor-panels {
+    left: 6px;
+    right: 6px;
+    bottom: 6px;
+    top: 58px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .editor-panels .dsl-pane,
+  .editor-panels .node-pane {
+    flex: 1 1 0;
+    min-height: 140px;
+    width: auto;
+  }
+  .editor-panels .editor-split-resize-handle {
+    display: none;
+  }
+  .editor-panels .bottom-panel-resize-handle,
+  .editor-panels .graph-errors-panel {
+    flex: 0 0 auto;
+  }
+  /* Keep the bottom panel from dominating short screens (still resizable). */
+  .editor-panels .graph-errors-panel {
+    height: min(260px, 38vh);
+  }
+
+  /* Slightly tighter tab buttons in the bottom panel. */
+  .tab-btn {
+    padding: 8px 11px;
+    font-size: 12px;
+  }
+}
