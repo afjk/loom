@@ -2984,7 +2984,8 @@ function setupEventListeners() {
     } else if (event.key === 'Enter') {
       event.preventDefault();
       event.stopImmediatePropagation();
-      resolveConfirmDialog(true);
+      // Enter confirms by default (OK is focused on open), but respects Cancel focus.
+      resolveConfirmDialog(document.activeElement !== elements.confirmCancel);
     }
   }, true);
 
