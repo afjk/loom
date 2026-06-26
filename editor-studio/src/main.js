@@ -158,6 +158,10 @@ const elements = {
   fnSubviewTitle: document.getElementById('fn-subview-title'),
   fnSubviewClose: document.getElementById('fn-subview-close'),
   fnSubviewCanvas: document.getElementById('fn-subview-canvas'),
+  confirmOverlay: document.getElementById('confirm-overlay'),
+  confirmMessage: document.getElementById('confirm-message'),
+  confirmCancel: document.getElementById('confirm-cancel'),
+  confirmOk: document.getElementById('confirm-ok'),
   inspectorPanel: document.getElementById('inspector-panel'),
   applyDslBtn: document.getElementById('applyDslBtn'),
   generateDslBtn: document.getElementById('generateDslBtn'),
@@ -1877,6 +1881,44 @@ async function deleteSelectedNode() {
   await deleteNodes([node.id]);
 }
 
+// In-app confirmation modal (replaces native window.confirm for a better UX).
+// Resolves to true on confirm, false on cancel / Escape / backdrop.
+let confirmResolver = null;
+
+function showConfirmDialog({ message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', danger = false } = {}) {
+  if (!elements.confirmOverlay) {
+    // Fallback if the overlay markup is unavailable.
+    return Promise.resolve(window.confirm(message));
+  }
+  // Resolve any dialog still open as cancelled before showing a new one.
+  resolveConfirmDialog(false);
+
+  if (elements.confirmMessage) elements.confirmMessage.textContent = message;
+  if (elements.confirmOk) {
+    elements.confirmOk.textContent = confirmLabel;
+    elements.confirmOk.classList.toggle('btn-danger', Boolean(danger));
+    elements.confirmOk.classList.toggle('btn-primary', !danger);
+  }
+  if (elements.confirmCancel) elements.confirmCancel.textContent = cancelLabel;
+
+  elements.confirmOverlay.hidden = false;
+  // Focus the confirm action so Enter/Space act on it.
+  elements.confirmOk?.focus();
+
+  return new Promise((resolve) => {
+    confirmResolver = resolve;
+  });
+}
+
+function resolveConfirmDialog(value) {
+  if (elements.confirmOverlay) elements.confirmOverlay.hidden = true;
+  if (confirmResolver) {
+    const resolve = confirmResolver;
+    confirmResolver = null;
+    resolve(value);
+  }
+}
+
 async function deleteNodes(nodeIds) {
   const state = store.getState();
   const existing = (nodeIds || []).filter((id) => state.editorModel?.nodesById?.[id]);
@@ -1885,7 +1927,7 @@ async function deleteNodes(nodeIds) {
   const message = existing.length === 1
     ? `Delete node '${existing[0]}'? Connected edges will also be removed.`
     : `Delete ${existing.length} nodes (${existing.join(', ')})? Connected edges will also be removed.`;
-  if (!window.confirm(message)) return;
+  if (!(await showConfirmDialog({ message, confirmLabel: 'Delete', danger: true }))) return;
 
   const removesSelected = selectedNodeId && existing.includes(selectedNodeId);
 
@@ -2923,6 +2965,29 @@ function setupEventListeners() {
       closeFunctionSubview();
     }
   });
+
+  // Confirmation modal
+  elements.confirmOk?.addEventListener('click', () => resolveConfirmDialog(true));
+  elements.confirmCancel?.addEventListener('click', () => resolveConfirmDialog(false));
+  elements.confirmOverlay?.addEventListener('click', (event) => {
+    if (event.target === elements.confirmOverlay) {
+      resolveConfirmDialog(false);
+    }
+  });
+  // Capture phase so Escape/Enter act on the open dialog before other handlers.
+  document.addEventListener('keydown', (event) => {
+    if (!elements.confirmOverlay || elements.confirmOverlay.hidden) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      resolveConfirmDialog(false);
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      // Enter confirms by default (OK is focused on open), but respects Cancel focus.
+      resolveConfirmDialog(document.activeElement !== elements.confirmCancel);
+    }
+  }, true);
 
   // Scene Sync event listeners
   elements.sceneSyncEndpoint?.addEventListener('input', saveSceneSyncSettings);
