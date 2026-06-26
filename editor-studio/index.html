@@ -183,7 +183,9 @@
 
               <div class="scene-sync-actions">
                 <button id="compileSceneSyncPayloadBtn" type="button" class="btn">Compile Payload</button>
-                <button id="applySceneSyncBehaviorBtn" type="button" class="btn btn-primary">Apply Behavior</button>
+                <button id="copySceneSyncPayloadBtn" type="button" class="btn btn-primary" title="Copy the scene-graph-set message JSON, ready to paste onto a Scene Sync object">Copy Payload</button>
+                <button id="copySceneSyncGraphBtn" type="button" class="btn" title="Copy only the behavior graph (nodes/edges) JSON">Copy Graph JSON</button>
+                <button id="applySceneSyncBehaviorBtn" type="button" class="btn">Apply Behavior</button>
                 <button id="clearSceneSyncBehaviorBtn" type="button" class="btn btn-danger">Clear Behavior</button>
               </div>
 
@@ -193,8 +195,10 @@
               </div>
 
               <p class="scene-sync-note">
-                Prototype: this panel sends Scene Sync Behavior Graph payloads by REST broadcast.
-                It does not integrate with Scene Sync undo/redo or object selection yet.
+                Recommended flow: build your motion graph, confirm it in the preview, then
+                <strong>Copy Payload</strong> and paste it onto your Scene Sync object.
+                <strong>Apply Behavior</strong> instead broadcasts the same payload by REST.
+                This panel does not integrate with Scene Sync undo/redo or object selection yet.
               </p>
 
               <p class="scene-sync-note">
