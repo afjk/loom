@@ -176,6 +176,61 @@ export class NodeEditorView {
       });
     };
     this.container.addEventListener('contextmenu', this._contextMenuHandler);
+    this._setupLongPress();
+  }
+
+  // Touch devices have no right-click, so a long-press opens the same context
+  // menu. Cancels if the finger moves (a drag/pan) or lifts before the delay.
+  _setupLongPress() {
+    const LONG_PRESS_MS = 500;
+    const MOVE_CANCEL_PX = 12;
+    let timer = null;
+    let startX = 0;
+    let startY = 0;
+    let startTarget = null;
+
+    const clear = () => {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+    };
+
+    const onPointerDown = (event) => {
+      if (event.pointerType !== 'touch') return;
+      startX = event.clientX;
+      startY = event.clientY;
+      startTarget = event.target;
+      clear();
+      timer = setTimeout(() => {
+        timer = null;
+        const nodeId = this._findNodeIdFromEventTarget(startTarget);
+        this.onContextMenu({
+          clientX: startX,
+          clientY: startY,
+          graphPosition: this.clientPointToGraph(startX, startY),
+          nodeId
+        });
+      }, LONG_PRESS_MS);
+    };
+
+    const onPointerMove = (event) => {
+      if (!timer) return;
+      if (Math.abs(event.clientX - startX) > MOVE_CANCEL_PX ||
+          Math.abs(event.clientY - startY) > MOVE_CANCEL_PX) {
+        clear();
+      }
+    };
+
+    // Capture phase: rete's NodeView drag handler calls stopPropagation() on the
+    // node element's pointerdown, so a bubble-phase listener on the container
+    // would never see a press that lands on a node. Capturing runs the container
+    // listener first, so long-press works on nodes (Inspect/Delete) too.
+    this._longPress = { onPointerDown, onPointerMove, clear };
+    this.container.addEventListener('pointerdown', onPointerDown, true);
+    this.container.addEventListener('pointermove', onPointerMove, true);
+    this.container.addEventListener('pointerup', clear, true);
+    this.container.addEventListener('pointercancel', clear, true);
   }
 
   _findNodeIdFromEventTarget(target) {
@@ -528,6 +583,14 @@ export class NodeEditorView {
     if (this._contextMenuHandler) {
       this.container.removeEventListener('contextmenu', this._contextMenuHandler);
       this._contextMenuHandler = null;
+    }
+    if (this._longPress) {
+      this._longPress.clear();
+      this.container.removeEventListener('pointerdown', this._longPress.onPointerDown, true);
+      this.container.removeEventListener('pointermove', this._longPress.onPointerMove, true);
+      this.container.removeEventListener('pointerup', this._longPress.clear, true);
+      this.container.removeEventListener('pointercancel', this._longPress.clear, true);
+      this._longPress = null;
     }
     this.area.destroy();
     this.container.innerHTML = '';
