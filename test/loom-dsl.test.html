@@ -25,7 +25,7 @@
   <div id="results"></div>
   <script type="module">
     import { parseDSL, parseDSLToAST, compileToGraph, formatDSL, LoomDSLError } from "../src/loom-dsl.js";
-    import { presets } from "../editor/presets.js";
+    import { presets } from "./fixtures/editor-presets.js";
 
     const results = [];
     function test(name, fn) { results.push({ name, fn }); }

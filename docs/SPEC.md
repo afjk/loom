@@ -2806,7 +2806,7 @@ Canonical DSL round-trip v1 の比較は、実装詳細のテキスト一致よ�
 - `patchDSL(originalSource, newGraph): string`
 - Canonical AST(NodeDecl / EdgeDecl)の独立公開
 - AST バージョニング機構(`astVersion`)
-- editor-pro の lint / autocomplete を Source AST ベースに移行
+- Editor Studio の lint / autocomplete を Source AST ベースに移行
 - DSL シンタックス拡張時の Source AST 拡張(InlineEdgeDecl, PipelineDecl 等)
 - 書式ヒントフィールドの追加(`CallExpression.multiline`, `Statement.blankLinesBefore`, `PipeExpression.lineBreakBefore`)
 

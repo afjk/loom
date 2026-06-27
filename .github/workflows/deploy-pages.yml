@@ -35,12 +35,10 @@ jobs:
       - name: Prepare Pages artifact
         run: |
           mkdir -p dist-pages/node-editor
-          mkdir -p dist-pages/editor
           mkdir -p dist-pages/examples
-          # The simple editor imports ../src/*.js directly, so src/ must be included in the Pages artifact.
+          # Browser examples import ../src/*.js directly, so src/ must be included in the Pages artifact.
           mkdir -p dist-pages/src
           cp -R editor-studio/dist/* dist-pages/node-editor/
-          cp -R editor/* dist-pages/editor/
           cp -R examples/* dist-pages/examples/
           cp -R src/* dist-pages/src/
 
@@ -57,7 +55,6 @@ jobs:
             <body>
               <h1>Loomlet</h1>
               <ul>
-                <li><a href="./editor/">Simple Editor</a></li>
                 <li><a href="./node-editor/">Node Editor</a></li>
                 <li><a href="./examples/01-basic.html">Example: Basic Browser Demo</a></li>
               </ul>

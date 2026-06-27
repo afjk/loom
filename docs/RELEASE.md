@@ -53,7 +53,7 @@ GitHub Pages is deployed automatically on pushes to `main` via:
 .github/workflows/deploy-pages.yml
 ```
 
-This workflow builds the Node Editor and publishes the simple editor, node editor, examples, and source code.
+This workflow builds the Node Editor and publishes the node editor, examples, and source code.
 
 ## GitHub Release automation
 
