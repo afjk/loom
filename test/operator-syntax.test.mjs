@@ -21,10 +21,11 @@ function evalSrc(src, ref, env) {
   return evalRef(compile(src), ref, env);
 }
 
-test('x = y + z lowers to math.add', () => {
+test('x = y + z lowers to formula node', () => {
   const graph = compile('a = 1 + 2');
   const node = graph.nodes.find(n => n.id === 'a');
-  assert.equal(node.type, 'math.add');
+  assert.equal(node.type, 'formula');
+  assert.equal(node.params.formula, '(1 + 2)');
   assert.equal(evalRef(graph, 'a.out'), 3);
 });
 
