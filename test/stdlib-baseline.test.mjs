@@ -6,6 +6,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { Loom, LoomError, NODE_TYPES } from '../src/loom.js';
+import { parseDSLToAST, compileToGraph } from '../src/loom-dsl.js';
 import { formatValuePreview } from '../src/value-preview.js';
 import { runLoomSource } from '../src/toolchain/run.js';
 import { LIBRARY_METADATA } from '../src/toolchain/library-metadata.js';
@@ -587,6 +588,80 @@ test('env.events omitted behaves as empty array', () => {
   engine.evaluateOnce({ env: { time: 1 } });
 
   assert.deepEqual(engine.getValue('listener.event'), []);
+});
+
+test('event arrays can feed list behavior adapters', () => {
+  const graph = {
+    nodes: [
+      { id: 'listener', type: 'onEvent', params: { channel: 'pointer.click' } },
+      { id: 'count', type: 'list.length' }
+    ],
+    edges: [{ from: 'listener.event', to: 'count.list' }]
+  };
+  const engine = new Loom(graph);
+
+  engine.evaluateOnce({ env: { time: 1, scope: { type: 'object', id: 'sample-cube' }, events: [] } });
+  assert.equal(engine.getValue('count.out'), 0);
+
+  engine.evaluateOnce({
+    env: {
+      time: 1.016,
+      scope: { type: 'object', id: 'sample-cube' },
+      events: [{ channel: 'pointer.click', target: 'sample-cube', timestamp: 1.016 }]
+    }
+  });
+  assert.equal(engine.getValue('count.out'), 1);
+});
+
+test('DSL pointer click can drive a white flash fade on scene color', () => {
+  const source = `
+import scene
+import logic
+import list
+
+click = onEvent(channel: "pointer.click")
+clickCount = list.length(list: click)
+clicked = logic.greaterThan(value: clickCount, other: 0)
+drive = logic.select(condition: clicked, whenTrue: 90, whenFalse: -2.8)
+flash = integrate(value: drive, initial: 0, min: 0, max: 1)
+
+rBoost = multiply(a: flash, b: 0.88)
+r = add(a: rBoost, b: 0.12)
+gBoost = multiply(a: flash, b: 0.58)
+g = add(a: gBoost, b: 0.42)
+
+scene.setColor(objectId: "sample-cube", r: r, g: g, b: 1)
+scene.offsetPosition(objectId: "sample-cube", y: 0)
+`;
+  const parsed = parseDSLToAST(source);
+  assert.deepEqual(parsed.errors, []);
+  const compiled = compileToGraph(parsed.ast);
+  assert.deepEqual(compiled.errors, []);
+
+  const engine = new Loom(compiled.graph);
+  engine.evaluateOnce({
+    env: {
+      time: 1,
+      deltaTime: 0.016,
+      scope: { type: 'object', id: 'sample-cube' },
+      events: [{ channel: 'pointer.click', target: 'sample-cube', timestamp: 1 }]
+    }
+  });
+  let color = engine.getEffects().find((effect) => effect.type === 'scene.setColor')?.color;
+  assert.deepEqual(color, [1, 1, 1]);
+
+  engine.evaluateOnce({
+    env: {
+      time: 1.1,
+      deltaTime: 0.1,
+      scope: { type: 'object', id: 'sample-cube' },
+      events: []
+    }
+  });
+  color = engine.getEffects().find((effect) => effect.type === 'scene.setColor')?.color;
+  assert.ok(color[0] < 1 && color[0] > 0.12);
+  assert.ok(color[1] < 1 && color[1] > 0.42);
+  assert.equal(color[2], 1);
 });
 
 test('invalid env.events shape fails clearly', () => {

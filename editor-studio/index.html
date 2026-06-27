@@ -10,6 +10,7 @@
   <canvas id="preview-canvas" class="preview-canvas"></canvas>
   <div id="scene3d-host" class="scene3d-host" hidden>
     <div class="scene3d-badge">3D Scene Preview · drag to orbit / scroll to zoom</div>
+    <div id="previewEventStatus" class="scene3d-click-status" aria-live="polite" hidden></div>
   </div>
 
   <div class="studio-overlay">
@@ -20,6 +21,10 @@
       <button id="saveAsFileBtn" class="btn">Save As</button>
       <span id="file-status" class="file-status">No file</span>
       <button id="runPreviewBtn" class="btn btn-success">Run Preview</button>
+      <div class="segmented-control preview-layout-switch" aria-label="Preview layout">
+        <button class="segmented-btn active" data-preview-layout="background" title="Use preview as the background">Background</button>
+        <button class="segmented-btn" data-preview-layout="docked" title="Dock preview beside the editor">Docked</button>
+      </div>
       <button id="resetSampleBtn" class="btn">Reset Sample</button>
       <button id="undo-btn" class="btn" title="Undo graph edit (Ctrl/Cmd+Z)" disabled>
         Undo
@@ -45,6 +50,19 @@
     </div>
 
     <div id="editor-panels" class="editor-panels">
+      <!-- Docked preview pane: active only in Preview Docked mode -->
+      <div class="panel preview-pane">
+        <div class="pane-header">
+          <h2>Preview</h2>
+        </div>
+        <div id="preview-stage" class="preview-stage"></div>
+      </div>
+
+      <div class="docked-editor-tabs" role="tablist" aria-label="Docked editor view">
+        <button class="docked-editor-tab active" data-docked-editor-tab="node" role="tab" aria-selected="true">Node Editor</button>
+        <button class="docked-editor-tab" data-docked-editor-tab="dsl" role="tab" aria-selected="false">DSL Editor</button>
+      </div>
+
       <!-- Left pane: DSL Editor -->
       <div class="panel dsl-pane">
         <div class="pane-header">

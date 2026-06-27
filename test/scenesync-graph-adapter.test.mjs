@@ -32,6 +32,57 @@ scene.setPosition("sample-cube", x: x, y: y, z: 0)
   assert.equal(result.graph.edges.length, 4);
 });
 
+test('compiles pointer click flash example to Scene Sync graph', () => {
+  const source = `
+import scene
+import logic
+import list
+
+click = onEvent(channel: "pointer.click")
+clickCount = list.length(list: click)
+clicked = logic.greaterThan(value: clickCount, other: 0)
+drive = logic.select(condition: clicked, whenTrue: 90, whenFalse: -2.8)
+flash = integrate(value: drive, initial: 0, min: 0, max: 1)
+
+rBoost = multiply(a: flash, b: 0.88)
+r = add(a: rBoost, b: 0.12)
+gBoost = multiply(a: flash, b: 0.58)
+g = add(a: gBoost, b: 0.42)
+
+scene.setColor(objectId: "sample-cube", r: r, g: g, b: 1)
+scene.offsetPosition(objectId: "sample-cube", y: 0)
+`;
+
+  const result = compileLoomToSceneSyncGraph(source);
+  const nodeTypes = result.graph.nodes.map((node) => node.type);
+
+  assert.deepEqual(result.scope, { object: 'sample-cube' });
+  assert.ok(nodeTypes.includes('onEvent'));
+  assert.ok(nodeTypes.includes('list.length'));
+  assert.ok(nodeTypes.includes('logic.greaterThan'));
+  assert.ok(nodeTypes.includes('logic.select'));
+  assert.ok(nodeTypes.includes('integrate'));
+  assert.ok(nodeTypes.includes('multiply'));
+  assert.ok(nodeTypes.includes('add'));
+  assert.ok(nodeTypes.includes('sceneSetColor'));
+  assert.ok(nodeTypes.includes('sceneOffsetPosition'));
+  assert.ok(result.graph.edges.some((edge) => edge.from === 'click.event' && edge.to === 'clickCount.list'));
+
+  const eventNode = result.graph.nodes.find((node) => node.id === 'click');
+  const driveNode = result.graph.nodes.find((node) => node.id === 'drive');
+  const flashNode = result.graph.nodes.find((node) => node.id === 'flash');
+  const colorNode = result.graph.nodes.find((node) => node.type === 'sceneSetColor');
+
+  assert.equal(eventNode.params.channel, 'pointer.click');
+  assert.equal(driveNode.params.whenTrue, 90);
+  assert.equal(driveNode.params.whenFalse, -2.8);
+  assert.equal(flashNode.params.min, 0);
+  assert.equal(flashNode.params.max, 1);
+  assert.ok(result.graph.edges.some((edge) => edge.to === `${colorNode.id}.r`));
+  assert.ok(result.graph.edges.some((edge) => edge.to === `${colorNode.id}.g`));
+  assert.equal(colorNode.params.b, 1);
+});
+
 test('--object option overrides DSL object id', () => {
   const source = `
 import math
