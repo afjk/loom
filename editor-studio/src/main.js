@@ -12,7 +12,7 @@ import { getLatestNodeValues } from '../../src/value-preview.js';
 import { loomletDslExtensions } from './loomlet-codemirror.js';
 import { parseDSLToAST, compileToGraph } from '../../src/loom-dsl.js';
 import { compileLoomToSceneSyncGraph } from '../../src/scenesync/graph-adapter.js';
-import { createSceneGraphSetPayload, createSceneGraphClearPayload } from '../../src/scenesync/graphs.js';
+import { createSceneGraphSetPayload } from '../../src/scenesync/graphs.js';
 import { reduceSceneEffectsToObjects, graphHasSceneNodes } from '../../src/scenesync/preview-transform.js';
 import { Scene3DPreview } from './scene3d-preview.js';
 import {
@@ -91,11 +91,8 @@ const PREVIEW_LAYOUT_MODE_KEY = 'loomlet.editorStudio.previewLayoutMode';
 const DOCKED_EDITOR_TAB_KEY = 'loomlet.editorStudio.dockedEditorTab';
 
 const SCENE_SYNC_STORAGE_KEYS = {
-  endpoint: 'loomlet.editorStudio.sceneSync.endpoint',
-  room: 'loomlet.editorStudio.sceneSync.room',
   scope: 'loomlet.editorStudio.sceneSync.scope',
-  objectId: 'loomlet.editorStudio.sceneSync.objectId',
-  nickname: 'loomlet.editorStudio.sceneSync.nickname'
+  objectId: 'loomlet.editorStudio.sceneSync.objectId'
 };
 
 const MAX_HISTORY_ENTRIES = 100;
@@ -213,16 +210,11 @@ const elements = {
   autoSyncStatusPill: document.getElementById('auto-sync-status-pill'),
   outputLog: document.getElementById('output-log'),
   clearOutputBtn: document.getElementById('clear-output-btn'),
-  sceneSyncEndpoint: document.getElementById('sceneSyncEndpoint'),
-  sceneSyncRoom: document.getElementById('sceneSyncRoom'),
   sceneSyncScope: document.getElementById('sceneSyncScope'),
   sceneSyncObjectId: document.getElementById('sceneSyncObjectId'),
-  sceneSyncNickname: document.getElementById('sceneSyncNickname'),
   compileSceneSyncPayloadBtn: document.getElementById('compileSceneSyncPayloadBtn'),
   copySceneSyncPayloadBtn: document.getElementById('copySceneSyncPayloadBtn'),
   copySceneSyncGraphBtn: document.getElementById('copySceneSyncGraphBtn'),
-  applySceneSyncBehaviorBtn: document.getElementById('applySceneSyncBehaviorBtn'),
-  clearSceneSyncBehaviorBtn: document.getElementById('clearSceneSyncBehaviorBtn'),
   sceneSyncPayloadPreview: document.getElementById('sceneSyncPayloadPreview'),
   loadSceneSyncJumpPresetBtn: document.getElementById('loadSceneSyncJumpPresetBtn'),
   loadSceneSyncCirclePresetBtn: document.getElementById('loadSceneSyncCirclePresetBtn'),
@@ -1610,33 +1602,16 @@ function setEditorError(message) {
 /* Scene Sync panel functions */
 
 function loadSceneSyncSettings() {
-  elements.sceneSyncEndpoint.value =
-    localStorage.getItem(SCENE_SYNC_STORAGE_KEYS.endpoint) || 'https://afjk.jp/presence';
-
-  elements.sceneSyncRoom.value =
-    localStorage.getItem(SCENE_SYNC_STORAGE_KEYS.room) || '';
-
   elements.sceneSyncScope.value =
     localStorage.getItem(SCENE_SYNC_STORAGE_KEYS.scope) || 'object';
 
   elements.sceneSyncObjectId.value =
     localStorage.getItem(SCENE_SYNC_STORAGE_KEYS.objectId) || 'sample-cube';
 
-  elements.sceneSyncNickname.value =
-    localStorage.getItem(SCENE_SYNC_STORAGE_KEYS.nickname) || 'Loomlet Editor';
-
   updateSceneSyncScopeUi();
 }
 
 function saveSceneSyncSettings() {
-  localStorage.setItem(
-    SCENE_SYNC_STORAGE_KEYS.endpoint,
-    elements.sceneSyncEndpoint.value.trim()
-  );
-  localStorage.setItem(
-    SCENE_SYNC_STORAGE_KEYS.room,
-    elements.sceneSyncRoom.value.trim()
-  );
   localStorage.setItem(
     SCENE_SYNC_STORAGE_KEYS.scope,
     elements.sceneSyncScope.value
@@ -1644,10 +1619,6 @@ function saveSceneSyncSettings() {
   localStorage.setItem(
     SCENE_SYNC_STORAGE_KEYS.objectId,
     elements.sceneSyncObjectId.value.trim()
-  );
-  localStorage.setItem(
-    SCENE_SYNC_STORAGE_KEYS.nickname,
-    elements.sceneSyncNickname.value.trim()
   );
 }
 
@@ -1689,70 +1660,6 @@ function compileCurrentSceneSyncPayload() {
   const result = compileLoomToSceneSyncGraph(source, { scope });
 
   return createSceneGraphSetPayload(result.scope || scope, result.graph);
-}
-
-function createCurrentSceneSyncClearPayload() {
-  const scope = getSceneSyncScopeFromUi();
-  return createSceneGraphClearPayload(scope);
-}
-
-function normalizeSceneSyncEndpoint(endpoint) {
-  return String(endpoint || '').trim().replace(/\/+$/, '');
-}
-
-function createSceneSyncBroadcastUrl({ endpoint, room, nickname }) {
-  const base = normalizeSceneSyncEndpoint(endpoint);
-  const encodedRoom = encodeURIComponent(room);
-  const url = new URL(`${base}/api/room/${encodedRoom}/broadcast`);
-
-  if (nickname) {
-    url.searchParams.set('name', nickname);
-  }
-
-  return url.toString();
-}
-
-async function broadcastSceneSyncPayload(payload) {
-  const endpoint = elements.sceneSyncEndpoint.value.trim();
-  const room = elements.sceneSyncRoom.value.trim();
-  const nickname = elements.sceneSyncNickname.value.trim() || 'Loomlet Editor';
-
-  if (!endpoint) {
-    throw new Error('Endpoint is required.');
-  }
-
-  if (!room) {
-    throw new Error('Room is required.');
-  }
-
-  const url = createSceneSyncBroadcastUrl({ endpoint, room, nickname });
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
-
-  const text = await response.text();
-
-  let body = text;
-  try {
-    body = text ? JSON.parse(text) : null;
-  } catch {
-    body = text;
-  }
-
-  if (!response.ok) {
-    throw new Error(
-      `Scene Sync broadcast failed: ${response.status} ${response.statusText} ${
-        body ? JSON.stringify(body) : ''
-      }`
-    );
-  }
-
-  return body;
 }
 
 function renderSceneSyncPayloadPreview(payload) {
@@ -1853,55 +1760,6 @@ async function handleCopySceneSyncGraphJson() {
     appendOutput({
       level: 'error',
       message: `Copy Scene Sync graph failed: ${error.message}`
-    });
-  }
-}
-
-async function handleApplySceneSyncBehavior() {
-  try {
-    saveSceneSyncSettings();
-
-    const payload = compileCurrentSceneSyncPayload();
-
-    renderSceneSyncPayloadPreview(payload);
-
-    const state = store.getState();
-    const source = (!hasUnsyncedDslText && state.editorModel)
-      ? 'graph'
-      : 'DSL editor';
-
-    const result = await broadcastSceneSyncPayload(payload);
-
-    appendOutput({
-      level: 'info',
-      message: `Applied Scene Sync Behavior from ${source}.\n${JSON.stringify(result, null, 2)}`
-    });
-  } catch (error) {
-    appendOutput({
-      level: 'error',
-      message: `Apply Scene Sync Behavior failed: ${error.message}`
-    });
-  }
-}
-
-async function handleClearSceneSyncBehavior() {
-  try {
-    saveSceneSyncSettings();
-
-    const payload = createCurrentSceneSyncClearPayload();
-
-    renderSceneSyncPayloadPreview(payload);
-
-    const result = await broadcastSceneSyncPayload(payload);
-
-    appendOutput({
-      level: 'info',
-      message: `Cleared Scene Sync Behavior.\n${JSON.stringify(result, null, 2)}`
-    });
-  } catch (error) {
-    appendOutput({
-      level: 'error',
-      message: `Clear Scene Sync Behavior failed: ${error.message}`
     });
   }
 }
@@ -3368,10 +3226,7 @@ function setupEventListeners() {
   }, true);
 
   // Scene Sync event listeners
-  elements.sceneSyncEndpoint?.addEventListener('input', saveSceneSyncSettings);
-  elements.sceneSyncRoom?.addEventListener('input', saveSceneSyncSettings);
   elements.sceneSyncObjectId?.addEventListener('input', saveSceneSyncSettings);
-  elements.sceneSyncNickname?.addEventListener('input', saveSceneSyncSettings);
 
   elements.sceneSyncScope?.addEventListener('change', () => {
     updateSceneSyncScopeUi();
@@ -3381,8 +3236,6 @@ function setupEventListeners() {
   elements.compileSceneSyncPayloadBtn?.addEventListener('click', handleCompileSceneSyncPayload);
   elements.copySceneSyncPayloadBtn?.addEventListener('click', handleCopySceneSyncPayload);
   elements.copySceneSyncGraphBtn?.addEventListener('click', handleCopySceneSyncGraphJson);
-  elements.applySceneSyncBehaviorBtn?.addEventListener('click', handleApplySceneSyncBehavior);
-  elements.clearSceneSyncBehaviorBtn?.addEventListener('click', handleClearSceneSyncBehavior);
 
   elements.loadSceneSyncJumpPresetBtn?.addEventListener('click', () => {
     loadSceneSyncPreset('Jump Preview', SCENE_SYNC_JUMP_PRESET);
