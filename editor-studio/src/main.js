@@ -429,36 +429,70 @@ function getPreviewSurfaceParent() {
   return isPreviewDockedInPanels() ? elements.previewStage : document.body;
 }
 
-function layoutDockedPreviewStage() {
+function getDockedPreviewRenderRect() {
   const stage = elements.previewStage;
-  if (!stage) return;
+  if (!stage) return null;
 
   if (!isPreviewDockedInPanels()) {
-    stage.style.width = '';
-    stage.style.height = '';
-    return;
+    return null;
   }
 
-  const pane = stage.closest('.preview-pane');
-  if (!pane) return;
-
-  const header = pane.querySelector('.pane-header');
-  const availableWidth = Math.max(1, pane.clientWidth);
-  const availableHeight = Math.max(1, pane.clientHeight - (header?.offsetHeight || 0));
+  const availableWidth = Math.max(1, stage.clientWidth);
+  const availableHeight = Math.max(1, stage.clientHeight);
   const availableAspect = availableWidth / availableHeight;
 
-  let width;
-  let height;
+  let width = availableWidth;
+  let height = availableHeight;
   if (availableAspect > DOCKED_PREVIEW_ASPECT_RATIO) {
-    height = availableHeight;
-    width = height * DOCKED_PREVIEW_ASPECT_RATIO;
-  } else {
     width = availableWidth;
     height = width / DOCKED_PREVIEW_ASPECT_RATIO;
+  } else {
+    height = availableHeight;
+    width = height * DOCKED_PREVIEW_ASPECT_RATIO;
   }
 
-  stage.style.width = `${Math.floor(width)}px`;
-  stage.style.height = `${Math.floor(height)}px`;
+  return {
+    width: Math.max(1, Math.floor(width)),
+    height: Math.max(1, Math.floor(height)),
+    left: Math.floor((availableWidth - width) / 2),
+    top: Math.floor((availableHeight - height) / 2)
+  };
+}
+
+function applyPreviewSurfaceLayout() {
+  if (isPreviewDockedInPanels()) {
+    const rect = getDockedPreviewRenderRect();
+    if (!rect) return { width: 1, height: 1 };
+
+    for (const element of [elements.previewCanvas, elements.scene3dHost]) {
+      if (!element) continue;
+      element.style.left = `${rect.left}px`;
+      element.style.top = `${rect.top}px`;
+      element.style.width = `${rect.width}px`;
+      element.style.height = `${rect.height}px`;
+    }
+
+    return { width: rect.width, height: rect.height };
+  }
+
+  if (elements.previewCanvas) {
+    elements.previewCanvas.style.left = '';
+    elements.previewCanvas.style.top = '';
+    elements.previewCanvas.style.width = `${window.innerWidth}px`;
+    elements.previewCanvas.style.height = `${window.innerHeight}px`;
+  }
+
+  if (elements.scene3dHost) {
+    elements.scene3dHost.style.left = '';
+    elements.scene3dHost.style.top = '';
+    elements.scene3dHost.style.width = '';
+    elements.scene3dHost.style.height = '';
+  }
+
+  return {
+    width: window.innerWidth,
+    height: window.innerHeight
+  };
 }
 
 function mountPreviewSurface() {
@@ -472,19 +506,7 @@ function mountPreviewSurface() {
 }
 
 function getPreviewSurfaceSize() {
-  if (isPreviewDockedInPanels()) {
-    layoutDockedPreviewStage();
-    const rect = elements.previewStage.getBoundingClientRect();
-    return {
-      width: Math.max(1, Math.floor(rect.width)),
-      height: Math.max(1, Math.floor(rect.height))
-    };
-  }
-
-  return {
-    width: window.innerWidth,
-    height: window.innerHeight
-  };
+  return applyPreviewSurfaceLayout();
 }
 
 function applyDockedEditorTab() {
