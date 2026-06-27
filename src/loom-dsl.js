@@ -631,7 +631,8 @@ function buildGraph(stmts, options = {}) { /* mostly original */
     return id; };
   function buildFormula(expr, resultId, locals) {
     const id = resultId || anonId();
-    nodes.push({ id, type: 'formula', params: { formula: expr.formula } });
+    const inputsMeta = Object.keys(expr.vars).map(name => ({ name, type: 'number', kind: 'behavior' }));
+    nodes.push({ id, type: 'formula', params: { formula: expr.formula }, inputs: inputsMeta });
     for (const [varName, varExpr] of Object.entries(expr.vars)) wireToNode(varExpr, id, varName, locals);
     return id;
   }

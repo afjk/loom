@@ -73,7 +73,13 @@ test('negative literal in named arg still works', () => {
 });
 
 test('operators with identifiers', () => {
-  assert.equal(evalSrc('a = 10\nb = 3\nc = a + b', 'c.out'), 13);
+  const graph = compile('a = 10\nb = 3\nc = a + b');
+  const node = graph.nodes.find(n => n.id === 'c');
+  assert.deepEqual(node.inputs, [
+    { name: 'a', type: 'number', kind: 'behavior' },
+    { name: 'b', type: 'number', kind: 'behavior' },
+  ]);
+  assert.equal(evalRef(graph, 'c.out'), 13);
 });
 
 test('chained addition', () => {
