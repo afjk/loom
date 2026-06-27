@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseDSLToAST, compileToGraph, formatDSL } from '../src/loom-dsl.js';
 import { Loom } from '../src/loom.js';
+import { extractFormulaVars } from '../src/nodes/math.js';
 
 function compile(src) {
   const { ast, errors } = parseDSLToAST(src);
@@ -126,4 +127,11 @@ test('operator fixture compiles and evaluates', () => {
   assert.equal(evalRef(graph, 'd.out'), 5);
   assert.equal(evalRef(graph, 'e.out'), 1);
   assert.equal(evalRef(graph, 'f.out'), 143);
+});
+
+test('extractFormulaVars extracts variable names from formula', () => {
+  assert.deepEqual(extractFormulaVars('(x + y)'), ['x', 'y']);
+  assert.deepEqual(extractFormulaVars('(a + (b * 10))'), ['a', 'b']);
+  assert.deepEqual(extractFormulaVars('(-x)'), ['x']);
+  assert.deepEqual(extractFormulaVars('42'), []);
 });
