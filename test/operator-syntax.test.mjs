@@ -159,3 +159,34 @@ test('canonical DSL round-trips operator expression', () => {
   const graph2 = compile(dsl.trim());
   assert.equal(evalRef(graph2, 'c.out'), 40);
 });
+
+test('canonical DSL uses explicit syntax when formula vars differ from node IDs', () => {
+  const graph = {
+    nodes: [
+      { id: 'x', type: 'constant', params: { value: 1 } },
+      { id: 'y', type: 'constant', params: { value: 2 } },
+      { id: 'z', type: 'formula', params: { formula: '(a + b)' }, inputs: [{ name: 'a' }, { name: 'b' }] },
+    ],
+    edges: [
+      { from: 'x.out', to: 'z.a' },
+      { from: 'y.out', to: 'z.b' },
+    ],
+  };
+  const dsl = graphToCanonicalDSL(graph);
+  assert.match(dsl, /z = formula\(formula: "\(a \+ b\)", a: x, b: y\)/);
+});
+
+test('canonical DSL uses explicit syntax when formula has disconnected vars', () => {
+  const graph = {
+    nodes: [
+      { id: 'x', type: 'constant', params: { value: 1 } },
+      { id: 'z', type: 'formula', params: { formula: '(x + y)' }, inputs: [{ name: 'x' }, { name: 'y' }] },
+    ],
+    edges: [
+      { from: 'x.out', to: 'z.x' },
+    ],
+  };
+  const dsl = graphToCanonicalDSL(graph);
+  assert.match(dsl, /z = formula\(formula: "\(x \+ y\)", x: x\)/);
+  assert.ok(!dsl.match(/z = x \+ y/));
+});
