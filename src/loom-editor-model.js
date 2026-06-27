@@ -162,13 +162,17 @@ export function graphToEditorModel(graph) {
       ? { x: metaPosition.x, y: metaPosition.y }
       : null;
 
-    return {
+    const result = {
       id: node.id,
       type: node.type,
       category,
       params: { ...(node.params || {}) },
       position
     };
+    if (node.inputs && node.inputs.length > 0) {
+      result.inputPorts = node.inputs.map(i => i.name);
+    }
+    return result;
   });
 
   const positioned = layoutFallback(rawNodes);
