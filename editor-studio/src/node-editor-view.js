@@ -334,6 +334,9 @@ export class NodeEditorView {
       if (!this.isRendering) {
         this.onOperation(op);
       }
+      if (op.type === 'updateParam' && op.key === 'formula') {
+        this._rebuildFormulaNode(op.id, op.value);
+      }
     }, this._getNodePreviewText(editorNode.id));
 
     await this.editor.addNode(reteNode);
@@ -342,6 +345,36 @@ export class NodeEditorView {
     await this.area.translate(reteNode.id, { x: pos.x, y: pos.y });
 
     return reteNode;
+  }
+
+  async _rebuildFormulaNode(nodeId, newFormula) {
+    if (!this.currentEditorModel) return;
+    const editorNode = this.currentEditorModel.nodesById[nodeId];
+    if (!editorNode) return;
+    const updatedNode = { ...editorNode, params: { ...editorNode.params, formula: newFormula } };
+    const prevVars = extractFormulaVars(editorNode.params?.formula || '');
+    const nextVars = extractFormulaVars(newFormula || '');
+    if (prevVars.length === nextVars.length && prevVars.every((v, i) => v === nextVars[i])) return;
+
+    const reteNode = this.editor.getNode(nodeId);
+    if (!reteNode) return;
+    const pos = await this.area.nodeViews.get(nodeId)?.position;
+
+    const edgeIds = [];
+    for (const [id, edge] of Object.entries(this.currentEditorModel.edgesById || {})) {
+      if (edge.fromNodeId === nodeId || edge.toNodeId === nodeId) edgeIds.push(id);
+    }
+    for (const id of edgeIds) await this._removeReteConnectionByEdgeId(id);
+    await this._removeReteNode(nodeId);
+
+    this.currentEditorModel.nodesById[nodeId] = updatedNode;
+    const newRete = await this._addReteNode(updatedNode);
+    if (pos) await this.area.translate(newRete.id, pos);
+
+    for (const id of edgeIds) {
+      const edge = this.currentEditorModel.edgesById[id];
+      if (edge) await this._addReteConnection(edge);
+    }
   }
 
   _getNodePreviewText(nodeId) {
