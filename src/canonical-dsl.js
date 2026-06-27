@@ -1,4 +1,5 @@
 import { NODE_TYPES } from './loom.js';
+import { extractFormulaVars } from './nodes/math.js';
 
 function splitRef(ref) {
   const dot = ref.indexOf('.');
@@ -175,9 +176,20 @@ export function graphToCanonicalDSL(graph) {
           inputEdges[toPort] = fromNodeId;
         }
       }
-      let rendered = renderFormulaDSL(formula, inputEdges);
-      if (rendered.startsWith('(') && rendered.endsWith(')')) rendered = rendered.slice(1, -1);
-      lines.push(`${node.id} = ${rendered}`);
+      const vars = extractFormulaVars(formula);
+      const allConnected = vars.length > 0 && vars.every(v => inputEdges[v]);
+      const allMatch = allConnected && vars.every(v => inputEdges[v] === v);
+      if (allMatch) {
+        let rendered = renderFormulaDSL(formula, inputEdges);
+        if (rendered.startsWith('(') && rendered.endsWith(')')) rendered = rendered.slice(1, -1);
+        lines.push(`${node.id} = ${rendered}`);
+      } else {
+        const args = [formatParam('formula', formula)];
+        for (const v of vars) {
+          if (inputEdges[v]) args.push(formatInputRefParam(v, inputEdges[v]));
+        }
+        lines.push(`${node.id} = formula(${args.join(', ')})`);
+      }
       continue;
     }
 
