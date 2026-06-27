@@ -1,5 +1,73 @@
 import { coerceFiniteNumber, resolveStateInputValue, sanitizeStateValue } from './helpers.js';
 
+export function evaluateFormula(formula, vars) {
+  let pos = 0;
+  const len = formula.length;
+  const skip = () => { while (pos < len && (formula[pos] === ' ' || formula[pos] === '\t')) pos++; };
+  const parseExpr = () => parseAdd();
+
+  function parseAdd() {
+    let left = parseMul();
+    while (pos < len) {
+      skip();
+      const ch = formula[pos];
+      if (ch === '+') { pos++; left = left + parseMul(); }
+      else if (ch === '-') { pos++; left = left - parseMul(); }
+      else break;
+    }
+    return left;
+  }
+
+  function parseMul() {
+    let left = parseUnary();
+    while (pos < len) {
+      skip();
+      const ch = formula[pos];
+      if (ch === '*') { pos++; left = left * parseUnary(); }
+      else if (ch === '/') { pos++; const r = parseUnary(); left = r === 0 ? 0 : left / r; }
+      else if (ch === '%') { pos++; const r = parseUnary(); left = r === 0 ? 0 : ((left % r) + r) % r; }
+      else break;
+    }
+    return left;
+  }
+
+  function parseUnary() {
+    skip();
+    if (formula[pos] === '-') { pos++; return -parseUnary(); }
+    return parsePrimary();
+  }
+
+  function parsePrimary() {
+    skip();
+    if (formula[pos] === '(') {
+      pos++;
+      const val = parseExpr();
+      skip();
+      if (formula[pos] === ')') pos++;
+      return val;
+    }
+    if (/\d/.test(formula[pos]) || (formula[pos] === '.' && pos + 1 < len && /\d/.test(formula[pos + 1]))) {
+      let num = '';
+      while (pos < len && /[\d.]/.test(formula[pos])) num += formula[pos++];
+      if (pos < len && /[eE]/.test(formula[pos])) {
+        num += formula[pos++];
+        if (pos < len && /[+-]/.test(formula[pos])) num += formula[pos++];
+        while (pos < len && /\d/.test(formula[pos])) num += formula[pos++];
+      }
+      return parseFloat(num);
+    }
+    if (/[a-zA-Z_]/.test(formula[pos])) {
+      let name = '';
+      while (pos < len && /[a-zA-Z0-9_]/.test(formula[pos])) name += formula[pos++];
+      const v = vars[name];
+      return typeof v === 'number' ? v : 0;
+    }
+    return 0;
+  }
+
+  return parseExpr();
+}
+
 export function registerMathNodes(registry) {
   registry.registerNodeType('abs', {
     category: 'transform',
@@ -310,5 +378,13 @@ export function registerMathNodes(registry) {
       { name: 'b', type: 'number', default: 0 }
     ],
     evaluate: (inputs, params, ctx) => ({ out: inputs.a - inputs.b })
+  });
+  registry.registerNodeType('formula', {
+    category: 'transform',
+    dynamicInputs: true,
+    inputs: [],
+    outputs: [{ name: 'out', type: 'number', kind: 'behavior' }],
+    params: [{ name: 'formula', type: 'string', default: '0' }],
+    evaluate: (inputs, params) => ({ out: evaluateFormula(params.formula, inputs) })
   });
 }

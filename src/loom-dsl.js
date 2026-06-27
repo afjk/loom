@@ -27,6 +27,7 @@ const TT = {
   ASSIGN: 'ASSIGN', COLON: 'COLON', COMMA: 'COMMA', DOT: 'DOT',
   LPAREN: 'LPAREN', RPAREN: 'RPAREN', LBRACKET: 'LBRACKET', RBRACKET: 'RBRACKET',
   LBRACE: 'LBRACE', RBRACE: 'RBRACE', PIPE: 'PIPE', ARROW: 'ARROW', COMMENT: 'COMMENT', NEWLINE: 'NEWLINE', EOF: 'EOF',
+  PLUS: 'PLUS', MINUS: 'MINUS', STAR: 'STAR', SLASH: 'SLASH', PERCENT: 'PERCENT',
 };
 
 const posFrom = (line, column, offset) => ({ line, column, offset });
@@ -65,7 +66,7 @@ function tokenize(src) {
       tok(TT.COMMENT, text, sLine, sCol, sOff);
       continue;
     }
-    if (/\d/.test(ch) || (ch === '-' && /\d/.test(src[i + 1]))) {
+    if (/\d/.test(ch)) {
       let raw = '';
       raw += adv();
       while (i < src.length && /[\d.]/.test(cur())) raw += adv();
@@ -93,7 +94,7 @@ function tokenize(src) {
       tok(TT.IDENT, id, sLine, sCol, sOff);
       continue;
     }
-    const map = { '=': TT.ASSIGN, ':': TT.COLON, ',': TT.COMMA, '.': TT.DOT, '(': TT.LPAREN, ')': TT.RPAREN, '[': TT.LBRACKET, ']': TT.RBRACKET, '{': TT.LBRACE, '}': TT.RBRACE };
+    const map = { '=': TT.ASSIGN, ':': TT.COLON, ',': TT.COMMA, '.': TT.DOT, '(': TT.LPAREN, ')': TT.RPAREN, '[': TT.LBRACKET, ']': TT.RBRACKET, '{': TT.LBRACE, '}': TT.RBRACE, '+': TT.PLUS, '-': TT.MINUS, '*': TT.STAR, '/': TT.SLASH, '%': TT.PERCENT };
     if (ch === '=' && src[i + 1] === '>') { adv(); adv(); tok(TT.ARROW, undefined, sLine, sCol, sOff); continue; }
     if (ch === '|') { adv(); if (cur() !== '>') throw new LoomDSLError("Expected '>' after '|'", sLine, sCol, 'UNEXPECTED_TOKEN'); adv(); tok(TT.PIPE, undefined, sLine, sCol, sOff); continue; }
     if (map[ch]) { adv(); tok(map[ch], undefined, sLine, sCol, sOff); continue; }
@@ -176,7 +177,37 @@ export function parseDSLToAST(source) {
       }
       return { type: 'FunctionDefinition', name: mkIdent(name), params, body, span: spanFrom(start.span.start, end) };
     }
-    function parsePipe() { let left = parseAtom(); while (true) { if (peek().type === TT.PIPE || (peek().type === TT.NEWLINE && peek(1).type === TT.PIPE)) { if (peek().type === TT.NEWLINE) take(); const pt = take(); const right = parseCall(); left = { type: 'PipeExpression', left, right, span: spanFrom(left.span.start, right.span.end) }; } else break; } return left; }
+    function parsePipe() { let left = parseAdditive(); while (true) { if (peek().type === TT.PIPE || (peek().type === TT.NEWLINE && peek(1).type === TT.PIPE)) { if (peek().type === TT.NEWLINE) take(); const pt = take(); const right = parseCall(); left = { type: 'PipeExpression', left, right, span: spanFrom(left.span.start, right.span.end) }; } else break; } return left; }
+    function parseAdditive() {
+      let left = parseMultiplicative();
+      while (peek().type === TT.PLUS || peek().type === TT.MINUS) {
+        const op = take();
+        const right = parseMultiplicative();
+        left = { type: 'BinaryExpression', operator: op.type === TT.PLUS ? '+' : '-', left, right, span: spanFrom(left.span.start, right.span.end) };
+      }
+      return left;
+    }
+    function parseMultiplicative() {
+      let left = parseUnary();
+      while (peek().type === TT.STAR || peek().type === TT.SLASH || peek().type === TT.PERCENT) {
+        const op = take();
+        const opChar = op.type === TT.STAR ? '*' : op.type === TT.SLASH ? '/' : '%';
+        const right = parseUnary();
+        left = { type: 'BinaryExpression', operator: opChar, left, right, span: spanFrom(left.span.start, right.span.end) };
+      }
+      return left;
+    }
+    function parseUnary() {
+      if (peek().type === TT.MINUS) {
+        const op = take();
+        const operand = parseUnary();
+        if (operand.type === 'NumberLiteral') {
+          return { type: 'NumberLiteral', value: -operand.value, raw: `-${operand.raw}`, span: spanFrom(op.span.start, operand.span.end) };
+        }
+        return { type: 'UnaryExpression', operator: '-', operand, span: spanFrom(op.span.start, operand.span.end) };
+      }
+      return parseAtom();
+    }
     function isCallStart() {
       if (peek().type !== TT.IDENT) return false;
       let lookahead = 1;
@@ -205,6 +236,12 @@ export function parseDSLToAST(source) {
       if (t.type === TT.NULL) { take(); return { type: 'NullLiteral', span: t.span }; }
       if (t.type === TT.LBRACKET) return parseMemberPostfix(parseArray());
       if (t.type === TT.LBRACE) return parseMemberPostfix(parseObject());
+      if (t.type === TT.LPAREN) {
+        take();
+        const expr = parseExpr();
+        expect(TT.RPAREN);
+        return expr;
+      }
       if (t.type === TT.IDENT) {
         if (isCallStart()) return parseMemberPostfix(parseCall());
         take();
@@ -331,6 +368,9 @@ export function compileToGraph(ast, options = {}) { /* bridge via existing shape
 
 function astToLegacy(program) {
   function convExpr(e) {
+    if (e.type === 'BinaryExpression' || (e.type === 'UnaryExpression' && e.operator === '-')) {
+      return buildFormulaExpr(e);
+    }
     if (e.type === 'CallExpression') return { type: 'call', name: e.callee.name, args: e.args.map(a => a.type === 'NamedArg' ? { named: true, name: a.name.name, value: convExpr(a.value) } : { named: false, value: convExpr(a.value) }), line: e.span.start.line, col: e.span.start.column };
     if (e.type === 'FunctionLiteral') return { type: 'fn', params: e.params.map((p) => p.name), body: convExpr(e.body), line: e.span.start.line, col: e.span.start.column };
     if (e.type === 'PipeExpression') return { type: 'pipe', left: convExpr(e.left), call: convExpr(e.right) };
@@ -344,11 +384,29 @@ function astToLegacy(program) {
     if (e.type === 'ObjectLiteral') return { type: 'object', value: convJsonLiteral(e, e.span.start.line, e.span.start.column), line: e.span.start.line, col: e.span.start.column };
     throw new LoomDSLError('Unsupported expression in compileToGraph', e.span.start.line, e.span.start.column, 'UNEXPECTED_TOKEN');
   }
+  function buildFormulaExpr(root) {
+    const vars = {};
+    let vc = 0;
+    function walk(node) {
+      if (node.type === 'BinaryExpression') return `(${walk(node.left)} ${node.operator} ${walk(node.right)})`;
+      if (node.type === 'UnaryExpression' && node.operator === '-') return `(-${walk(node.operand)})`;
+      if (node.type === 'NumberLiteral') return String(node.value);
+      if (node.type === 'Identifier') {
+        if (!vars[node.name]) vars[node.name] = convExpr(node);
+        return node.name;
+      }
+      const name = `_v${vc++}`;
+      vars[name] = convExpr(node);
+      return name;
+    }
+    const formula = walk(root);
+    return { type: 'formula', formula, vars, line: root.span.start.line, col: root.span.start.column };
+  }
   function convJsonLiteral(node, line, col) {
     if (node.type === 'NumberLiteral' || node.type === 'StringLiteral' || node.type === 'BooleanLiteral') return node.value;
     if (node.type === 'NullLiteral') return null;
     if (node.type === 'ArrayLiteral') return node.elements.map((e) => {
-      if (['Identifier', 'CallExpression', 'PipeExpression'].includes(e.type)) throw new LoomDSLError('Nested non-literal in array is not supported', e.span.start.line, e.span.start.column, 'UNEXPECTED_TOKEN');
+      if (['Identifier', 'CallExpression', 'PipeExpression', 'BinaryExpression', 'UnaryExpression'].includes(e.type)) throw new LoomDSLError('Nested non-literal in array is not supported', e.span.start.line, e.span.start.column, 'UNEXPECTED_TOKEN');
       return convJsonLiteral(e, line, col);
     });
     if (node.type === 'ObjectLiteral') {
@@ -463,6 +521,10 @@ function buildGraph(stmts, options = {}) { /* mostly original */
       validateFunctionExpr(expr.call, fn, seenCalls);
       return;
     }
+    if (expr.type === 'formula') {
+      for (const varExpr of Object.values(expr.vars)) validateFunctionExpr(varExpr, fn, seenCalls);
+      return;
+    }
   }
   if (isTopLevel) for (const fn of functionDefs.values()) validateFunctionExpr(fn.body, fn, new Set([fn.name]));
   function buildFunctionLiteral(fn, resultId) {
@@ -558,7 +620,7 @@ function buildGraph(stmts, options = {}) { /* mostly original */
     else if (expr.type === 'ref') edges.push({ from: expr.ref, to: `${id}.${port}` });
     else if (expr.type === 'ident' && locals?.has(expr.name)) wireToNode(locals.get(expr.name), id, port, locals);
     else if (expr.type === 'ident') edges.push({ from: resolveIdent(expr.name, expr.line, expr.col, locals), to: `${id}.${port}` });
-    else if (expr.type === 'call' || expr.type === 'pipe' || expr.type === 'fn' || expr.type === 'member') { const inId = buildExpr(expr, null, null, locals); const inNode = nodes.find(n => n.id === inId); edges.push({ from: `${inId}.${defaultOutputPort(inNode.type, nodeTypes)}`, to: `${id}.${port}` }); }
+    else if (expr.type === 'call' || expr.type === 'pipe' || expr.type === 'fn' || expr.type === 'member' || expr.type === 'formula') { const inId = buildExpr(expr, null, null, locals); const inNode = nodes.find(n => n.id === inId); edges.push({ from: `${inId}.${defaultOutputPort(inNode.type, nodeTypes)}`, to: `${id}.${port}` }); }
     else { const nodeObj = nodes.find(n => n.id === id); nodeObj.params ||= {}; nodeObj.params[port] = expr.value; }
   }
   function buildNode(call, resultId, pipeFrom, locals = null) { const fnName = call.name; if (functionDefs.has(fnName)) return buildFunctionDefinitionCall(call, resultId, pipeFrom, locals); if (!nodeTypes[fnName]) { if (scope[fnName]) return buildUserCall(call, resultId); if (hasFunctionDefinitions && !fnName.includes('.')) throw new LoomDSLError(`Unknown function: ${fnName}`, call.line, call.col, 'UNKNOWN_FUNCTION'); throw new LoomDSLError(`Unknown node type: ${fnName}`, call.line, call.col, 'UNKNOWN_NODE_TYPE'); } const typeDef = nodeTypes[fnName]; const id = resultId || anonId(); const nodeObj = { id, type: fnName }; nodes.push(nodeObj); const inputNames = typeDef.inputs.map(i => i.name); const paramNames = (typeDef.params || []).map(p => p.name); const pos = call.args.filter(a => !a.named); const named = call.args.filter(a => a.named); const hasUnknownNamed = named.some(a => !inputNames.includes(a.name) && !paramNames.includes(a.name)); if (typeDef.commutative && pos.length && named.length && !hasUnknownNamed) throw new LoomDSLError(`Node '${fnName}' is commutative: arguments must be all positional or all named`, call.line, call.col, 'MISSING_ARGUMENT_NAME'); if (!canUseTwoPositionalArgs(fnName, typeDef) && pos.length > (pipeFrom ? 0 : 1)) throw new LoomDSLError(`Argument at position 2 for '${fnName}' requires a name`, call.line, call.col, 'MISSING_ARGUMENT_NAME'); let idx = 0;
@@ -567,7 +629,13 @@ function buildGraph(stmts, options = {}) { /* mostly original */
     for (const a of pos) wire(a.value, inputNames[idx++]);
     for (const a of named) { if (inputNames.includes(a.name)) wire(a.value, a.name); else if (paramNames.includes(a.name)) { if (a.value.type === 'ident' || a.value.type === 'call' || a.value.type === 'fn' || a.value.type === 'member') throw new LoomDSLError(`Parameter '${a.name}' for '${fnName}' must be a literal`, call.line, call.col, 'UNEXPECTED_TOKEN'); nodeObj.params ||= {}; nodeObj.params[a.name] = a.value.value; } else throw new LoomDSLError(`Unknown argument '${a.name}' for '${fnName}'`, call.line, call.col, 'UNKNOWN_ARGUMENT'); }
     return id; };
-  const buildExpr = (expr, resultId, pipeFrom, locals = null) => expr.type === 'binding' ? buildExpr(expr.expr, resultId, null, expr.locals) : expr.type === 'call' ? buildNode(expr, resultId, pipeFrom, locals) : expr.type === 'fn' ? buildFunctionLiteral(expr, resultId) : ['number', 'string', 'bool', 'null', 'array', 'object'].includes(expr.type) ? buildLiteral(expr, resultId) : expr.type === 'member' ? buildMember(expr, resultId) : expr.type === 'pipe' ? (() => { const lId = buildExpr(expr.left, null, null, locals); const ln = nodes.find(n => n.id === lId); return buildNode(expr.call, resultId, `${lId}.${defaultOutputPort(ln.type, nodeTypes)}`, locals); })() : expr.type === 'ref' ? expr.ref.split('.')[0] : expr.type === 'ident' ? (locals?.has(expr.name) ? buildExpr(locals.get(expr.name), resultId, null, locals) : scope[expr.name] || (()=>{throw new LoomDSLError(`Undefined identifier: ${expr.name}`, expr.line, expr.col, 'UNDEFINED_IDENTIFIER');})()) : (()=>{throw new LoomDSLError('Cannot use literal as expression', expr.line, expr.col, 'UNEXPECTED_TOKEN');})();
+  function buildFormula(expr, resultId, locals) {
+    const id = resultId || anonId();
+    nodes.push({ id, type: 'formula', params: { formula: expr.formula } });
+    for (const [varName, varExpr] of Object.entries(expr.vars)) wireToNode(varExpr, id, varName, locals);
+    return id;
+  }
+  const buildExpr = (expr, resultId, pipeFrom, locals = null) => expr.type === 'binding' ? buildExpr(expr.expr, resultId, null, expr.locals) : expr.type === 'formula' ? buildFormula(expr, resultId, locals) : expr.type === 'call' ? buildNode(expr, resultId, pipeFrom, locals) : expr.type === 'fn' ? buildFunctionLiteral(expr, resultId) : ['number', 'string', 'bool', 'null', 'array', 'object'].includes(expr.type) ? buildLiteral(expr, resultId) : expr.type === 'member' ? buildMember(expr, resultId) : expr.type === 'pipe' ? (() => { const lId = buildExpr(expr.left, null, null, locals); const ln = nodes.find(n => n.id === lId); return buildNode(expr.call, resultId, `${lId}.${defaultOutputPort(ln.type, nodeTypes)}`, locals); })() : expr.type === 'ref' ? expr.ref.split('.')[0] : expr.type === 'ident' ? (locals?.has(expr.name) ? buildExpr(locals.get(expr.name), resultId, null, locals) : scope[expr.name] || (()=>{throw new LoomDSLError(`Undefined identifier: ${expr.name}`, expr.line, expr.col, 'UNDEFINED_IDENTIFIER');})()) : (()=>{throw new LoomDSLError('Cannot use literal as expression', expr.line, expr.col, 'UNEXPECTED_TOKEN');})();
   const buildRender = (call) => { const named = {}; for (const a of call.args) { if (!a.named) throw new LoomDSLError('render arguments must be named', call.line, call.col, 'MISSING_ARGUMENT_NAME'); named[a.name] = a.value; } const rv = (e) => { if (e.type === 'ident') return resolveIdent(e.name, e.line, e.col); if (e.type === 'member' || e.type === 'call' || e.type === 'pipe') { const id = buildExpr(e, null, null); const node = nodes.find(n => n.id === id); return `${id}.${defaultOutputPort(node.type, nodeTypes)}`; } return e.value; }; if (call.name === 'point') return { type: 'point', x: named.x ? rv(named.x) : undefined, y: named.y ? rv(named.y) : undefined, color: named.color ? named.color.value : '#00ff00', trail: named.trail ? named.trail.value : 0.1 }; if (call.name === 'bar') return { type: 'bar', width: named.width ? rv(named.width) : undefined, color: named.color ? named.color.value : '#00ccff', height: named.height ? named.height.value : 40, y: named.y ? rv(named.y) : undefined }; throw new LoomDSLError(`Unknown render function: ${call.name}`, call.line, call.col, 'UNKNOWN_NODE_TYPE'); };
   for (const s of stmts) {
     if (s.type === 'render') renderConfig = buildRender(s.call);
@@ -589,7 +657,22 @@ export function formatDSL(ast, options = {}) {
   const maxInlineParams = options.maxInlineParams ?? 2;
   const maxWidth = options.maxLineWidth ?? 80;
 
+  function opPrec(op) { return (op === '*' || op === '/' || op === '%') ? 2 : 1; }
+  function fmtBinaryChild(child, parentOp, side, level) {
+    const s = fmtExpr(child, level);
+    if (child.type === 'PipeExpression') return `(${s})`;
+    if (child.type !== 'BinaryExpression') return s;
+    const cp = opPrec(child.operator), pp = opPrec(parentOp);
+    if (cp < pp) return `(${s})`;
+    if (cp === pp && side === 'right' && (parentOp === '-' || parentOp === '/' || parentOp === '%')) return `(${s})`;
+    return s;
+  }
   function fmtExpr(e, level = 0) {
+    if (e.type === 'BinaryExpression') return `${fmtBinaryChild(e.left, e.operator, 'left', level)} ${e.operator} ${fmtBinaryChild(e.right, e.operator, 'right', level)}`;
+    if (e.type === 'UnaryExpression' && e.operator === '-') {
+      const s = fmtExpr(e.operand, level);
+      return (e.operand.type === 'BinaryExpression' || e.operand.type === 'PipeExpression') ? `-(${s})` : `-${s}`;
+    }
     if (e.type === 'PipeExpression') {
       const chain = [];
       let cur = e;

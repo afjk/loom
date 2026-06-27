@@ -870,6 +870,26 @@ export class Loom {
 
       }
 
+      if (nodeType.dynamicInputs) {
+        const prefix = nodeId + '.';
+        for (const edge of this._currentGraph.edges) {
+          if (edge.to.startsWith(prefix)) {
+            const portName = edge.to.slice(prefix.length);
+            if (!(portName in inputs)) {
+              inputs[portName] = this._values.get(edge.from);
+            }
+          }
+        }
+        if (node.params) {
+          const declaredParams = new Set((nodeType.params || []).map(p => p.name));
+          for (const [key, value] of Object.entries(node.params)) {
+            if (!declaredParams.has(key) && !(key in inputs)) {
+              inputs[key] = value;
+            }
+          }
+        }
+      }
+
       // パラメータ値の解決
       const params = {};
       for (const paramDef of nodeType.params) {
@@ -1212,13 +1232,13 @@ export class Loom {
       const toNode = graph.nodes.find(n => n.id === toNodeId);
       const toNodeType = this._nodeTypes[toNode.type];
       const toPort = toNodeType.inputs.find(i => i.name === toPortName);
-      if (!toPort) {
+      if (!toPort && !toNodeType.dynamicInputs) {
         throw new LoomError('UNKNOWN_PORT', `Unknown port: ${toNodeId}.${toPortName}`, { nodeId: toNodeId, port: toPortName, side: 'input' });
       }
 
       // 6. 型チェック（Behavior/Event の混在禁止、ただし sample.value は例外）
       const fromKind = fromPort.kind;
-      const toKind = toPort.kind;
+      const toKind = toPort ? toPort.kind : 'behavior';
       const isSampleValueException = toNode.type === 'sample' && toPortName === 'value';
 
       if (fromKind !== toKind && !isSampleValueException) {
