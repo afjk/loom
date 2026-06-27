@@ -261,6 +261,11 @@ body.preview-layout-docked:not(.panels-hidden) .preview-pane {
   display: flex;
   grid-column: 1;
   grid-row: 1 / 3;
+  align-items: center;
+}
+
+body.preview-layout-docked:not(.panels-hidden) .preview-pane > .pane-header {
+  width: 100%;
 }
 
 body.preview-layout-docked:not(.panels-hidden) .editor-split-resize-handle,
@@ -320,6 +325,14 @@ body.preview-layout-docked:not(.panels-hidden) .node-pane > .pane-header {
   min-height: 0;
   overflow: hidden;
   background: radial-gradient(120% 90% at 50% 18%, #141b2b 0%, #0a0d14 70%);
+}
+
+body.preview-layout-docked:not(.panels-hidden) .preview-stage {
+  flex: 0 0 auto;
+  align-self: center;
+  max-width: 100%;
+  max-height: 100%;
+  margin: auto 0;
 }
 
 body.preview-layout-docked:not(.panels-hidden) .preview-stage > .preview-canvas,

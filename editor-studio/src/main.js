@@ -116,6 +116,7 @@ const MIN_NODE_PANE_WIDTH = 320;
 const DEFAULT_PREVIEW_PANE_WIDTH = 520;
 const MIN_PREVIEW_PANE_WIDTH = 320;
 const MIN_DOCKED_EDITOR_WIDTH = 360;
+const DOCKED_PREVIEW_ASPECT_RATIO = 16 / 9;
 const EDITOR_SPLIT_HANDLE_WIDTH = 8;
 const EDITOR_SPLIT_GRID_GAP = 12;
 const EDITOR_SPLIT_GRID_GAP_COUNT = 2;
@@ -325,6 +326,7 @@ function resizeBottomPanel(event) {
 
   bottomPanelHeight = clampBottomPanelHeight(newHeight);
   applyBottomPanelLayout();
+  resizePreviewCanvas();
 }
 
 function stopBottomPanelResize() {
@@ -350,6 +352,7 @@ function handleWindowResizeForBottomPanel() {
 function toggleBottomPanelCollapsed() {
   isBottomPanelCollapsed = !isBottomPanelCollapsed;
   applyBottomPanelLayout();
+  resizePreviewCanvas();
   saveBottomPanelLayout();
 }
 
@@ -434,6 +437,38 @@ function getPreviewSurfaceParent() {
   return isPreviewDockedInPanels() ? elements.previewStage : document.body;
 }
 
+function layoutDockedPreviewStage() {
+  const stage = elements.previewStage;
+  if (!stage) return;
+
+  if (!isPreviewDockedInPanels()) {
+    stage.style.width = '';
+    stage.style.height = '';
+    return;
+  }
+
+  const pane = stage.closest('.preview-pane');
+  if (!pane) return;
+
+  const header = pane.querySelector('.pane-header');
+  const availableWidth = Math.max(1, pane.clientWidth);
+  const availableHeight = Math.max(1, pane.clientHeight - (header?.offsetHeight || 0));
+  const availableAspect = availableWidth / availableHeight;
+
+  let width;
+  let height;
+  if (availableAspect > DOCKED_PREVIEW_ASPECT_RATIO) {
+    height = availableHeight;
+    width = height * DOCKED_PREVIEW_ASPECT_RATIO;
+  } else {
+    width = availableWidth;
+    height = width / DOCKED_PREVIEW_ASPECT_RATIO;
+  }
+
+  stage.style.width = `${Math.floor(width)}px`;
+  stage.style.height = `${Math.floor(height)}px`;
+}
+
 function mountPreviewSurface() {
   const parent = getPreviewSurfaceParent();
   if (!parent) return;
@@ -446,6 +481,7 @@ function mountPreviewSurface() {
 
 function getPreviewSurfaceSize() {
   if (isPreviewDockedInPanels()) {
+    layoutDockedPreviewStage();
     const rect = elements.previewStage.getBoundingClientRect();
     return {
       width: Math.max(1, Math.floor(rect.width)),
@@ -652,6 +688,7 @@ function resizeEditorSplit(event) {
     dslPaneWidth = clampDslPaneWidth(nextWidth);
   }
   applyEditorSplitLayout();
+  resizePreviewCanvas();
 }
 
 function stopEditorSplitResize() {
