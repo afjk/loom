@@ -152,19 +152,15 @@ Graph DSL → JSON graph → Web Loom / Unity Loom で評価
 
 詳細は [UNITY.md](UNITY.md) を参照してください。
 
-## ライブエディタと DSL
+## Node Editor と DSL
 
 ### エディタ一覧
 
 | エディタ | URL | 特徴 |
 |---|---|---|
-| シンプル版 (`editor/`) | [editor/](https://afjk.github.io/loomlet/editor/) | 依存ゼロ・軽量・textarea ベース |
 | フル版 Node Editor (`editor-studio/`) | [node-editor/](https://afjk.github.io/loomlet/node-editor/) | CodeMirror DSL editor + Rete.js Node Editor による並行編集 |
 
-**シンプル版** はライブラリ依存ゼロで手軽に使えるテキストエリアベースのエディタです。  
 **フル版 Node Editor** は CodeMirror 6 ベースの DSL editor と Rete.js v2 ベースの Node Editor を組み合わせた実験的なエディタです。
-
-ライブエディタ（`editor/index.html`）では **JSON** モードと **DSL** モードを切り替えてグラフを編集できます。
 
 DSL（Domain Specific Language）は JSON より簡潔にグラフを記述するためのテキスト形式です。各代入文がノードに、識別子参照がエッジに自動変換されます。Loomlet source files use the `.loom` extension.
 
