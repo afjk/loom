@@ -68,6 +68,14 @@ export function evaluateFormula(formula, vars) {
   return parseExpr();
 }
 
+export function extractFormulaVars(formula) {
+  const vars = new Set();
+  const re = /[a-zA-Z_][a-zA-Z0-9_]*/g;
+  let m;
+  while ((m = re.exec(formula)) !== null) vars.add(m[0]);
+  return [...vars];
+}
+
 export function registerMathNodes(registry) {
   registry.registerNodeType('abs', {
     category: 'transform',

@@ -3,6 +3,7 @@ import { AreaPlugin, AreaExtensions } from 'rete-area-plugin';
 import { ConnectionPlugin, Presets as ConnectionPresets } from 'rete-connection-plugin';
 import { ReactPlugin, Presets } from 'rete-react-plugin';
 import { NODE_TYPES } from '../../src/loom.js';
+import { extractFormulaVars } from '../../src/nodes/math.js';
 import { formatValuePreview } from '../../src/value-preview.js';
 import {
   connectionToAddEdgeOp,
@@ -45,9 +46,14 @@ function createReteNode(editorNode, onControl, previewText) {
   node._editorNode = editorNode;
 
   if (nodeTypeDef) {
-    const inputDefs = (nodeTypeDef.dynamicInputs && editorNode.inputPorts)
-      ? editorNode.inputPorts.map(name => ({ name }))
-      : (nodeTypeDef.inputs || []);
+    let inputDefs;
+    if (nodeTypeDef.dynamicInputs) {
+      const ports = editorNode.inputPorts
+        || (editorNode.params?.formula ? extractFormulaVars(editorNode.params.formula) : []);
+      inputDefs = ports.map(name => ({ name }));
+    } else {
+      inputDefs = nodeTypeDef.inputs || [];
+    }
     for (const input of inputDefs) {
       const name = getPortName(input);
       node.addInput(name, new ClassicPreset.Input(socket, name));
