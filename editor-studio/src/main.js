@@ -84,8 +84,11 @@ render point(x: previewX, y: previewY, radius: 8, color: "#80ed99", trail: 0.08)
 const BOTTOM_PANEL_HEIGHT_KEY = 'loomlet.editorStudio.bottomPanelHeight';
 const BOTTOM_PANEL_COLLAPSED_KEY = 'loomlet.editorStudio.bottomPanelCollapsed';
 const EDITOR_SPLIT_WIDTH_KEY = 'loomlet.editorStudio.editorSplitWidth';
+const PREVIEW_PANE_WIDTH_KEY = 'loomlet.editorStudio.previewPaneWidth';
 const ACTIVE_BOTTOM_TAB_KEY = 'loomlet.editorStudio.activeBottomTab';
 const EDITOR_MAXIMIZE_MODE_KEY = 'loomlet.editorStudio.editorMaximizeMode';
+const PREVIEW_LAYOUT_MODE_KEY = 'loomlet.editorStudio.previewLayoutMode';
+const DOCKED_EDITOR_TAB_KEY = 'loomlet.editorStudio.dockedEditorTab';
 
 const SCENE_SYNC_STORAGE_KEYS = {
   endpoint: 'loomlet.editorStudio.sceneSync.endpoint',
@@ -110,6 +113,9 @@ const MAX_BOTTOM_PANEL_RATIO = 0.6;
 const DEFAULT_DSL_PANE_WIDTH = 520;
 const MIN_DSL_PANE_WIDTH = 280;
 const MIN_NODE_PANE_WIDTH = 320;
+const DEFAULT_PREVIEW_PANE_WIDTH = 520;
+const MIN_PREVIEW_PANE_WIDTH = 320;
+const MIN_DOCKED_EDITOR_WIDTH = 360;
 const EDITOR_SPLIT_HANDLE_WIDTH = 8;
 const EDITOR_SPLIT_GRID_GAP = 12;
 const EDITOR_SPLIT_GRID_GAP_COUNT = 2;
@@ -138,6 +144,7 @@ let bottomPanelHeight = DEFAULT_BOTTOM_PANEL_HEIGHT;
 let isBottomPanelCollapsed = false;
 let isResizingBottomPanel = false;
 let dslPaneWidth = DEFAULT_DSL_PANE_WIDTH;
+let previewPaneWidth = DEFAULT_PREVIEW_PANE_WIDTH;
 let isResizingEditorSplit = false;
 
 let undoStack = [];
@@ -148,13 +155,20 @@ let moveHistoryCoalesceTimer = null;
 let activeParamHistoryKey = null;
 let paramHistoryCoalesceTimer = null;
 let editorMaximizeMode = 'split';
+let previewLayoutMode = 'background';
+let dockedEditorTab = 'node';
 let lastNodeValuePreviewAtMs = 0;
+let previewEventQueue = [];
+let previewEventScopeId = '';
+let previewEventSequence = 0;
 
 const elements = {
   dslEditorHost: document.getElementById('dsl-editor-host'),
   nodeEditorHost: document.getElementById('node-editor'),
   previewCanvas: document.getElementById('preview-canvas'),
+  previewStage: document.getElementById('preview-stage'),
   scene3dHost: document.getElementById('scene3d-host'),
+  previewEventStatus: document.getElementById('previewEventStatus'),
   graphJson: document.getElementById('graph-json'),
   errorsList: document.getElementById('errors-list'),
   compatPanel: document.getElementById('compat-panel'),
@@ -173,6 +187,8 @@ const elements = {
   runPreviewBtn: document.getElementById('runPreviewBtn'),
   resetSampleBtn: document.getElementById('resetSampleBtn'),
   togglePanelsBtn: document.getElementById('toggle-panels'),
+  previewLayoutBtns: document.querySelectorAll('[data-preview-layout]'),
+  dockedEditorTabBtns: document.querySelectorAll('[data-docked-editor-tab]'),
   tabBtns: document.querySelectorAll('.tab-btn'),
   tabPanes: document.querySelectorAll('.tab-pane'),
   fileStatus: document.getElementById('file-status'),
@@ -224,6 +240,10 @@ function setPanelsVisible(visible) {
   if (button) {
     button.textContent = visible ? 'Hide Editors' : 'Show Editors';
   }
+
+  mountPreviewSurface();
+  resizePreviewCanvas();
+  notifyNodeEditorLayoutChanged();
 }
 
 function getMaxBottomPanelHeight() {
@@ -320,6 +340,7 @@ function handleWindowResizeForBottomPanel() {
   applyBottomPanelLayout();
 
   dslPaneWidth = clampDslPaneWidth(dslPaneWidth);
+  previewPaneWidth = clampPreviewPaneWidth(previewPaneWidth);
   applyEditorSplitLayout();
 
   saveBottomPanelLayout();
@@ -348,10 +369,31 @@ function getMaxDslPaneWidth() {
   return Math.max(MIN_DSL_PANE_WIDTH, Math.floor(maxWidth));
 }
 
+function getMaxPreviewPaneWidth() {
+  const panels = elements.editorPanels;
+  if (!panels) return DEFAULT_PREVIEW_PANE_WIDTH;
+
+  const rect = panels.getBoundingClientRect();
+  const maxWidth =
+    rect.width
+    - MIN_DOCKED_EDITOR_WIDTH
+    - EDITOR_SPLIT_HANDLE_WIDTH
+    - EDITOR_SPLIT_GRID_GAP * EDITOR_SPLIT_GRID_GAP_COUNT;
+
+  return Math.max(MIN_PREVIEW_PANE_WIDTH, Math.floor(maxWidth));
+}
+
 function clampDslPaneWidth(width) {
   return Math.min(
     Math.max(width, MIN_DSL_PANE_WIDTH),
     getMaxDslPaneWidth()
+  );
+}
+
+function clampPreviewPaneWidth(width) {
+  return Math.min(
+    Math.max(width, MIN_PREVIEW_PANE_WIDTH),
+    getMaxPreviewPaneWidth()
   );
 }
 
@@ -360,7 +402,9 @@ function applyEditorSplitLayout() {
   if (!panels) return;
 
   dslPaneWidth = clampDslPaneWidth(dslPaneWidth);
+  previewPaneWidth = clampPreviewPaneWidth(previewPaneWidth);
   panels.style.setProperty('--dsl-pane-width-px', `${dslPaneWidth}px`);
+  panels.style.setProperty('--preview-pane-width-px', `${previewPaneWidth}px`);
 }
 
 function loadEditorSplitLayout() {
@@ -369,11 +413,117 @@ function loadEditorSplitLayout() {
     dslPaneWidth = savedWidth;
   }
 
+  const savedPreviewWidth = Number(localStorage.getItem(PREVIEW_PANE_WIDTH_KEY));
+  if (Number.isFinite(savedPreviewWidth)) {
+    previewPaneWidth = savedPreviewWidth;
+  }
+
   applyEditorSplitLayout();
 }
 
 function saveEditorSplitLayout() {
   localStorage.setItem(EDITOR_SPLIT_WIDTH_KEY, String(dslPaneWidth));
+  localStorage.setItem(PREVIEW_PANE_WIDTH_KEY, String(previewPaneWidth));
+}
+
+function isPreviewDockedInPanels() {
+  return previewLayoutMode === 'docked' && panelsVisible && Boolean(elements.previewStage);
+}
+
+function getPreviewSurfaceParent() {
+  return isPreviewDockedInPanels() ? elements.previewStage : document.body;
+}
+
+function mountPreviewSurface() {
+  const parent = getPreviewSurfaceParent();
+  if (!parent) return;
+
+  for (const element of [elements.previewCanvas, elements.scene3dHost]) {
+    if (!element || element.parentElement === parent) continue;
+    parent.appendChild(element);
+  }
+}
+
+function getPreviewSurfaceSize() {
+  if (isPreviewDockedInPanels()) {
+    const rect = elements.previewStage.getBoundingClientRect();
+    return {
+      width: Math.max(1, Math.floor(rect.width)),
+      height: Math.max(1, Math.floor(rect.height))
+    };
+  }
+
+  return {
+    width: window.innerWidth,
+    height: window.innerHeight
+  };
+}
+
+function applyDockedEditorTab() {
+  const normalized = dockedEditorTab === 'dsl' ? 'dsl' : 'node';
+  dockedEditorTab = normalized;
+
+  document.body.classList.toggle('docked-editor-dsl', normalized === 'dsl');
+  document.body.classList.toggle('docked-editor-node', normalized === 'node');
+
+  elements.dockedEditorTabBtns?.forEach((button) => {
+    const active = button.getAttribute('data-docked-editor-tab') === normalized;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+}
+
+function setDockedEditorTab(tab, { save = true } = {}) {
+  if (!['node', 'dsl'].includes(tab)) return;
+  dockedEditorTab = tab;
+  applyDockedEditorTab();
+  notifyNodeEditorLayoutChanged();
+  if (save) {
+    localStorage.setItem(DOCKED_EDITOR_TAB_KEY, dockedEditorTab);
+  }
+}
+
+function updatePreviewLayoutButtons() {
+  elements.previewLayoutBtns?.forEach((button) => {
+    const active = button.getAttribute('data-preview-layout') === previewLayoutMode;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+}
+
+function applyPreviewLayoutMode() {
+  document.body.classList.toggle('preview-layout-docked', previewLayoutMode === 'docked');
+  document.body.classList.toggle('preview-layout-background', previewLayoutMode !== 'docked');
+
+  applyDockedEditorTab();
+  updatePreviewLayoutButtons();
+  mountPreviewSurface();
+  applyEditorSplitLayout();
+  resizePreviewCanvas();
+  notifyNodeEditorLayoutChanged();
+}
+
+function setPreviewLayoutMode(mode, { save = true } = {}) {
+  if (!['background', 'docked'].includes(mode)) return;
+  previewLayoutMode = mode;
+  applyPreviewLayoutMode();
+  if (save) {
+    localStorage.setItem(PREVIEW_LAYOUT_MODE_KEY, previewLayoutMode);
+  }
+}
+
+function loadPreviewLayoutMode() {
+  const savedLayout = localStorage.getItem(PREVIEW_LAYOUT_MODE_KEY);
+  if (savedLayout === 'background' || savedLayout === 'docked') {
+    previewLayoutMode = savedLayout;
+  }
+
+  const savedDockedTab = localStorage.getItem(DOCKED_EDITOR_TAB_KEY);
+  if (savedDockedTab === 'node' || savedDockedTab === 'dsl') {
+    dockedEditorTab = savedDockedTab;
+  }
+
+  applyPreviewLayoutMode();
 }
 
 function applyEditorMaximizeMode() {
@@ -421,16 +571,18 @@ function updateEditorMaximizeButtons() {
   const panels = elements.editorPanels;
   if (!panels) return;
 
+  const showMaximizeControls = previewLayoutMode === 'background';
+
   panels.querySelectorAll('[data-action="maximize-dsl"]').forEach((btn) => {
-    btn.style.display = editorMaximizeMode === 'split' ? 'block' : 'none';
+    btn.style.display = showMaximizeControls && editorMaximizeMode === 'split' ? 'block' : 'none';
   });
 
   panels.querySelectorAll('[data-action="maximize-node"]').forEach((btn) => {
-    btn.style.display = editorMaximizeMode === 'split' ? 'block' : 'none';
+    btn.style.display = showMaximizeControls && editorMaximizeMode === 'split' ? 'block' : 'none';
   });
 
   panels.querySelectorAll('[data-action="restore-split"]').forEach((btn) => {
-    btn.style.display = editorMaximizeMode !== 'split' ? 'block' : 'none';
+    btn.style.display = showMaximizeControls && editorMaximizeMode !== 'split' ? 'block' : 'none';
   });
 }
 
@@ -494,7 +646,11 @@ function resizeEditorSplit(event) {
   const rect = panels.getBoundingClientRect();
   const nextWidth = event.clientX - rect.left;
 
-  dslPaneWidth = clampDslPaneWidth(nextWidth);
+  if (previewLayoutMode === 'docked') {
+    previewPaneWidth = clampPreviewPaneWidth(nextWidth);
+  } else {
+    dslPaneWidth = clampDslPaneWidth(nextWidth);
+  }
   applyEditorSplitLayout();
 }
 
@@ -510,10 +666,11 @@ function resizePreviewCanvas() {
   const canvas = elements.previewCanvas;
   if (!canvas) return;
 
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  canvas.style.width = `${window.innerWidth}px`;
-  canvas.style.height = `${window.innerHeight}px`;
+  const { width, height } = getPreviewSurfaceSize();
+  canvas.width = width;
+  canvas.height = height;
+  canvas.style.width = `${width}px`;
+  canvas.style.height = `${height}px`;
 
   if (scene3dPreview) {
     scene3dPreview.resize();
@@ -530,12 +687,103 @@ function setScene3DActive(active) {
   }
 
   if (active && !scene3dPreview && elements.scene3dHost) {
-    scene3dPreview = new Scene3DPreview(elements.scene3dHost);
+    scene3dPreview = new Scene3DPreview(elements.scene3dHost, {
+      onObjectPointerEvent: handleScenePreviewObjectPointerEvent
+    });
   }
 
   if (active && scene3dPreview) {
+    scene3dPreview.onObjectPointerEvent = handleScenePreviewObjectPointerEvent;
     scene3dPreview.resize();
   }
+}
+
+function setPreviewEventScope(target = '') {
+  const nextTarget = String(target || '').trim();
+  previewEventScopeId = nextTarget;
+}
+
+function renderPreviewEventStatus(text) {
+  if (!elements.previewEventStatus) return;
+  elements.previewEventStatus.hidden = !text;
+  elements.previewEventStatus.textContent = text || '';
+}
+
+function formatPreviewEventDescriptor(event) {
+  const target = event.target ? ` -> ${event.target}` : '';
+  return `${event.channel}${target}`;
+}
+
+function queuePreviewEvent(event) {
+  if (!event?.channel) return;
+
+  const target = typeof event.target === 'string' ? event.target.trim() : '';
+  const queued = {
+    id: ++previewEventSequence,
+    channel: event.channel,
+    ...(target ? { target } : {}),
+    ...(event.payload !== undefined ? { payload: event.payload } : {}),
+    ...(event.pointer ? { pointer: event.pointer } : {})
+  };
+
+  previewEventQueue.push(queued);
+  setPreviewEventScope(target);
+  renderPreviewEventStatus(formatPreviewEventDescriptor(queued));
+  appendOutput({
+    level: 'event',
+    message: `Queued preview event: ${formatPreviewEventDescriptor(queued)}`
+  });
+}
+
+function consumePreviewEvents(elapsed) {
+  if (!previewEventQueue.length) return [];
+
+  const queued = previewEventQueue;
+  previewEventQueue = [];
+
+  return queued.map((event) => ({
+    channel: event.channel,
+    timestamp: Number.isFinite(elapsed) ? elapsed : performance.now() / 1000,
+    source: 'editor.preview',
+    ...(event.target ? { target: event.target } : {}),
+    ...(event.payload !== undefined ? { payload: event.payload } : {}),
+    ...(event.pointer ? { pointer: event.pointer } : {})
+  }));
+}
+
+function createPreviewEnvironment(elapsed) {
+  const env = {
+    time: elapsed,
+    events: consumePreviewEvents(elapsed)
+  };
+
+  const scopeId = previewEventScopeId.trim();
+  if (scopeId) {
+    env.scope = { type: 'object', id: scopeId };
+  }
+
+  return env;
+}
+
+function handleScenePreviewObjectPointerEvent(event) {
+  const objectId = event?.objectId || '';
+  if (!objectId) return;
+
+  queuePreviewEvent({
+    channel: event.channel || 'pointer.click',
+    target: objectId,
+    payload: {
+      x: Math.round(event.clientX),
+      y: Math.round(event.clientY),
+      button: event.button ?? 0,
+      ...(event.payload && typeof event.payload === 'object' ? event.payload : {})
+    },
+    pointer: {
+      x: event.clientX,
+      y: event.clientY,
+      button: event.button ?? 0
+    }
+  });
 }
 
 function initDslEditor() {
@@ -2096,6 +2344,9 @@ function runPreview(graph) {
     engine.stop();
   }
   lastNodeValuePreviewAtMs = 0;
+  previewEventQueue = [];
+  setPreviewEventScope('');
+  renderPreviewEventStatus(null);
 
   const state = store.getState();
   if (!graph) graph = state.graph;
@@ -2119,7 +2370,7 @@ function runPreview(graph) {
     if (typeof engine.enableProbes === 'function') {
       engine.enableProbes({ values: true });
     }
-    engine.start({ getEnv: ({ elapsed }) => ({ time: elapsed }) });
+    engine.start({ getEnv: ({ elapsed }) => createPreviewEnvironment(elapsed) });
 
     animationFrameId = requestAnimationFrame(() => {
       tick(engine, graph);
@@ -2139,6 +2390,15 @@ function tick(engine, graph) {
     for (const effect of effects) {
       if (effect.type === 'log' && effect.message) {
         appendOutput({ level: 'log', message: effect.message });
+      } else if (effect.kind === 'event.send') {
+        const target = effect.target ? ` -> ${effect.target}` : '';
+        const payload = effect.payload !== undefined
+          ? ` ${JSON.stringify(effect.payload)}`
+          : '';
+        appendOutput({
+          level: 'event',
+          message: `sendEvent: ${effect.channel}${target}${payload}`
+        });
       }
     }
 
@@ -3018,6 +3278,18 @@ function setupEventListeners() {
   elements.togglePanelsBtn.addEventListener('click', () => {
     setPanelsVisible(!panelsVisible);
   });
+  elements.previewLayoutBtns?.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const mode = btn.getAttribute('data-preview-layout');
+      setPreviewLayoutMode(mode);
+    });
+  });
+  elements.dockedEditorTabBtns?.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const tab = btn.getAttribute('data-docked-editor-tab');
+      setDockedEditorTab(tab);
+    });
+  });
   elements.openFileBtn.addEventListener('click', openLoomFile);
   elements.saveFileBtn.addEventListener('click', saveDslFile);
   elements.saveAsFileBtn.addEventListener('click', saveDslAsFile);
@@ -3289,6 +3561,7 @@ async function init() {
   loadEditorSplitLayout();
   loadActiveBottomTab();
   loadEditorMaximizeMode();
+  loadPreviewLayoutMode();
   loadSceneSyncSettings();
   renderFileStatus();
   renderDirtyStatus();

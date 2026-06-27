@@ -1,11 +1,20 @@
 import { compileLoomSource } from '../toolchain/compile.js';
 
 const SUPPORTED_NODES = new Set([
+  'constant',
   'clock',
+  'onEvent',
+  'list.length',
+  'logic.greaterThan',
+  'logic.select',
+  'integrate',
+  'add',
+  'multiply',
   'math.sine',
   'math.cosine',
   'math.add',
   'math.multiply',
+  'math.lerp',
   'scene.setPosition',
   'scene.offsetPosition',
   'scene.setRotation',
@@ -24,11 +33,20 @@ const SUPPORTED_NODES = new Set([
 ]);
 
 const NODE_TYPE_MAPPING = {
+  'constant': 'constant',
   'clock': 'clock',
+  'onEvent': 'onEvent',
+  'list.length': 'list.length',
+  'logic.greaterThan': 'logic.greaterThan',
+  'logic.select': 'logic.select',
+  'integrate': 'integrate',
+  'add': 'add',
+  'multiply': 'multiply',
   'math.sine': 'sine',
   'math.cosine': 'cosine',
   'math.add': 'add',
   'math.multiply': 'multiply',
+  'math.lerp': 'lerp',
   'scene.setPosition': 'sceneSetPosition',
   'scene.offsetPosition': 'sceneOffsetPosition',
   'scene.setRotation': 'sceneSetRotation',
@@ -52,7 +70,15 @@ function isSceneSyncSink(nodeType) {
 }
 
 const OUTPUT_PORT_MAPPING = {
+  'constant': 'out',
   'clock': 't',
+  'onEvent': 'event',
+  'list.length': 'out',
+  'logic.greaterThan': 'out',
+  'logic.select': 'out',
+  'integrate': 'out',
+  'add': 'out',
+  'multiply': 'out',
   'math.sine': 'out',
   'sine': 'out',
   'math.cosine': 'out',
@@ -61,6 +87,8 @@ const OUTPUT_PORT_MAPPING = {
   'add': 'out',
   'math.multiply': 'out',
   'multiply': 'out',
+  'math.lerp': 'out',
+  'lerp': 'out',
   'scene.setPosition': undefined,
   'sceneSetPosition': undefined,
   'scene.offsetPosition': undefined,
@@ -95,11 +123,18 @@ const OUTPUT_PORT_MAPPING = {
 
 function generateStableNodeBase(nodeType) {
   const mapped = NODE_TYPE_MAPPING[nodeType] || nodeType;
+  if (mapped === 'constant') return 'constant';
   if (mapped === 'clock') return 'clock';
+  if (mapped === 'onEvent') return 'event';
+  if (mapped === 'list.length') return 'length';
+  if (mapped === 'logic.greaterThan') return 'greaterThan';
+  if (mapped === 'logic.select') return 'select';
+  if (mapped === 'integrate') return 'integrate';
   if (mapped === 'sine') return 'sine';
   if (mapped === 'cosine') return 'cosine';
   if (mapped === 'add') return 'add';
   if (mapped === 'multiply') return 'multiply';
+  if (mapped === 'lerp') return 'lerp';
   if (mapped === 'sceneSetPosition') return 'pos';
   if (mapped === 'sceneOffsetPosition') return 'offset';
   if (mapped === 'sceneSetRotation') return 'rot';
@@ -151,6 +186,21 @@ function normalizeScope(options = {}) {
 }
 
 function pickParams(nodeType, params = {}) {
+  if (
+    nodeType === 'constant' ||
+    nodeType === 'onEvent' ||
+    nodeType === 'integrate' ||
+    nodeType === 'add' ||
+    nodeType === 'multiply' ||
+    nodeType === 'math.add' ||
+    nodeType === 'math.multiply' ||
+    nodeType === 'math.lerp' ||
+    nodeType === 'logic.greaterThan' ||
+    nodeType === 'logic.select' ||
+    nodeType === 'list.length'
+  ) {
+    return { ...params };
+  }
   if (nodeType === 'scene.offsetPosition') {
     return {
       ...(params.objectId ? { target: params.objectId } : {}),

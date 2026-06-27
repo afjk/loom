@@ -75,6 +75,24 @@ html, body {
   z-index: 1;
 }
 
+.scene3d-click-status {
+  position: absolute;
+  right: 20px;
+  top: 64px;
+  max-width: min(320px, calc(100vw - 40px));
+  padding: 5px 11px;
+  border-radius: 999px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+  color: #d7e4ff;
+  background: rgba(13, 16, 23, 0.72);
+  border: 1px solid #34415f;
+  pointer-events: none;
+  z-index: 1;
+}
+
 /* Overlay container */
 .studio-overlay {
   position: fixed;
@@ -96,6 +114,55 @@ html, body {
   pointer-events: auto;
 }
 
+@media (max-width: 1180px) {
+  .studio-toolbar {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
+  .editor-panels {
+    top: 100px;
+  }
+
+  .scene3d-click-status {
+    top: 100px;
+  }
+}
+
+.segmented-control {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 2px;
+  gap: 2px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(20, 20, 20, 0.78);
+}
+
+.segmented-btn {
+  height: 24px;
+  padding: 0 9px;
+  border: none;
+  border-radius: 5px;
+  color: var(--text-dim);
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.segmented-btn:hover {
+  color: var(--text-color);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.segmented-btn.active {
+  color: #ffffff;
+  background: rgba(74, 144, 226, 0.35);
+}
+
 /* Editor panels */
 .editor-panels {
   position: fixed;
@@ -105,6 +172,7 @@ html, body {
   bottom: 12px;
   display: grid;
   --dsl-pane-width-px: 520px;
+  --preview-pane-width-px: 520px;
   grid-template-columns:
     minmax(280px, var(--dsl-pane-width-px))
     8px
@@ -117,6 +185,11 @@ html, body {
 
 /* Hide editor panels */
 body.panels-hidden .editor-panels {
+  display: none;
+}
+
+.preview-pane,
+.docked-editor-tabs {
   display: none;
 }
 
@@ -174,6 +247,138 @@ body.panels-hidden .editor-panels {
   grid-row: 3;
 }
 
+body.preview-layout-docked:not(.panels-hidden) .editor-panels,
+body.preview-layout-docked:not(.panels-hidden) .editor-panels.is-maximized-dsl,
+body.preview-layout-docked:not(.panels-hidden) .editor-panels.is-maximized-node {
+  grid-template-columns:
+    minmax(320px, var(--preview-pane-width-px))
+    8px
+    minmax(360px, 1fr);
+  grid-template-rows: auto 1fr auto auto;
+}
+
+body.preview-layout-docked:not(.panels-hidden) .preview-pane {
+  display: flex;
+  grid-column: 1;
+  grid-row: 1 / 3;
+}
+
+body.preview-layout-docked:not(.panels-hidden) .editor-split-resize-handle,
+body.preview-layout-docked:not(.panels-hidden) .editor-panels.is-maximized-dsl .editor-split-resize-handle,
+body.preview-layout-docked:not(.panels-hidden) .editor-panels.is-maximized-node .editor-split-resize-handle {
+  display: block;
+  grid-column: 2;
+  grid-row: 1 / 3;
+}
+
+body.preview-layout-docked:not(.panels-hidden) .docked-editor-tabs {
+  display: flex;
+  grid-column: 3;
+  grid-row: 1;
+}
+
+body.preview-layout-docked:not(.panels-hidden) .dsl-pane,
+body.preview-layout-docked:not(.panels-hidden) .node-pane,
+body.preview-layout-docked:not(.panels-hidden) .editor-panels.is-maximized-dsl .dsl-pane,
+body.preview-layout-docked:not(.panels-hidden) .editor-panels.is-maximized-dsl .node-pane,
+body.preview-layout-docked:not(.panels-hidden) .editor-panels.is-maximized-node .dsl-pane,
+body.preview-layout-docked:not(.panels-hidden) .editor-panels.is-maximized-node .node-pane {
+  display: none;
+  grid-column: 3;
+  grid-row: 2;
+}
+
+body.preview-layout-docked.docked-editor-dsl:not(.panels-hidden) .dsl-pane,
+body.preview-layout-docked.docked-editor-node:not(.panels-hidden) .node-pane,
+body.preview-layout-docked.docked-editor-dsl:not(.panels-hidden) .editor-panels.is-maximized-node .dsl-pane,
+body.preview-layout-docked.docked-editor-node:not(.panels-hidden) .editor-panels.is-maximized-dsl .node-pane {
+  display: flex;
+}
+
+body.preview-layout-docked:not(.panels-hidden) .bottom-panel-resize-handle {
+  grid-column: 1 / -1;
+  grid-row: 3;
+}
+
+body.preview-layout-docked:not(.panels-hidden) .graph-errors-panel {
+  grid-column: 1 / -1;
+  grid-row: 4;
+}
+
+body.preview-layout-docked:not(.panels-hidden) .pane-controls {
+  display: none;
+}
+
+body.preview-layout-docked:not(.panels-hidden) .dsl-pane > .pane-header,
+body.preview-layout-docked:not(.panels-hidden) .node-pane > .pane-header {
+  display: none;
+}
+
+.preview-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 18%, #141b2b 0%, #0a0d14 70%);
+}
+
+body.preview-layout-docked:not(.panels-hidden) .preview-stage > .preview-canvas,
+body.preview-layout-docked:not(.panels-hidden) .preview-stage > .scene3d-host {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+body.preview-layout-docked:not(.panels-hidden) .preview-stage > .scene3d-host {
+  z-index: 1;
+}
+
+body.preview-layout-docked:not(.panels-hidden) .scene3d-badge {
+  left: 14px;
+  bottom: 14px;
+}
+
+body.preview-layout-docked:not(.panels-hidden) .scene3d-click-status {
+  top: 14px;
+  right: 14px;
+  max-width: calc(100% - 28px);
+}
+
+.docked-editor-tabs {
+  align-items: stretch;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  background: var(--panel-bg);
+}
+
+.docked-editor-tab {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 10px 14px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-dim);
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.docked-editor-tab:hover {
+  color: var(--text-color);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.docked-editor-tab.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+  background: rgba(74, 144, 226, 0.08);
+}
+
 /* Panel styling */
 .panel {
   background: var(--panel-bg);
@@ -183,6 +388,11 @@ body.panels-hidden .editor-panels {
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+.editor-panels > .preview-pane,
+.editor-panels > .docked-editor-tabs {
+  display: none;
 }
 
 .pane {
@@ -1588,5 +1798,15 @@ button:disabled:hover,
   .tab-btn {
     padding: 8px 11px;
     font-size: 12px;
+  }
+}
+
+@media (min-width: 721px) and (max-width: 1180px) {
+  body .editor-panels {
+    top: 100px;
+  }
+
+  body .scene3d-click-status {
+    top: 100px;
   }
 }

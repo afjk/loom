@@ -9,8 +9,11 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 const CUBE_COLORS = [0x4a90e2, 0xff70a6, 0x80ed99, 0xffd166, 0xc792ea];
 
 export class Scene3DPreview {
-  constructor(host) {
+  constructor(host, options = {}) {
     this.host = host;
+    this.onObjectPointerEvent = typeof options.onObjectPointerEvent === 'function'
+      ? options.onObjectPointerEvent
+      : null;
     this.initialized = false;
     this.scene = null;
     this.camera = null;
@@ -18,6 +21,16 @@ export class Scene3DPreview {
     this.controls = null;
     this.objects = new Map(); // objectId -> THREE.Mesh
     this._colorCursor = 0;
+    this._raycaster = new THREE.Raycaster();
+    this._pointer = new THREE.Vector2();
+    this._pointerDown = null;
+    this._hoverObjectId = null;
+    this._boundPointerDown = (event) => this._handlePointerDown(event);
+    this._boundPointerMove = (event) => this._handlePointerMove(event);
+    this._boundPointerUp = (event) => this._handlePointerUp(event);
+    this._boundPointerCancel = () => {
+      this._pointerDown = null;
+    };
   }
 
   _ensureInit() {
@@ -36,6 +49,10 @@ export class Scene3DPreview {
     this.renderer.setSize(width, height, false);
     this.renderer.setPixelRatio(window.devicePixelRatio || 1);
     this.host.appendChild(this.renderer.domElement);
+    this.renderer.domElement.addEventListener('pointerdown', this._boundPointerDown);
+    this.renderer.domElement.addEventListener('pointermove', this._boundPointerMove);
+    this.renderer.domElement.addEventListener('pointerup', this._boundPointerUp);
+    this.renderer.domElement.addEventListener('pointercancel', this._boundPointerCancel);
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
@@ -55,6 +72,99 @@ export class Scene3DPreview {
     this.initialized = true;
   }
 
+  _handlePointerDown(event) {
+    const picked = this._pickObject(event);
+    this._pointerDown = {
+      x: event.clientX,
+      y: event.clientY,
+      button: event.button,
+      time: performance.now(),
+      objectId: picked?.objectId || null
+    };
+
+    if (picked) {
+      this._emitObjectPointerEvent('pointer.down', picked.objectId, event);
+    }
+  }
+
+  _handlePointerMove(event) {
+    const picked = this._pickObject(event);
+    const nextObjectId = picked?.objectId || null;
+    const previousObjectId = this._hoverObjectId;
+
+    if (this.renderer?.domElement) {
+      this.renderer.domElement.style.cursor = nextObjectId ? 'pointer' : '';
+    }
+
+    if (nextObjectId === previousObjectId) return;
+
+    this._hoverObjectId = nextObjectId;
+
+    if (previousObjectId) {
+      this._emitObjectPointerEvent('pointer.leave', previousObjectId, event, {
+        relatedTarget: nextObjectId
+      });
+    }
+    if (nextObjectId) {
+      this._emitObjectPointerEvent('pointer.enter', nextObjectId, event, {
+        relatedTarget: previousObjectId
+      });
+    }
+  }
+
+  _handlePointerUp(event) {
+    if (!this._pointerDown || event.button !== this._pointerDown.button) {
+      this._pointerDown = null;
+      return;
+    }
+
+    const dx = event.clientX - this._pointerDown.x;
+    const dy = event.clientY - this._pointerDown.y;
+    const elapsed = performance.now() - this._pointerDown.time;
+    const moved = Math.hypot(dx, dy);
+    const downObjectId = this._pointerDown.objectId;
+    this._pointerDown = null;
+
+    const picked = this._pickObject(event);
+    if (picked) {
+      this._emitObjectPointerEvent('pointer.up', picked.objectId, event);
+    }
+
+    if (moved > 5 || elapsed > 650 || !picked || picked.objectId !== downObjectId) return;
+
+    this._emitObjectPointerEvent('pointer.click', picked.objectId, event);
+  }
+
+  _pickObject(event) {
+    if (!this.initialized) return null;
+
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return null;
+
+    this._pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    this._pointer.y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
+    this._raycaster.setFromCamera(this._pointer, this.camera);
+
+    const meshes = [...this.objects.values()].filter((mesh) => mesh.visible);
+    const intersects = this._raycaster.intersectObjects(meshes, false);
+    const mesh = intersects[0]?.object;
+    const objectId = mesh?.userData?.objectId;
+    return objectId ? { objectId, mesh } : null;
+  }
+
+  _emitObjectPointerEvent(channel, objectId, event, extraPayload = {}) {
+    if (!this.onObjectPointerEvent) return;
+
+    this.onObjectPointerEvent({
+      channel,
+      objectId,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      button: event.button ?? 0,
+      payload: extraPayload
+    });
+  }
+
   _getOrCreateObject(objectId) {
     let mesh = this.objects.get(objectId);
     if (mesh) return mesh;
@@ -66,6 +176,7 @@ export class Scene3DPreview {
     const material = new THREE.MeshStandardMaterial({ color, metalness: 0.1, roughness: 0.6 });
     mesh = new THREE.Mesh(geometry, material);
     mesh.position.y = 0.5; // sit on the floor by default
+    mesh.userData.objectId = objectId;
     this.scene.add(mesh);
     this.objects.set(objectId, mesh);
     return mesh;
@@ -125,6 +236,12 @@ export class Scene3DPreview {
   dispose() {
     if (!this.initialized) return;
     this.controls.dispose();
+    this.renderer.domElement.removeEventListener('pointerdown', this._boundPointerDown);
+    this.renderer.domElement.removeEventListener('pointermove', this._boundPointerMove);
+    this.renderer.domElement.removeEventListener('pointerup', this._boundPointerUp);
+    this.renderer.domElement.removeEventListener('pointercancel', this._boundPointerCancel);
+    this.renderer.domElement.style.cursor = '';
+    this._hoverObjectId = null;
     for (const mesh of this.objects.values()) {
       mesh.geometry.dispose();
       mesh.material.dispose();

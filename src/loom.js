@@ -1236,12 +1236,14 @@ export class Loom {
         throw new LoomError('UNKNOWN_PORT', `Unknown port: ${toNodeId}.${toPortName}`, { nodeId: toNodeId, port: toPortName, side: 'input' });
       }
 
-      // 6. 型チェック（Behavior/Event の混在禁止、ただし sample.value は例外）
+      // 6. 型チェック（Behavior/Event の混在禁止、ただし明示的な
+      // Event->Behavior adapters は例外）
       const fromKind = fromPort.kind;
       const toKind = toPort ? toPort.kind : 'behavior';
       const isSampleValueException = toNode.type === 'sample' && toPortName === 'value';
+      const isEventArrayAdapter = fromKind === 'event' && toKind === 'behavior' && toPort?.type === 'array';
 
-      if (fromKind !== toKind && !isSampleValueException) {
+      if (fromKind !== toKind && !isSampleValueException && !isEventArrayAdapter) {
         throw new LoomError('TYPE_MISMATCH',
           `Cannot connect ${fromKind} port to ${toKind} port`,
           { from: edge.from, to: edge.to, fromType: fromKind, toType: toKind });
