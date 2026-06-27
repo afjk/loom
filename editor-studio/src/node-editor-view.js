@@ -335,7 +335,7 @@ export class NodeEditorView {
         this.onOperation(op);
       }
       if (op.type === 'updateParam' && op.key === 'formula') {
-        this._rebuildFormulaNode(op.id, op.value);
+        this._scheduleFormulaRebuild(op.id, op.value);
       }
     }, this._getNodePreviewText(editorNode.id));
 
@@ -345,6 +345,16 @@ export class NodeEditorView {
     await this.area.translate(reteNode.id, { x: pos.x, y: pos.y });
 
     return reteNode;
+  }
+
+  _scheduleFormulaRebuild(nodeId, newFormula) {
+    if (!this._formulaRebuildTimers) this._formulaRebuildTimers = new Map();
+    const existing = this._formulaRebuildTimers.get(nodeId);
+    if (existing) clearTimeout(existing);
+    this._formulaRebuildTimers.set(nodeId, setTimeout(() => {
+      this._formulaRebuildTimers.delete(nodeId);
+      this._rebuildFormulaNode(nodeId, newFormula);
+    }, 400));
   }
 
   async _rebuildFormulaNode(nodeId, newFormula) {

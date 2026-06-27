@@ -159,6 +159,28 @@ export function graphToCanonicalDSL(graph) {
       continue;
     }
 
+    if (node.type === 'constant') {
+      const val = node.params?.value;
+      lines.push(`${node.id} = ${formatValue(val)}`);
+      continue;
+    }
+
+    if (node.type === 'formula') {
+      const formula = node.params?.formula || '0';
+      const inputEdges = {};
+      for (const edge of graph.edges || []) {
+        if (edge.to.startsWith(node.id + '.')) {
+          const [, toPort] = edge.to.split('.');
+          const [fromNodeId] = edge.from.split('.');
+          inputEdges[toPort] = fromNodeId;
+        }
+      }
+      let rendered = renderFormulaDSL(formula, inputEdges);
+      if (rendered.startsWith('(') && rendered.endsWith(')')) rendered = rendered.slice(1, -1);
+      lines.push(`${node.id} = ${rendered}`);
+      continue;
+    }
+
     const nodeType = NODE_TYPES[node.type];
     if (!nodeType) continue;
 
@@ -222,6 +244,69 @@ export function graphToCanonicalDSL(graph) {
   }
 
   return lines.join('\n') + '\n';
+}
+
+function renderFormulaDSL(formula, inputEdges) {
+  let pos = 0;
+  const len = formula.length;
+  const skip = () => { while (pos < len && formula[pos] === ' ') pos++; };
+
+  function parseAdd() {
+    let left = parseMul();
+    while (pos < len) {
+      skip();
+      if (formula[pos] === '+') { pos++; left = `${left} + ${parseMul()}`; }
+      else if (formula[pos] === '-') { pos++; left = `${left} - ${parseMul()}`; }
+      else break;
+    }
+    return left;
+  }
+
+  function parseMul() {
+    let left = parseUnary();
+    while (pos < len) {
+      skip();
+      const ch = formula[pos];
+      if (ch === '*' || ch === '/' || ch === '%') { pos++; left = `${left} ${ch} ${parseUnary()}`; }
+      else break;
+    }
+    return left;
+  }
+
+  function parseUnary() {
+    skip();
+    if (formula[pos] === '-') { pos++; return `-${parsePrimary()}`; }
+    return parsePrimary();
+  }
+
+  function parsePrimary() {
+    skip();
+    if (formula[pos] === '(') {
+      pos++;
+      const inner = parseAdd();
+      skip();
+      if (formula[pos] === ')') pos++;
+      return `(${inner})`;
+    }
+    if (/\d/.test(formula[pos]) || (formula[pos] === '.' && pos + 1 < len && /\d/.test(formula[pos + 1]))) {
+      let num = '';
+      while (pos < len && /[\d.]/.test(formula[pos])) num += formula[pos++];
+      if (pos < len && /[eE]/.test(formula[pos])) {
+        num += formula[pos++];
+        if (pos < len && /[+-]/.test(formula[pos])) num += formula[pos++];
+        while (pos < len && /\d/.test(formula[pos])) num += formula[pos++];
+      }
+      return num;
+    }
+    if (/[a-zA-Z_]/.test(formula[pos])) {
+      let name = '';
+      while (pos < len && /[a-zA-Z0-9_]/.test(formula[pos])) name += formula[pos++];
+      return inputEdges[name] || name;
+    }
+    return '0';
+  }
+
+  return parseAdd();
 }
 
 function formatValue(val, options = {}) {

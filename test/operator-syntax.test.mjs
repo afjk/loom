@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseDSLToAST, compileToGraph, formatDSL } from '../src/loom-dsl.js';
+import { graphToCanonicalDSL } from '../src/canonical-dsl.js';
 import { Loom } from '../src/loom.js';
 import { extractFormulaVars } from '../src/nodes/math.js';
 
@@ -134,4 +135,27 @@ test('extractFormulaVars extracts variable names from formula', () => {
   assert.deepEqual(extractFormulaVars('(a + (b * 10))'), ['a', 'b']);
   assert.deepEqual(extractFormulaVars('(-x)'), ['x']);
   assert.deepEqual(extractFormulaVars('42'), []);
+});
+
+test('canonical DSL renders constant as literal', () => {
+  const graph = compile('x = 1');
+  const dsl = graphToCanonicalDSL(graph);
+  assert.match(dsl, /x = 1/);
+  assert.ok(!dsl.includes('constant'));
+});
+
+test('canonical DSL renders formula as operator syntax', () => {
+  const graph = compile('x = 1\ny = 2\nz = x + y');
+  const dsl = graphToCanonicalDSL(graph);
+  assert.match(dsl, /z = x \+ y/);
+  assert.ok(!dsl.includes('formula'));
+});
+
+test('canonical DSL round-trips operator expression', () => {
+  const src = 'a = 10\nb = 3\nc = a + b * 10';
+  const graph = compile(src);
+  const dsl = graphToCanonicalDSL(graph);
+  assert.match(dsl, /c = a \+ \(b \* 10\)/);
+  const graph2 = compile(dsl.trim());
+  assert.equal(evalRef(graph2, 'c.out'), 40);
 });
