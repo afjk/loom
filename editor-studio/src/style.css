@@ -1811,6 +1811,22 @@ button:disabled:hover,
     height: min(260px, 38vh);
   }
 
+  /* Docked preview on mobile: the desktop layout places the preview in a grid
+     column, but the mobile flex-column layout above gives it no size, so the
+     preview stage collapses to zero height and nothing renders. Pin the
+     preview to a visible band at the top and let the active editor (node or
+     DSL, switched via the docked tabs) take the remaining space. */
+  body.preview-layout-docked:not(.panels-hidden) .editor-panels .preview-pane {
+    display: flex;
+    flex: 0 0 auto;
+    height: clamp(160px, 30vh, 320px);
+    width: auto;
+  }
+  body.preview-layout-docked:not(.panels-hidden) .editor-panels .docked-editor-tabs {
+    flex: 0 0 auto;
+    width: auto;
+  }
+
   /* Slightly tighter tab buttons in the bottom panel. */
   .tab-btn {
     padding: 8px 11px;
