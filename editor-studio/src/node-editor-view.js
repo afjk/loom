@@ -1,8 +1,10 @@
+import React from 'react';
 import { NodeEditor, ClassicPreset } from 'rete';
 import { AreaPlugin, AreaExtensions } from 'rete-area-plugin';
 import { ConnectionPlugin, Presets as ConnectionPresets } from 'rete-connection-plugin';
 import { ReactPlugin, Presets } from 'rete-react-plugin';
 import { NODE_TYPES } from '../../src/loom.js';
+import { layoutFallback } from '../../src/loom-editor-model.js';
 import { extractFormulaVars } from '../../src/nodes/math.js';
 import { formatValuePreview } from '../../src/value-preview.js';
 import {
@@ -25,6 +27,23 @@ import {
 
 const socket = new ClassicPreset.Socket('value');
 const VALUE_PREVIEW_CONTROL_KEY = '__preview';
+
+// Custom control component that renders a parameter name beside its value, so a
+// node's editable fields (e.g. `freq: 0.35`) are self-describing instead of
+// showing a bare value. The control instance carries the label via `paramLabel`
+// (set in createReteNode); controls without one render only the input.
+function LabeledControl(props) {
+  const control = props.data;
+  const label = control?.paramLabel;
+  return React.createElement(
+    'div',
+    { className: 'node-param' },
+    label
+      ? React.createElement('span', { className: 'node-param-label', title: label }, label)
+      : null,
+    React.createElement(Presets.classic.Control, { data: control })
+  );
+}
 
 function getPortName(port) {
   return typeof port === 'string' ? port : port.name;
@@ -94,6 +113,7 @@ function createReteNode(editorNode, onControl, previewText) {
         });
       }
     });
+    ctrl.paramLabel = key;
     node.addControl(key, ctrl);
   }
 
@@ -136,7 +156,13 @@ export class NodeEditorView {
     this.connectionPlugin = new ConnectionPlugin();
     this.renderPlugin = new ReactPlugin();
 
-    this.renderPlugin.addPreset(Presets.classic.setup());
+    this.renderPlugin.addPreset(Presets.classic.setup({
+      customize: {
+        control(data) {
+          return data.payload instanceof ClassicPreset.InputControl ? LabeledControl : null;
+        }
+      }
+    }));
     this.connectionPlugin.addPreset(ConnectionPresets.classic.setup());
 
     this.editor.use(this.area);
@@ -301,6 +327,33 @@ export class NodeEditorView {
       console.warn('zoomToFit failed:', e.message);
       return false;
     }
+  }
+
+  // Re-flow every node using the shared column layout, ignoring current
+  // positions, and persist the result via moveNode operations so the new
+  // layout round-trips through the model/DSL. Returns the number of nodes moved.
+  async autoLayout() {
+    if (!this.currentEditorModel) return 0;
+    const order = this.currentEditorModel.order || [];
+    const nodes = order
+      .map((id) => this.currentEditorModel.nodesById[id])
+      .filter(Boolean)
+      .map((node) => ({
+        id: node.id,
+        type: node.type,
+        category: node.category,
+        params: node.params,
+        inputPorts: node.inputPorts,
+        position: null
+      }));
+    if (nodes.length === 0) return 0;
+
+    const laidOut = layoutFallback(nodes);
+    for (const node of laidOut) {
+      this.onOperation({ type: 'moveNode', id: node.id, position: node.position, source: 'autoLayout' });
+    }
+    await this.zoomToFit();
+    return laidOut.length;
   }
 
   async zoomBy(factor) {

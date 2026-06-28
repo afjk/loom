@@ -8,6 +8,30 @@ export const NODE_LAYOUT_STEP_Y = 160;
 export const NODE_LAYOUT_MAX_ROWS = 50;
 export const NODE_LAYOUT_MAX_COLS = 50;
 
+// Vertical breathing room added below a node when stacking the next one in the
+// same column. Chosen so a default-height node reproduces the legacy
+// NODE_LAYOUT_STEP_Y spacing (DEFAULT_NODE_HEIGHT + this gap === STEP_Y).
+export const NODE_LAYOUT_VERTICAL_GAP = NODE_LAYOUT_STEP_Y - DEFAULT_NODE_HEIGHT;
+const NODE_TITLE_ROW = 40;
+const NODE_PORT_ROW = 38;
+const NODE_BODY_PADDING = 20;
+
+// Estimate a node's rendered height from its port/param count so the fallback
+// layout can space tall nodes (e.g. `map`, with many params) without
+// overlapping their neighbours. Nodes with an unknown type fall back to the
+// default height, which keeps spacing identical to the legacy behaviour.
+export function estimateNodeHeight(node) {
+  const def = NODE_TYPES[node?.type];
+  if (!def) return DEFAULT_NODE_HEIGHT;
+  const inputCount = node?.inputPorts?.length ?? def.inputs?.length ?? 0;
+  const outputCount = def.outputs?.length ?? 0;
+  const paramCount = Object.keys(node?.params || {}).length;
+  const valueReadoutRow = 1;
+  const rows = inputCount + outputCount + paramCount + valueReadoutRow;
+  const estimated = NODE_TITLE_ROW + rows * NODE_PORT_ROW + NODE_BODY_PADDING;
+  return Math.max(DEFAULT_NODE_HEIGHT, estimated);
+}
+
 /**
  * @typedef {Object} EditorNode
  * @property {string} id
@@ -121,7 +145,7 @@ export function layoutFallback(nodes) {
     state: 600,
     sink: 900
   };
-  const counts = {};
+  const columnY = {};
   const occupiedPositions = [];
 
   return nodes.map((node) => {
@@ -132,10 +156,13 @@ export function layoutFallback(nodes) {
 
     const category = node.category;
     const x = Object.prototype.hasOwnProperty.call(categoryX, category) ? categoryX[category] : 1200;
-    const idx = counts[category] || 0;
-    counts[category] = idx + 1;
+    const y = columnY[category] || 0;
+    // Advance the column by the actual (estimated) node height so the next node
+    // clears tall nodes. A default-height node keeps the legacy STEP_Y spacing.
+    const step = Math.max(NODE_LAYOUT_STEP_Y, estimateNodeHeight(node) + NODE_LAYOUT_VERTICAL_GAP);
+    columnY[category] = y + step;
 
-    const desiredPosition = { x, y: idx * NODE_LAYOUT_STEP_Y };
+    const desiredPosition = { x, y };
     const finalPosition = findNonOverlappingPosition(desiredPosition, occupiedPositions);
     occupiedPositions.push(finalPosition);
 
