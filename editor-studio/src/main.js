@@ -227,6 +227,7 @@ const elements = {
   nodeZoomInBtn: document.getElementById('node-zoom-in-btn'),
   nodeZoomOutBtn: document.getElementById('node-zoom-out-btn'),
   nodeZoomFitBtn: document.getElementById('node-zoom-fit-btn'),
+  nodeAutoLayoutBtn: document.getElementById('node-auto-layout-btn'),
   nodeAddBtn: document.getElementById('node-add-btn')
 };
 
@@ -3384,6 +3385,7 @@ function setupEventListeners() {
   elements.nodeZoomInBtn?.addEventListener('click', () => nodeEditor?.zoomBy(1.25));
   elements.nodeZoomOutBtn?.addEventListener('click', () => nodeEditor?.zoomBy(0.8));
   elements.nodeZoomFitBtn?.addEventListener('click', () => nodeEditor?.zoomToFit());
+  elements.nodeAutoLayoutBtn?.addEventListener('click', () => nodeEditor?.autoLayout());
   elements.nodeAddBtn?.addEventListener('click', (event) => {
     const rect = event.currentTarget.getBoundingClientRect();
     openCanvasContextMenu({

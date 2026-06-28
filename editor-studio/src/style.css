@@ -542,6 +542,33 @@ body.preview-layout-docked:not(.panels-hidden) .scene3d-click-status {
   user-select: text;
 }
 
+/* Parameter row: a small name label next to the value field so each control is
+   self-describing (e.g. "freq" beside its 0.35 input). */
+.node-editor-canvas .node-param {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.node-editor-canvas .node-param-label {
+  flex: 0 0 auto;
+  min-width: 48px;
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  font-size: 11px;
+  color: #9aa0a6;
+  user-select: none;
+}
+
+.node-editor-canvas .node-param input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 /* Output value readout.
    The node's computed output value is rendered as a read-only field, which by
    default looks identical to an editable input. Style it as a green-tinted
