@@ -1406,11 +1406,41 @@ async function autoApplyDslFromEditor(requestId) {
   }
 }
 
+// Format a console.* effect's value the way a console would: strings print
+// bare, structured values as JSON, primitives via String().
+function formatConsoleEffectValue(value) {
+  if (typeof value === 'string') return value;
+  if (value === undefined) return 'undefined';
+  if (value === null || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
 function appendOutput(entry) {
+  const level = entry.level || 'info';
+  const message = String(entry.message ?? '');
+
+  // Sink nodes (log / console.*) emit an effect every frame, so an unchanging
+  // value would otherwise flood the panel. Collapse consecutive identical
+  // lines into a single entry with a repeat counter, like browser devtools.
+  const last = outputEntries[outputEntries.length - 1];
+  if (last && last.level === level && last.message === message) {
+    last.count += 1;
+    last.time = new Date().toISOString();
+    renderOutput();
+    return;
+  }
+
   outputEntries.push({
     time: new Date().toISOString(),
-    level: entry.level || 'info',
-    message: String(entry.message ?? '')
+    level,
+    message,
+    count: 1
   });
 
   if (outputEntries.length > MAX_OUTPUT_ENTRIES) {
@@ -1442,7 +1472,8 @@ function renderOutput() {
   elements.outputLog.textContent = outputEntries
     .map((entry) => {
       const time = formatOutputTime(entry.time);
-      return `${time} [${entry.level}] ${entry.message}`;
+      const repeat = entry.count > 1 ? ` (x${entry.count})` : '';
+      return `${time} [${entry.level}] ${entry.message}${repeat}`;
     })
     .join('\n');
 }
@@ -2313,6 +2344,11 @@ function tick(engine, graph) {
     for (const effect of effects) {
       if (effect.type === 'log' && effect.message) {
         appendOutput({ level: 'log', message: effect.message });
+      } else if (typeof effect.type === 'string' && effect.type.startsWith('console.')) {
+        appendOutput({
+          level: effect.level || 'log',
+          message: formatConsoleEffectValue(effect.value)
+        });
       } else if (effect.kind === 'event.send') {
         const target = effect.target ? ` -> ${effect.target}` : '';
         const payload = effect.payload !== undefined
