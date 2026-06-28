@@ -542,6 +542,23 @@ body.preview-layout-docked:not(.panels-hidden) .scene3d-click-status {
   user-select: text;
 }
 
+/* Output value readout.
+   The node's computed output value is rendered as a read-only field, which by
+   default looks identical to an editable input. Style it as a green-tinted
+   monospace readout (matching the output socket colour) so it reads as a
+   non-editable output rather than an input field. */
+.node-editor-canvas input[readonly] {
+  background: rgba(76, 175, 80, 0.22) !important;
+  color: #b6f0b3 !important;
+  border: 1px solid rgba(118, 214, 122, 0.75) !important;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace !important;
+  font-weight: 600 !important;
+  text-align: right !important;
+  cursor: default !important;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 /* Graph/Errors panel */
 .graph-errors-panel {
   grid-column: 1 / -1;
