@@ -1,27 +1,29 @@
 export const SCENESYNC_DEMOS = [
   {
     name: 'lissajous',
-    file: 'examples/tour/scenesync/02-lissajous.loom',
-    requiredObjects: ['sample-cube'],
+    file: 'examples/tour/scenesync/demos/02-lissajous.loom',
+    requiredObjects: ['lissajous-target'],
     command: 'dev',
     status: 'manual-runnable',
-    description: 'Move sample-cube in a Lissajous curve.'
+    description: 'Move lissajous-target in a Lissajous curve.'
   },
   {
+    // Object-scoped behavior: applies to whichever object you attach it to.
     name: 'breathing-scale',
-    file: 'examples/tour/scenesync/04-breathing-scale.loom',
-    requiredObjects: ['sample-cube'],
+    file: 'examples/tour/scenesync/behaviors/04-breathing-scale.loom',
+    requiredObjects: [],
     command: 'dev',
     status: 'manual-runnable',
-    description: 'Animate sample-cube with a breathing scale pulse.'
+    description: 'Object-scoped breathing scale pulse for any attached object.'
   },
   {
+    // Object-scoped behavior: applies to whichever object you attach it to.
     name: 'orbit',
-    file: 'examples/tour/scenesync/03-orbit.loom',
-    requiredObjects: ['sample-cube'],
+    file: 'examples/tour/scenesync/behaviors/03-orbit-offset.loom',
+    requiredObjects: [],
     command: 'dev',
     status: 'manual-runnable',
-    description: 'Orbit sample-cube around a center point.'
+    description: 'Object-scoped circular orbit offset for any attached object.'
   }
 ];
 

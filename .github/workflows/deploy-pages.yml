@@ -56,7 +56,6 @@ jobs:
               <h1>Loomlet</h1>
               <ul>
                 <li><a href="./node-editor/">Node Editor</a></li>
-                <li><a href="./examples/01-basic.html">Example: Basic Browser Demo</a></li>
               </ul>
             </body>
           </html>

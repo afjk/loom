@@ -20,7 +20,7 @@ function runCli(args, env = {}) {
 test('demo registry includes lissajous', () => {
   assert.ok(SCENESYNC_DEMOS.some((demo) => demo.name === 'lissajous'));
   const demo = getSceneSyncDemoByName('lissajous');
-  assert.equal(demo.file, 'examples/tour/scenesync/02-lissajous.loom');
+  assert.equal(demo.file, 'examples/tour/scenesync/demos/02-lissajous.loom');
 });
 
 test('scenesync demo list includes lissajous', () => {

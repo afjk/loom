@@ -1,0 +1,23 @@
+# Tour: Click Count
+# Goal: Accumulate click activity into a 0..1 charge that fills as you click.
+# Status: manual-runnable
+# Run:
+#   loomlet run examples/tour/events/02-click-count.loom
+# Note:
+#   - list.length converts the click event stream into a per-frame count.
+#   - integrate accumulates that activity over time (clamped to [0, 1]).
+#     This is a charge-style accumulator, not an exact integer click counter.
+#   - Without injected events on channel "pointer.click" the charge stays 0.
+# Requires:
+#   - onEvent, list.length, logic.*, integrate, console.log
+import console
+import logic
+import list
+
+click = onEvent(channel: "pointer.click")
+clickCount = list.length(list: click)
+clicked = logic.greaterThan(value: clickCount, other: 0)
+
+drive = logic.select(condition: clicked, whenTrue: 40, whenFalse: 0)
+charge = integrate(value: drive, initial: 0, min: 0, max: 1)
+console.log(charge)

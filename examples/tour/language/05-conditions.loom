@@ -2,7 +2,7 @@
 # Goal: Value selection with logic nodes.
 # Status: runnable
 # Run:
-#   loomlet run examples/tour/language/06-conditions.loom
+#   loomlet run examples/tour/language/05-conditions.loom
 # Requires:
 #   - logic.equals
 #   - logic.select

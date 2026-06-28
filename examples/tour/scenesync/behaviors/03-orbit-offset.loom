@@ -1,0 +1,20 @@
+# Tour: Orbit Offset
+# Goal: Object-scoped circular orbit using a relative offset (no objectId).
+# Status: runnable
+# Run:
+#   loomlet scenesync dev examples/tour/scenesync/behaviors/03-orbit-offset.loom
+# Setup:
+#   - Open a Scene Sync room and link Loomlet (`loomlet scenesync redeem <code> --save`).
+#   - Attach this behavior to the object you want to orbit.
+# Requires:
+#   - clock (host-provided time)
+#   - math.cosine, math.sine
+#   - scene.offsetPosition
+import math
+import scene
+
+t = clock()
+dx = math.cosine(t, freq: 0.2, amplitude: 1.5)
+dz = math.sine(t, freq: 0.2, amplitude: 1.5)
+
+scene.offsetPosition(x: dx, z: dz)

@@ -2,7 +2,7 @@
 # Goal: Show pipe operator flow through transform nodes.
 # Status: runnable
 # Run:
-#   loomlet run examples/tour/language/03-pipeline.loom
+#   loomlet run examples/tour/language/04-pipeline.loom
 # Requires:
 #   - map
 #   - clamp

@@ -1,0 +1,15 @@
+# Tour: Calls and Named Arguments
+# Goal: Show positional vs named arguments and the first-arg rule.
+# Status: runnable
+# Run:
+#   loomlet run examples/tour/language/03-calls-and-named-args.loom
+# Requires:
+#   - constant
+#   - map
+#   - console.log
+import console
+
+# First argument may be positional; later arguments must be named.
+value = constant(value: 0.5)
+scaled = map(value, inMin: 0, inMax: 1, outMin: 0, outMax: 100)
+console.log(scaled)
