@@ -8,8 +8,9 @@ import { forceLinting } from '@codemirror/lint';
 
 import { Loom, NODE_TYPES } from '../../src/loom.js';
 import { describeGraphHostCompatibility } from '../../src/runtime/capabilities.js';
-import { getLatestNodeValues } from '../../src/value-preview.js';
+import { getLatestNodeValues, formatValuePreview } from '../../src/value-preview.js';
 import { loomletDslExtensions } from './loomlet-codemirror.js';
+import { valueInlayExtensions, dispatchValueInlays } from './dsl-value-inlay.js';
 import { parseDSLToAST, compileToGraph } from '../../src/loom-dsl.js';
 import { compileLoomToSceneSyncGraph } from '../../src/scenesync/graph-adapter.js';
 import { createSceneGraphSetPayload } from '../../src/scenesync/graphs.js';
@@ -99,6 +100,7 @@ const MAX_HISTORY_ENTRIES = 100;
 const MOVE_HISTORY_COALESCE_MS = 250;
 const PARAM_HISTORY_COALESCE_MS = 750;
 const NODE_VALUE_PREVIEW_INTERVAL_MS = 100;
+const VALUE_INLAY_STORAGE_KEY = 'loomlet.dslValueInlay';
 
 let outputEntries = [];
 const MAX_OUTPUT_ENTRIES = 500;
@@ -156,12 +158,14 @@ let editorMaximizeMode = 'split';
 let previewLayoutMode = 'background';
 let dockedEditorTab = 'node';
 let lastNodeValuePreviewAtMs = 0;
+let valueInlayEnabled = readValueInlayPreference();
 let previewEventQueue = [];
 let previewEventScopeId = '';
 let previewEventSequence = 0;
 
 const elements = {
   dslEditorHost: document.getElementById('dsl-editor-host'),
+  dslValueInlayBtn: document.getElementById('dslValueInlayBtn'),
   nodeEditorHost: document.getElementById('node-editor'),
   previewCanvas: document.getElementById('preview-canvas'),
   previewStage: document.getElementById('preview-stage'),
@@ -859,6 +863,7 @@ function initDslEditor() {
         nodeTypes: NODE_TYPES,
         getErrors: () => store.getState().errors || []
       }),
+      ...valueInlayExtensions(),
       EditorView.updateListener.of((update) => {
         if (!update.docChanged) return;
         if (isApplyingProgrammaticDslChange) return;
@@ -2369,12 +2374,105 @@ function tick(engine, graph) {
 }
 
 function postNodeValuePreviews(engineInstance, graph) {
-  if (!nodeEditor || !engineInstance || !graph) return;
+  if (!engineInstance || !graph) return;
   const now = performance.now();
   if (now - lastNodeValuePreviewAtMs < NODE_VALUE_PREVIEW_INTERVAL_MS) return;
   lastNodeValuePreviewAtMs = now;
 
-  nodeEditor.setNodeValuePreviews(getLatestNodeValues(engineInstance, graph, NODE_TYPES));
+  const values = getLatestNodeValues(engineInstance, graph, NODE_TYPES);
+  nodeEditor?.setNodeValuePreviews(values);
+  updateDslValueInlays(values, graph);
+}
+
+function readValueInlayPreference() {
+  try {
+    return localStorage.getItem(VALUE_INLAY_STORAGE_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
+
+// Walk top-level assignment statements. The DSL compiles each assignment's
+// target name into a graph node with the same id, so the left-hand name doubles
+// as the node id we look up runtime values by.
+function collectAssignmentInlayTargets(ast) {
+  const targets = [];
+  if (!ast || !Array.isArray(ast.body)) return targets;
+
+  for (const statement of ast.body) {
+    if (statement?.type !== 'AssignmentStatement') continue;
+    const nodeId = statement.target?.name;
+    const line = statement.span?.start?.line;
+    if (!nodeId || typeof line !== 'number') continue;
+    targets.push({ line, nodeId });
+  }
+
+  return targets;
+}
+
+function formatInlayValue(value, nodeType) {
+  // Event sources emit an array of events; the array contents are noise, so we
+  // summarize as a count instead.
+  if (nodeType === 'onEvent' && Array.isArray(value)) {
+    return value.length === 1 ? '1 event' : `${value.length} events`;
+  }
+  return formatValuePreview(value);
+}
+
+function updateDslValueInlays(values, graph) {
+  if (!dslEditor) return;
+  if (!valueInlayEnabled) return;
+
+  // While the editor text is ahead of the applied graph, the stored AST line
+  // numbers no longer match what is on screen. Leave the existing badges in
+  // place (the decoration field tracks them through edits) until the next
+  // apply re-syncs the source map.
+  if (hasUnsyncedDslText) return;
+
+  const ast = store.getState().sourceAst;
+  const targets = collectAssignmentInlayTargets(ast);
+  if (targets.length === 0) {
+    dispatchValueInlays(dslEditor, []);
+    return;
+  }
+
+  const nodeTypeById = new Map();
+  for (const node of graph?.nodes || []) {
+    nodeTypeById.set(node.id, node.type);
+  }
+
+  const inlays = [];
+  for (const { line, nodeId } of targets) {
+    if (!values.has(nodeId)) continue;
+    const value = values.get(nodeId);
+    if (value === undefined) continue;
+    inlays.push({ line, text: formatInlayValue(value, nodeTypeById.get(nodeId)) });
+  }
+
+  dispatchValueInlays(dslEditor, inlays);
+}
+
+function setValueInlayEnabled(enabled) {
+  valueInlayEnabled = enabled;
+  try {
+    localStorage.setItem(VALUE_INLAY_STORAGE_KEY, enabled ? '1' : '0');
+  } catch {
+    // Ignore storage failures (e.g. private mode); preference stays in-memory.
+  }
+  renderValueInlayToggle();
+  if (!enabled && dslEditor) {
+    dispatchValueInlays(dslEditor, []);
+  }
+}
+
+function renderValueInlayToggle() {
+  const btn = elements.dslValueInlayBtn;
+  if (!btn) return;
+  btn.classList.toggle('active', valueInlayEnabled);
+  btn.setAttribute('aria-pressed', valueInlayEnabled ? 'true' : 'false');
+  btn.title = valueInlayEnabled
+    ? 'Hide inline values'
+    : 'Show inline values';
 }
 
 function resolveValue(engine, ref) {
@@ -3211,6 +3309,10 @@ function setupEventListeners() {
   elements.saveFileBtn.addEventListener('click', saveDslFile);
   elements.saveAsFileBtn.addEventListener('click', saveDslAsFile);
 
+  elements.dslValueInlayBtn?.addEventListener('click', () => {
+    setValueInlayEnabled(!valueInlayEnabled);
+  });
+
   elements.editorPanels?.querySelectorAll('[data-action="maximize-dsl"]').forEach(btn => {
     btn.addEventListener('click', () => setEditorMaximizeMode('dsl'));
   });
@@ -3480,6 +3582,7 @@ async function init() {
   renderAutoApplyStatus();
   renderAutoSyncGraphToDslStatus();
   renderUndoRedoState();
+  renderValueInlayToggle();
   renderNodePaletteCategories();
   renderNodePalette();
   updateNodeListCategories();
