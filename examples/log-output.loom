@@ -1,7 +1,0 @@
-t = clock()
-wave = sine(t, freq: 0.35)
-smooth = smoothLerp(wave, rate: 5, initial: 0)
-width = map(smooth, inMin: -1, inMax: 1, outMin: 80, outMax: 680, clamp: true)
-logged = log(smooth, label: "wave")
-
-render bar(width: width, color: "#80ed99", height: 48)

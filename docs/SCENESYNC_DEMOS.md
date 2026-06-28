@@ -17,14 +17,13 @@
 
 ## Required object IDs
 
-Some samples assume objects already exist:
+Some demos assume objects already exist:
 
-- `sample-cube`
-- `dancer`
-- `wave-1` ... `wave-5`
-- `pulse-target`
-- `color-target`
-- `grid-1` ... `grid-9`
+- `sample-cube` (move-cube demo)
+- `lissajous-target` (lissajous demo)
+
+Object-scoped behaviors under `examples/tour/scenesync/behaviors/` omit
+`objectId` and apply to whichever object you attach them to.
 
 ## Adding GLB models
 
@@ -35,11 +34,11 @@ Then rename or assign the object ID used by the sample (for example, `dancer`).
 
 Use either:
 
-`loomlet scenesync dev examples/tour/scenesync/02-lissajous.loom`
+`loomlet scenesync dev examples/tour/scenesync/demos/02-lissajous.loom`
 
 or:
 
-`loomlet scenesync dev examples/tour/live/01-pulse.loom`
+`loomlet scenesync dev examples/tour/scenesync/behaviors/03-float-y.loom`
 
 ## Demo helper commands
 
@@ -68,5 +67,10 @@ They do not create objects during live graph evaluation.
 
 ## Runtime support notes
 
-- Multi-object graph sketches (for example `05-wave-objects` and `03-grid-wave`) are marked draft because the current Scene Sync graph adapter targets a single object scope.
-- `scene.setColor` and `scene.setVisible` may compile through the Loomlet graph adapter, but samples remain draft until Scene Sync receiver/runtime support is confirmed.
+- The current Scene Sync graph adapter targets a single object scope, so the tour
+  ships single-object behaviors rather than multi-object graphs.
+- Click behaviors (`01-click-color`, `02-click-bounce`) compile through the graph
+  adapter and are marked `manual-runnable`: they need real click events on the
+  `pointer.click` channel to do anything visible.
+- `scene.setColor` may compile through the Loomlet graph adapter, but visible
+  results depend on Scene Sync receiver/runtime support.

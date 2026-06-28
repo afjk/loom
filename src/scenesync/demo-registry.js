@@ -1,7 +1,7 @@
 export const SCENESYNC_DEMOS = [
   {
     name: 'lissajous',
-    file: 'examples/tour/scenesync/02-lissajous.loom',
+    file: 'examples/tour/scenesync/demos/02-lissajous.loom',
     requiredObjects: ['sample-cube'],
     command: 'dev',
     status: 'manual-runnable',
@@ -9,7 +9,7 @@ export const SCENESYNC_DEMOS = [
   },
   {
     name: 'breathing-scale',
-    file: 'examples/tour/scenesync/04-breathing-scale.loom',
+    file: 'examples/tour/scenesync/behaviors/05-breathing-scale.loom',
     requiredObjects: ['sample-cube'],
     command: 'dev',
     status: 'manual-runnable',
@@ -17,7 +17,7 @@ export const SCENESYNC_DEMOS = [
   },
   {
     name: 'orbit',
-    file: 'examples/tour/scenesync/03-orbit.loom',
+    file: 'examples/tour/scenesync/behaviors/04-orbit-offset.loom',
     requiredObjects: ['sample-cube'],
     command: 'dev',
     status: 'manual-runnable',

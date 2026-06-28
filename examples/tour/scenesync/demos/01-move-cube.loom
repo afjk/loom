@@ -2,7 +2,7 @@
 # Goal: Send a single Scene Sync position command to an existing object.
 # Status: runnable
 # Run:
-#   loomlet scenesync dev examples/tour/scenesync/01-move-cube.loom
+#   loomlet scenesync dev examples/tour/scenesync/demos/01-move-cube.loom
 # Setup:
 #   - Open a Scene Sync room.
 #   - Link Loomlet with `loomlet scenesync redeem <code> --save`.

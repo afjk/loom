@@ -1,0 +1,20 @@
+# Tour: Toggle
+# Goal: Flip a persistent on/off state with every click.
+# Status: draft
+# Run:
+#   loomlet run examples/tour/events/03-toggle.loom
+# Note:
+#   - A true toggle needs to remember a discrete on/off state and flip it once
+#     per click. That requires an integer click counter (then count % 2) or a
+#     latch/flip-flop state node.
+#   - Today the event tools give a per-frame count (list.length) and a
+#     time-integrating accumulator (integrate), neither of which yields an exact
+#     parity bit, so this sample stays a draft sketch.
+# TODO NODE: integer event counter or latch/toggle state node
+import console
+import list
+
+click = onEvent(channel: "pointer.click")
+clickCount = list.length(list: click)
+# state = toggleOnEvent(click)   # not available yet
+console.log(clickCount)

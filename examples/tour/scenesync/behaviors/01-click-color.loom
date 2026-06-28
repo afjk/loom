@@ -1,0 +1,32 @@
+# Tour: Click Color
+# Goal: Flash an object bluish-white for a moment on each click.
+# Status: manual-runnable
+# Run:
+#   loomlet scenesync dev examples/tour/scenesync/behaviors/01-click-color.loom
+# Setup:
+#   - Open a Scene Sync room and link Loomlet (`loomlet scenesync redeem <code> --save`).
+#   - Attach this behavior to an object; click it in the scene.
+# Note:
+#   - onEvent yields an event stream; list.length turns it into a per-frame count.
+#   - integrate rises while clicked and decays otherwise, making a short flash.
+# Requires:
+#   - onEvent, list.length, logic.*, math.*, integrate, scene.setColor
+import scene
+import logic
+import list
+import math
+
+click = onEvent(channel: "pointer.click")
+clickCount = list.length(list: click)
+clicked = logic.greaterThan(value: clickCount, other: 0)
+
+drive = logic.select(condition: clicked, whenTrue: 90, whenFalse: -2.8)
+flash = integrate(value: drive, initial: 0, min: 0, max: 1)
+
+rBoost = math.multiply(a: flash, b: 0.88)
+r = math.add(a: rBoost, b: 0.12)
+gBoost = math.multiply(a: flash, b: 0.58)
+g = math.add(a: gBoost, b: 0.42)
+b = 1
+
+scene.setColor(r: r, g: g, b: b)

@@ -1,9 +1,0 @@
-# Tour: Breathing Scale
-# Goal: Scale pulsing with sine wave.
-# Status: runnable
-import math
-import scene
-
-t = clock()
-s = math.sine(t, freq: 1.0, amplitude: 0.3, offset: 1.0)
-scene.setScale(objectId: "breathing-target", x: s, y: s, z: s)

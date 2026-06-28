@@ -72,6 +72,7 @@ function categoryFor(relativeFile) {
   const normalized = relativeFile.replace(/\\/g, '/');
   if (normalized.startsWith('examples/tour/language/')) return 'language';
   if (normalized.startsWith('examples/tour/signals/')) return 'signals';
+  if (normalized.startsWith('examples/tour/events/')) return 'events';
   if (normalized.startsWith('examples/tour/scenesync/')) return 'scenesync';
   if (normalized.startsWith('examples/tour/live/')) return 'live';
   return 'unknown';
@@ -94,12 +95,13 @@ function buildSafeCommand(sample) {
     return [process.execPath, [cliPath, ...args]];
   }
 
-  if (category === 'language' || category === 'signals') {
+  if (category === 'language' || category === 'signals' || category === 'events') {
     return [process.execPath, [cliPath, 'run', relativeFile]];
   }
 
   if (category === 'scenesync' || category === 'live') {
-    return [process.execPath, [cliPath, 'scenesync', 'graph-compile', relativeFile]];
+    // Object-scoped behaviors omit objectId, so compile them at scene scope.
+    return [process.execPath, [cliPath, 'scenesync', 'graph-compile', relativeFile, '--scene']];
   }
 
   return null;

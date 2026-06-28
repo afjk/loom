@@ -2,7 +2,7 @@
 # Goal: Two-axis oscillation with different frequencies.
 # Status: runnable
 # Run:
-#   loomlet scenesync dev examples/tour/scenesync/02-lissajous.loom
+#   loomlet scenesync dev examples/tour/scenesync/demos/02-lissajous.loom
 # Setup:
 #   - Open a Scene Sync room.
 #   - Link Loomlet with `loomlet scenesync redeem <code> --save`.

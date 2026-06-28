@@ -1,0 +1,18 @@
+# Tour: Float Y
+# Goal: Gentle vertical floating using a sine offset (object-scoped, no objectId).
+# Status: runnable
+# Run:
+#   loomlet scenesync dev examples/tour/scenesync/behaviors/03-float-y.loom
+# Setup:
+#   - Open a Scene Sync room and link Loomlet (`loomlet scenesync redeem <code> --save`).
+#   - Attach this behavior to the object you want to float.
+# Requires:
+#   - clock (host-provided time)
+#   - math.sine
+#   - scene.offsetPosition
+import math
+import scene
+
+t = clock()
+dy = math.sine(t, freq: 0.5, amplitude: 0.5)
+scene.offsetPosition(y: dy)

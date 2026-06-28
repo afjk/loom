@@ -1,0 +1,15 @@
+# Tour: Integrate
+# Goal: Accumulate a value over time with the integrate state node.
+# Status: runnable
+# Run:
+#   loomlet run examples/tour/signals/03-integrate.loom --time 2.0
+# Requires:
+#   - constant
+#   - integrate
+#   - console.log
+import console
+
+# integrate accumulates `value` per second, clamped to [min, max].
+rate = constant(value: 0.5)
+charge = integrate(rate, initial: 0, min: 0, max: 1)
+console.log(charge)

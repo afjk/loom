@@ -1,9 +1,0 @@
-# Tour: Wave Objects
-# Goal: Array of objects with phase-shifted wave.
-# Status: runnable
-import math
-import scene
-
-t = clock()
-y = math.sine(t, freq: 0.5, amplitude: 1.0, offset: 0.5)
-scene.setPosition(objectId: "wave-target", x: 0, y: y, z: 0)

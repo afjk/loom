@@ -1,0 +1,18 @@
+# Tour: Pointer Click
+# Goal: Turn a click event stream into a per-frame count (event -> value).
+# Status: manual-runnable
+# Run:
+#   loomlet run examples/tour/events/01-pointer-click.loom
+# Note:
+#   - onEvent yields an event stream; list.length counts the events seen this frame.
+#   - Without injected events on channel "pointer.click" the count stays 0.
+# Requires:
+#   - onEvent
+#   - list.length
+#   - console.log
+import console
+import list
+
+click = onEvent(channel: "pointer.click")
+clickCount = list.length(list: click)
+console.log(clickCount)
