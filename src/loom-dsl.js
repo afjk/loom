@@ -331,7 +331,7 @@ export function parseDSLToAST(source) {
   }
 }
 
-function defaultOutputPort(nodeTypeName, nodeTypes = NODE_TYPES) {
+export function defaultOutputPort(nodeTypeName, nodeTypes = NODE_TYPES) {
   if (nodeTypeName === 'clock') return 't';
   if (nodeTypeName === 'pointerPosition') return 'pos';
   const def = nodeTypes[nodeTypeName];
