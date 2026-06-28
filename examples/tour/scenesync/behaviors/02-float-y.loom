@@ -2,7 +2,7 @@
 # Goal: Gentle vertical floating using a sine offset (object-scoped, no objectId).
 # Status: runnable
 # Run:
-#   loomlet scenesync dev examples/tour/scenesync/behaviors/03-float-y.loom
+#   loomlet scenesync dev examples/tour/scenesync/behaviors/02-float-y.loom
 # Setup:
 #   - Open a Scene Sync room and link Loomlet (`loomlet scenesync redeem <code> --save`).
 #   - Attach this behavior to the object you want to float.

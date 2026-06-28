@@ -38,7 +38,7 @@ Use either:
 
 or:
 
-`loomlet scenesync dev examples/tour/scenesync/behaviors/03-float-y.loom`
+`loomlet scenesync dev examples/tour/scenesync/behaviors/02-float-y.loom`
 
 ## Demo helper commands
 
@@ -69,8 +69,8 @@ They do not create objects during live graph evaluation.
 
 - The current Scene Sync graph adapter targets a single object scope, so the tour
   ships single-object behaviors rather than multi-object graphs.
-- Click behaviors (`01-click-color`, `02-click-bounce`) compile through the graph
-  adapter and are marked `manual-runnable`: they need real click events on the
-  `pointer.click` channel to do anything visible.
+- The click behavior (`01-click-color`) compiles through the graph adapter and is
+  marked `manual-runnable`: it needs real click events on the `pointer.click`
+  channel to do anything visible.
 - `scene.setColor` may compile through the Loomlet graph adapter, but visible
   results depend on Scene Sync receiver/runtime support.

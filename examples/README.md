@@ -66,10 +66,9 @@ status and teaching focus of each sample.
 Object-scoped behaviors omit `objectId`; the host applies them to the attached object.
 
 - [tour/scenesync/behaviors/01-click-color.loom](tour/scenesync/behaviors/01-click-color.loom)
-- [tour/scenesync/behaviors/02-click-bounce.loom](tour/scenesync/behaviors/02-click-bounce.loom)
-- [tour/scenesync/behaviors/03-float-y.loom](tour/scenesync/behaviors/03-float-y.loom)
-- [tour/scenesync/behaviors/04-orbit-offset.loom](tour/scenesync/behaviors/04-orbit-offset.loom)
-- [tour/scenesync/behaviors/05-breathing-scale.loom](tour/scenesync/behaviors/05-breathing-scale.loom)
+- [tour/scenesync/behaviors/02-float-y.loom](tour/scenesync/behaviors/02-float-y.loom)
+- [tour/scenesync/behaviors/03-orbit-offset.loom](tour/scenesync/behaviors/03-orbit-offset.loom)
+- [tour/scenesync/behaviors/04-breathing-scale.loom](tour/scenesync/behaviors/04-breathing-scale.loom)
 
 ### Scene Sync demos (`tour/scenesync/demos`)
 

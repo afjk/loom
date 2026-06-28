@@ -92,7 +92,7 @@ so they are marked `manual-runnable`.
 ## Scene Sync behaviors
 
 Object-scoped behaviors omit `objectId`; the host applies them to the attached
-object. Click behaviors are `manual-runnable` because they need real click
+object. The click behavior is `manual-runnable` because it needs real click
 events to do anything visible.
 
 ### 01 Click Color
@@ -101,28 +101,22 @@ events to do anything visible.
 - Run: `loomlet scenesync dev examples/tour/scenesync/behaviors/01-click-color.loom`
 - Teaches: click -> flash color via the `list.length` + `integrate` idiom
 
-### 02 Click Bounce
-- Path: `examples/tour/scenesync/behaviors/02-click-bounce.loom`
-- Status: Manual-runnable
-- Run: `loomlet scenesync dev examples/tour/scenesync/behaviors/02-click-bounce.loom`
-- Teaches: click -> vertical nudge that settles back
-
-### 03 Float Y
-- Path: `examples/tour/scenesync/behaviors/03-float-y.loom`
+### 02 Float Y
+- Path: `examples/tour/scenesync/behaviors/02-float-y.loom`
 - Status: Runnable
-- Run: `loomlet scenesync dev examples/tour/scenesync/behaviors/03-float-y.loom`
-- Teaches: continuous vertical floating with `scene.offsetPosition`
+- Run: `loomlet scenesync dev examples/tour/scenesync/behaviors/02-float-y.loom`
+- Teaches: continuous vertical floating with a zero-mean `scene.offsetPosition`
 
-### 04 Orbit Offset
-- Path: `examples/tour/scenesync/behaviors/04-orbit-offset.loom`
+### 03 Orbit Offset
+- Path: `examples/tour/scenesync/behaviors/03-orbit-offset.loom`
 - Status: Runnable
-- Run: `loomlet scenesync dev examples/tour/scenesync/behaviors/04-orbit-offset.loom`
+- Run: `loomlet scenesync dev examples/tour/scenesync/behaviors/03-orbit-offset.loom`
 - Teaches: circular orbit with `math.cosine` + `math.sine` offsets
 
-### 05 Breathing Scale
-- Path: `examples/tour/scenesync/behaviors/05-breathing-scale.loom`
+### 04 Breathing Scale
+- Path: `examples/tour/scenesync/behaviors/04-breathing-scale.loom`
 - Status: Runnable
-- Run: `loomlet scenesync dev examples/tour/scenesync/behaviors/05-breathing-scale.loom`
+- Run: `loomlet scenesync dev examples/tour/scenesync/behaviors/04-breathing-scale.loom`
 - Teaches: pulse scaling with `scene.setScale`
 
 ## Scene Sync demos
