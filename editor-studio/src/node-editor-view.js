@@ -38,9 +38,19 @@ function getNodeControl(node, key) {
   return node.controls[key] ?? null;
 }
 
+// Title shown on a node. The node id (the DSL variable name, e.g. `wave`) is
+// the most useful identifier when reading a graph, so surface it alongside the
+// label/type descriptor instead of only showing the type.
+function getNodeTitle(editorNode) {
+  const descriptor = editorNode.label || editorNode.type;
+  const id = editorNode.id;
+  if (!id || id === descriptor) return descriptor;
+  return `${id} · ${descriptor}`;
+}
+
 function createReteNode(editorNode, onControl, previewText) {
   const nodeTypeDef = NODE_TYPES[editorNode.type];
-  const displayLabel = editorNode.label || editorNode.type;
+  const displayLabel = getNodeTitle(editorNode);
   const node = new ClassicPreset.Node(displayLabel);
   node.id = editorNode.id;
   node._editorNode = editorNode;
