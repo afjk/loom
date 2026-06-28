@@ -108,6 +108,7 @@ Search for `Loomlet` in the VS Code Marketplace.
 ## Documentation
 
 - [Language guide](docs/language-guide.md)
+- [Language reference](docs/LANGUAGE_REFERENCE.md)
 - [CLI guide](docs/cli.md)
 - [VS Code extension](docs/vscode-extension.md)
 - [Concepts and design notes](docs/concepts.md)

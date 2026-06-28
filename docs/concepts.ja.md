@@ -182,7 +182,7 @@ timer = clock()
 x = timer |> sine(freq: 0.3) |> map(inMin: -1, inMax: 1, outMin: 100, outMax: 700)
 ```
 
-詳細な仕様は [DSL.md](DSL.md) を参照してください。
+詳細な構文は [言語リファレンス](LANGUAGE_REFERENCE.md) を参照してください。
 
 ## Scene Sync 関連の概要
 
