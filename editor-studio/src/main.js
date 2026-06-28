@@ -8,9 +8,10 @@ import { forceLinting } from '@codemirror/lint';
 
 import { Loom, NODE_TYPES } from '../../src/loom.js';
 import { describeGraphHostCompatibility } from '../../src/runtime/capabilities.js';
-import { getLatestNodeValues } from '../../src/value-preview.js';
+import { getLatestNodeValues, formatValuePreview } from '../../src/value-preview.js';
 import { loomletDslExtensions } from './loomlet-codemirror.js';
-import { parseDSLToAST, compileToGraph } from '../../src/loom-dsl.js';
+import { valueInlayExtensions, dispatchValueInlays } from './dsl-value-inlay.js';
+import { parseDSLToAST, compileToGraph, defaultOutputPort } from '../../src/loom-dsl.js';
 import { compileLoomToSceneSyncGraph } from '../../src/scenesync/graph-adapter.js';
 import { createSceneGraphSetPayload } from '../../src/scenesync/graphs.js';
 import { reduceSceneEffectsToObjects, graphHasSceneNodes } from '../../src/scenesync/preview-transform.js';
@@ -99,6 +100,7 @@ const MAX_HISTORY_ENTRIES = 100;
 const MOVE_HISTORY_COALESCE_MS = 250;
 const PARAM_HISTORY_COALESCE_MS = 750;
 const NODE_VALUE_PREVIEW_INTERVAL_MS = 100;
+const VALUE_INLAY_STORAGE_KEY = 'loomlet.dslValueInlay';
 
 let outputEntries = [];
 const MAX_OUTPUT_ENTRIES = 500;
@@ -156,12 +158,15 @@ let editorMaximizeMode = 'split';
 let previewLayoutMode = 'background';
 let dockedEditorTab = 'node';
 let lastNodeValuePreviewAtMs = 0;
+const VALUE_INLAY_MODES = ['off', 'compact', 'verbose'];
+let valueInlayMode = readValueInlayMode();
 let previewEventQueue = [];
 let previewEventScopeId = '';
 let previewEventSequence = 0;
 
 const elements = {
   dslEditorHost: document.getElementById('dsl-editor-host'),
+  dslValueInlayBtn: document.getElementById('dslValueInlayBtn'),
   nodeEditorHost: document.getElementById('node-editor'),
   previewCanvas: document.getElementById('preview-canvas'),
   previewStage: document.getElementById('preview-stage'),
@@ -859,6 +864,7 @@ function initDslEditor() {
         nodeTypes: NODE_TYPES,
         getErrors: () => store.getState().errors || []
       }),
+      ...valueInlayExtensions(),
       EditorView.updateListener.of((update) => {
         if (!update.docChanged) return;
         if (isApplyingProgrammaticDslChange) return;
@@ -2369,12 +2375,189 @@ function tick(engine, graph) {
 }
 
 function postNodeValuePreviews(engineInstance, graph) {
-  if (!nodeEditor || !engineInstance || !graph) return;
+  if (!engineInstance || !graph) return;
   const now = performance.now();
   if (now - lastNodeValuePreviewAtMs < NODE_VALUE_PREVIEW_INTERVAL_MS) return;
   lastNodeValuePreviewAtMs = now;
 
-  nodeEditor.setNodeValuePreviews(getLatestNodeValues(engineInstance, graph, NODE_TYPES));
+  const values = getLatestNodeValues(engineInstance, graph, NODE_TYPES);
+  nodeEditor?.setNodeValuePreviews(values);
+  updateDslValueInlays(values, graph);
+}
+
+function readValueInlayMode() {
+  try {
+    const raw = localStorage.getItem(VALUE_INLAY_STORAGE_KEY);
+    if (raw === '0') return 'off';        // legacy boolean storage
+    if (raw === '1') return 'compact';    // legacy boolean storage
+    if (VALUE_INLAY_MODES.includes(raw)) return raw;
+  } catch {
+    // Ignore storage failures; fall through to the default.
+  }
+  return 'compact';
+}
+
+function effectCallName(expr) {
+  if (!expr) return 'effect';
+  if (expr.type === 'CallExpression') return expr.callee?.name || 'effect';
+  if (expr.type === 'PipeExpression') return effectCallName(expr.right);
+  if (expr.type === 'MemberExpression') return expr.property?.name || 'effect';
+  return 'effect';
+}
+
+// Walk top-level statements and map each to the graph entity it produces:
+//  - assignments compile to a node whose id equals the target name
+//  - effect/sink expressions compile to sequential `_effectN` nodes
+//  - render statements populate graph.render (not a node)
+function collectInlayTargets(ast) {
+  const targets = [];
+  if (!ast || !Array.isArray(ast.body)) return targets;
+
+  let effectCounter = 0;
+  for (const statement of ast.body) {
+    const line = statement?.span?.start?.line;
+    if (typeof line !== 'number') continue;
+
+    if (statement.type === 'AssignmentStatement' && statement.target?.name) {
+      targets.push({ kind: 'assignment', line, nodeId: statement.target.name, name: statement.target.name });
+    } else if (statement.type === 'ExpressionStatement') {
+      effectCounter += 1;
+      targets.push({ kind: 'effect', line, nodeId: `_effect${effectCounter}`, name: effectCallName(statement.expression) });
+    } else if (statement.type === 'RenderStatement') {
+      targets.push({ kind: 'render', line });
+    }
+  }
+
+  return targets;
+}
+
+function formatScalarValue(value, nodeType) {
+  // Event sources emit an array of events; the contents are noise, so we
+  // summarize as a count instead.
+  if (nodeType === 'onEvent' && Array.isArray(value)) {
+    return value.length === 1 ? '1 event' : `${value.length} events`;
+  }
+  return formatValuePreview(value);
+}
+
+// Resolve a graph ref (e.g. "x.out") or literal to its latest value.
+function resolveRefValue(values, ref) {
+  if (typeof ref === 'number') return ref;
+  if (typeof ref !== 'string') return undefined;
+  const dot = ref.indexOf('.');
+  const nodeId = dot >= 0 ? ref.slice(0, dot) : ref;
+  const port = dot >= 0 ? ref.slice(dot + 1) : null;
+  const value = values.get(nodeId);
+  if (port && value && typeof value === 'object' && !Array.isArray(value) && port in value) {
+    return value[port];
+  }
+  return value;
+}
+
+function formatInlayTarget(target, values, nodeTypeById, graph) {
+  const verbose = valueInlayMode === 'verbose';
+
+  if (target.kind === 'assignment') {
+    if (!values.has(target.nodeId)) return null;
+    const value = values.get(target.nodeId);
+    if (value === undefined) return null;
+    const nodeType = nodeTypeById.get(target.nodeId);
+    const text = formatScalarValue(value, nodeType);
+    if (verbose) {
+      return `${target.name}.${defaultOutputPort(nodeType, NODE_TYPES)} = ${text}`;
+    }
+    return text;
+  }
+
+  if (target.kind === 'effect') {
+    // Most sinks (scene.setColor, ...) have no output, so we just label the
+    // line with the effect name. Sinks that do expose a value (e.g. log) show
+    // it inline.
+    const value = values.get(target.nodeId);
+    const hasValue = value !== undefined;
+    if (verbose) {
+      return hasValue ? `effect: ${target.name} = ${formatValuePreview(value)}` : `effect: ${target.name}`;
+    }
+    return hasValue ? `${target.name}: ${formatValuePreview(value)}` : target.name;
+  }
+
+  if (target.kind === 'render') {
+    const render = graph?.render;
+    if (!render) return null;
+    const fmt = (v) => (v === undefined ? '—' : formatValuePreview(v));
+    let body;
+    if (render.type === 'point') {
+      body = `point(${fmt(resolveRefValue(values, render.x))}, ${fmt(resolveRefValue(values, render.y))})`;
+    } else if (render.type === 'bar') {
+      body = `bar(${fmt(resolveRefValue(values, render.width))})`;
+    } else {
+      body = String(render.type || 'render');
+    }
+    return verbose ? `render: ${body}` : body;
+  }
+
+  return null;
+}
+
+function updateDslValueInlays(values, graph) {
+  if (!dslEditor) return;
+  if (valueInlayMode === 'off') return;
+
+  // While the editor text is ahead of the applied graph, the stored AST line
+  // numbers no longer match what is on screen. Leave the existing badges in
+  // place (the decoration field tracks them through edits) until the next
+  // apply re-syncs the source map.
+  if (hasUnsyncedDslText) return;
+
+  const ast = store.getState().sourceAst;
+  const targets = collectInlayTargets(ast);
+  if (targets.length === 0) {
+    dispatchValueInlays(dslEditor, []);
+    return;
+  }
+
+  const nodeTypeById = new Map();
+  for (const node of graph?.nodes || []) {
+    nodeTypeById.set(node.id, node.type);
+  }
+
+  const inlays = [];
+  for (const target of targets) {
+    const text = formatInlayTarget(target, values, nodeTypeById, graph);
+    if (text != null && text !== '') {
+      inlays.push({ line: target.line, text });
+    }
+  }
+
+  dispatchValueInlays(dslEditor, inlays);
+}
+
+function cycleValueInlayMode() {
+  const idx = VALUE_INLAY_MODES.indexOf(valueInlayMode);
+  setValueInlayMode(VALUE_INLAY_MODES[(idx + 1) % VALUE_INLAY_MODES.length]);
+}
+
+function setValueInlayMode(mode) {
+  valueInlayMode = VALUE_INLAY_MODES.includes(mode) ? mode : 'compact';
+  try {
+    localStorage.setItem(VALUE_INLAY_STORAGE_KEY, valueInlayMode);
+  } catch {
+    // Ignore storage failures (e.g. private mode); preference stays in-memory.
+  }
+  renderValueInlayToggle();
+  if (valueInlayMode === 'off' && dslEditor) {
+    dispatchValueInlays(dslEditor, []);
+  }
+}
+
+function renderValueInlayToggle() {
+  const btn = elements.dslValueInlayBtn;
+  if (!btn) return;
+  const on = valueInlayMode !== 'off';
+  btn.classList.toggle('active', on);
+  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  btn.textContent = valueInlayMode === 'verbose' ? '⟦⟧+' : '⟦⟧';
+  btn.title = `Inline values: ${valueInlayMode} (click to change)`;
 }
 
 function resolveValue(engine, ref) {
@@ -3211,6 +3394,10 @@ function setupEventListeners() {
   elements.saveFileBtn.addEventListener('click', saveDslFile);
   elements.saveAsFileBtn.addEventListener('click', saveDslAsFile);
 
+  elements.dslValueInlayBtn?.addEventListener('click', () => {
+    cycleValueInlayMode();
+  });
+
   elements.editorPanels?.querySelectorAll('[data-action="maximize-dsl"]').forEach(btn => {
     btn.addEventListener('click', () => setEditorMaximizeMode('dsl'));
   });
@@ -3480,6 +3667,7 @@ async function init() {
   renderAutoApplyStatus();
   renderAutoSyncGraphToDslStatus();
   renderUndoRedoState();
+  renderValueInlayToggle();
   renderNodePaletteCategories();
   renderNodePalette();
   updateNodeListCategories();

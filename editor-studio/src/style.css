@@ -459,6 +459,12 @@ body.preview-layout-docked:not(.panels-hidden) .scene3d-click-status {
   transform: scale(0.95);
 }
 
+.btn-icon.active {
+  color: #82aaff;
+  border-color: rgba(130, 170, 255, 0.5);
+  background: rgba(130, 170, 255, 0.12);
+}
+
 .dsl-editor-host {
   flex: 1;
   overflow: hidden;
