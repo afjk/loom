@@ -14,6 +14,12 @@ import { valueInlayExtensions, dispatchValueInlays } from './dsl-value-inlay.js'
 import { parseDSLToAST, compileToGraph, defaultOutputPort } from '../../src/loom-dsl.js';
 import { compileLoomToSceneSyncGraph } from '../../src/scenesync/graph-adapter.js';
 import { reduceSceneEffectsToObjects, graphHasSceneNodes } from '../../src/scenesync/preview-transform.js';
+// Object-scoped Scene Sync behavior samples (omit objectId; the host applies
+// them to the attached/selected object). Imported as raw text from the tour.
+import behaviorClickColor from '../../examples/tour/scenesync/behaviors/01-click-color.loom?raw';
+import behaviorFloatY from '../../examples/tour/scenesync/behaviors/02-float-y.loom?raw';
+import behaviorOrbitOffset from '../../examples/tour/scenesync/behaviors/03-orbit-offset.loom?raw';
+import behaviorBreathingScale from '../../examples/tour/scenesync/behaviors/04-breathing-scale.loom?raw';
 import { Scene3DPreview } from './scene3d-preview.js';
 import {
   graphToEditorModel,
@@ -92,7 +98,11 @@ const DOCKED_EDITOR_TAB_KEY = 'loomlet.editorStudio.dockedEditorTab';
 
 const SCENE_SYNC_PRESETS = {
   jump: { label: 'Jump (vertical bounce)', source: SCENE_SYNC_JUMP_PRESET },
-  circle: { label: 'Circle (orbit)', source: SCENE_SYNC_CIRCLE_PRESET }
+  circle: { label: 'Circle (orbit)', source: SCENE_SYNC_CIRCLE_PRESET },
+  'click-color': { label: 'Click color flash', source: behaviorClickColor },
+  'float-y': { label: 'Float Y', source: behaviorFloatY },
+  'orbit-offset': { label: 'Orbit offset', source: behaviorOrbitOffset },
+  'breathing-scale': { label: 'Breathing scale', source: behaviorBreathingScale }
 };
 
 const MAX_HISTORY_ENTRIES = 100;
