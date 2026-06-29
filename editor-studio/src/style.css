@@ -1482,6 +1482,13 @@ button:disabled:hover,
   color: rgba(255, 255, 255, 0.7);
 }
 
+.scene-sync-payload-preview.is-error {
+  color: #ff9b9b;
+  border-color: rgba(255, 155, 155, 0.4);
+  background: rgba(255, 155, 155, 0.08);
+  white-space: pre-wrap;
+}
+
 /* Node canvas toolbar and hint */
 
 .node-pane {

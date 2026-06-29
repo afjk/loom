@@ -511,3 +511,51 @@ test('scene sink depending on unsupported node throws error', () => {
     /Unsupported Scene Sync graph node: unsupportedNode/
   );
 });
+
+test('expands inline arithmetic (formula) into supported math nodes', () => {
+  const source = `
+import math
+import scene
+
+t = clock()
+dy = math.sine(t, freq: 0.5, amplitude: 0.5)
+dy2 = dy / 10
+scene.offsetPosition(y: dy2)
+`;
+
+  const { graph } = compileLoomToSceneSyncGraph(source);
+
+  // No formula node survives; a divide + constant(10) replace it.
+  assert.ok(!graph.nodes.some((n) => n.type === 'formula'), 'formula node should be expanded');
+  const divide = graph.nodes.find((n) => n.type === 'divide');
+  assert.ok(divide, 'divide node should exist');
+  const constTen = graph.nodes.find((n) => n.type === 'constant' && n.params?.value === 10);
+  assert.ok(constTen, 'constant(10) should exist');
+
+  // Numerator is the sine output, denominator is the constant.
+  const sine = graph.nodes.find((n) => n.type === 'sine');
+  assert.ok(graph.edges.some((e) => e.from === `${sine.id}.out` && e.to === `${divide.id}.a`), 'sine -> divide.a');
+  assert.ok(graph.edges.some((e) => e.from === `${constTen.id}.out` && e.to === `${divide.id}.b`), 'constant -> divide.b');
+  assertEdgesReferToExistingNodes(graph);
+});
+
+test('expands nested arithmetic with correct precedence', () => {
+  const source = `
+import math
+import scene
+
+t = clock()
+a = math.sine(t, freq: 0.5)
+b = math.cosine(t, freq: 0.3)
+c = a * b - 0.5
+scene.offsetPosition(y: c)
+`;
+
+  const { graph } = compileLoomToSceneSyncGraph(source);
+  assert.ok(!graph.nodes.some((n) => n.type === 'formula'));
+  // a * b - 0.5  =>  subtract(multiply(a, b), 0.5)
+  assert.ok(graph.nodes.some((n) => n.type === 'multiply'), 'has multiply');
+  assert.ok(graph.nodes.some((n) => n.type === 'subtract'), 'has subtract');
+  assert.ok(graph.nodes.some((n) => n.type === 'constant' && n.params?.value === 0.5));
+  assertEdgesReferToExistingNodes(graph);
+});

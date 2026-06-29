@@ -9,11 +9,15 @@ const SUPPORTED_NODES = new Set([
   'logic.select',
   'integrate',
   'add',
+  'subtract',
   'multiply',
+  'divide',
   'math.sine',
   'math.cosine',
   'math.add',
+  'math.subtract',
   'math.multiply',
+  'math.divide',
   'math.lerp',
   'scene.setPosition',
   'scene.offsetPosition',
@@ -41,11 +45,15 @@ const NODE_TYPE_MAPPING = {
   'logic.select': 'logic.select',
   'integrate': 'integrate',
   'add': 'add',
+  'subtract': 'subtract',
   'multiply': 'multiply',
+  'divide': 'divide',
   'math.sine': 'sine',
   'math.cosine': 'cosine',
   'math.add': 'add',
+  'math.subtract': 'subtract',
   'math.multiply': 'multiply',
+  'math.divide': 'divide',
   'math.lerp': 'lerp',
   'scene.setPosition': 'sceneSetPosition',
   'scene.offsetPosition': 'sceneOffsetPosition',
@@ -78,7 +86,11 @@ const OUTPUT_PORT_MAPPING = {
   'logic.select': 'out',
   'integrate': 'out',
   'add': 'out',
+  'subtract': 'out',
   'multiply': 'out',
+  'divide': 'out',
+  'math.subtract': 'out',
+  'math.divide': 'out',
   'math.sine': 'out',
   'sine': 'out',
   'math.cosine': 'out',
@@ -191,9 +203,13 @@ function pickParams(nodeType, params = {}) {
     nodeType === 'onEvent' ||
     nodeType === 'integrate' ||
     nodeType === 'add' ||
+    nodeType === 'subtract' ||
     nodeType === 'multiply' ||
+    nodeType === 'divide' ||
     nodeType === 'math.add' ||
+    nodeType === 'math.subtract' ||
     nodeType === 'math.multiply' ||
+    nodeType === 'math.divide' ||
     nodeType === 'math.lerp' ||
     nodeType === 'logic.greaterThan' ||
     nodeType === 'logic.select' ||
@@ -248,6 +264,168 @@ function pickParams(nodeType, params = {}) {
   return {};
 }
 
+// --- Formula lowering -------------------------------------------------------
+//
+// Inline arithmetic in the DSL (e.g. `dy / 10`) compiles to a single `formula`
+// node, which the Scene Sync runtime does not implement. Before mapping to the
+// Scene Sync graph we expand every `formula` node into the equivalent tree of
+// runtime-supported math nodes (add / subtract / multiply / divide) plus
+// `constant` nodes for literals, so inline operators "just work" on export.
+
+// Recursive-descent parser for the formula grammar:
+//   expr := add ; add := mul (('+'|'-') mul)* ; mul := unary (('*'|'/') unary)*
+//   unary := '-' unary | primary ; primary := number | ident | '(' expr ')'
+function parseFormulaExpression(formula) {
+  const text = String(formula);
+  let pos = 0;
+  const skipWs = () => { while (pos < text.length && /\s/.test(text[pos])) pos++; };
+
+  function parseExpr() { return parseAdd(); }
+  function parseAdd() {
+    let node = parseMul();
+    skipWs();
+    while (text[pos] === '+' || text[pos] === '-') {
+      const op = text[pos++];
+      node = { t: 'op', op, l: node, r: parseMul() };
+      skipWs();
+    }
+    return node;
+  }
+  function parseMul() {
+    let node = parseUnary();
+    skipWs();
+    while (text[pos] === '*' || text[pos] === '/') {
+      const op = text[pos++];
+      node = { t: 'op', op, l: node, r: parseUnary() };
+      skipWs();
+    }
+    return node;
+  }
+  function parseUnary() {
+    skipWs();
+    if (text[pos] === '-') { pos++; return { t: 'neg', x: parseUnary() }; }
+    if (text[pos] === '+') { pos++; return parseUnary(); }
+    return parsePrimary();
+  }
+  function parsePrimary() {
+    skipWs();
+    const ch = text[pos];
+    if (ch === '(') {
+      pos++;
+      const node = parseExpr();
+      skipWs();
+      if (text[pos] !== ')') throw new Error(`Unbalanced parentheses in formula: ${formula}`);
+      pos++;
+      return node;
+    }
+    if (/[0-9.]/.test(ch)) {
+      let num = '';
+      while (pos < text.length && /[0-9.]/.test(text[pos])) num += text[pos++];
+      return { t: 'num', value: Number(num) };
+    }
+    if (/[a-zA-Z_]/.test(ch)) {
+      let name = '';
+      while (pos < text.length && /[a-zA-Z0-9_]/.test(text[pos])) name += text[pos++];
+      return { t: 'var', name };
+    }
+    throw new Error(`Unsupported character '${ch ?? ''}' in formula: ${formula}`);
+  }
+
+  const ast = parseExpr();
+  skipWs();
+  if (pos < text.length) throw new Error(`Unexpected '${text[pos]}' in formula: ${formula}`);
+  return ast;
+}
+
+const FORMULA_OP_TYPE = { '+': 'add', '-': 'subtract', '*': 'multiply', '/': 'divide' };
+
+// Expand every `formula` node in a loom graph into supported math/constant
+// nodes. The expression root reuses the formula node's id so downstream edges
+// (formula.out -> ...) stay valid. Returns a new graph; non-formula graphs are
+// returned unchanged.
+export function expandFormulaNodes(loomGraph) {
+  const formulaNodes = loomGraph.nodes.filter((n) => n.type === 'formula');
+  if (formulaNodes.length === 0) return loomGraph;
+
+  const usedIds = new Set(loomGraph.nodes.map((n) => n.id));
+  const removedNodeIds = new Set();
+  const removedEdgeKeys = new Set();
+  const newNodes = [];
+  const newEdges = [];
+
+  for (const formula of formulaNodes) {
+    const fid = formula.id;
+
+    // Map each formula input variable to the endpoint feeding it.
+    const varSources = new Map();
+    for (const edge of loomGraph.edges) {
+      const [toNode, toPort] = edge.to.split('.');
+      if (toNode === fid) {
+        varSources.set(toPort, edge.from);
+        removedEdgeKeys.add(`${edge.from}->${edge.to}`);
+      }
+    }
+
+    const uniqueId = (base) => {
+      let id = `${fid}_${base}`;
+      let i = 2;
+      while (usedIds.has(id)) id = `${fid}_${base}_${i++}`;
+      usedIds.add(id);
+      return id;
+    };
+    const constNode = (value) => {
+      const id = uniqueId('const');
+      newNodes.push({ id, type: 'constant', params: { value } });
+      return `${id}.out`;
+    };
+
+    // Lower an AST node, returning its output endpoint. `forcedId` pins the
+    // root to the formula node's id.
+    const lower = (ast, forcedId = null) => {
+      if (ast.t === 'num') {
+        if (!forcedId) return constNode(ast.value);
+        newNodes.push({ id: forcedId, type: 'constant', params: { value: ast.value } });
+        return `${forcedId}.out`;
+      }
+      if (ast.t === 'var') {
+        const src = varSources.get(ast.name);
+        if (!src) throw new Error(`Formula references unconnected variable '${ast.name}'`);
+        if (!forcedId) return src;
+        // Bare-variable root: identity via add(var, 0) so the root keeps fid.
+        newNodes.push({ id: forcedId, type: 'add' });
+        newEdges.push({ from: src, to: `${forcedId}.a` });
+        newEdges.push({ from: constNode(0), to: `${forcedId}.b` });
+        return `${forcedId}.out`;
+      }
+      if (ast.t === 'neg') {
+        const id = forcedId || uniqueId('subtract');
+        newNodes.push({ id, type: 'subtract' });
+        newEdges.push({ from: constNode(0), to: `${id}.a` });
+        newEdges.push({ from: lower(ast.x), to: `${id}.b` });
+        return `${id}.out`;
+      }
+      if (ast.t === 'op') {
+        const type = FORMULA_OP_TYPE[ast.op];
+        const id = forcedId || uniqueId(type);
+        const left = lower(ast.l);
+        const right = lower(ast.r);
+        newNodes.push({ id, type });
+        newEdges.push({ from: left, to: `${id}.a` });
+        newEdges.push({ from: right, to: `${id}.b` });
+        return `${id}.out`;
+      }
+      throw new Error('Unsupported formula expression');
+    };
+
+    lower(parseFormulaExpression(formula.params?.formula ?? '0'), fid);
+    removedNodeIds.add(fid);
+  }
+
+  const nodes = loomGraph.nodes.filter((n) => !removedNodeIds.has(n.id)).concat(newNodes);
+  const edges = loomGraph.edges.filter((e) => !removedEdgeKeys.has(`${e.from}->${e.to}`)).concat(newEdges);
+  return { ...loomGraph, nodes, edges };
+}
+
 export function compileLoomToSceneSyncGraph(source, options = {}) {
   const result = compileLoomSource(source, { target: 'scenesync' });
   if (!result.ok) throw new Error(`Compilation failed: ${result.errors.map((e) => e.message).join(', ')}`);
@@ -256,6 +434,9 @@ export function compileLoomToSceneSyncGraph(source, options = {}) {
 
 export function loomGraphToSceneSyncGraph(loomGraph, options = {}) {
   if (!loomGraph || !loomGraph.nodes || !loomGraph.edges) throw new Error('loomGraph must have nodes and edges arrays');
+
+  // Expand inline-arithmetic `formula` nodes into runtime-supported math nodes.
+  loomGraph = expandFormulaNodes(loomGraph);
 
   // Phase 1: Find all Scene Sync sink nodes (scene.* and audioSource.* nodes)
   const sinkNodeIds = new Set();
