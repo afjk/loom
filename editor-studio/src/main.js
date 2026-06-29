@@ -204,7 +204,7 @@ const elements = {
   nodeListSearch: document.getElementById('node-list-search'),
   nodeListCategory: document.getElementById('node-list-category'),
   nodeList: document.getElementById('node-list'),
-  autoApplyStatus: document.getElementById('auto-apply-status'),
+  syncStatus: document.getElementById('sync-status'),
   bottomPanel: document.getElementById('bottom-panel'),
   bottomPanelResizeHandle: document.getElementById('bottom-panel-resize-handle'),
   bottomPanelCollapseBtn: document.getElementById('bottom-panel-collapse-btn'),
@@ -212,8 +212,6 @@ const elements = {
   editorSplitResizeHandle: document.getElementById('editor-split-resize-handle'),
   undoBtn: document.getElementById('undo-btn'),
   redoBtn: document.getElementById('redo-btn'),
-  dirtyStatus: document.getElementById('dirty-status'),
-  autoSyncStatusPill: document.getElementById('auto-sync-status-pill'),
   outputLog: document.getElementById('output-log'),
   clearOutputBtn: document.getElementById('clear-output-btn'),
   sceneSyncScope: document.getElementById('sceneSyncScope'),
@@ -909,57 +907,58 @@ function setDirty(dirty) {
 }
 
 function renderFileStatus() {
+  if (!elements.fileStatus) return;
   const label = currentFileName || 'No file';
-  const dirtyMark = isDirty ? ' *' : '';
-  elements.fileStatus.textContent = `${label}${dirtyMark}`;
+  elements.fileStatus.textContent = label;
+  elements.fileStatus.classList.toggle('is-dirty', isDirty);
+  elements.fileStatus.title = isDirty ? `${label} — unsaved changes` : label;
+}
+
+// The two sync directions (DSL->Node auto-apply and Node->DSL auto-sync) are
+// surfaced through a single consolidated "Sync" indicator. Each direction
+// reports independently; the badge reflects the most urgent state and the
+// tooltip spells out both directions.
+let syncApplyState = 'live';
+let syncGraphState = 'live';
+
+function renderSyncStatus() {
+  const el = elements.syncStatus;
+  if (!el) return;
+
+  let label = 'Sync: live';
+  let modifier = '';
+  if (syncApplyState === 'error') {
+    label = 'Sync: error';
+    modifier = ' error';
+  } else if (syncApplyState === 'pending') {
+    label = 'Sync: pending';
+    modifier = ' pending';
+  } else if (syncApplyState === 'ok' || syncGraphState === 'ok') {
+    label = 'Sync: synced';
+    modifier = ' ok';
+  }
+
+  el.textContent = label;
+  el.className = `sync-status${modifier}`;
+
+  const applyText = { pending: 'pending', ok: 'synced', error: 'error' }[syncApplyState] || 'live';
+  const graphText = syncGraphState === 'ok' ? 'synced' : 'live';
+  el.title = `DSL → Node: ${applyText}\nNode → DSL: ${graphText}`;
 }
 
 function renderAutoApplyStatus(status = null) {
-  if (!elements.autoApplyStatus) return;
-
-  if (status === 'pending') {
-    elements.autoApplyStatus.textContent = 'DSL->Node: pending';
-    elements.autoApplyStatus.className = 'auto-apply-status pending';
-    return;
-  }
-
-  if (status === 'ok') {
-    elements.autoApplyStatus.textContent = 'DSL->Node: synced';
-    elements.autoApplyStatus.className = 'auto-apply-status ok';
-    return;
-  }
-
-  if (status === 'error') {
-    elements.autoApplyStatus.textContent = 'DSL->Node: error';
-    elements.autoApplyStatus.className = 'auto-apply-status error';
-    return;
-  }
-
-  elements.autoApplyStatus.textContent = 'DSL->Node: live';
-  elements.autoApplyStatus.className = 'auto-apply-status';
+  syncApplyState = status || 'live';
+  renderSyncStatus();
 }
 
 function renderAutoSyncGraphToDslStatus(status = null) {
-  if (!elements.autoSyncStatusPill) return;
-
-  elements.autoSyncStatusPill.className = 'status-pill';
-
-  if (status === 'ok') {
-    elements.autoSyncStatusPill.textContent = 'Node->DSL: synced';
-    elements.autoSyncStatusPill.classList.add('is-on');
-    return;
-  }
-
-  elements.autoSyncStatusPill.textContent = 'Node->DSL: live';
-  elements.autoSyncStatusPill.classList.add('is-on');
+  syncGraphState = status || 'live';
+  renderSyncStatus();
 }
 
 function renderDirtyStatus() {
-  if (!elements.dirtyStatus) return;
-
-  elements.dirtyStatus.textContent = isDirty ? 'Dirty' : 'Saved';
-  elements.dirtyStatus.classList.toggle('is-dirty', isDirty);
-  elements.dirtyStatus.classList.toggle('is-saved', !isDirty);
+  // Dirty state is shown inline on the file status badge (see renderFileStatus).
+  renderFileStatus();
 }
 
 
@@ -3381,7 +3380,58 @@ function clearEditorHistory() {
   renderUndoRedoState();
 }
 
+// Wire up the toolbar dropdown menus (File ▾, DSL ▾): the trigger toggles its
+// menu, selecting an item or clicking elsewhere closes it. The menu items keep
+// their original IDs, so their actions are wired separately like before.
+function setupToolbarMenus() {
+  const menus = Array.from(document.querySelectorAll('.toolbar-menu'));
+  if (menus.length === 0) return;
+
+  const toolbar = menus[0].closest('.studio-toolbar');
+  // The mobile toolbar is an overflow-clipped horizontal scroll strip, which
+  // would clip an open dropdown. Flag the toolbar while any menu is open so CSS
+  // can lift the clipping (see the .has-open-menu rule).
+  const syncOpenState = () => {
+    toolbar?.classList.toggle('has-open-menu', menus.some((m) => m.classList.contains('open')));
+  };
+
+  const closeAll = (except = null) => {
+    for (const menu of menus) {
+      if (menu === except) continue;
+      menu.classList.remove('open');
+      menu.querySelector('.toolbar-menu-trigger')?.setAttribute('aria-expanded', 'false');
+    }
+    syncOpenState();
+  };
+
+  for (const menu of menus) {
+    const trigger = menu.querySelector('.toolbar-menu-trigger');
+    trigger?.addEventListener('click', () => {
+      const willOpen = !menu.classList.contains('open');
+      closeAll(menu);
+      menu.classList.toggle('open', willOpen);
+      trigger.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      syncOpenState();
+    });
+    menu.querySelector('.toolbar-menu-list')?.addEventListener('click', (event) => {
+      if (event.target.closest('.toolbar-menu-item')) closeAll();
+    });
+  }
+
+  // Capture-phase so a pointerdown on the node editor canvas (which stops
+  // propagation) still closes open menus. Pointerdowns inside a menu are left
+  // to the per-menu handlers above.
+  document.addEventListener('pointerdown', (event) => {
+    if (event.target.closest?.('.toolbar-menu')) return;
+    closeAll();
+  }, true);
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeAll();
+  });
+}
+
 function setupEventListeners() {
+  setupToolbarMenus();
   elements.nodeZoomInBtn?.addEventListener('click', () => nodeEditor?.zoomBy(1.25));
   elements.nodeZoomOutBtn?.addEventListener('click', () => nodeEditor?.zoomBy(0.8));
   elements.nodeZoomFitBtn?.addEventListener('click', () => nodeEditor?.zoomToFit());
