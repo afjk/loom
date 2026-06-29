@@ -3387,12 +3387,21 @@ function setupToolbarMenus() {
   const menus = Array.from(document.querySelectorAll('.toolbar-menu'));
   if (menus.length === 0) return;
 
+  const toolbar = menus[0].closest('.studio-toolbar');
+  // The mobile toolbar is an overflow-clipped horizontal scroll strip, which
+  // would clip an open dropdown. Flag the toolbar while any menu is open so CSS
+  // can lift the clipping (see the .has-open-menu rule).
+  const syncOpenState = () => {
+    toolbar?.classList.toggle('has-open-menu', menus.some((m) => m.classList.contains('open')));
+  };
+
   const closeAll = (except = null) => {
     for (const menu of menus) {
       if (menu === except) continue;
       menu.classList.remove('open');
       menu.querySelector('.toolbar-menu-trigger')?.setAttribute('aria-expanded', 'false');
     }
+    syncOpenState();
   };
 
   for (const menu of menus) {
@@ -3402,6 +3411,7 @@ function setupToolbarMenus() {
       closeAll(menu);
       menu.classList.toggle('open', willOpen);
       trigger.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      syncOpenState();
     });
     menu.querySelector('.toolbar-menu-list')?.addEventListener('click', (event) => {
       if (event.target.closest('.toolbar-menu-item')) closeAll();

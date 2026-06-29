@@ -1900,6 +1900,11 @@ button:disabled:hover,
     scrollbar-width: thin;
     -webkit-overflow-scrolling: touch;
   }
+  /* While a dropdown is open, stop clipping so the menu is visible (the strip
+     is not scrolled during menu interaction). */
+  .studio-toolbar.has-open-menu {
+    overflow: visible;
+  }
   .studio-toolbar > * {
     flex: 0 0 auto;
   }
