@@ -1210,45 +1210,17 @@ button:disabled:hover,
   cursor: pointer;
 }
 
-/* Consolidated DSL<->Node sync indicator. Colour reflects the live state;
-   the full per-direction detail is in the tooltip. */
+/* DSL<->Node sync indicator. Hidden while sync is healthy (toggled via inline
+   display from JS); only shown when the DSL has errors and can't be applied. */
 .sync-status {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-size: 12px;
+  font-weight: 600;
   white-space: nowrap;
-  color: var(--text-dim);
-  cursor: default;
-}
-
-.sync-status::before {
-  content: "";
-  flex: 0 0 auto;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #80ed99;
-}
-
-.sync-status.pending {
-  color: #e7c66b;
-}
-
-.sync-status.pending::before {
-  background: #e7c66b;
-}
-
-.sync-status.ok::before {
-  background: #80ed99;
-}
-
-.sync-status.error {
   color: #ff9b9b;
-}
-
-.sync-status.error::before {
-  background: #ff9b9b;
+  cursor: default;
 }
 
 /* Node List */
