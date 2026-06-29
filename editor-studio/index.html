@@ -182,43 +182,32 @@
           </div>
           <div id="scene-sync-tab" class="tab-pane">
             <div class="scene-sync-panel">
-              <div class="scene-sync-form-grid">
-                <label>
-                  Scope
-                  <select id="sceneSyncScope">
-                    <option value="object">Object Behavior Graph</option>
-                    <option value="scene">Scene Behavior Graph</option>
-                  </select>
-                </label>
-
-                <label>
-                  Object ID
-                  <input id="sceneSyncObjectId" type="text" placeholder="sample-cube" />
-                </label>
-              </div>
+              <p class="scene-sync-note">
+                Build your motion graph and confirm it in the preview, then
+                <strong>Copy Graph JSON</strong> and paste it onto a selected object in
+                Scene Sync. Pasting an empty graph removes the behavior.
+              </p>
 
               <div class="scene-sync-actions">
-                <button id="compileSceneSyncPayloadBtn" type="button" class="btn">Compile Payload</button>
-                <button id="copySceneSyncPayloadBtn" type="button" class="btn btn-primary" title="Copy the scene-graph-set message JSON, ready to paste onto a Scene Sync object">Copy Payload</button>
-                <button id="copySceneSyncGraphBtn" type="button" class="btn" title="Copy only the behavior graph (nodes/edges) JSON">Copy Graph JSON</button>
+                <button id="copySceneSyncGraphBtn" type="button" class="btn btn-primary" title="Copy the behavior graph JSON (nodes/edges), ready to paste onto a selected Scene Sync object">Copy Graph JSON</button>
               </div>
 
               <div class="scene-sync-preset-actions">
-                <button id="loadSceneSyncJumpPresetBtn" type="button" class="btn">Load Jump Preview</button>
-                <button id="loadSceneSyncCirclePresetBtn" type="button" class="btn">Load Circle Preview</button>
+                <label for="sceneSyncPresetSelect">Sample</label>
+                <select id="sceneSyncPresetSelect">
+                  <option value="">Select a sample…</option>
+                  <option value="jump">Jump (vertical bounce)</option>
+                  <option value="circle">Circle (orbit)</option>
+                </select>
+                <button id="loadSceneSyncPresetBtn" type="button" class="btn">Load</button>
               </div>
-
-              <p class="scene-sync-note">
-                Recommended flow: build your motion graph, confirm it in the preview, then
-                <strong>Copy Payload</strong> and paste it onto your Scene Sync object.
-              </p>
 
               <p class="scene-sync-note">
                 Note: sceneSetPosition currently writes absolute world positions.
                 Use explicit base values in your graph if you want to keep the object near its current location.
               </p>
 
-              <pre id="sceneSyncPayloadPreview" class="scene-sync-payload-preview"></pre>
+              <pre id="sceneSyncGraphPreview" class="scene-sync-payload-preview"></pre>
             </div>
           </div>
         </div>
