@@ -914,10 +914,10 @@ function renderFileStatus() {
   elements.fileStatus.title = isDirty ? `${label} — unsaved changes` : label;
 }
 
-// The two sync directions (DSL->Node auto-apply and Node->DSL auto-sync) are
-// surfaced through a single consolidated "Sync" indicator. Each direction
-// reports independently; the badge reflects the most urgent state and the
-// tooltip spells out both directions.
+// DSL<->Node stays in sync automatically, so a constant "synced" badge is just
+// noise. The indicator is therefore quiet by default and only appears when the
+// DSL has errors and changes can't be applied to the graph — the one state the
+// user needs to act on.
 let syncApplyState = 'live';
 let syncGraphState = 'live';
 
@@ -925,25 +925,13 @@ function renderSyncStatus() {
   const el = elements.syncStatus;
   if (!el) return;
 
-  let label = 'Sync: live';
-  let modifier = '';
   if (syncApplyState === 'error') {
-    label = 'Sync: error';
-    modifier = ' error';
-  } else if (syncApplyState === 'pending') {
-    label = 'Sync: pending';
-    modifier = ' pending';
-  } else if (syncApplyState === 'ok' || syncGraphState === 'ok') {
-    label = 'Sync: synced';
-    modifier = ' ok';
+    el.style.display = '';
+    el.textContent = '⚠ DSL error';
+    el.title = 'The DSL has errors, so changes are not applied to the node graph.\nFix the DSL to resume automatic sync.';
+  } else {
+    el.style.display = 'none';
   }
-
-  el.textContent = label;
-  el.className = `sync-status${modifier}`;
-
-  const applyText = { pending: 'pending', ok: 'synced', error: 'error' }[syncApplyState] || 'live';
-  const graphText = syncGraphState === 'ok' ? 'synced' : 'live';
-  el.title = `DSL → Node: ${applyText}\nNode → DSL: ${graphText}`;
 }
 
 function renderAutoApplyStatus(status = null) {
