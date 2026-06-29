@@ -15,38 +15,46 @@
 
   <div class="studio-overlay">
     <div class="studio-toolbar">
-      <button id="toggle-panels">Hide Editors</button>
-      <button id="openFileBtn" class="btn">Open .loom</button>
-      <button id="saveFileBtn" class="btn btn-primary">Save .loom</button>
-      <button id="saveAsFileBtn" class="btn">Save As</button>
-      <span id="file-status" class="file-status">No file</span>
+      <!-- Primary action -->
       <button id="runPreviewBtn" class="btn btn-success">Run Preview</button>
+
+      <!-- Edit history -->
+      <button id="undo-btn" class="btn btn-icon-text" title="Undo graph edit (Ctrl/Cmd+Z)" disabled>↶</button>
+      <button id="redo-btn" class="btn btn-icon-text" title="Redo graph edit (Ctrl/Cmd+Shift+Z)" disabled>↷</button>
+
+      <!-- File menu -->
+      <div class="toolbar-menu" data-menu="file">
+        <button type="button" class="btn toolbar-menu-trigger" aria-haspopup="true" aria-expanded="false">File ▾</button>
+        <div class="toolbar-menu-list" role="menu">
+          <button id="openFileBtn" type="button" class="toolbar-menu-item" role="menuitem">Open .loom…</button>
+          <button id="saveFileBtn" type="button" class="toolbar-menu-item" role="menuitem">Save .loom</button>
+          <button id="saveAsFileBtn" type="button" class="toolbar-menu-item" role="menuitem">Save As…</button>
+          <div class="toolbar-menu-sep" role="separator"></div>
+          <button id="resetSampleBtn" type="button" class="toolbar-menu-item" role="menuitem">Reset Sample</button>
+        </div>
+      </div>
+
+      <!-- DSL sync menu -->
+      <div class="toolbar-menu" data-menu="dsl">
+        <button type="button" class="btn toolbar-menu-trigger" aria-haspopup="true" aria-expanded="false">DSL ▾</button>
+        <div class="toolbar-menu-list" role="menu">
+          <button id="applyDslBtn" type="button" class="toolbar-menu-item" role="menuitem" title="Apply DSL text to the node graph (also clears edit history)">Apply DSL → Node</button>
+          <button id="generateDslBtn" type="button" class="toolbar-menu-item" role="menuitem" title="Rewrite the DSL editor as canonical text from the graph">Generate Canonical DSL</button>
+        </div>
+      </div>
+
+      <!-- View -->
+      <button id="toggle-panels" class="btn">Hide Editors</button>
       <div class="segmented-control preview-layout-switch" aria-label="Preview layout">
         <button class="segmented-btn active" data-preview-layout="background" title="Use preview as the background">Background</button>
         <button class="segmented-btn" data-preview-layout="docked" title="Dock preview beside the editor">Docked</button>
       </div>
-      <button id="resetSampleBtn" class="btn">Reset Sample</button>
-      <button id="undo-btn" class="btn" title="Undo graph edit (Ctrl/Cmd+Z)" disabled>
-        Undo
-      </button>
-      <button id="redo-btn" class="btn" title="Redo graph edit (Ctrl/Cmd+Shift+Z)" disabled>
-        Redo
-      </button>
-      <button id="applyDslBtn" class="btn btn-primary">Apply DSL → Node</button>
-      <button id="generateDslBtn" class="btn btn-primary">Generate Canonical DSL</button>
-      <div class="toolbar-status" aria-label="Editor status">
-        <span id="dirty-status" class="status-pill">Saved</span>
-        <span
-          id="auto-sync-status-pill"
-          class="status-pill is-on"
-          title="Node edits rewrite DSL as canonical text. Layout-only node moves preserve the current DSL text."
-        >Node-&gt;DSL: live</span>
+
+      <!-- Status (pushed to the right) -->
+      <div class="toolbar-status-cluster" aria-label="Editor status">
+        <span id="file-status" class="file-status" title="Current file">No file</span>
+        <span id="sync-status" class="sync-status" title="DSL ↔ Node sync">Sync: live</span>
       </div>
-      <span
-        id="auto-apply-status"
-        class="auto-apply-status"
-        title="DSL edits apply to the node editor automatically. Fix DSL errors before editing the graph."
-      >DSL-&gt;Node: live</span>
     </div>
 
     <div id="editor-panels" class="editor-panels">
