@@ -1714,9 +1714,18 @@ function renderSceneSyncGraphPreview(graph) {
     return;
   }
 
+  elements.sceneSyncGraphPreview.classList.remove('is-error');
   elements.sceneSyncGraphPreview.textContent = graph
     ? JSON.stringify(graph, null, 2)
     : '';
+}
+
+function renderSceneSyncGraphPreviewError(message) {
+  if (!elements.sceneSyncGraphPreview) {
+    return;
+  }
+  elements.sceneSyncGraphPreview.classList.add('is-error');
+  elements.sceneSyncGraphPreview.textContent = `⚠ ${message}`;
 }
 
 async function copyTextToClipboard(text) {
@@ -1754,6 +1763,9 @@ async function handleCopySceneSyncGraphJson() {
       message: 'Copied Scene Sync behavior graph (nodes/edges). Select an object in Scene Sync and paste to apply.'
     });
   } catch (error) {
+    // Surface the failure in the preview so a stale graph isn't mistaken for a
+    // successful copy (the clipboard is intentionally left untouched on error).
+    renderSceneSyncGraphPreviewError(error.message);
     appendOutput({
       level: 'error',
       message: `Copy Scene Sync graph failed: ${error.message}`
@@ -2516,22 +2528,6 @@ async function resetSample() {
 }
 
 function loadSceneSyncPreset(name, source) {
-  const currentText = getDslText();
-
-  if (currentText.trim()) {
-    const ok = window.confirm(
-      `Loading "${name}" will replace the DSL editor content. Continue?`
-    );
-
-    if (!ok) {
-      appendOutput({
-        level: 'info',
-        message: `Canceled loading Scene Sync preset: ${name}.`
-      });
-      return;
-    }
-  }
-
   setDslText(source);
   hasUnsyncedDslText = true;
   setDirty(true);
