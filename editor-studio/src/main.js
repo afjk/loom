@@ -105,6 +105,54 @@ const SCENE_SYNC_PRESETS = {
   'breathing-scale': { label: 'Breathing scale', source: behaviorBreathingScale }
 };
 
+// All Tour samples, loaded as raw text so the Sample picker can offer every
+// entry. Using import.meta.glob keeps the list in sync automatically as tour
+// files are added or removed under examples/tour/.
+const TOUR_SAMPLE_MODULES = import.meta.glob('../../examples/tour/**/*.loom', {
+  eager: true,
+  query: '?raw',
+  import: 'default'
+});
+
+const DEFAULT_SAMPLE_KEY = '__default__';
+
+const TOUR_CATEGORY_LABELS = {
+  language: 'Language',
+  signals: 'Signals',
+  events: 'Events',
+  'scenesync/behaviors': 'Scene Sync · Behaviors',
+  'scenesync/demos': 'Scene Sync · Demos'
+};
+
+function tourSampleCategory(relPath) {
+  // relPath is like "language/01-hello.loom" or
+  // "scenesync/behaviors/01-click-color.loom".
+  const parts = relPath.split('/');
+  if (parts[0] === 'scenesync' && parts.length > 2) {
+    return `scenesync/${parts[1]}`;
+  }
+  return parts[0];
+}
+
+function tourSampleTitle(source, relPath) {
+  const tourHeader = source.match(/^#\s*Tour:\s*(.+)$/m);
+  if (tourHeader) return tourHeader[1].trim();
+  const file = relPath.split('/').pop().replace(/\.loom$/, '');
+  return file.replace(/^\d+-/, '').replace(/-/g, ' ');
+}
+
+const TOUR_SAMPLES = Object.entries(TOUR_SAMPLE_MODULES)
+  .map(([path, source]) => {
+    const relPath = path.replace(/^.*\/examples\/tour\//, '');
+    return {
+      key: relPath,
+      category: tourSampleCategory(relPath),
+      title: tourSampleTitle(source, relPath),
+      source
+    };
+  })
+  .sort((a, b) => a.key.localeCompare(b.key));
+
 const MAX_HISTORY_ENTRIES = 100;
 const MOVE_HISTORY_COALESCE_MS = 250;
 const PARAM_HISTORY_COALESCE_MS = 750;
@@ -197,7 +245,8 @@ const elements = {
   applyDslBtn: document.getElementById('applyDslBtn'),
   generateDslBtn: document.getElementById('generateDslBtn'),
   runPreviewBtn: document.getElementById('runPreviewBtn'),
-  resetSampleBtn: document.getElementById('resetSampleBtn'),
+  sampleSelect: document.getElementById('sampleSelect'),
+  loadSampleBtn: document.getElementById('loadSampleBtn'),
   togglePanelsBtn: document.getElementById('toggle-panels'),
   previewLayoutBtns: document.querySelectorAll('[data-preview-layout]'),
   dockedEditorTabBtns: document.querySelectorAll('[data-docked-editor-tab]'),
@@ -2527,6 +2576,56 @@ async function resetSample() {
   clearEditorHistory();
 }
 
+// Populate the Sample picker with the built-in default plus every Tour sample,
+// grouped by category.
+function populateSampleSelect() {
+  const select = elements.sampleSelect;
+  if (!select) return;
+
+  const groups = new Map();
+  for (const sample of TOUR_SAMPLES) {
+    if (!groups.has(sample.category)) groups.set(sample.category, []);
+    groups.get(sample.category).push(sample);
+  }
+
+  let html = `<option value="${DEFAULT_SAMPLE_KEY}">Default — bar wave</option>`;
+  for (const [category, samples] of groups) {
+    const label = TOUR_CATEGORY_LABELS[category] || category;
+    html += `<optgroup label="${escapeHtml(label)}">`;
+    for (const sample of samples) {
+      html += `<option value="${escapeHtml(sample.key)}">${escapeHtml(sample.title)}</option>`;
+    }
+    html += '</optgroup>';
+  }
+  select.innerHTML = html;
+}
+
+// Load the sample currently chosen in the picker. The chosen sample is treated
+// as a fresh, unsaved document (same semantics as resetting to the default).
+async function loadSelectedSample() {
+  const key = elements.sampleSelect?.value;
+  if (!key || key === DEFAULT_SAMPLE_KEY) {
+    await resetSample();
+    appendOutput({ level: 'info', message: 'Loaded default sample.' });
+    return;
+  }
+
+  const sample = TOUR_SAMPLES.find((entry) => entry.key === key);
+  if (!sample) {
+    appendOutput({ level: 'info', message: 'Select a sample to load.' });
+    return;
+  }
+
+  setDslText(sample.source);
+  currentFileHandle = null;
+  currentFileName = '';
+  await applyDsl({ markDirty: false });
+  hasUnsyncedDslText = false;
+  setDirty(false);
+  clearEditorHistory();
+  appendOutput({ level: 'info', message: `Loaded sample: ${sample.title}.` });
+}
+
 function loadSceneSyncPreset(name, source) {
   setDslText(source);
   hasUnsyncedDslText = true;
@@ -3368,7 +3467,8 @@ function setupEventListeners() {
     clearOutput();
     runPreview(state.graph);
   });
-  elements.resetSampleBtn.addEventListener('click', resetSample);
+  populateSampleSelect();
+  elements.loadSampleBtn?.addEventListener('click', loadSelectedSample);
   elements.clearOutputBtn?.addEventListener('click', clearOutput);
   elements.togglePanelsBtn.addEventListener('click', () => {
     setPanelsVisible(!panelsVisible);

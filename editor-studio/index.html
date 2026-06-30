@@ -30,7 +30,11 @@
           <button id="saveFileBtn" type="button" class="toolbar-menu-item" role="menuitem">Save .loom</button>
           <button id="saveAsFileBtn" type="button" class="toolbar-menu-item" role="menuitem">Save As…</button>
           <div class="toolbar-menu-sep" role="separator"></div>
-          <button id="resetSampleBtn" type="button" class="toolbar-menu-item" role="menuitem">Reset Sample</button>
+          <div class="toolbar-menu-sample">
+            <label for="sampleSelect">Sample</label>
+            <select id="sampleSelect" aria-label="Choose a sample to load"></select>
+            <button id="loadSampleBtn" type="button" class="btn toolbar-menu-item" role="menuitem">Load</button>
+          </div>
         </div>
       </div>
 
