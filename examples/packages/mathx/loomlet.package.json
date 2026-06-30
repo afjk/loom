@@ -1,8 +1,0 @@
-{
-  "name": "mathx",
-  "version": "0.1.0",
-  "loomlet": {
-    "entry": "./index.js",
-    "metadata": "./metadata.json"
-  }
-}

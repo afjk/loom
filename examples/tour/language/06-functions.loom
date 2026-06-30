@@ -1,0 +1,27 @@
+# Tour: Function Definitions
+# Goal: Bundle a reusable expression into a function and call it.
+# Status: runnable
+# Run:
+#   loomlet run examples/tour/language/06-functions.loom
+# Requires:
+#   - add / multiply (arithmetic)
+#   - console.log
+#
+# `fn name(params) => expr` defines a reusable, same-file function over pure
+# expressions. Calls are positional. Functions may call other functions in the
+# same file. (Experimental v0 — no recursion, closures, or named arguments on
+# the function call itself. See docs/labs/FUNCTION_DEFINITIONS_V0.md.)
+
+import console
+
+fn double(x) => add(x, x)
+fn square(x) => multiply(x, x)
+
+# functions can call other same-file functions
+fn sumOfSquares(a, b) => add(square(a), square(b))
+
+d = double(21)          # -> 42
+s = sumOfSquares(3, 4)  # -> 9 + 16 = 25
+
+console.log(d)
+console.log(s)

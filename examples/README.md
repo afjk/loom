@@ -29,21 +29,6 @@ Or with the published package:
 npx -p @afjk/loomlet loomlet compile examples/cli-basic.loom
 ```
 
-## Custom function / package examples
-
-How to author your own functions (node types) and load them as a trusted local
-package. See [docs/labs/PACKAGE_SYSTEM.md](../docs/labs/PACKAGE_SYSTEM.md).
-
-- [packages/demo/](packages/demo/) - minimal package with `demo.double` / `demo.offset`
-- [packages/mathx/](packages/mathx/) - user-authored `mathx.clamp` / `mathx.lerp`, directory-manifest form
-- [mathx.loom](mathx.loom) - runnable example using the `mathx` package
-
-```bash
-node bin/loomlet.mjs run examples/mathx.loom \
-  --package ./examples/packages/mathx \
-  --get safe.out --get mid.out
-```
-
 ## Scene Sync examples
 
 - [lissajous.loom](lissajous.loom) - Scene Sync behavior graph example
@@ -63,6 +48,7 @@ status and teaching focus of each sample.
 - [tour/language/03-calls-and-named-args.loom](tour/language/03-calls-and-named-args.loom)
 - [tour/language/04-pipeline.loom](tour/language/04-pipeline.loom)
 - [tour/language/05-conditions.loom](tour/language/05-conditions.loom)
+- [tour/language/06-functions.loom](tour/language/06-functions.loom) - reusable `fn` definitions
 
 ### Signals (`tour/signals`)
 
