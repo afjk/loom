@@ -230,6 +230,42 @@ html, body {
   background: rgba(255, 255, 255, 0.12);
 }
 
+.toolbar-menu-sample {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+}
+
+.toolbar-menu-sample label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.toolbar-menu-sample select {
+  flex: 1 1 160px;
+  min-width: 160px;
+  max-width: 240px;
+  padding: 5px 7px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.88);
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.toolbar-menu-sample select:focus {
+  outline: none;
+  border-color: rgba(74, 144, 226, 0.5);
+}
+
+.toolbar-menu-sample .toolbar-menu-item {
+  width: auto;
+  flex: 0 0 auto;
+}
+
 /* Editor panels */
 .editor-panels {
   position: fixed;
