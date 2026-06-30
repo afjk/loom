@@ -1,0 +1,13 @@
+# Example using a user-authored package: examples/packages/mathx
+#
+#   node bin/loomlet.mjs run examples/mathx.loom \
+#     --package ./examples/packages/mathx \
+#     --get safe.out --get mid.out
+import mathx
+
+# clamp 1.5 into [0, 1] -> 1
+safe = mathx.clamp(1.5, min: 0, max: 1)
+
+# linear interpolation from 0 to 100 at t = 0.25 -> 25
+# (only the first argument may be positional; the rest must be named)
+mid = mathx.lerp(0, b: 100, t: 0.25)
