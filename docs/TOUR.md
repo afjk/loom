@@ -44,6 +44,12 @@ Loomlet source files use the `.loom` extension.
 - Run: `loomlet run examples/tour/language/05-conditions.loom`
 - Teaches: declarative condition + selection
 
+### 06 Function Definitions
+- Path: `examples/tour/language/06-functions.loom`
+- Status: Runnable
+- Run: `loomlet run examples/tour/language/06-functions.loom`
+- Teaches: reusable `fn name(params) => expr` definitions, calling functions from functions
+
 ## Signals
 
 ### 01 Clock

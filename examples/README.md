@@ -48,6 +48,7 @@ status and teaching focus of each sample.
 - [tour/language/03-calls-and-named-args.loom](tour/language/03-calls-and-named-args.loom)
 - [tour/language/04-pipeline.loom](tour/language/04-pipeline.loom)
 - [tour/language/05-conditions.loom](tour/language/05-conditions.loom)
+- [tour/language/06-functions.loom](tour/language/06-functions.loom) - reusable `fn` definitions
 
 ### Signals (`tour/signals`)
 
