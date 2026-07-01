@@ -10,12 +10,14 @@ Loomlet: Open Node Preview to the Side
 
 The Node Preview shows the node graph as an overlay and uses the background canvas as a small runtime host.
 
+The examples here rely on the VS Code-only `input` library (mouse / keyboard). Time-driven
+canvas samples (bars and points) now live under `examples/tour/canvas/`, where they run in the
+CLI and the web node editor too.
+
 ## Examples
 
 | File | What to try |
 | --- | --- |
-| `01-bouncing-bar.loom` | A simple animated bar rendered to the preview canvas. |
-| `console-log.loom` | Writes values to `View > Output > Loomlet` while rendering a bar. |
 | `03-mouse-follower.loom` | Move the mouse over the preview canvas. |
 | `04-mouse-paint.loom` | Hold the mouse button down and draw. Press Reset to clear the canvas. |
 | `05-key-visualizer.loom` | Click the preview canvas, then press Space or Arrow keys. |

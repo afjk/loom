@@ -1,9 +1,11 @@
-# VS Code Runtime Preview example: Pulse Bar
-# Open this file with Loomlet: Open Node Preview to the Side.
-# The background canvas should show a bar changing width and vertical position.
-
+# Tour: Pulse Bar
+# Goal: Animate a bar's width and vertical position together.
 # Status: runnable
-# Host: vscode-runtime-preview
+# Run:
+#   loomlet run examples/tour/canvas/02-pulse-bar.loom --time 0.5
+# Requires:
+#   - clock / sine / map
+#   - render bar
 
 t = clock()
 wave = sine(t, freq: 1.2)

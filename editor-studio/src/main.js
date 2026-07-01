@@ -120,6 +120,7 @@ const TOUR_CATEGORY_LABELS = {
   language: 'Language',
   signals: 'Signals',
   events: 'Events',
+  canvas: 'Canvas',
   'scenesync/behaviors': 'Scene Sync · Behaviors',
   'scenesync/demos': 'Scene Sync · Demos'
 };

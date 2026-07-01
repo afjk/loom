@@ -62,6 +62,17 @@ status and teaching focus of each sample.
 - [tour/events/02-click-count.loom](tour/events/02-click-count.loom)
 - [tour/events/03-toggle.loom](tour/events/03-toggle.loom) (draft)
 
+### Canvas (`tour/canvas`)
+
+Time-driven `render` samples for the Canvas Preview (bar / point). Run them with
+an explicit `--time`, e.g. `loomlet run examples/tour/canvas/01-bouncing-bar.loom --time 0.5`.
+
+- [tour/canvas/01-bouncing-bar.loom](tour/canvas/01-bouncing-bar.loom)
+- [tour/canvas/02-pulse-bar.loom](tour/canvas/02-pulse-bar.loom)
+- [tour/canvas/03-orbit-point.loom](tour/canvas/03-orbit-point.loom)
+- [tour/canvas/04-lissajous-point.loom](tour/canvas/04-lissajous-point.loom)
+- [tour/canvas/05-console-bar.loom](tour/canvas/05-console-bar.loom)
+
 ### Scene Sync behaviors (`tour/scenesync/behaviors`)
 
 Object-scoped behaviors omit `objectId`; the host applies them to the attached object.
@@ -80,13 +91,12 @@ Demos target an explicit object by `objectId`.
 
 ## VS Code examples
 
+These use the `input` library (mouse / keyboard), which is provided by the VS Code
+runtime preview host and is not available in the CLI or web node editor. Time-driven
+canvas samples now live under [Canvas (`tour/canvas`)](#canvas-tourcanvas).
+
 - [vscode/README.md](vscode/README.md)
-- [vscode/01-bouncing-bar.loom](vscode/01-bouncing-bar.loom)
-- [vscode/02-orbit-point.loom](vscode/02-orbit-point.loom)
-- [vscode/03-lissajous-point.loom](vscode/03-lissajous-point.loom)
 - [vscode/03-mouse-follower.loom](vscode/03-mouse-follower.loom)
 - [vscode/04-mouse-paint.loom](vscode/04-mouse-paint.loom)
-- [vscode/04-pulse-bar.loom](vscode/04-pulse-bar.loom)
 - [vscode/05-key-visualizer.loom](vscode/05-key-visualizer.loom)
-- [vscode/console-log.loom](vscode/console-log.loom)
 </content>

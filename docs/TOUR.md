@@ -95,6 +95,41 @@ so they are marked `manual-runnable`.
 - Teaches: intended persistent on/off flip on click
 - Missing: an integer event counter or a latch/toggle state node
 
+## Canvas
+
+Time-driven `render` samples for the Canvas Preview. They use `clock()`, so pass an
+explicit `--time` when running from the CLI.
+
+### 01 Bouncing Bar
+- Path: `examples/tour/canvas/01-bouncing-bar.loom`
+- Status: Runnable
+- Run: `loomlet run examples/tour/canvas/01-bouncing-bar.loom --time 0.5`
+- Teaches: driving a `render bar` width from a sine signal
+
+### 02 Pulse Bar
+- Path: `examples/tour/canvas/02-pulse-bar.loom`
+- Status: Runnable
+- Run: `loomlet run examples/tour/canvas/02-pulse-bar.loom --time 0.5`
+- Teaches: animating bar width and vertical position together
+
+### 03 Orbit Point
+- Path: `examples/tour/canvas/03-orbit-point.loom`
+- Status: Runnable
+- Run: `loomlet run examples/tour/canvas/03-orbit-point.loom --time 0.5`
+- Teaches: moving a `render point` in a circle with sine/cosine
+
+### 04 Lissajous Point
+- Path: `examples/tour/canvas/04-lissajous-point.loom`
+- Status: Runnable
+- Run: `loomlet run examples/tour/canvas/04-lissajous-point.loom --time 0.5`
+- Teaches: tracing a Lissajous path from two frequencies
+
+### 05 Console Bar
+- Path: `examples/tour/canvas/05-console-bar.loom`
+- Status: Runnable
+- Run: `loomlet run examples/tour/canvas/05-console-bar.loom --time 0.5`
+- Teaches: rendering a bar and logging its value together
+
 ## Scene Sync behaviors
 
 Object-scoped behaviors omit `objectId`; the host applies them to the attached

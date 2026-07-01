@@ -1,0 +1,14 @@
+# Tour: Bouncing Bar
+# Goal: Drive a canvas bar's width from a sine signal.
+# Status: runnable
+# Run:
+#   loomlet run examples/tour/canvas/01-bouncing-bar.loom --time 0.5
+# Requires:
+#   - clock / sine / map
+#   - render bar
+
+t = clock()
+wave = sine(t, freq: 0.8)
+width = map(wave, inMin: -1, inMax: 1, outMin: 40, outMax: 320)
+
+render bar(width: width, height: 48, color: "#80ed99")
