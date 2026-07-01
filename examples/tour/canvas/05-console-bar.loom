@@ -1,0 +1,19 @@
+# Tour: Console Bar
+# Goal: Render a bar and log its value at the same time.
+# Status: runnable
+# Run:
+#   loomlet run examples/tour/canvas/05-console-bar.loom --time 0.5
+# Requires:
+#   - clock / math.sine / math.map
+#   - console.log
+#   - render bar
+
+import console
+import math
+
+t = clock()
+wave = math.sine(t, freq: 0.5)
+width = math.map(wave, inMin: -1, inMax: 1, outMin: 80, outMax: 520)
+
+console.log(width)
+render bar(width: width, height: 36, y: 180, color: "#4ec9b0", trail: 0.12)

@@ -1,9 +1,11 @@
-# VS Code Runtime Preview example: Lissajous Point
-# Open this file with Loomlet: Open Node Preview to the Side.
-# The background canvas should show a looping Lissajous-like path.
-
+# Tour: Lissajous Point
+# Goal: Trace a looping Lissajous path with two different frequencies.
 # Status: runnable
-# Host: vscode-runtime-preview
+# Run:
+#   loomlet run examples/tour/canvas/04-lissajous-point.loom --time 0.5
+# Requires:
+#   - clock / sine / cosine / map
+#   - render point
 
 t = clock()
 xWave = sine(t, freq: 0.7)
